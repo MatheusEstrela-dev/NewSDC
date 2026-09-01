@@ -136,6 +136,19 @@ nao tem entidade estavel por tras. Estacao tem.
 Consequencia: corrigir a coordenada de uma estacao corrige o historico inteiro
 num update, em vez de exigir backfill.
 
+**Municipio da estacao.** O inventario do INMET nao tem campo de municipio: traz
+`DC_NOME`, que e nome de estacao ("BELO HORIZONTE - PAMPULHA"), e `SG_ESTADO`.
+Como a coluna `municipio` da dimensao e `NOT NULL`, ela e resolvida pelo
+centroide mais proximo entre os 853 municipios de MG ja semeados.
+
+E aproximacao, e a limitacao esta registrada de proposito: `municipios` tem
+`latitude`/`longitude`, nao geometria de area, entao nao ha contencao por
+poligono. Estacao proxima de divisa pode resolver para o vizinho. Verificado
+para A521: resolve Belo Horizonte a 5,3 km, contra Contagem a 10,3 km — margem
+confortavel no caso tipico. Gravar o nome da estacao no campo de municipio foi
+descartado: em relatorio de Defesa Civil, campo de municipio errado vaza para
+decisao.
+
 ### 3.4 Recorte geografico por UF, nao por bbox
 
 Os sismos usam bbox porque as fontes devolvem o mundo e o `Local` vem generico.

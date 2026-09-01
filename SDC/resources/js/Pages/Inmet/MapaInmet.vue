@@ -13,7 +13,7 @@
 
       <!-- Mapa Container -->
       <div class="map-wrapper">
-        <div id="map" ref="mapContainer"></div>
+        <MapaLeaflet :pontos="pontosDoMapa" :bbox="bbox" class="mapa-area" />
 
         <!-- Overlay: Estatísticas -->
         <div class="map-overlay stats-overlay">
@@ -39,14 +39,9 @@
         <div class="map-overlay legend-overlay">
           <h4 class="legend-title">Níveis de Precipitação (24h)</h4>
           <div class="legend-grid">
-            <div class="legend-item"><span class="color-box" style="background:#22c55e"></span> Sem chuva (0mm)</div>
-            <div class="legend-item"><span class="color-box" style="background:#3b82f6"></span> Muito fraca (0-5mm)</div>
-            <div class="legend-item"><span class="color-box" style="background:#06b6d4"></span> Fraca (5-15mm)</div>
-            <div class="legend-item"><span class="color-box" style="background:#eab308"></span> Moderada (15-35mm)</div>
-            <div class="legend-item"><span class="color-box" style="background:#f97316"></span> Forte (35-60mm)</div>
-            <div class="legend-item"><span class="color-box" style="background:#ef4444"></span> Muito forte (60-100mm)</div>
-            <div class="legend-item"><span class="color-box" style="background:#991b1b"></span> Intensa (100-140mm)</div>
-            <div class="legend-item"><span class="color-box" style="background:#7f1d1d"></span> Extrema (> 140mm)</div>
+            <div v-for="item in legenda" :key="item.classe" class="legend-item">
+              <span class="color-box" :style="{ background: item.cor }"></span> {{ item.rotulo }}
+            </div>
           </div>
           <p class="legend-footer">*Adaptado do sistema LHASA_RIO para MG</p>
         </div>
@@ -65,21 +60,21 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="leitura in leituras" :key="leitura.codigo_estacao">
-              <td class="code-cell hidden md:table-cell">{{ leitura.codigo_estacao }}<br><span class="sub-text">Automática</span></td>
+            <tr v-for="estacao in estacoes" :key="estacao.codigo_estacao">
+              <td class="code-cell hidden md:table-cell">{{ estacao.codigo_estacao }}<br><span class="sub-text">Automática</span></td>
               <td>
-                <div class="station-name">{{ leitura.nome_estacao }}</div>
-                <div class="municipio-name">{{ leitura.municipio }}</div>
+                <div class="station-name">{{ estacao.nome_estacao }}</div>
+                <div class="municipio-name">{{ estacao.municipio }}</div>
               </td>
-              <td class="value-cell" :style="{ color: getMarkerColor(leitura.nivel_color) }">
-                {{ leitura.precipitacao?.toFixed(2) ?? 'N/A' }} mm
+              <td class="value-cell" :style="{ color: corDaClasse(estacao.classe_precipitacao) }">
+                {{ formatarMm(estacao.precipitacao) }}
               </td>
               <td>
-                <span class="status-badge" :style="{ borderColor: getMarkerColor(leitura.nivel_color), color: getMarkerColor(leitura.nivel_color) }">
-                  {{ leitura.nivel_label }}
+                <span class="status-badge" :style="{ borderColor: corDaClasse(estacao.classe_precipitacao), color: corDaClasse(estacao.classe_precipitacao) }">
+                  {{ rotuloDaClasse(estacao.classe_precipitacao) }}
                 </span>
               </td>
-              <td class="time-cell hidden sm:table-cell">{{ leitura.data_hora }}</td>
+              <td class="time-cell hidden sm:table-cell">{{ formatarDataHora(estacao.medido_em) }}</td>
             </tr>
           </tbody>
         </table>
@@ -92,81 +87,98 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { nextTick, onMounted, ref } from 'vue';
+import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
-  leituras: Array,
-  estatisticas: Object,
-  uf_selecionada: String,
+  estacoes: { type: Array, default: () => [] },
+  estatisticas: { type: Object, default: () => ({}) },
+  bbox: { type: Object, required: true },
 });
 
-const mapContainer = ref(null);
-let map = null;
+// Mesmas classes da matview gold.inmet_mapa, faixas do LHASA_RIO adaptadas para
+// MG. Se mudarem la, mudam aqui.
+const CORES = {
+  sem_chuva: '#22c55e',
+  muito_fraca: '#3b82f6',
+  fraca: '#06b6d4',
+  moderada: '#eab308',
+  forte: '#f97316',
+  muito_forte: '#ef4444',
+  intensa: '#991b1b',
+  extrema: '#7f1d1d',
+  desconhecido: '#6b7280',
+};
 
-onMounted(() => {
-  nextTick(() => {
-    if (props.leituras) {
-      initMap();
-    }
-  });
-});
+const ROTULOS = {
+  sem_chuva: 'Sem chuva',
+  muito_fraca: 'Muito fraca',
+  fraca: 'Fraca',
+  moderada: 'Moderada',
+  forte: 'Forte',
+  muito_forte: 'Muito forte',
+  intensa: 'Intensa',
+  extrema: 'Extrema',
+  desconhecido: 'Sem leitura',
+};
 
-function initMap() {
-  map = L.map('map', {
-    zoomControl: false,
-    attributionControl: false
-  }).setView([-18.5122, -44.555], 6);
+// A legenda deriva das mesmas faixas, em vez de repetir as cores em markup —
+// era o que permitia a legenda divergir da classificacao sem ninguem notar.
+const legenda = [
+  { classe: 'sem_chuva', cor: CORES.sem_chuva, rotulo: 'Sem chuva (0 mm)' },
+  { classe: 'muito_fraca', cor: CORES.muito_fraca, rotulo: 'Muito fraca (0-5 mm)' },
+  { classe: 'fraca', cor: CORES.fraca, rotulo: 'Fraca (5-15 mm)' },
+  { classe: 'moderada', cor: CORES.moderada, rotulo: 'Moderada (15-35 mm)' },
+  { classe: 'forte', cor: CORES.forte, rotulo: 'Forte (35-60 mm)' },
+  { classe: 'muito_forte', cor: CORES.muito_forte, rotulo: 'Muito forte (60-100 mm)' },
+  { classe: 'intensa', cor: CORES.intensa, rotulo: 'Intensa (100-140 mm)' },
+  { classe: 'extrema', cor: CORES.extrema, rotulo: 'Extrema (> 140 mm)' },
+];
 
-  L.control.zoom({ position: 'topleft' }).addTo(map);
-
-  // Tile Layer (Usando CartoDB Voyager para um look mais limpo, ou OpenStreetMap padrão)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-  }).addTo(map);
-
-  props.leituras.forEach(leitura => {
-    if (leitura.latitude && leitura.longitude) {
-      const color = getMarkerColor(leitura.nivel_color);
-      
-      const marker = L.circleMarker([leitura.latitude, leitura.longitude], {
-        radius: 6,
-        fillColor: color,
-        color: '#1a1d21', // Borda escura para contraste
-        weight: 1,
-        opacity: 1,
-        fillOpacity: 1
-      }).addTo(map);
-
-      marker.bindPopup(`
-        <div style="min-width: 200px; color: #1a1d21;">
-          <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${leitura.nome_estacao}</h4>
-          <p style="margin: 4px 0; color: #6b7280; font-size: 12px;">${leitura.municipio}</p>
-          <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 18px; font-weight: bold; color: ${color};">${leitura.precipitacao?.toFixed(2) ?? '0.00'} mm</span>
-            <span style="background: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px;">${leitura.nivel_label}</span>
-          </div>
-          <p style="margin: 8px 0 0 0; font-size: 11px; color: #9ca3af; text-align: right;">${leitura.data_hora}</p>
-        </div>
-      `);
-    }
-  });
+function corDaClasse(classe) {
+  return CORES[classe] ?? CORES.desconhecido;
 }
 
-function getMarkerColor(nivel) {
-  const colors = {
-    'green': '#22c55e',
-    'blue': '#3b82f6',
-    'cyan': '#06b6d4', // Fraca
-    'yellow': '#eab308',
-    'orange': '#f97316',
-    'red': '#ef4444',
-    'darkred': '#991b1b',
-    'purple': '#7f1d1d' // Extrema
-  };
-  return colors[nivel] || '#6b7280';
+function rotuloDaClasse(classe) {
+  return ROTULOS[classe] ?? ROTULOS.desconhecido;
 }
+
+function formatarMm(valor) {
+  const numero = Number(valor);
+
+  return Number.isFinite(numero) ? `${numero.toFixed(2)} mm` : 'N/A';
+}
+
+function formatarDataHora(valor) {
+  if (!valor) {
+    return '-';
+  }
+
+  const data = new Date(valor);
+
+  return Number.isNaN(data.getTime()) ? String(valor) : data.toLocaleString('pt-BR');
+}
+
+// A pagina traduz estacao -> ponto; a mecanica de Leaflet vive no componente.
+// O popup vai estruturado: quem escapa e o componente, o que importa porque
+// nome de estacao e municipio vem da API do INMET.
+const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
+  id: estacao.id,
+  latitude: estacao.latitude,
+  longitude: estacao.longitude,
+  cor: corDaClasse(estacao.classe_precipitacao),
+  raio: 6,
+  popup: {
+    titulo: estacao.nome_estacao,
+    linhas: [
+      { rotulo: 'Municipio', valor: estacao.municipio },
+      { rotulo: 'Chuva', valor: formatarMm(estacao.precipitacao) },
+      { rotulo: 'Nivel', valor: rotuloDaClasse(estacao.classe_precipitacao) },
+      { rotulo: 'Temperatura', valor: estacao.temperatura !== null ? `${estacao.temperatura} C` : '-' },
+      { rotulo: 'Medido em', valor: formatarDataHora(estacao.medido_em) },
+    ],
+  },
+})));
 </script>
 
 <style scoped>
@@ -245,7 +257,7 @@ function getMarkerColor(nivel) {
 }
 
 
-#map {
+.mapa-area {
   height: 100%;
   width: 100%;
   background: #1a1d21; /* Fallback */

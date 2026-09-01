@@ -21,8 +21,11 @@ readonly class LeituraMeteorologicaDTO
         public ?float $pressao,
         public NivelPrecipitacao $nivelPrecipitacao,
         public string $condicao,
-        public float $latitude,
-        public float $longitude,
+        // Nullable de proposito: a versao anterior tinha `?? 0` na origem, o
+        // que mandava estacao sem coordenada para lat 0 / lon 0 -- o Golfo da
+        // Guine. Ausencia agora e ausencia, e quem consome decide o que fazer.
+        public ?float $latitude,
+        public ?float $longitude,
     ) {
     }
 
@@ -49,8 +52,8 @@ readonly class LeituraMeteorologicaDTO
             pressao: self::parseFloat($data['PRE_INS'] ?? null),
             nivelPrecipitacao: $nivel,
             condicao: self::calculateCondition($data),
-            latitude: (float) ($data['VL_LATITUDE'] ?? $data['latitude'] ?? 0),
-            longitude: (float) ($data['VL_LONGITUDE'] ?? $data['longitude'] ?? 0),
+            latitude: self::parseFloat($data['VL_LATITUDE'] ?? $data['latitude'] ?? null),
+            longitude: self::parseFloat($data['VL_LONGITUDE'] ?? $data['longitude'] ?? null),
         );
     }
 

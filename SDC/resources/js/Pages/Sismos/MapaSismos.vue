@@ -11,7 +11,7 @@
     </div>
 
     <div class="map-wrapper">
-      <div id="map-sismos" ref="mapContainer"></div>
+      <MapaLeaflet :pontos="pontosDoMapa" :bbox="bbox" class="mapa-area" />
 
       <div class="map-overlay stats-overlay">
         <h3 class="overlay-title">Estatisticas</h3>
@@ -48,9 +48,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { nextTick, onMounted, onBeforeUnmount, ref } from 'vue';
+import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   eventos: { type: Array, default: () => [] },
@@ -75,80 +74,32 @@ const legenda = [
   { classe: 'desconhecido', cor: CORES.desconhecido, rotulo: 'Sem magnitude' },
 ];
 
-const mapContainer = ref(null);
-let map = null;
-
-onMounted(() => {
-  nextTick(() => initMap());
-});
-
-onBeforeUnmount(() => {
-  if (map) {
-    map.remove();
-    map = null;
-  }
-});
-
-function initMap() {
-  map = L.map('map-sismos', {
-    zoomControl: false,
-    attributionControl: false,
-  });
-
-  // Enquadra o quadrante de MG que o backend usa para coletar, em vez de um
-  // centro fixo: mapa e coleta ficam coerentes.
-  map.fitBounds([
-    [props.bbox.min_lat, props.bbox.min_lon],
-    [props.bbox.max_lat, props.bbox.max_lon],
-  ]);
-
-  L.control.zoom({ position: 'topleft' }).addTo(map);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-  }).addTo(map);
-
-  props.eventos.forEach((evento) => {
-    const lat = Number(evento.latitude);
-    const lon = Number(evento.longitude);
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      return;
-    }
-
-    const cor = CORES[evento.classe_magnitude] ?? CORES.desconhecido;
-
-    L.circleMarker([lat, lon], {
-      radius: raioPorMagnitude(evento.magnitude),
-      fillColor: cor,
-      color: '#1a1d21',
-      weight: 1,
-      opacity: 1,
-      fillOpacity: 0.85,
-    })
-      .bindPopup(montarPopup(evento))
-      .addTo(map);
-  });
-}
+// A pagina traduz evento -> ponto; toda a mecanica de Leaflet vive no
+// componente. O popup vai estruturado: quem escapa e o componente, porque
+// regiao e autor vem do catalogo externo.
+const pontosDoMapa = computed(() => props.eventos.map((evento) => ({
+  id: evento.id,
+  latitude: evento.latitude,
+  longitude: evento.longitude,
+  cor: CORES[evento.classe_magnitude] ?? CORES.desconhecido,
+  raio: raioPorMagnitude(evento.magnitude),
+  popup: {
+    titulo: evento.regiao ?? 'Regiao nao informada',
+    linhas: [
+      { rotulo: 'Magnitude', valor: `${formatarMagnitude(evento.magnitude)} ${evento.escala_magnitude ?? ''}`.trim() },
+      { rotulo: 'Profundidade', valor: `${evento.profundidade_km ?? '-'} km` },
+      { rotulo: 'Origem (UTC)', valor: formatarDataHora(evento.origem_utc) },
+      { rotulo: 'Fonte', valor: evento.fonte },
+      { rotulo: 'ID', valor: evento.evento_id },
+    ],
+  },
+})));
 
 // Raio proporcional a magnitude, como o CircleMarker do folium nos notebooks.
 function raioPorMagnitude(magnitude) {
   const valor = Number(magnitude);
 
   return Number.isFinite(valor) ? Math.max(4, valor * 2.5) : 4;
-}
-
-function montarPopup(evento) {
-  const linhas = [
-    `<strong>${escapar(evento.regiao ?? 'Regiao nao informada')}</strong>`,
-    `Magnitude: ${formatarMagnitude(evento.magnitude)} ${escapar(evento.escala_magnitude ?? '')}`,
-    `Profundidade: ${evento.profundidade_km ?? '-'} km`,
-    `Origem (UTC): ${formatarDataHora(evento.origem_utc)}`,
-    `Fonte: ${escapar(evento.fonte)}`,
-    `ID: ${escapar(evento.evento_id)}`,
-  ];
-
-  return linhas.join('<br>');
 }
 
 function formatarMagnitude(valor) {
@@ -167,14 +118,8 @@ function formatarDataHora(valor) {
   return Number.isNaN(data.getTime()) ? String(valor) : data.toLocaleString('pt-BR');
 }
 
-// O popup monta HTML, e regiao/autor vem de fonte externa: escapar evita que
-// conteudo do catalogo seja interpretado como marcacao.
-function escapar(texto) {
-  const div = document.createElement('div');
-  div.textContent = String(texto ?? '');
-
-  return div.innerHTML;
-}
+// O escapar() saiu daqui: quem monta o HTML do popup agora e o MapaLeaflet, e a
+// protecao vive num lugar so, valendo tambem para a pagina do Inmet.
 </script>
 
 <style scoped>
@@ -227,7 +172,13 @@ function escapar(texto) {
   box-sizing: border-box;
 }
 
-#map-sismos {
+/*
+ * O seletor mudou de #map-sismos para .mapa-area porque o mapa agora e o
+ * componente MapaLeaflet, que gera id proprio por instancia. A altura de 100%
+ * e a do wrapper: e o .map-wrapper que carrega os 600px e que a media query
+ * encolhe no telefone.
+ */
+.mapa-area {
   height: 100%;
   width: 100%;
   background: #1a1d21; /* fallback enquanto os tiles nao chegam */

@@ -7,7 +7,6 @@ namespace App\Modules\Medalhao\Jobs;
 use App\Modules\Medalhao\DTOs\PayloadBruto;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Medalhao\Registry\IngestorRegistry;
-use App\Modules\Sismos\Jobs\AtualizarGoldSismosJob;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -50,8 +49,12 @@ class NormalizarSilverJob implements ShouldQueue
             'registros' => $total,
         ]);
 
-        if ($grupo === 'sismos') {
-            AtualizarGoldSismosJob::dispatch();
+        // O job de refresh vem de config, nao de um if por dominio: fonte nova
+        // se registra sem editar o kernel. Grupo sem entrada nao despacha nada.
+        $jobGold = config("medalhao.refresh_gold.{$grupo}");
+
+        if ($jobGold !== null) {
+            $jobGold::dispatch();
         }
     }
 
