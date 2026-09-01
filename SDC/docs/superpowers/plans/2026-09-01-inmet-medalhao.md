@@ -1261,8 +1261,10 @@ final class InmetApiClientTest extends TestCase
     {
         $fonte = file_get_contents(app_path('Modules/Inmet/Services/InmetApiClient.php'));
 
-        $this->assertStringNotContainsString('Cc2XHVRlpjTR7FzeuNvhAM6Xdz70He10', $fonte);
+        // Nao escrever o token literal aqui: este arquivo e versionado, e
+        // repetir a credencial para provar que ela saiu seria autodestrutivo.
         $this->assertStringNotContainsString('API_TOKEN', $fonte);
+        $this->assertDoesNotMatchRegularExpression('/const\s+\w*TOKEN\w*\s*=\s*[\'"]/', $fonte);
     }
 }
 ```
@@ -2498,7 +2500,9 @@ Expected: `medalhao` segue somente nos tres processos dedicados; a segunda busca
 - [ ] **Step 8: O token nao esta versionado**
 
 ```bash
-git grep -n "Cc2XHVRlpjTR7FzeuNvhAM6Xdz70He10" -- . || echo "ok: token ausente do versionado"
+# Le o token do .env (nao versionado) e procura por ele no que E versionado.
+git grep -n -F "$(grep '^MEDALHAO_INMET_TOKEN=' SDC/.env | cut -d= -f2-)" -- . \
+  || echo "ok: token ausente do versionado"
 ```
 
 Expected: `ok: token ausente do versionado`.
