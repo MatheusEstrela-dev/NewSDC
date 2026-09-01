@@ -98,7 +98,7 @@ function handleClose() {
 
 <template>
   <Modal :show="show" max-width="5xl" @close="handleClose">
-    <div v-if="processo" class="flex flex-col max-h-[90vh] overflow-y-auto scrollbar-hide">
+    <div v-if="processo" class="flex max-h-full min-h-0 flex-col overflow-hidden scrollbar-hide">
       <!-- Header -->
       <div class="bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 px-4 md:px-6 py-3 md:py-4 border-b border-slate-200 dark:border-slate-700/50">
         <div class="flex items-center justify-between">
@@ -197,7 +197,7 @@ function handleClose() {
       </div>
 
       <!-- Tab Content -->
-      <div class="flex-1 overflow-y-auto overscroll-contain p-4 md:p-6 bg-slate-50 dark:bg-slate-900/50 scrollbar-hide">
+      <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 pb-10 md:p-6 md:pb-12 bg-slate-50 dark:bg-slate-900/50 scrollbar-hide">
         <!-- Loading Skeleton -->
         <div v-if="loading" class="space-y-4">
           <div class="animate-pulse space-y-4">

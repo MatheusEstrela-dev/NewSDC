@@ -26,7 +26,7 @@
           </button>
         </div>
 
-        <div class="mt-4 flex items-center gap-6 border-b border-slate-700/40">
+        <div class="tira-rolavel mt-4 items-center gap-4 border-b border-slate-700/40 sm:gap-6">
           <button
             v-for="aba in ABAS"
             :key="aba.chave"

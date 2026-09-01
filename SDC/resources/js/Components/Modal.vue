@@ -58,6 +58,19 @@ const maxWidthClass = computed(() => {
 <template>
     <Teleport to="body">
         <Transition leave-active-class="duration-200">
+            <!--
+              O painel e limitado a ALTURA QUE SOBRA, nao a uma fracao da tela
+              inteira. Este container empurra 64px no topo (`pt-16`, para nao
+              cobrir a TopBar) e reserva 16px embaixo: 80px = 5rem. Um filho
+              pedindo `max-h-[90vh]` media 702px numa tela de 780 e terminava
+              em 766 + 16 de padding = 782 -- 26px fora da tela, alcancaveis
+              so rolando ESTE container, um segundo contexto de rolagem. No
+              telefone isso se sente como "a rolagem esta cortada": o conteudo
+              chega ao fim e a borda do painel continua escondida.
+
+              `dvh` e nao `vh` de proposito: no celular a barra de endereco
+              entra e sai, e `vh` congela na altura maior.
+            -->
             <div 
                 v-show="show" 
                 class="fixed inset-0 overflow-y-auto overscroll-contain scrollbar-hide px-3 py-4 pt-16 sm:px-0 sm:pt-20" 
@@ -87,7 +100,7 @@ const maxWidthClass = computed(() => {
                 >
                     <div
                         v-show="show"
-                        class="relative mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto z-[10000]"
+                        class="relative flex max-h-[calc(100dvh-5rem)] flex-col overflow-y-auto overflow-x-hidden overscroll-contain rounded-lg bg-white shadow-xl transition-all transform sm:mx-auto sm:max-h-[calc(100dvh-6rem)] sm:w-full dark:bg-gray-800 z-[10000]"
                         style="z-index: 10000 !important;"
                         :class="maxWidthClass"
                     >

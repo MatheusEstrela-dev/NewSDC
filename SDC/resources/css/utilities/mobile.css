@@ -558,3 +558,40 @@
 .virtual-list-item {
   contain: layout style;
 }
+
+/*
+ * Tira que rola de lado sem barra visivel.
+ *
+ * Estava duplicado em quatro componentes, cada um no proprio <style scoped> --
+ * e um quinto (as abas do historico do beneficiario) simplesmente nao rolava,
+ * com a ultima aba cortada e inalcançavel. Como utilitario global, a tira nova
+ * so precisa de `overflow-x-auto scrollbar-hide`.
+ *
+ * Acompanha `tira-rolavel`, que embala as tres partes da regra 2 de
+ * responsividade: o container contem o transbordo e os itens nao encolhem.
+ */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.tira-rolavel {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tira-rolavel::-webkit-scrollbar {
+  display: none;
+}
+
+.tira-rolavel > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
