@@ -38,13 +38,19 @@ return new class extends Migration
                 l.precipitacao,
                 l.velocidade_vento,
                 l.pressao,
+                -- Faixas do sistema LHASA_RIO adaptadas para MG, as mesmas que
+                -- a legenda da pagina ja documentava. Classificar no banco (e
+                -- nao no PHP) e o que mantem a entrega sem agregacao.
                 CASE
                     WHEN l.precipitacao IS NULL THEN 'desconhecido'
-                    WHEN l.precipitacao =  0    THEN 'sem_chuva'
-                    WHEN l.precipitacao <  5    THEN 'leve'
-                    WHEN l.precipitacao < 25    THEN 'moderada'
-                    WHEN l.precipitacao < 50    THEN 'forte'
-                    ELSE 'muito_forte'
+                    WHEN l.precipitacao =   0   THEN 'sem_chuva'
+                    WHEN l.precipitacao <   5   THEN 'muito_fraca'
+                    WHEN l.precipitacao <  15   THEN 'fraca'
+                    WHEN l.precipitacao <  35   THEN 'moderada'
+                    WHEN l.precipitacao <  60   THEN 'forte'
+                    WHEN l.precipitacao < 100   THEN 'muito_forte'
+                    WHEN l.precipitacao < 140   THEN 'intensa'
+                    ELSE 'extrema'
                 END AS classe_precipitacao
             FROM silver.leituras_inmet l
             JOIN estacoes_meteorologicas e ON e.codigo = l.codigo_estacao
