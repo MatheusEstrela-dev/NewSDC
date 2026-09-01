@@ -97,7 +97,7 @@ Leituras:    GET https://apitempo.inmet.gov.br/token/estacao/{inicio}/{fim}/{cod
 **Interfaces:**
 - Produces: chave de config `medalhao.refresh_gold` mapeando `string $grupo => class-string`. As Tasks 4 e 8 dependem dela.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -173,12 +173,12 @@ final class RefreshGoldPorConfigTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=RefreshGoldPorConfigTest`
 Expected: FAIL — `test_grupo_sem_entrada_de_config_nao_despacha_nada` e `test_o_kernel_nao_cita_nome_de_grupo_no_codigo` falham, porque o `if` hardcoded ignora config.
 
-- [ ] **Step 3: Adicionar `refresh_gold` ao config**
+- [x] **Step 3: Adicionar `refresh_gold` ao config**
 
 Em `SDC/config/medalhao.php`, logo abaixo do bloco `persistidores`:
 
@@ -191,7 +191,7 @@ Em `SDC/config/medalhao.php`, logo abaixo do bloco `persistidores`:
     ],
 ```
 
-- [ ] **Step 4: Trocar o `if` pelo despacho por config**
+- [x] **Step 4: Trocar o `if` pelo despacho por config**
 
 Em `NormalizarSilverJob::handle`, substituir:
 
@@ -213,12 +213,12 @@ por:
 
 E remover o `use App\Modules\Sismos\Jobs\AtualizarGoldSismosJob;` do topo do arquivo — o kernel deixa de importar dominio.
 
-- [ ] **Step 5: Rodar e ver passar**
+- [x] **Step 5: Rodar e ver passar**
 
 Run: `art php vendor/bin/phpunit --filter="RefreshGoldPorConfigTest|Medalhao|Sismos"`
 Expected: PASS. A suite de Medalhao/Sismos da Fase 1 continua verde.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add SDC/config/medalhao.php SDC/app/Modules/Medalhao/Jobs/NormalizarSilverJob.php
@@ -238,7 +238,7 @@ git commit -m "♻️ refactor(medalhao): refresh do Gold por config, sem domini
 **Interfaces:**
 - Produces: `EstacaoDTO` readonly com `codigo, nome, uf, latitude, longitude, altitude, situacao, tipo` e `EstacaoDTO::fromInventarioArray(array): ?self`. Retorna `null` quando falta coordenada. Consumido pelas Tasks 3 e 7.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -296,12 +296,12 @@ final class EstacaoDTOTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=EstacaoDTOTest`
 Expected: FAIL — `Class "App\Modules\Inmet\DTOs\EstacaoDTO" not found`.
 
-- [ ] **Step 3: Criar o DTO**
+- [x] **Step 3: Criar o DTO**
 
 `SDC/app/Modules/Inmet/DTOs/EstacaoDTO.php`:
 
@@ -365,12 +365,12 @@ final readonly class EstacaoDTO
 }
 ```
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 Run: `art php vendor/bin/phpunit --filter=EstacaoDTOTest`
 Expected: PASS.
 
-- [ ] **Step 5: Criar a migration da coluna geografica**
+- [x] **Step 5: Criar a migration da coluna geografica**
 
 `SDC/database/migrations/2026_09_01_000001_add_geom_to_estacoes_meteorologicas.php`:
 
@@ -411,11 +411,11 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 6: Adicionar `situacao` ao fillable do model**
+- [x] **Step 6: Adicionar `situacao` ao fillable do model**
 
 Em `SDC/app/Modules/Inmet/Models/EstacaoMeteorologica.php`, incluir `'situacao'` no array `$fillable`. Nao adicionar `geom`: ela e escrita por SQL cru no repositorio, porque exige `ST_SetSRID(ST_MakePoint(...))`.
 
-- [ ] **Step 7: Rodar a migration e conferir**
+- [x] **Step 7: Rodar a migration e conferir**
 
 ```bash
 art php artisan migrate --force
@@ -424,7 +424,7 @@ docker exec newsdc_dev_db psql -U sdc -d sdc_medalhao -c "\d estacoes_meteorolog
 
 Expected: as duas colunas aparecem, `geom` como `geometry(Point,4326)`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add SDC/database/migrations/2026_09_01_000001_add_geom_to_estacoes_meteorologicas.php \
@@ -447,7 +447,7 @@ git commit -m "🗃️ db(inmet): dimensao de estacao ganha geometria PostGIS"
 - Consumes: `EstacaoDTO` (Task 2).
 - Produces: `InmetRepository::upsertLote(iterable $dtos, ?int $ingestaoId = null): int`, contrato que o kernel exige do persistidor. Aceita mistura de `EstacaoDTO` e `LeituraMeteorologicaDTO` no mesmo iteravel. Tambem `InmetRepository::totalLeituras(): int`.
 
-- [ ] **Step 1: Tornar a coordenada do DTO de leitura nullable**
+- [x] **Step 1: Tornar a coordenada do DTO de leitura nullable**
 
 Em `LeituraMeteorologicaDTO`, trocar as duas propriedades e o construtor:
 
@@ -465,7 +465,7 @@ E em `fromInmetArray`, trocar o `?? 0` por parse honesto:
 
 O `?? 0` mandava estacao sem coordenada para lat 0, lon 0.
 
-- [ ] **Step 2: Escrever o teste que falha**
+- [x] **Step 2: Escrever o teste que falha**
 
 ```php
 <?php
@@ -594,12 +594,12 @@ final class InmetRepositoryTest extends TestCase
 }
 ```
 
-- [ ] **Step 3: Rodar e ver falhar**
+- [x] **Step 3: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetRepositoryTest`
 Expected: FAIL — `relation "silver.leituras_inmet" does not exist`.
 
-- [ ] **Step 4: Criar a migration do fato**
+- [x] **Step 4: Criar a migration do fato**
 
 `SDC/database/migrations/2026_09_01_000002_create_silver_leituras_inmet.php`:
 
@@ -655,7 +655,7 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 5: Criar o repositorio**
+- [x] **Step 5: Criar o repositorio**
 
 `SDC/app/Modules/Inmet/Repositories/InmetRepository.php`:
 
@@ -846,7 +846,7 @@ final class InmetRepository
 }
 ```
 
-- [ ] **Step 6: Rodar a migration e os testes**
+- [x] **Step 6: Rodar a migration e os testes**
 
 ```bash
 art php artisan migrate --force
@@ -855,7 +855,7 @@ art php vendor/bin/phpunit --filter=InmetRepositoryTest
 
 Expected: PASS, 4 testes.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add SDC/database/migrations/2026_09_01_000002_create_silver_leituras_inmet.php \
@@ -879,7 +879,7 @@ git commit -m "🗃️ db(inmet): camada silver de leituras com upsert idempoten
 - Consumes: `silver.leituras_inmet` e `estacoes_meteorologicas.geom` (Tasks 2 e 3).
 - Produces: `InmetRepository::mapa(): Collection` e `InmetRepository::estatisticas(): array{total_estacoes:int, precipitacao_media:float, precipitacao_maxima:float, estacoes_com_chuva:int, temperatura_media:float, ultima_atualizacao:?string}`. Consumido pela Task 9.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -971,12 +971,12 @@ final class GoldInmetTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=GoldInmetTest`
 Expected: FAIL — `Class "App\Modules\Inmet\Jobs\AtualizarGoldInmetJob" not found`.
 
-- [ ] **Step 3: Criar a migration das matviews**
+- [x] **Step 3: Criar a migration das matviews**
 
 `SDC/database/migrations/2026_09_01_000003_create_gold_inmet_views.php`:
 
@@ -1062,7 +1062,7 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 4: Criar o job de refresh**
+- [x] **Step 4: Criar o job de refresh**
 
 `SDC/app/Modules/Inmet/Jobs/AtualizarGoldInmetJob.php`:
 
@@ -1111,7 +1111,7 @@ class AtualizarGoldInmetJob implements ShouldQueue
 }
 ```
 
-- [ ] **Step 5: Adicionar a leitura do Gold ao repositorio**
+- [x] **Step 5: Adicionar a leitura do Gold ao repositorio**
 
 Acrescentar a `InmetRepository`, antes de `upsertLote`:
 
@@ -1150,7 +1150,7 @@ Acrescentar a `InmetRepository`, antes de `upsertLote`:
     }
 ```
 
-- [ ] **Step 6: Registrar o job no `refresh_gold`**
+- [x] **Step 6: Registrar o job no `refresh_gold`**
 
 Em `SDC/config/medalhao.php`, no array `refresh_gold` criado na Task 1:
 
@@ -1158,7 +1158,7 @@ Em `SDC/config/medalhao.php`, no array `refresh_gold` criado na Task 1:
         'inmet' => \App\Modules\Inmet\Jobs\AtualizarGoldInmetJob::class,
 ```
 
-- [ ] **Step 7: Rodar a migration e os testes**
+- [x] **Step 7: Rodar a migration e os testes**
 
 ```bash
 art php artisan migrate --force
@@ -1167,7 +1167,7 @@ art php vendor/bin/phpunit --filter=GoldInmetTest
 
 Expected: PASS, 3 testes.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add SDC/database/migrations/2026_09_01_000003_create_gold_inmet_views.php \
@@ -1190,7 +1190,7 @@ git commit -m "🗃️ db(inmet): matviews gold do mapa e estatisticas"
 **Interfaces:**
 - Produces: `InmetApiClient::inventario(): array` e `InmetApiClient::leiturasDaEstacao(string $codigo, string $dia): array`, mais `InmetApiClient::leiturasEmLote(array $codigos, string $dia): array{leituras: array, falhas: array}`. Consumido pela Task 6.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -1269,12 +1269,12 @@ final class InmetApiClientTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetApiClientTest`
 Expected: FAIL — os quatro testes falham: nao ha User-Agent, nao existe `leiturasDaEstacao`, e `API_TOKEN` esta no fonte.
 
-- [ ] **Step 3: Adicionar o bloco `inmet` ao config**
+- [x] **Step 3: Adicionar o bloco `inmet` ao config**
 
 Em `SDC/config/medalhao.php`, ao lado do bloco `sismos`:
 
@@ -1305,13 +1305,13 @@ Em `SDC/config/medalhao.php`, ao lado do bloco `sismos`:
     ],
 ```
 
-- [ ] **Step 4: Adicionar a variavel ao `.env.example`**
+- [x] **Step 4: Adicionar a variavel ao `.env.example`**
 
 ```
 MEDALHAO_INMET_TOKEN=
 ```
 
-- [ ] **Step 5: Reescrever o cliente**
+- [x] **Step 5: Reescrever o cliente**
 
 Substituir todo o conteudo de `SDC/app/Modules/Inmet/Services/InmetApiClient.php`:
 
@@ -1441,12 +1441,12 @@ class InmetApiClient
 }
 ```
 
-- [ ] **Step 6: Rodar e ver passar**
+- [x] **Step 6: Rodar e ver passar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetApiClientTest`
 Expected: PASS, 4 testes.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add SDC/app/Modules/Inmet/Services/InmetApiClient.php SDC/config/medalhao.php SDC/.env.example
@@ -1467,7 +1467,7 @@ git commit -m "🐛 fix(inmet): URL da API estava errada e faltava User-Agent"
 - Consumes: `InmetApiClient` (Task 5).
 - Produces: `InmetApiIngestor` implementando `FonteIngestor` com `chave() = 'inmet-api'`, `grupo() = 'inmet'`, `formato() = 'inmet-json'`. O `PayloadBruto::$conteudo` e um JSON `{"dia": "...", "estacoes": [...], "leituras": [...]}`. Consumido pela Task 7.
 
-- [ ] **Step 1: Gravar as fixtures reais**
+- [x] **Step 1: Gravar as fixtures reais**
 
 ```bash
 mkdir -p SDC/tests/Fixtures/Inmet
@@ -1484,7 +1484,7 @@ curl -s -A "$UA" -o SDC/tests/Fixtures/Inmet/leituras-a521.json \
 
 Confira que `inventario-mg.json` tem 5 registros com `SG_ESTADO: "MG"` e que `leituras-a521.json` tem 24 entradas com `HR_MEDICAO` de `"0000"` a `"2300"`.
 
-- [ ] **Step 2: Escrever o teste que falha**
+- [x] **Step 2: Escrever o teste que falha**
 
 ```php
 <?php
@@ -1574,12 +1574,12 @@ final class InmetApiIngestorTest extends TestCase
 }
 ```
 
-- [ ] **Step 3: Rodar e ver falhar**
+- [x] **Step 3: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetApiIngestorTest`
 Expected: FAIL — `Class "App\Modules\Inmet\Ingestores\InmetApiIngestor" not found`.
 
-- [ ] **Step 4: Criar o ingestor**
+- [x] **Step 4: Criar o ingestor**
 
 `SDC/app/Modules/Inmet/Ingestores/InmetApiIngestor.php`:
 
@@ -1672,12 +1672,12 @@ final class InmetApiIngestor implements FonteIngestor
 }
 ```
 
-- [ ] **Step 5: Rodar e ver passar**
+- [x] **Step 5: Rodar e ver passar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetApiIngestorTest`
 Expected: PASS, 4 testes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add SDC/app/Modules/Inmet/Ingestores/InmetApiIngestor.php
@@ -1696,7 +1696,7 @@ git commit -m "✨ feat(inmet): ingestor com coleta concorrente das estacoes de 
 - Consumes: `PayloadBruto` produzido pela Task 6; `EstacaoDTO` (Task 2); `LeituraMeteorologicaDTO` (Task 3).
 - Produces: `InmetJsonNormalizador::normalizar(PayloadBruto): iterable` — Generator que emite `EstacaoDTO` primeiro e `LeituraMeteorologicaDTO` depois. A ordem importa: a dimensao precisa existir antes do fato, por causa do join da matview.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -1802,12 +1802,12 @@ final class InmetJsonNormalizadorTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetJsonNormalizadorTest`
 Expected: FAIL — classe inexistente.
 
-- [ ] **Step 3: Criar o normalizador**
+- [x] **Step 3: Criar o normalizador**
 
 `SDC/app/Modules/Inmet/Normalizadores/InmetJsonNormalizador.php`:
 
@@ -1902,12 +1902,12 @@ final class InmetJsonNormalizador implements NormalizadorSilver
 }
 ```
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetJsonNormalizadorTest`
 Expected: PASS, 5 testes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add SDC/app/Modules/Inmet/Normalizadores/InmetJsonNormalizador.php
@@ -1928,7 +1928,7 @@ git commit -m "✨ feat(inmet): normalizador descartando hora sem medicao"
 - Consumes: tudo das Tasks 2 a 7.
 - Produces: fonte `inmet-api` registrada no `IngestorRegistry`; grupo `inmet` resolvivel por `medalhao:ingerir inmet`.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -1995,12 +1995,12 @@ final class PipelineInmetTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=PipelineInmetTest`
 Expected: FAIL — a fonte nao esta registrada e nao ha persistidor para o grupo.
 
-- [ ] **Step 3: Registrar a fonte no provider**
+- [x] **Step 3: Registrar a fonte no provider**
 
 Em `SDC/app/Modules/Inmet/InmetServiceProvider.php`, acrescentar o `boot`
 (ou o corpo, se ele ja existir):
@@ -2025,7 +2025,7 @@ Em `SDC/app/Modules/Inmet/InmetServiceProvider.php`, acrescentar o `boot`
 
 Se o provider ja tiver `register`/`boot`, some o conteudo em vez de substituir. Nao remover binding existente.
 
-- [ ] **Step 4: Configurar o persistidor do grupo**
+- [x] **Step 4: Configurar o persistidor do grupo**
 
 Em `SDC/config/medalhao.php`, no array `persistidores`:
 
@@ -2033,7 +2033,7 @@ Em `SDC/config/medalhao.php`, no array `persistidores`:
         'inmet' => \App\Modules\Inmet\Repositories\InmetRepository::class,
 ```
 
-- [ ] **Step 5: Agendar a coleta**
+- [x] **Step 5: Agendar a coleta**
 
 Em `SDC/routes/console.php`, ao lado do agendamento dos sismos:
 
@@ -2046,12 +2046,12 @@ Schedule::command('medalhao:ingerir inmet')
     ->runInBackground();
 ```
 
-- [ ] **Step 6: Rodar e ver passar**
+- [x] **Step 6: Rodar e ver passar**
 
 Run: `art php vendor/bin/phpunit --filter="PipelineInmetTest|Inmet|Medalhao|Sismos"`
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add SDC/app/Modules/Inmet/InmetServiceProvider.php SDC/config/medalhao.php SDC/routes/console.php
@@ -2071,7 +2071,7 @@ git commit -m "✨ feat(inmet): registro da fonte, persistidor e agendamento hor
 - Consumes: `InmetRepository::mapa()` e `::estatisticas()` (Task 4).
 - Produces: pagina Inertia `Inmet/MapaInmet` com props `estacoes`, `estatisticas`, `bbox`.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -2160,12 +2160,12 @@ final class InmetIndexControllerTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetIndexControllerTest`
 Expected: FAIL — o controller ainda usa `InmetService` e a prop chama-se `leituras`.
 
-- [ ] **Step 3: Reescrever o controller**
+- [x] **Step 3: Reescrever o controller**
 
 ```php
 <?php
@@ -2200,7 +2200,7 @@ class InmetIndexController extends Controller
 }
 ```
 
-- [ ] **Step 4: Limpar o `InmetService`**
+- [x] **Step 4: Limpar o `InmetService`**
 
 Remover de `InmetService`: `getEstatisticas`, `findAllEstacoes`, `findEstacaoByCodigo`, `findEstacoesByUf`, `createEstacao`, `updateEstacao`, `deleteEstacao` — nenhum tem chamador. Se apos a remocao a classe ficar sem metodo algum, apague o arquivo e o `use` correspondente onde houver.
 
@@ -2212,12 +2212,12 @@ grep -rn "getEstatisticas\|findAllEstacoes\|findEstacaoByCodigo\|findEstacoesByU
 
 Expected: nenhuma ocorrencia fora do proprio `InmetService`.
 
-- [ ] **Step 5: Rodar e ver passar**
+- [x] **Step 5: Rodar e ver passar**
 
 Run: `art php vendor/bin/phpunit --filter=InmetIndexControllerTest`
 Expected: PASS, 4 testes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add SDC/app/Modules/Inmet/Controllers/InmetIndexController.php SDC/app/Modules/Inmet/Services/InmetService.php
@@ -2236,7 +2236,7 @@ git commit -m "♻️ refactor(inmet): entrega le apenas a camada gold"
 **Interfaces:**
 - Produces: componente `MapaLeaflet` com props `pontos` (array de `{ id, latitude, longitude, cor, raio, popup }`), `centro` (`[lat, lon]`), `zoom` (number), `bbox` (objeto opcional) e slot `legenda`.
 
-- [ ] **Step 1: Criar o componente**
+- [x] **Step 1: Criar o componente**
 
 `SDC/resources/js/Components/Mapa/MapaLeaflet.vue`:
 
@@ -2332,12 +2332,12 @@ watch(() => props.pontos, desenhar, { deep: true });
 </script>
 ```
 
-- [ ] **Step 2: Conferir que o build passa**
+- [x] **Step 2: Conferir que o build passa**
 
 Run: `cd SDC && npm run build`
 Expected: build sem erro. Se `npm` nao estiver disponivel no host, rode dentro do container `newsdc_dev_app`.
 
-- [ ] **Step 3: Trocar a pagina de sismos para o componente**
+- [x] **Step 3: Trocar a pagina de sismos para o componente**
 
 Em `MapaSismos.vue`: remover os imports de `leaflet` e `leaflet/dist/leaflet.css`, remover o `onMounted`/`onBeforeUnmount` que montam o mapa, remover a `div#map-sismos`, e usar:
 
@@ -2376,7 +2376,7 @@ const pontosDoMapa = computed(() => props.eventos.map((e) => ({
 })));
 ```
 
-- [ ] **Step 4: Trocar a pagina do Inmet para o componente**
+- [x] **Step 4: Trocar a pagina do Inmet para o componente**
 
 Em `MapaInmet.vue`: mesma remocao de imports e de `onMounted`, e a prop passa a ser `estacoes` em vez de `leituras`:
 
@@ -2404,7 +2404,7 @@ const pontosDoMapa = computed(() => props.estacoes.map((e) => ({
 
 Ajustar tambem o `defineProps` para `estacoes`, `estatisticas` e `bbox`, e os cartoes de estatistica para as chaves novas (`total_estacoes`, `precipitacao_media`, `precipitacao_maxima`, `estacoes_com_chuva`, `temperatura_media`).
 
-- [ ] **Step 5: Conferir que nenhuma pagina instancia Leaflet direto**
+- [x] **Step 5: Conferir que nenhuma pagina instancia Leaflet direto**
 
 ```bash
 grep -rn "from 'leaflet'" SDC/resources/js/Pages/
@@ -2412,7 +2412,7 @@ grep -rn "from 'leaflet'" SDC/resources/js/Pages/
 
 Expected: nenhuma ocorrencia. Somente `Components/Mapa/MapaLeaflet.vue` importa Leaflet.
 
-- [ ] **Step 6: Build e commit**
+- [x] **Step 6: Build e commit**
 
 ```bash
 cd SDC && npm run build && cd ..
@@ -2429,12 +2429,12 @@ git commit -m "♻️ refactor(mapa): Leaflet num componente unico para Inmet e 
 **Files:**
 - Nenhum arquivo novo; validacao dos criterios da secao 6 do spec.
 
-- [ ] **Step 1: Suite completa**
+- [x] **Step 1: Suite completa**
 
 Run: `art php vendor/bin/phpunit`
 Expected: nenhuma falha nova em Inmet, Medalhao ou Sismos. Sobre banco limpo, testes que exigem dado semeado falham por falta de seed — compare com o baseline antes de tratar como regressao.
 
-- [ ] **Step 2: Migrations do zero**
+- [x] **Step 2: Migrations do zero**
 
 ```bash
 art php artisan migrate:fresh --force
@@ -2445,7 +2445,7 @@ docker exec newsdc_dev_db psql -U sdc -d sdc_medalhao \
 
 Expected: `gold.inmet_estatisticas`, `gold.inmet_mapa`, `gold.sismos_estatisticas`, `gold.sismos_mapa`; `silver.leituras_inmet` e `silver.sismos`.
 
-- [ ] **Step 3: Ciclo real de ingestao**
+- [x] **Step 3: Ciclo real de ingestao**
 
 ```bash
 # A fila do Redis sobrevive entre execucoes e pode replayar job antigo,
@@ -2465,12 +2465,12 @@ docker exec newsdc_dev_db psql -U sdc -d sdc_medalhao -c "
 
 Expected: bronze 1; dimensao ~61; silver bem maior que zero; gold igual ao numero de estacoes com leitura.
 
-- [ ] **Step 4: Idempotencia**
+- [x] **Step 4: Idempotencia**
 
 Rode o Step 3 de novo, sem limpar o Redis.
 Expected: a contagem de `silver` **nao** aumenta em multiplo (o upsert por `(codigo_estacao, medido_em)` reaproveita as linhas do mesmo dia); `dimensao` fica igual.
 
-- [ ] **Step 5: Geometria confere com a origem**
+- [x] **Step 5: Geometria confere com a origem**
 
 ```bash
 docker exec newsdc_dev_db psql -U sdc -d sdc_medalhao -c "
@@ -2479,7 +2479,7 @@ docker exec newsdc_dev_db psql -U sdc -d sdc_medalhao -c "
 
 Expected: `lat` ~ -19.88388888 e `lon` ~ -43.96944443, batendo com `VL_LATITUDE`/`VL_LONGITUDE` do inventario.
 
-- [ ] **Step 6: Nenhuma estacao no Golfo da Guine**
+- [x] **Step 6: Nenhuma estacao no Golfo da Guine**
 
 ```bash
 docker exec newsdc_dev_db psql -U sdc -d sdc_medalhao -c "
@@ -2488,7 +2488,7 @@ docker exec newsdc_dev_db psql -U sdc -d sdc_medalhao -c "
 
 Expected: 0.
 
-- [ ] **Step 7: Isolamento da fila e ausencia de dominio no kernel**
+- [x] **Step 7: Isolamento da fila e ausencia de dominio no kernel**
 
 ```bash
 grep -rn "queue:work" SDC/docker/ | grep -c medalhao
@@ -2497,7 +2497,7 @@ grep -n "'sismos'\|'inmet'" SDC/app/Modules/Medalhao/Jobs/NormalizarSilverJob.ph
 
 Expected: `medalhao` segue somente nos tres processos dedicados; a segunda busca nao retorna nada.
 
-- [ ] **Step 8: O token nao esta versionado**
+- [x] **Step 8: O token nao esta versionado**
 
 ```bash
 # Le o token do .env (nao versionado) e procura por ele no que E versionado.
@@ -2507,13 +2507,13 @@ git grep -n -F "$(grep '^MEDALHAO_INMET_TOKEN=' SDC/.env | cut -d= -f2-)" -- . \
 
 Expected: `ok: token ausente do versionado`.
 
-- [ ] **Step 9: Conferencia contra os criterios do spec**
+- [x] **Step 9: Conferencia contra os criterios do spec**
 
 Percorra os dez criterios da secao 6 de
 `SDC/docs/superpowers/specs/2026-09-01-inmet-medalhao-design.md` e marque cada um.
 Qualquer um que nao passe vira correcao antes de considerar a fase concluida.
 
-- [ ] **Step 10: Commit final**
+- [x] **Step 10: Commit final**
 
 ```bash
 git add SDC/docs/superpowers/plans/2026-09-01-inmet-medalhao.md
@@ -2544,3 +2544,71 @@ silenciosamente como antes.
 com janelas e QC (Fase 4), superficie interpolada (Fase 5), ingestao CEMADEN
 SALVAR (Fase 2), pagina unica com camadas ligaveis, retencao de Bronze por fonte,
 e estacoes convencionais (`/estacoes/M`).
+
+
+---
+
+## Resultado da execucao (2026-09-01)
+
+Todas as 11 tasks entregues. As tasks 5 e 9 foram commitadas juntas: remover
+`getLeiturasRecentes` do cliente quebra o unico consumidor dele, e separar
+deixaria `/inmet` respondendo 500 entre um commit e outro. O plano nao previu
+esse acoplamento.
+
+### Coleta real contra a API do INMET
+
+| Camada | Resultado |
+| --- | --- |
+| Bronze | 1 payload consolidado por ciclo |
+| Dimensao | **61 estacoes** operantes de MG, todas com geometria |
+| Silver | **999 leituras** |
+| Gold | 59 no mapa (2 estacoes sem leitura no dia) |
+| Estacoes em (0,0) ou sem geom | **0** |
+
+Idempotencia: segunda coleta registrou "conteudo identico ao anterior, ignorado"
+e as quatro contagens ficaram identicas.
+
+**Correcao de uma medicao do spec.** A secao 3.2 dizia que as 68 chamadas levariam
+"poucos segundos", extrapolando de 12 concorrentes em menos de 1s. A coleta fria
+real levou **1min49s**; a segunda, com a API ja quente, levou 7s. A sondagem
+original pegou resposta cacheada. Continua dentro dos 300s do worker, mas com
+margem bem menor do que o spec afirmava.
+
+### O municipio resolvido por coordenada se provou em dado real
+
+`A509 MONTE VERDE` resolveu para **Camanducaia** — Monte Verde e distrito, nao
+municipio. Gravar `DC_NOME` teria posto "Monte Verde" no campo de municipio.
+
+A limitacao registrada tambem apareceu: `CONCEICAO DAS ALAGOAS` resolveu para
+**Agua Comprida**, municipio vizinho. E o esperado de centroide sem contencao por
+poligono, e esta documentado na secao 3.3 do spec.
+
+### Faixas de precipitacao corrigidas
+
+O plano inventara 6 faixas. A legenda da pagina ja documentava as **8 do
+LHASA_RIO adaptadas para MG** — conhecimento de dominio que prevalece. A matview
+foi alinhada a elas (migration ajustada no lugar, regra de ouro 9) e a legenda
+passou a derivar das mesmas constantes, em vez de repetir cores em markup.
+
+### Achados que o TDD produziu
+
+1. **Upsert em lote estourava** com "ON CONFLICT DO UPDATE command cannot affect
+   row a second time": o ON CONFLICT resolve conflito com linha ja existente na
+   tabela, nao entre linhas propostas no mesmo INSERT. Os dois lotes passaram a
+   deduplicar por chave.
+2. **9 de 24 leituras por estacao vem vazias** (horas futuras). Sem a guarda do
+   normalizador, seriam 9 linhas vazias por estacao por ciclo.
+3. **O token estava no proprio plano**, inclusive dentro do teste que prova que
+   ele nao esta hardcoded. Removido. Segue no historico do repositorio desde
+   `d8dd19f4` (Feat: Meteorologia), onde nasceu como `const API_TOKEN` — a
+   remediacao real e rotacionar a credencial.
+
+### Criterios da secao 6 do spec
+
+Os dez passam. Os itens 1 a 5 estao na tabela de coleta acima; 6 (service sem
+metodo morto) foi alem do previsto e o `InmetService` inteiro saiu, por nao ter
+um unico chamador; 7 (token fora do versionado) exigiu a correcao do proprio
+plano; 8 (nenhuma pagina instancia Leaflet) verificado por grep; 9 (kernel sem
+nome de grupo) idem; 10, suite em 220 testes e 607 assertions, com 1 erro
+pre-existente (`PaeFormularioControllerTest`, colisao de BH 3106200 com o
+seeder, documentado desde 2026-08-28).
