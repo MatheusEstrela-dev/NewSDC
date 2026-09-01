@@ -158,6 +158,11 @@ return [
         // servidos por rota autenticada plancon.planos.download.
         'plancon' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_PLANCON', 'sdc-plancon'), 'PLANCON', 'app/plancon'),
 
+        // Camada Bronze do medalhao arquivada em Parquet, particionada por
+        // fonte e dia. Nao e anexo de usuario: e historico bruto imutavel,
+        // lido por ferramental de dados (pandas/Power BI), nunca servido via web.
+        'medalhao' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_MEDALHAO', 'sdc-medalhao'), 'MEDALHAO', 'app/medalhao'),
+
     ],
 
     /*

@@ -311,6 +311,17 @@
           Meteorologia
         </NavItem>
 
+        <!-- Sismos -->
+        <NavItem
+          v-if="canSeeSismos && _routes.hasSismos"
+          :href="route('sismos.index', undefined, false)"
+          :active="isRouteActive('sismos.*')"
+          icon="map"
+          :collapsed="isCollapsed"
+        >
+          Sismos
+        </NavItem>
+
         <!-- Vistoria -->
         <NavItem
           v-if="canSeeVistoria"
@@ -777,6 +788,7 @@ const _routes = {
   hasTreinamentos: route().has('treinamentos.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
+  hasSismos: route().has('sismos.index'),
 };
 
 // ============================================================================
@@ -829,6 +841,7 @@ const _activeRoutes = computed(() => {
     'treinamentos.*': route().current('treinamentos.*'),
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
+    'sismos.*': route().current('sismos.*'),
     'admin.permissions.*': route().current('admin.permissions.*'),
     'log-viewer.*': route().current('log-viewer.*'),
     'portal.treinamento.catalogo': route().current('portal.treinamento.catalogo'),
@@ -969,6 +982,12 @@ const canSeePlantao = computed(() => {
 const canSeeMeteorologia = computed(() => {
   // TODO: Adicionar permissao meteorologia.dados.view no config
   return true; // Liberado - modulo publico
+});
+
+const canSeeSismos = computed(() => {
+  // Mesmo tratamento de Meteorologia: modulo de consulta, sem permissao propria
+  // por enquanto. A rota ja exige autenticacao (grupo auth em routes/web.php).
+  return true;
 });
 
 const canSeeVistoria = computed(() => {

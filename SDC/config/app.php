@@ -199,6 +199,8 @@ return [
         App\Modules\AjudaHumanitaria\AjudaHumanitariaServiceProvider::class,
         App\Modules\Treinamento\TreinamentoServiceProvider::class,
         App\Modules\Inmet\InmetServiceProvider::class,
+        App\Modules\Medalhao\MedalhaoServiceProvider::class,
+        App\Modules\Sismos\SismosServiceProvider::class,
         App\Modules\Suporte\SuporteServiceProvider::class,
         App\Modules\PlanCon\PlanConServiceProvider::class,
         App\Modules\Dashboard\DashboardServiceProvider::class,

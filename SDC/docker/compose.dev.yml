@@ -422,6 +422,10 @@ services:
     # interrompe o que esta em execucao -- num sistema onde a fila carrega
     # notificacao de alerta, isso e latencia inaceitavel.
     # --timeout=120: job diferivel pode ser longo (export, relatorio).
+    # A fila "medalhao" (ETL do pipeline de dados) tambem nao entra na lista: ela
+    # roda no loop de background abaixo, com timeout de 300s, pelo mesmo motivo
+    # que critical e high sairam daqui. Em producao a separacao e feita pelo
+    # supervisor (docker/supervisor/medalhao-worker.conf); aqui, pelo loop.
     # --max-time=3600: restart de hora em hora para evitar memory leak.
     # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
     # A guarda do marcador replica o /start.sh (este command sobrescreve o CMD
@@ -435,6 +439,10 @@ services:
         fi &&
         umask 002 &&
         composer dump-autoload --optimize --no-interaction &&
+        ( while true; do
+        php artisan queue:work redis --queue=medalhao --tries=3 --timeout=300 --max-time=3600 --sleep=5;
+        echo "[medalhao-worker] saiu (codigo $$?); reiniciando em 2s..."; sleep 2;
+        done & ) &&
         exec php artisan queue:work redis
         --queue=default,webhooks,low
         --tries=2 --timeout=120 --max-time=3600 --sleep=3
@@ -629,8 +637,8 @@ services:
 
     mem_limit: 128m
     ports:
-      - "1025:1025"       # SMTP
-      - "8025:8025"       # UI
+      - "1027:1025"       # SMTP
+      - "8027:8025"       # UI
 
 volumes:
   pgdata:
