@@ -105,6 +105,8 @@ final class InmetRepository
      */
     private function gravarEstacoes(array $lote): int
     {
+        $lote = $this->deduplicar($lote, static fn (EstacaoDTO $d): string => $d->codigo);
+
         $placeholders = [];
         $bindings = [];
 
@@ -176,9 +178,39 @@ final class InmetRepository
         );
     }
 
+    /**
+     * Remove duplicata de chave DENTRO do lote, mantendo a ultima ocorrencia.
+     *
+     * Sem isso o Postgres recusa o statement inteiro com
+     * "ON CONFLICT DO UPDATE command cannot affect row a second time": o
+     * ON CONFLICT resolve conflito com linha JA existente na tabela, nao entre
+     * linhas propostas no mesmo INSERT. Manter a ultima espelha a semantica do
+     * DO UPDATE, onde o valor mais recente vence.
+     *
+     * @template T of object
+     * @param list<T> $lote
+     * @param callable(T): string $chave
+     * @return list<T>
+     */
+    private function deduplicar(array $lote, callable $chave): array
+    {
+        $porChave = [];
+
+        foreach ($lote as $dto) {
+            $porChave[$chave($dto)] = $dto;
+        }
+
+        return array_values($porChave);
+    }
+
     /** @param list<LeituraMeteorologicaDTO> $lote */
     private function gravarLeituras(array $lote, ?int $ingestaoId): int
     {
+        $lote = $this->deduplicar(
+            $lote,
+            static fn (LeituraMeteorologicaDTO $d): string => $d->codigoEstacao . '|' . $d->dataHoraMedicao->utc()->toIso8601String()
+        );
+
         $placeholders = [];
         $bindings = [];
 

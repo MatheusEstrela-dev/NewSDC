@@ -13,6 +13,7 @@ return [
     // Contrato esperado: upsertLote(iterable $dtos, ?int $ingestaoId = null): int
     'persistidores' => [
         'sismos' => \App\Modules\Sismos\Repositories\SismoRepository::class,
+        'inmet' => \App\Modules\Inmet\Repositories\InmetRepository::class,
     ],
 
     // Mapa grupo -> job que refaz as matviews da camada Gold. Fica em config

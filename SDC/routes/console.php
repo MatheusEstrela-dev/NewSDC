@@ -42,6 +42,15 @@ Schedule::command('medalhao:ingerir sismos')
     ->onOneServer()
     ->runInBackground();
 
+// Cadencia horaria, nao de 15 minutos como os sismos: a estacao automatica do
+// INMET publica de hora em hora, entao coletar mais so multiplica I/O sobre as
+// 61 estacoes de MG. O upsert do Silver por (codigo_estacao, medido_em) torna
+// reingerir o mesmo dia inofensivo.
+Schedule::command('medalhao:ingerir inmet')
+    ->hourly()
+    ->onOneServer()
+    ->runInBackground();
+
 // Arquiva o Bronze vencido em Parquet e poda o Postgres. A poda so ocorre apos a
 // escrita ser verificada — ver RolloverParquetJob.
 Schedule::command('medalhao:rollup')
