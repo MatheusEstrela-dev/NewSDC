@@ -244,39 +244,6 @@ function getMarkerColor(nivel) {
   box-sizing: border-box; /* Include border in width calculation */
 }
 
-/*
- * Telas pequenas: o mapa de 600px fixos ocupava a tela inteira e os overlays de
- * 280-300px cobriam metade dele. Altura por viewport e overlays em largura
- * relativa devolvem o mapa ao usuario.
- */
-@media (max-width: 767px) {
-  .map-wrapper {
-    height: 60vh;
-    min-height: 320px;
-    margin-bottom: 16px;
-  }
-
-  .map-overlay {
-    padding: 10px 12px;
-    font-size: 0.8125rem;
-  }
-
-  .stats-overlay {
-    top: 8px;
-    right: 8px;
-    left: auto;
-    width: auto;
-    max-width: 60%;
-  }
-
-  /* A legenda vai para baixo do mapa: sobreposta, ela cobria o proprio dado
-     que explica. */
-  .legend-overlay {
-    position: static;
-    width: 100%;
-    margin-top: 12px;
-  }
-}
 
 #map {
   height: 100%;
@@ -540,4 +507,41 @@ function getMarkerColor(nivel) {
   }
 }
 
+/*
+ * ESTE BLOCO FICA NO FIM DO ARQUIVO DE PROPOSITO.
+ *
+ * Media query NAO soma especificidade: `.legend-overlay` aqui dentro vale
+ * 0,1,0, igual ao `.map-overlay { position: absolute }` das regras base. Com
+ * o bloco no meio do arquivo, a regra base vinha DEPOIS e vencia -- a legenda
+ * seguia sobreposta ao mapa no telefone, cobrindo os pontos que explica, sem
+ * nenhum sintoma no CSS.
+ */
+@media (max-width: 767px) {
+  .map-wrapper {
+    height: 60vh;
+    min-height: 320px;
+    margin-bottom: 16px;
+  }
+
+  .map-overlay {
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+  }
+
+  .stats-overlay {
+    top: 8px;
+    right: 8px;
+    left: auto;
+    width: auto;
+    max-width: 60%;
+  }
+
+  /* A legenda vai para baixo do mapa: sobreposta, ela cobria o proprio dado
+     que explica. */
+  .legend-overlay {
+    position: static;
+    width: 100%;
+    margin-top: 12px;
+  }
+}
 </style>

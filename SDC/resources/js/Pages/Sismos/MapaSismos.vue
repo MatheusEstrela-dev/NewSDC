@@ -200,16 +200,39 @@ function escapar(texto) {
   opacity: 0.6;
 }
 
+/*
+ * Mesma correcao do MapaInmet: o wrapper isola o contexto de empilhamento.
+ *
+ * O Leaflet posiciona os proprios paines em z-index 200-700 e os controles de
+ * zoom em 800-1000, e os overlays deste arquivo usam 500. Sem contexto proprio,
+ * tudo isso competia no contexto RAIZ -- e a sidebar do SDC e z-index 50. No
+ * telefone, abrir o menu com o mapa na tela deixava o zoom e o painel de
+ * estatisticas flutuando por cima do drawer.
+ *
+ * `isolation: isolate` cria o contexto sem depender de position/z-index; o
+ * `z-index: 0` cobre navegador que ignore `isolation`. Dentro dele o 500 do
+ * overlay continua valendo sobre os paines do mapa; fora, o wrapper todo vale 0.
+ *
+ * A altura sai do #map e vem para o wrapper: e o wrapper que a media query de
+ * mobile precisa encolher, e o mapa passa a preencher 100% dele.
+ */
 .map-wrapper {
   position: relative;
+  isolation: isolate;
+  z-index: 0;
+  height: 600px;
+  width: 100%;
   border-radius: 0.5rem;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 #map-sismos {
-  height: 600px;
+  height: 100%;
   width: 100%;
+  background: #1a1d21; /* fallback enquanto os tiles nao chegam */
 }
+
 
 .map-overlay {
   position: absolute;
@@ -270,5 +293,41 @@ function escapar(texto) {
   align-items: center;
   gap: 0.5rem;
   opacity: 0.7;
+}
+
+/*
+ * ESTE BLOCO FICA NO FIM DO ARQUIVO DE PROPOSITO.
+ *
+ * Media query NAO soma especificidade: `.legend-overlay` aqui dentro vale
+ * 0,1,0, igual ao `.map-overlay { position: absolute }` das regras base. Com
+ * o bloco no meio do arquivo, a regra base vinha DEPOIS e vencia -- a legenda
+ * seguia sobreposta ao mapa no telefone, cobrindo os pontos que explica, sem
+ * nenhum sintoma no CSS.
+ */
+@media (max-width: 767px) {
+  .map-wrapper {
+    height: 60vh;
+    min-height: 320px;
+  }
+
+  .map-overlay {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+    min-width: 0;
+  }
+
+  .stats-overlay {
+    top: 0.5rem;
+    right: 0.5rem;
+    left: auto;
+    max-width: 60%;
+  }
+
+  /* A legenda desce para baixo do mapa em vez de cobri-lo. */
+  .legend-overlay {
+    position: static;
+    width: 100%;
+    margin-top: 0.75rem;
+  }
 }
 </style>
