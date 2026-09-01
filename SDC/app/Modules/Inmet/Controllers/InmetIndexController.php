@@ -5,29 +5,29 @@ declare(strict_types=1);
 namespace App\Modules\Inmet\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Inmet\Services\InmetService;
+use App\Modules\Inmet\Repositories\InmetRepository;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\Request;
 
 class InmetIndexController extends Controller
 {
     public function __construct(
-        private readonly InmetService $inmetService,
+        private readonly InmetRepository $repository,
     ) {
     }
 
     public function __invoke(Request $request): Response
     {
-        $uf = $request->input('uf', 'MG');
-
-        $leituras = $this->inmetService->getLeiturasAtuais($uf);
-        $estatisticas = $this->inmetService->getEstatisticas($leituras);
-
+        // Toda a agregacao ja esta materializada na camada Gold: aqui so se le.
+        //
+        // O parametro uf saiu de proposito: o recorte e do pipeline, nao da
+        // requisicao. E a bbox aqui nao filtra nada — serve para o mapa se
+        // enquadrar em MG.
         return Inertia::render('Inmet/MapaInmet', [
-            'leituras' => $leituras->map(fn($l) => $l->toArray())->values()->all(),
-            'estatisticas' => $estatisticas,
-            'uf_selecionada' => $uf,
+            'estacoes' => $this->repository->mapa()->all(),
+            'estatisticas' => $this->repository->estatisticas(),
+            'bbox' => config('medalhao.inmet.bbox'),
         ]);
     }
 }
