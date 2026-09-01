@@ -20,6 +20,7 @@ return [
     // fonte nova nao deve exigir edicao no NormalizarSilverJob.
     'refresh_gold' => [
         'sismos' => \App\Modules\Sismos\Jobs\AtualizarGoldSismosJob::class,
+        'inmet' => \App\Modules\Inmet\Jobs\AtualizarGoldInmetJob::class,
     ],
 
     'sismos' => [

@@ -6,11 +6,48 @@ namespace App\Modules\Inmet\Repositories;
 
 use App\Modules\Inmet\DTOs\EstacaoDTO;
 use App\Modules\Inmet\DTOs\LeituraMeteorologicaDTO;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 final class InmetRepository
 {
     private const CHUNK = 500;
+
+    /**
+     * Le a camada Gold para o mapa. Nenhuma agregacao aqui: a matview ja
+     * entrega lat/lon extraidos da geometria e a classe de precipitacao
+     * calculada no banco.
+     *
+     * @return Collection<int, object>
+     */
+    public function mapa(): Collection
+    {
+        return DB::table('gold.inmet_mapa')
+            ->select([
+                'id', 'codigo_estacao', 'nome_estacao', 'municipio', 'uf',
+                'medido_em', 'latitude', 'longitude', 'temperatura', 'umidade',
+                'precipitacao', 'velocidade_vento', 'pressao', 'classe_precipitacao',
+            ])
+            ->orderByDesc('precipitacao')
+            ->get();
+    }
+
+    /**
+     * @return array{total_estacoes: int, precipitacao_media: float, precipitacao_maxima: float, estacoes_com_chuva: int, temperatura_media: float, ultima_atualizacao: ?string}
+     */
+    public function estatisticas(): array
+    {
+        $linha = DB::table('gold.inmet_estatisticas')->first();
+
+        return [
+            'total_estacoes' => (int) ($linha->total_estacoes ?? 0),
+            'precipitacao_media' => (float) ($linha->precipitacao_media ?? 0),
+            'precipitacao_maxima' => (float) ($linha->precipitacao_maxima ?? 0),
+            'estacoes_com_chuva' => (int) ($linha->estacoes_com_chuva ?? 0),
+            'temperatura_media' => (float) ($linha->temperatura_media ?? 0),
+            'ultima_atualizacao' => $linha->ultima_atualizacao ?? null,
+        ];
+    }
 
     /**
      * Contrato exigido pelo kernel: upsertLote(iterable, ?int): int.
