@@ -218,7 +218,6 @@ function closePrintModal() {
             @click="handleBuscarNoticias"
           >
             <span class="hidden sm:inline">Buscar Noticias</span>
-            <span class="sm:hidden">Noticias</span>
           </Button>
 
           <Button
@@ -228,7 +227,7 @@ function closePrintModal() {
             icon-position="left"
             @click="handleFrota"
           >
-            Frota
+            <span class="hidden sm:inline">Frota</span>
           </Button>
 
           <Button
@@ -239,7 +238,7 @@ function closePrintModal() {
             icon-position="left"
             @click="handleEscala"
           >
-            Escala
+            <span class="hidden sm:inline">Escala</span>
           </Button>
 
           <Button
@@ -263,7 +262,6 @@ function closePrintModal() {
             @click="showExportModal = true"
           >
             <span class="hidden sm:inline">Exportar Excel</span>
-            <span class="sm:hidden">Exp</span>
           </Button>
 
           <Button
@@ -274,8 +272,7 @@ function closePrintModal() {
             icon-position="left"
             @click="showAbrirModal = true"
           >
-            <span class="hidden sm:inline">Abrir Plantão</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Abrir Plantão</span>
           </Button>
         </div>
       </template>

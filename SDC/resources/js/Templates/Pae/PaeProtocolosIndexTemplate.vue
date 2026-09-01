@@ -24,7 +24,7 @@
 
           <!-- Botao Arquivados - filtro rapido -->
           <Button variant="warning" size="md" :icon="ArchiveBoxIcon" icon-position="left" @click="handleArquivadosFilter">
-            Arquivados
+            <span class="hidden sm:inline">Arquivados</span>
           </Button>
 
           <!-- Botao Exportar -->
@@ -34,8 +34,7 @@
 
           <!-- Botao Novo Protocolo - Responsivo -->
           <Button v-if="canCreate" variant="primary" size="md" :icon="PlusIcon" icon-position="left" @click="openNovoProtocolo">
-            <span class="hidden sm:inline">Novo Protocolo</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Novo Protocolo</span>
           </Button>
         </div>
       </template>

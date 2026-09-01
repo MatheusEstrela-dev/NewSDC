@@ -177,8 +177,7 @@ const limparFiltros = () => {
             icon-position="left"
             @click="openCreateModal"
           >
-            <span class="hidden sm:inline">Nova Viatura</span>
-            <span class="sm:hidden">Nova</span>
+            <span>Nova Viatura</span>
           </Button>
         </div>
       </template>

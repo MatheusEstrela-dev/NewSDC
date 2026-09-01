@@ -18,8 +18,7 @@
             label="Novo Equipamento"
             @click="emit('create')"
           >
-            <span class="hidden sm:inline">Novo Equipamento</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Novo Equipamento</span>
           </ActionButton>
         </div>
       </template>

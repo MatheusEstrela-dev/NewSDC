@@ -33,8 +33,7 @@
           <!-- Botao Criar - Responsivo -->
           <Link v-if="canCreate" :href="route('rat.create')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-              <span class="hidden sm:inline">Novo RAT</span>
-              <span class="sm:hidden">Novo</span>
+              <span>Novo RAT</span>
             </Button>
           </Link>
         </div>

@@ -79,7 +79,14 @@
       :title="tooltipTitle"
       @click="handleClick"
     >
-      <slot>{{ computedLabel }}</slot>
+      <!--
+        Rotulo em span proprio para poder sumir no mobile: abaixo de `sm` o botao
+        fica so com o icone, no padrao do RAT. O `title` continua no <Button>,
+        entao a acao segue identificavel por toque longo e por leitor de tela.
+      -->
+      <slot>
+        <span :class="rotuloEscondidoNoMobile ? 'hidden sm:inline' : ''">{{ computedLabel }}</span>
+      </slot>
     </Button>
   </template>
 </template>
@@ -256,6 +263,9 @@ const props = defineProps({
   variant: { type: String, default: null },
   label: { type: String, default: null },
   showLabel: { type: Boolean, default: true },
+  // Forca ou dispensa o rotulo-so-no-desktop. `null` deixa a decisao para a
+  // natureza da acao (ver ACOES_SECUNDARIAS).
+  rotuloSoNoDesktop: { type: Boolean, default: null },
   icon: { type: [Object, Function], default: null },
   size: { type: String, default: 'md' },
   iconPosition: { type: String, default: 'left' },
@@ -379,6 +389,27 @@ const computedVariant = computed(() => props.variant || ActionVariants[props.act
 const computedIconVariant = computed(() => props.variant || ActionIconVariants[props.action] || 'secondary');
 const computedIcon = computed(() => props.icon || (props.action ? ActionIcons[props.action] : null) || null);
 const computedLabel = computed(() => props.label !== null ? props.label : ActionLabels[props.action] || '');
+
+/**
+ * Acoes cujo rotulo nao vale a largura em tela estreita.
+ *
+ * Exportar e arquivar sao secundarias em toda tela do sistema: quem entra num
+ * modulo vai criar ou consultar, nao exportar. Com cinco botoes rotulados o
+ * cabecalho do PAE e do Plantao quebrava em quatro linhas e o card recortava o
+ * ultimo -- e no Plantao "Exportar Excel" ainda virava "Exp", que nao diz nada.
+ *
+ * Abaixo de `sm` elas ficam so com o icone. O rotulo volta a partir de `sm`.
+ * Criar e analisar mantem o nome sempre: sao o motivo de a tela existir.
+ */
+const ACOES_SECUNDARIAS = ['export', 'archive'];
+
+const rotuloEscondidoNoMobile = computed(() => {
+  if (props.rotuloSoNoDesktop !== null) {
+    return props.rotuloSoNoDesktop;
+  }
+
+  return ACOES_SECUNDARIAS.includes(props.action);
+});
 
 const tooltipTitle = computed(() => {
   if (!hasPermissionSingle.value && props.fallback === 'disable') {

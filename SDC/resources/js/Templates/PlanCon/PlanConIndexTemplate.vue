@@ -29,7 +29,6 @@
             @click="$emit('upload')"
           >
             <span class="hidden sm:inline">Upload Plano</span>
-            <span class="sm:hidden">Upload</span>
           </Button>
         </div>
       </template>

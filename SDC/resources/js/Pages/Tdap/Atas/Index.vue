@@ -11,12 +11,10 @@
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">
           <span class="hidden sm:inline">Exportar</span>
-          <span class="sm:hidden">CSV</span>
         </Button>
         <Link v-if="canCreate" :href="route('tdap.atas.create')">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-            <span class="hidden sm:inline">Nova Ata</span>
-            <span class="sm:hidden">Nova</span>
+            <span>Nova Ata</span>
           </Button>
         </Link>
       </template>

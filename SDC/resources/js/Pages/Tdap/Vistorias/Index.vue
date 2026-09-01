@@ -12,8 +12,7 @@
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
         <Link v-if="canCreate" :href="route('tdap.vistorias.create')">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-            <span class="hidden sm:inline">Nova Vistoria</span>
-            <span class="sm:hidden">Nova</span>
+            <span>Nova Vistoria</span>
           </Button>
         </Link>
       </template>

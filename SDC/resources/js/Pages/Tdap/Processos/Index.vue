@@ -13,13 +13,11 @@
         <Link :href="route('tdap.processos.swimlanes')">
           <Button variant="secondary" size="md">
             <span class="hidden sm:inline">Ver Swimlanes</span>
-            <span class="sm:hidden">Kanban</span>
           </Button>
         </Link>
         <Link v-if="canCreate" :href="route('tdap.processos.create')">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-            <span class="hidden sm:inline">Novo Processo</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Novo Processo</span>
           </Button>
         </Link>
       </template>

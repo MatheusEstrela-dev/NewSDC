@@ -11,12 +11,10 @@
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">
           <span class="hidden sm:inline">Exportar</span>
-          <span class="sm:hidden">CSV</span>
         </Button>
         <Link v-if="canCreate" :href="route('tdap.cronogramas.create')">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-            <span class="hidden sm:inline">Novo Cronograma</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Novo Cronograma</span>
           </Button>
         </Link>
       </template>

@@ -22,8 +22,7 @@
             label="Novo Produto"
             @click="emit('create')"
           >
-            <span class="hidden sm:inline">Novo Produto</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Novo Produto</span>
           </ActionButton>
         </div>
       </template>

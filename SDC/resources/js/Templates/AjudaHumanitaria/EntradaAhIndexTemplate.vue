@@ -19,7 +19,7 @@
             icon-position="left"
             @click="$emit('nova')"
           >
-            <span class="hidden sm:inline">Nova entrada</span>
+            <span>Nova entrada</span>
           </Button>
 
           <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="mostrarModalExport = true">

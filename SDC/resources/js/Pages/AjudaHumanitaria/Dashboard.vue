@@ -12,8 +12,7 @@
       <template #actions>
         <Link v-if="canCreate" :href="route('ajuda-humanitaria.pedidos.create')">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-            <span class="hidden sm:inline">Novo Pedido</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Novo Pedido</span>
           </Button>
         </Link>
       </template>

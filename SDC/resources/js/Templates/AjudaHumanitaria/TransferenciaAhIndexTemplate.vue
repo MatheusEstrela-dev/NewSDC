@@ -52,67 +52,104 @@
         helper="Ajuste o depósito, a situação ou o período."
       />
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-sm text-left">
-          <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-            <tr class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              <SortableHeader coluna="codigo" v-bind="ordenacaoUi" @ordenar="ordenar">Código</SortableHeader>
-              <!-- Trajeto e origem e destino juntos, cada um em outra tabela:
-                   ordenar por ele exigiria join na consulta que serve o CSV. -->
-              <SortableHeader>Trajeto</SortableHeader>
-              <SortableHeader coluna="saida" direcao-inicial="desc" v-bind="ordenacaoUi" @ordenar="ordenar">Saída</SortableHeader>
-              <SortableHeader coluna="chegada" direcao-inicial="desc" v-bind="ordenacaoUi" @ordenar="ordenar">Chegada</SortableHeader>
-              <SortableHeader coluna="motorista" v-bind="ordenacaoUi" @ordenar="ordenar">Motorista</SortableHeader>
-              <SortableHeader coluna="situacao" v-bind="ordenacaoUi" @ordenar="ordenar">Situação</SortableHeader>
-              <SortableHeader classe="text-center">Itens</SortableHeader>
-              <SortableHeader classe="text-right">Ações</SortableHeader>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-            <tr
-              v-for="linha in transferencias.data"
-              :key="linha.id"
-              class="hover:bg-slate-50 dark:hover:bg-slate-700/30"
-            >
-              <td class="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">
-                {{ linha.codigo_legado }}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                <span class="font-medium text-slate-900 dark:text-white">{{ linha.origem_sigla }}</span>
-                <span class="mx-2 text-slate-400">&rarr;</span>
-                <span class="font-medium text-slate-900 dark:text-white">{{ linha.destino_sigla }}</span>
-              </td>
-              <td class="px-4 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                {{ formatarDataHora(linha.saiu_em) }}
-              </td>
-              <td class="px-4 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                {{ formatarDataHora(linha.chegou_em) }}
-              </td>
-              <td class="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate" :title="linha.motorista">
-                {{ linha.motorista || '—' }}
-              </td>
-              <td class="px-4 py-3">
-                <Badge :variant="linha.status_cor">{{ linha.status_label }}</Badge>
-              </td>
-              <td class="px-4 py-3 text-center tabular-nums text-slate-600 dark:text-slate-300">
-                {{ linha.itens }}
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex justify-end">
-                  <ActionButton
-                    module="humanitaria"
-                    resource="saldo"
-                    size="sm"
-                    :actions="[
-                      { action: 'view', handler: () => $emit('ver', linha.id) },
-                    ]"
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <ResponsiveTable
+        v-else
+        :items="transferencias.data"
+        :mobile-fields="CAMPOS_MOBILE"
+        :get-item-title="(linha) => linha.codigo_legado"
+        empty-message="Nenhuma transferência encontrada"
+      >
+        <template #table>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+              <tr class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <SortableHeader coluna="codigo" v-bind="ordenacaoUi" @ordenar="ordenar">Código</SortableHeader>
+                <!-- Trajeto e origem e destino juntos, cada um em outra tabela:
+                     ordenar por ele exigiria join na consulta que serve o CSV. -->
+                <SortableHeader>Trajeto</SortableHeader>
+                <SortableHeader coluna="saida" direcao-inicial="desc" v-bind="ordenacaoUi" @ordenar="ordenar">Saída</SortableHeader>
+                <SortableHeader coluna="chegada" direcao-inicial="desc" v-bind="ordenacaoUi" @ordenar="ordenar">Chegada</SortableHeader>
+                <SortableHeader coluna="motorista" v-bind="ordenacaoUi" @ordenar="ordenar">Motorista</SortableHeader>
+                <SortableHeader coluna="situacao" v-bind="ordenacaoUi" @ordenar="ordenar">Situação</SortableHeader>
+                <SortableHeader classe="text-center">Itens</SortableHeader>
+                <SortableHeader classe="text-right">Ações</SortableHeader>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              <tr
+                v-for="linha in transferencias.data"
+                :key="linha.id"
+                class="hover:bg-slate-50 dark:hover:bg-slate-700/30"
+              >
+                <td class="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">
+                  {{ linha.codigo_legado }}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <span class="font-medium text-slate-900 dark:text-white">{{ linha.origem_sigla }}</span>
+                  <span class="mx-2 text-slate-400">&rarr;</span>
+                  <span class="font-medium text-slate-900 dark:text-white">{{ linha.destino_sigla }}</span>
+                </td>
+                <td class="px-4 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  {{ formatarDataHora(linha.saiu_em) }}
+                </td>
+                <td class="px-4 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  {{ formatarDataHora(linha.chegou_em) }}
+                </td>
+                <td class="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate" :title="linha.motorista">
+                  {{ linha.motorista || '—' }}
+                </td>
+                <td class="px-4 py-3">
+                  <Badge :variant="linha.status_cor">{{ linha.status_label }}</Badge>
+                </td>
+                <td class="px-4 py-3 text-center tabular-nums text-slate-600 dark:text-slate-300">
+                  {{ linha.itens }}
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex justify-end">
+                    <ActionButton
+                      module="humanitaria"
+                      resource="saldo"
+                      size="sm"
+                      :actions="[
+                        { action: 'view', handler: () => $emit('ver', linha.id) },
+                      ]"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+          </template>
+
+        <template #mobile-trajeto="{ item: linha }">
+          <span class="font-medium text-slate-900 dark:text-white">{{ linha.origem_sigla }}</span>
+          <span class="mx-2 text-slate-400">&rarr;</span>
+          <span class="font-medium text-slate-900 dark:text-white">{{ linha.destino_sigla }}</span>
+        </template>
+
+        <template #mobile-saida="{ item: linha }">
+          {{ formatarDataHora(linha.saiu_em) }}
+        </template>
+
+        <template #mobile-chegada="{ item: linha }">
+          {{ formatarDataHora(linha.chegou_em) }}
+        </template>
+
+        <template #mobile-situacao="{ item: linha }">
+          <Badge :variant="linha.status_cor">{{ linha.status_label }}</Badge>
+        </template>
+
+        <template #mobile-actions="{ item: linha }">
+          <ActionButton
+            module="humanitaria"
+            resource="saldo"
+            size="sm"
+            :actions="[{ action: 'view', handler: () => $emit('ver', linha.id) }]"
+          />
+        </template>
+      </ResponsiveTable>
     </ListContainer>
 
     <div v-if="transferencias.meta" class="mt-6">
@@ -137,6 +174,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import TransferenciaAhFiltersSection from '@/Components/Organisms/AjudaHumanitaria/TransferenciaAhFiltersSection.vue';
 import TransferenciaAhStatsCards from '@/Components/Organisms/AjudaHumanitaria/TransferenciaAhStatsCards.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 const props = defineProps({
   transferencias: { type: Object, default: () => ({ data: [], meta: null }) },
@@ -171,4 +209,18 @@ function exportar(escopo) {
   emit('exportar', escopo);
   mostrarModalExport.value = false;
 }
+
+/**
+ * Campos do card no mobile (regra 9).
+ *
+ * Das oito colunas, quatro. Codigo vira o titulo; Motorista e Itens ficam de
+ * fora -- card com oito linhas nao e melhor que tabela rolando de lado, e o
+ * trajeto e a situacao sao o que identifica a transferencia numa lista.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'trajeto', label: 'Trajeto' },
+  { key: 'saida', label: 'Saída' },
+  { key: 'chegada', label: 'Chegada' },
+  { key: 'situacao', label: 'Situação' },
+];
 </script>

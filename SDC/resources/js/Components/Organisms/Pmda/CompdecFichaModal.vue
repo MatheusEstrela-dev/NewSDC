@@ -135,7 +135,7 @@ function removerFoto() {
 
 <template>
   <Modal :show="show" max-width="5xl" @close="fechar">
-    <div class="flex max-h-[90vh] flex-col overflow-hidden">
+    <div class="flex max-h-full flex-col overflow-hidden">
       <div v-if="form.processing || fotoBusy" class="h-1 w-full overflow-hidden bg-slate-200 dark:bg-slate-700"><div class="h-full w-1/2 animate-pulse rounded-r-full bg-blue-600" /></div>
       <!-- Header: foto dedicada, identificacao do COMPDEC e bloco legivel da prefeitura -->
       <div class="relative border-b border-slate-200 bg-gradient-to-r from-slate-100 via-white to-blue-50 px-6 py-5 dark:border-slate-700/50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900">
@@ -334,7 +334,7 @@ function removerFoto() {
                     <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Possui NUPDEC?</span>
                     <div class="w-28"><SelectInput v-model="possuiNupdec" :options="SIM_NAO" placeholder="" /></div>
                   </div>
-                  <div v-if="form.possui_nupdec" class="grid grid-cols-2 gap-4">
+                  <div v-if="form.possui_nupdec" class="grid grid-cols-1 gap-4 xs:grid-cols-2">
                     <div><label class="pmda-field-label">Quantos NUPDEC's</label><TextInput v-model="form.qtd_nupdec" type="number" /></div>
                     <div><label class="pmda-field-label">Quantos integrantes</label><TextInput v-model="form.qtd_efetivo" type="number" /></div>
                   </div>

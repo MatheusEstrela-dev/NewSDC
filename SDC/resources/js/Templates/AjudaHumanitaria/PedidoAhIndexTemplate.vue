@@ -17,8 +17,7 @@
             icon-position="left"
             @click="$emit('create')"
           >
-            <span class="hidden sm:inline">Novo Pedido</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Novo Pedido</span>
           </Button>
         </div>
       </template>
