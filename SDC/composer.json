@@ -89,7 +89,12 @@
         "laravel": {
             "dont-discover": [
                 "laravel/telescope",
-                "nativephp/mobile"
+                "nativephp/mobile",
+                "barryvdh/laravel-debugbar",
+                "laravel/sail",
+                "laravel/sentinel",
+                "nunomaduro/collision",
+                "spatie/laravel-ignition"
             ]
         }
     },
