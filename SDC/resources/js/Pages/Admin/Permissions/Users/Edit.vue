@@ -742,7 +742,9 @@ const toggleExtraPermission = (slug, event) => {
   }
 };
 
-const expandedModules = ref(['SISTEMA', 'PAE', 'RAT']);
+// Todos contraidos na abertura: com o "marcar tudo" no cabecalho, liberar um
+// modulo inteiro nao exige mais expandi-lo, e a lista completa cabe na tela.
+const expandedModules = ref([]);
 
 const selectedRolesCount = computed(() => form.roles.length);
 
