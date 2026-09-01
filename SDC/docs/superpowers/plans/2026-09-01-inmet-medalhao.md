@@ -575,6 +575,22 @@ final class InmetRepositoryTest extends TestCase
 
         $this->assertSame(3, $total);
     }
+
+    public function test_resolve_o_municipio_real_pela_coordenada(): void
+    {
+        // O inventario do INMET nao traz municipio: DC_NOME e nome de estacao.
+        // A coordenada de TST1 e a da estacao A521 (Pampulha), entao o
+        // municipio tem de sair "Belo Horizonte", e nao o nome da estacao.
+        if ((int) DB::scalar("SELECT count(*) FROM municipios WHERE uf = 'MG'") === 0) {
+            $this->markTestSkipped('Exige MunicipiosMGSeeder rodado.');
+        }
+
+        $this->repo->upsertLote([$this->estacao()]);
+
+        $municipio = DB::scalar('SELECT municipio FROM estacoes_meteorologicas WHERE codigo = ?', ['TST1']);
+
+        $this->assertSame('Belo Horizonte', $municipio);
+    }
 }
 ```
 
@@ -724,7 +740,7 @@ final class InmetRepository
                 $bindings,
                 $dto->codigo,
                 $dto->nome,
-                $dto->nome,          // municipio: o inventario nao traz municipio proprio
+                $this->municipioMaisProximo($dto->latitude, $dto->longitude, $dto->uf) ?? $dto->nome,
                 $dto->uf,
                 $dto->latitude,
                 $dto->longitude,
@@ -754,6 +770,37 @@ final class InmetRepository
         );
 
         return count($lote);
+    }
+
+    /**
+     * O inventario do INMET nao traz municipio: traz DC_NOME, que e nome de
+     * estacao ("BELO HORIZONTE - PAMPULHA"), e SG_ESTADO. Como a coluna
+     * municipio e NOT NULL, resolve-se pelo centroide mais proximo entre os 853
+     * municipios de MG ja semeados.
+     *
+     * ATENCAO: e centroide, nao contencao por poligono — a tabela municipios
+     * tem latitude/longitude, nao geometria de area. Estacao perto de divisa
+     * pode resolver para o municipio vizinho. Verificado para A521: resolve
+     * Belo Horizonte a 5,3 km, contra Contagem a 10,3 km.
+     *
+     * O ::numeric no round e obrigatorio: o Postgres nao tem
+     * round(double precision, integer).
+     */
+    private function municipioMaisProximo(float $latitude, float $longitude, string $uf): ?string
+    {
+        return DB::scalar(
+            'SELECT m.nome
+               FROM municipios m
+              WHERE m.uf = ?
+                AND m.latitude IS NOT NULL
+                AND m.longitude IS NOT NULL
+              ORDER BY ST_Distance(
+                        ST_SetSRID(ST_MakePoint(m.longitude::float8, m.latitude::float8), 4326)::geography,
+                        ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography
+                      ) ASC
+              LIMIT 1',
+            [$uf, $longitude, $latitude]
+        );
     }
 
     /** @param list<LeituraMeteorologicaDTO> $lote */
