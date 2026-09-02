@@ -14,6 +14,7 @@ return [
     'persistidores' => [
         'sismos' => \App\Modules\Sismos\Repositories\SismoRepository::class,
         'inmet' => \App\Modules\Inmet\Repositories\InmetRepository::class,
+        'cemaden' => \App\Modules\Cemaden\Repositories\CemadenRepository::class,
     ],
 
     // Mapa grupo -> job que refaz as matviews da camada Gold. Fica em config
@@ -22,6 +23,7 @@ return [
     'refresh_gold' => [
         'sismos' => \App\Modules\Sismos\Jobs\AtualizarGoldSismosJob::class,
         'inmet' => \App\Modules\Inmet\Jobs\AtualizarGoldInmetJob::class,
+        'cemaden' => \App\Modules\Cemaden\Jobs\AtualizarGoldCemadenJob::class,
     ],
 
     'sismos' => [
@@ -69,5 +71,31 @@ return [
         // concorrentes em menos de 1s, entao as 68 estacoes de MG cabem folgado
         // nos 300s de timeout do worker da fila medalhao.
         'concorrencia' => (int) env('MEDALHAO_INMET_CONCORRENCIA', 20),
+    ],
+
+    'cemaden' => [
+        // Feed publico da rede automatica do CEMADEN, sem token e sem login.
+        // Devolve o Brasil inteiro (5789 estacoes) numa requisicao; o recorte
+        // por UF acontece no ingestor.
+        //
+        // A janela e fixa em 24h porque e a unica publicada: 311_1, 311_3,
+        // 311_6, 311_12 e 311_72 responderam 404 em 2026-09-02. O numero 311 e
+        // o codigo do produto de estacoes automaticas.
+        'feed_url' => env('MEDALHAO_CEMADEN_FEED_URL', 'https://resources.cemaden.gov.br/dados/311_24.json'),
+
+        'uf' => env('MEDALHAO_CEMADEN_UF', 'MG'),
+
+        // 2,1 MB por resposta: o timeout default de 30s do Http fica curto em
+        // rede corporativa com proxy.
+        'timeout' => (int) env('MEDALHAO_CEMADEN_TIMEOUT', 60),
+
+        // A bbox aqui NAO filtra nada: serve so para enquadrar o mapa na
+        // entrega, mesma semantica da bbox do inmet.
+        'bbox' => [
+            'min_lat' => -22.9,
+            'max_lat' => -14.23,
+            'min_lon' => -51.04,
+            'max_lon' => -39.85,
+        ],
     ],
 ];

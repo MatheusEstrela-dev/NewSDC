@@ -59,10 +59,26 @@ Schedule::command('medalhao:ingerir sismos')
  * ~7s com a API quente. Medido: a API nao aplica rate limit (8 chamadas seguidas,
  * todas 200, ~220ms cada).
  *
- * Dez minutos, e nao quinze, para casar com a cadencia do CEMADEN -- que publica
- * a cada ~10 min e entra na fase 2, quando as duas fontes serao unificadas.
+ * Dez minutos, e nao quinze, para casar com a cadencia do CEMADEN, agendado
+ * abaixo.
  */
 Schedule::command('medalhao:ingerir inmet')
+    ->everyTenMinutes()
+    ->onOneServer()
+    ->runInBackground();
+
+/*
+ * Aqui os dez minutos buscam dado que EXISTE, diferente do INMET: o feed do
+ * CEMADEN republica o campo "atualizado" a cada ~10 min, e foi medido avancando
+ * em 2 minutos (16:58:37 -> 17:00:44 em 2026-09-02). Cada avanco vira um
+ * snapshot novo em silver.leituras_cemaden, e e isso que faz a tela andar em
+ * 16:10, 16:20 em vez de 16:00, 17:00.
+ *
+ * Custo: UMA requisicao por ciclo, contra as 68 do INMET -- o feed e agregado
+ * nacional. Quando o feed nao avanca, o dedup por hash da camada Bronze
+ * descarta antes de tocar Silver ou Gold.
+ */
+Schedule::command('medalhao:ingerir cemaden')
     ->everyTenMinutes()
     ->onOneServer()
     ->runInBackground();

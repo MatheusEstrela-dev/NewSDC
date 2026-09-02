@@ -211,6 +211,7 @@ return [
         App\Modules\AjudaHumanitaria\AjudaHumanitariaServiceProvider::class,
         App\Modules\Treinamento\TreinamentoServiceProvider::class,
         App\Modules\Inmet\InmetServiceProvider::class,
+        App\Modules\Cemaden\CemadenServiceProvider::class,
         App\Modules\Medalhao\MedalhaoServiceProvider::class,
         App\Modules\Sismos\SismosServiceProvider::class,
         App\Modules\Suporte\SuporteServiceProvider::class,
