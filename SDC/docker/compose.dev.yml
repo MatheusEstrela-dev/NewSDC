@@ -325,6 +325,12 @@ services:
       APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env - copie do SDC/.env}
       APP_ENV: local
       APP_DEBUG: "true"
+      # Credencial da API do INMET, mesmo racional do APP_KEY: vem do
+      # docker/.env (gitignorado) e nao do .env da aplicacao, que nao e montado
+      # nestes containers. Sem ela a coleta agendada do Inmet falha com 4xx.
+      # Sem ":?" de proposito: o pipeline de sismos nao depende dela, e faltar o
+      # token nao deve impedir a fila inteira de subir.
+      MEDALHAO_INMET_TOKEN: ${MEDALHAO_INMET_TOKEN:-}
       # Mesmo racional do app: classmap regenerado no boot (bind mount + pull).
       AUTOLOAD_REFRESH_ON_BOOT: "true"
       # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
