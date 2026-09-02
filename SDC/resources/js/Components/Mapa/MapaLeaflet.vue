@@ -43,6 +43,7 @@ const idMapa = `mapa-leaflet-${Math.random().toString(36).slice(2, 9)}`;
 
 let mapa = null;
 let camada = null;
+let observador = null;
 
 // O popup monta HTML e recebe dado de fonte externa: escapar evita que conteudo
 // do catalogo seja interpretado como marcacao.
@@ -109,13 +110,10 @@ function desenhar() {
   });
 }
 
-onMounted(async () => {
-  await nextTick();
-
-  mapa = L.map(idMapa, {
-    zoomControl: false,
-    attributionControl: false,
-  });
+function enquadrar() {
+  if (!mapa) {
+    return;
+  }
 
   if (props.bbox) {
     // Enquadra o quadrante que o backend usa, em vez de um centro fixo: mapa e
@@ -127,6 +125,19 @@ onMounted(async () => {
   } else {
     mapa.setView(props.centro, props.zoom);
   }
+}
+
+onMounted(async () => {
+  await nextTick();
+
+  const container = document.getElementById(idMapa);
+
+  mapa = L.map(idMapa, {
+    zoomControl: false,
+    attributionControl: false,
+  });
+
+  enquadrar();
 
   L.control.zoom({ position: 'topleft' }).addTo(mapa);
 
@@ -135,9 +146,34 @@ onMounted(async () => {
   }).addTo(mapa);
 
   desenhar();
+
+  /*
+   * O container recebe altura por cadeia de `height: 100%` ate o .map-wrapper
+   * da pagina, e essa cadeia pode nao estar resolvida no onMounted. Medindo
+   * zero, o Leaflet calcula o zoom para caber tudo em 0px -- e cai no zoom
+   * minimo, mostrando o mundo inteiro em vez de Minas.
+   *
+   * O ResizeObserver reenquadra na primeira medida com altura de verdade e se
+   * desliga: reenquadrar a cada resize desfaria o zoom que o usuario deu.
+   */
+  if (container && typeof ResizeObserver !== 'undefined') {
+    observador = new ResizeObserver(() => {
+      if (container.clientHeight > 0 && container.clientWidth > 0) {
+        mapa?.invalidateSize();
+        enquadrar();
+        observador?.disconnect();
+        observador = null;
+      }
+    });
+
+    observador.observe(container);
+  }
 });
 
 onBeforeUnmount(() => {
+  observador?.disconnect();
+  observador = null;
+
   if (mapa) {
     mapa.remove();
     mapa = null;
