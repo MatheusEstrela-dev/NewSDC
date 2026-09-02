@@ -80,4 +80,34 @@ return [
         'bloquear_sobreposicao' => true,
     ],
 
+    /*
+    |---------------------------------------------------------------------------
+    | Reserva de viatura e QR Code da chave
+    |---------------------------------------------------------------------------
+    |
+    | A retirada da chave exige reserva vigente do proprio agente: o scan sem
+    | reserva e recusado. Os numeros abaixo sao a folga operacional que impede
+    | essa regra de virar um obstaculo -- o agente que chega cedo consegue a
+    | chave, e a reserva que ninguem retirou nao trava a viatura para sempre.
+    |
+    */
+
+    'reservas' => [
+
+        // Antecedencia com que o check-in e aceito antes do inicio previsto.
+        // Sem folga, quem reservou para as 14h e chegou 13h50 seria recusado
+        // pela mesma regra que existe para garantir que o carro estivesse la.
+        'tolerancia_checkin_minutos' => (int) env('PLANTAO_RESERVA_TOLERANCIA_CHECKIN', 30),
+
+        // Quanto tempo depois do fim previsto a reserva sem check-in vira
+        // EXPIRADA. Nao e zero porque o command roda a cada 15 minutos e a
+        // pessoa pode estar a caminho; nao e generoso porque cada reserva
+        // fantasma bloqueia a agenda da viatura para os outros.
+        'expiracao_apos_fim_minutos' => (int) env('PLANTAO_RESERVA_EXPIRACAO_MINUTOS', 60),
+
+        // Teto de duracao de uma reserva. Reserva nao e cessao: passar disso e
+        // caso de CEDIDA no cadastro da viatura, com outro tipo de controle.
+        'duracao_maxima_horas' => (int) env('PLANTAO_RESERVA_DURACAO_MAXIMA_HORAS', 72),
+    ],
+
 ];

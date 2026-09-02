@@ -42,12 +42,28 @@ Schedule::command('medalhao:ingerir sismos')
     ->onOneServer()
     ->runInBackground();
 
-// Cadencia horaria, nao de 15 minutos como os sismos: a estacao automatica do
-// INMET publica de hora em hora, entao coletar mais so multiplica I/O sobre as
-// 61 estacoes de MG. O upsert do Silver por (codigo_estacao, medido_em) torna
-// reingerir o mesmo dia inofensivo.
+/*
+ * A cada 10 minutos, embora o INMET publique de hora em hora.
+ *
+ * Isso NAO busca dado que nao existe: a granularidade da fonte e horaria, medido
+ * na propria API (HR_MEDICAO vai de 0000 a 2300, um por hora). O que a cadencia
+ * muda e o atraso de DETECCAO.
+ *
+ * De hora em hora: o INMET publica a leitura das 17:00 por volta das 17:05 e nos
+ * coletamos as 18:00 -- a tela mostra dado de ate 60 minutos atras. De 10 em 10,
+ * vemos as 17:10. Para chuva em Defesa Civil, sair de 60 para 10 minutos de
+ * defasagem e operacionalmente relevante.
+ *
+ * O custo extra e baixo: o dedup por hash do IngerirFonteJob descarta o ciclo
+ * antes de gravar quando o payload nao mudou, e a coleta das 61 estacoes leva
+ * ~7s com a API quente. Medido: a API nao aplica rate limit (8 chamadas seguidas,
+ * todas 200, ~220ms cada).
+ *
+ * Dez minutos, e nao quinze, para casar com a cadencia do CEMADEN -- que publica
+ * a cada ~10 min e entra na fase 2, quando as duas fontes serao unificadas.
+ */
 Schedule::command('medalhao:ingerir inmet')
-    ->hourly()
+    ->everyTenMinutes()
     ->onOneServer()
     ->runInBackground();
 

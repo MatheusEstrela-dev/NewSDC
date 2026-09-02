@@ -33,6 +33,15 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  plantaoAtivoRotulo: {
+    type: String,
+    default: null,
+  },
+  // {value, label} do usuario da sessao, para pre-preencher o condutor.
+  usuarioAtual: {
+    type: Object,
+    default: null,
+  },
   canCreate: {
     type: Boolean,
     default: false,
@@ -46,6 +55,14 @@ const props = defineProps({
     default: false,
   },
   canMovimentar: {
+    type: Boolean,
+    default: false,
+  },
+  canReservar: {
+    type: Boolean,
+    default: false,
+  },
+  canQrCode: {
     type: Boolean,
     default: false,
   },
@@ -94,10 +111,14 @@ const confirmDelete = () => {
     :filter-options="filterOptions"
     :condutores="condutores"
     :plantao-ativo-id="plantaoAtivoId"
+    :plantao-ativo-rotulo="plantaoAtivoRotulo"
+    :usuario-atual="usuarioAtual"
     :can-create="canCreate"
     :can-edit="canEdit"
     :can-delete="canDelete"
     :can-movimentar="canMovimentar"
+    :can-reservar="canReservar"
+    :can-qr-code="canQrCode"
     @filter="handleFilter"
     @delete="handleDelete"
   />

@@ -8,6 +8,10 @@ use App\Modules\Plantao\Controllers\EscalaItemStoreController;
 use App\Modules\Plantao\Controllers\EscalaItemUpdateController;
 use App\Modules\Plantao\Controllers\EscalaPublicarController;
 use App\Modules\Plantao\Controllers\EscalaStoreController;
+use App\Modules\Plantao\Controllers\ChaveCheckinController;
+use App\Modules\Plantao\Controllers\ChaveCheckoutController;
+use App\Modules\Plantao\Controllers\ChaveScanController;
+use App\Modules\Plantao\Controllers\ChaveScanPageController;
 use App\Modules\Plantao\Controllers\MovimentacaoRetornoController;
 use App\Modules\Plantao\Controllers\MovimentacaoSaidaController;
 use App\Modules\Plantao\Controllers\NoticiasIndexController;
@@ -25,7 +29,12 @@ use App\Modules\Plantao\Controllers\PlantonistaIndexController;
 use App\Modules\Plantao\Controllers\PlantonistaStoreController;
 use App\Modules\Plantao\Controllers\PlantonistaUpdateController;
 use App\Modules\Plantao\Controllers\RelatorioPassagemController;
+use App\Modules\Plantao\Controllers\ReservaCancelarController;
+use App\Modules\Plantao\Controllers\ReservaIndexController;
+use App\Modules\Plantao\Controllers\ReservaStoreController;
 use App\Modules\Plantao\Controllers\ViaturaDestroyController;
+use App\Modules\Plantao\Controllers\ViaturaQrCodeController;
+use App\Modules\Plantao\Controllers\ViaturaQrCodeRotacionarController;
 use App\Modules\Plantao\Controllers\ViaturaIndexController;
 use App\Modules\Plantao\Controllers\ViaturaStoreController;
 use App\Modules\Plantao\Controllers\ViaturaUpdateController;
@@ -68,6 +77,66 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
 
         Route::post('/{viatura}/saida', MovimentacaoSaidaController::class)
             ->name('saida')
+            ->middleware('can:plantao.viaturas.movimentar');
+
+        // Etiqueta do chaveiro. Sob `manage` e nao `view`: quem imprime a
+        // etiqueta define qual token abre a chave daquela viatura, e
+        // ?rotacionar=1 invalida as etiquetas ja coladas.
+        Route::get('/{viatura}/qrcode', ViaturaQrCodeController::class)
+            ->name('qrcode')
+            ->middleware('can:plantao.reservas.manage');
+
+        // Troca da etiqueta em POST: o ato mata o adesivo vigente e nao pode
+        // ser repetido por prefetch nem por recarregamento, como acontecia
+        // quando era `?rotacionar=1` no GET acima.
+        Route::post('/{viatura}/qrcode/rotacionar', ViaturaQrCodeRotacionarController::class)
+            ->name('qrcode.rotacionar')
+            ->middleware('can:plantao.reservas.manage');
+    });
+
+    // ─── Reservas de viatura ────────────────────────────────────────────────
+    //
+    // Subgrupo estatico: entra ANTES das parametrizadas /{plantao} pela mesma
+    // razao de /viaturas e /escala -- senao "reservas" casa como id de plantao.
+    Route::prefix('reservas')->name('reservas.')->group(function () {
+        Route::get('/', ReservaIndexController::class)
+            ->name('index')
+            ->middleware('can:plantao.reservas.view');
+
+        Route::post('/', ReservaStoreController::class)
+            ->name('store')
+            ->middleware('can:plantao.reservas.create');
+
+        // Middleware exige apenas `create`, que todo agente tem: cancelar a
+        // PROPRIA reserva e operacao diaria. Derrubar a de outra pessoa exige
+        // `manage`, e essa checagem fina mora no controller e responde 403 --
+        // mesmo desenho do PlantaoDestroyController.
+        Route::post('/{reserva}/cancelar', ReservaCancelarController::class)
+            ->name('cancelar')
+            ->middleware('can:plantao.reservas.create');
+    });
+
+    // ─── Chave (QR Code) ────────────────────────────────────────────────────
+    //
+    // Retirar e devolver chave e movimentar viatura: reusa
+    // `plantao.viaturas.movimentar` em vez de criar slug novo. O que a reserva
+    // acrescenta e QUEM pode, nao um direito diferente.
+    Route::prefix('chave')->name('chave.')->group(function () {
+        Route::get('/scan', ChaveScanPageController::class)
+            ->name('scan')
+            ->middleware('can:plantao.viaturas.movimentar');
+
+        // Leitura do token: responde JSON e nao grava nada.
+        Route::post('/scan', ChaveScanController::class)
+            ->name('scan.resolver')
+            ->middleware('can:plantao.viaturas.movimentar');
+
+        Route::post('/{reserva}/checkin', ChaveCheckinController::class)
+            ->name('checkin')
+            ->middleware('can:plantao.viaturas.movimentar');
+
+        Route::post('/{reserva}/checkout', ChaveCheckoutController::class)
+            ->name('checkout')
             ->middleware('can:plantao.viaturas.movimentar');
     });
 

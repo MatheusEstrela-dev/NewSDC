@@ -74,6 +74,28 @@ onUnmounted(() => window.removeEventListener('toast', onToastEvent));
     width: calc(100vw - 2rem);
 }
 
+/*
+ * Celular: ancorado embaixo e preso aos dois lados.
+ *
+ * No topo o toast cobria o cabecalho e a trilha de navegacao; embaixo fica na
+ * area do polegar e nao esconde nada. Os insets simetricos substituem o
+ * `width: calc(100vw - 2rem)` com `right: 1.5rem`, que deixava 8px de margem a
+ * esquerda contra 24px a direita -- discreto no desktop, torto na tela pequena.
+ *
+ * Mesmo ponto de corte (640px) do `sm:` do FlashNotification, para os dois
+ * sistemas de toast do app se comportarem igual.
+ */
+@media (max-width: 639px) {
+    .toast-container {
+        top: auto;
+        left: 0.75rem;
+        right: 0.75rem;
+        bottom: calc(1rem + env(safe-area-inset-bottom));
+        width: auto;
+        max-width: none;
+    }
+}
+
 .toast-list {
     display: flex;
     flex-direction: column;

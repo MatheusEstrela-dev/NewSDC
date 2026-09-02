@@ -10,7 +10,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import InscricoesTable from '@/Components/Organisms/Treinamento/InscricoesTable.vue';
-import QrScanner from '@/Components/Molecules/Treinamento/QrScanner.vue';
+import QrScanner from '@/Components/Molecules/QrScanner.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from '@/Composables/useToast';
