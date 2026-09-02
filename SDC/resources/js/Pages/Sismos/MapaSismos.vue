@@ -95,6 +95,7 @@ defineOptions({ layout: AuthenticatedLayout });
 
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { useTheme } from '@/Composables/ui/useTheme';
 import { computed, ref } from 'vue';
 
@@ -102,6 +103,15 @@ const props = defineProps({
   eventos: { type: Array, default: () => [] },
   estatisticas: { type: Object, default: () => ({}) },
   bbox: { type: Object, required: true },
+});
+
+// A coleta roda a cada 15 minutos, mas o dedup por hash so deixa passar quando
+// ha evento novo -- entao esta pagina raramente vai piscar, e quando piscar sera
+// porque algo aconteceu de verdade.
+useAtualizacaoAoVivo({
+  canal: 'medalhao.sismos',
+  evento: '.GoldAtualizado',
+  props: ['eventos', 'estatisticas'],
 });
 
 /*
