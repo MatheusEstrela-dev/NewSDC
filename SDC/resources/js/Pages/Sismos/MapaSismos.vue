@@ -1,5 +1,5 @@
 <template>
-  <div class="sismos-container dark">
+  <div class="sismos-container">
     <div class="header-section">
       <h1 class="page-title">Sismos</h1>
       <p class="page-subtitle">
@@ -40,6 +40,51 @@
         </div>
       </div>
     </div>
+
+    <div class="table-container">
+      <table class="dados-table">
+        <thead>
+          <tr>
+            <th class="hidden md:table-cell">Evento</th>
+            <th>Regiao</th>
+            <th>Magnitude</th>
+            <th>Classe</th>
+            <th class="hidden sm:table-cell">Profundidade</th>
+            <th class="hidden sm:table-cell">Origem (UTC)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="evento in eventosDaPagina" :key="evento.evento_id">
+            <td class="code-cell hidden md:table-cell">
+              {{ evento.evento_id }}<br><span class="sub-text">{{ evento.fonte }}</span>
+            </td>
+            <td>
+              <div class="station-name">{{ evento.regiao ?? 'Regiao nao informada' }}</div>
+              <div class="municipio-name md:hidden">{{ evento.evento_id }}</div>
+            </td>
+            <td class="value-cell" :style="{ color: corDaClasse(evento.classe_magnitude) }">
+              {{ formatarMagnitude(evento.magnitude) }}
+              <span class="sub-text">{{ evento.escala_magnitude ?? '' }}</span>
+            </td>
+            <td>
+              <span
+                class="status-badge"
+                :style="{ borderColor: corDaClasse(evento.classe_magnitude), color: corDaClasse(evento.classe_magnitude) }"
+              >
+                {{ rotuloDaClasse(evento.classe_magnitude) }}
+              </span>
+            </td>
+            <td class="hidden sm:table-cell">{{ evento.profundidade_km ?? '-' }} km</td>
+            <td class="time-cell hidden sm:table-cell">{{ formatarDataHora(evento.origem_utc) }}</td>
+          </tr>
+          <tr v-if="eventos.length === 0">
+            <td colspan="6" class="empty-cell">Nenhum evento na janela atual</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <Pagination :pagination="paginacao" @page-change="irParaPagina" />
+    </div>
   </div>
 </template>
 
@@ -49,7 +94,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 defineOptions({ layout: AuthenticatedLayout });
 
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
-import { computed } from 'vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import { useTheme } from '@/Composables/ui/useTheme';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   eventos: { type: Array, default: () => [] },
@@ -57,8 +104,14 @@ const props = defineProps({
   bbox: { type: Object, required: true },
 });
 
-// Mesmas faixas da matview gold.sismos_mapa. Se mudarem la, mudam aqui.
-const CORES = {
+/*
+ * Mesmas faixas da matview gold.sismos_mapa. Se mudarem la, mudam aqui.
+ *
+ * Duas paletas porque a saturacao que funciona sobre fundo escuro agride sobre
+ * branco: os tons vivos foram escolhidos para o tema escuro. No claro entram as
+ * variantes 600/700 do Tailwind, que tem contraste suficiente sem estourar.
+ */
+const CORES_ESCURO = {
   micro: '#94a3b8',
   leve: '#22c55e',
   moderado: '#f59e0b',
@@ -66,13 +119,31 @@ const CORES = {
   desconhecido: '#64748b',
 };
 
-const legenda = [
-  { classe: 'micro', cor: CORES.micro, rotulo: 'Micro (< 2,0)' },
-  { classe: 'leve', cor: CORES.leve, rotulo: 'Leve (2,0 a 3,9)' },
-  { classe: 'moderado', cor: CORES.moderado, rotulo: 'Moderado (4,0 a 4,9)' },
-  { classe: 'forte', cor: CORES.forte, rotulo: 'Forte (>= 5,0)' },
-  { classe: 'desconhecido', cor: CORES.desconhecido, rotulo: 'Sem magnitude' },
+const CORES_CLARO = {
+  micro: '#64748b',
+  leve: '#15803d',
+  moderado: '#b45309',
+  forte: '#b91c1c',
+  desconhecido: '#475569',
+};
+
+const { isDarkMode } = useTheme();
+
+const CORES = computed(() => (isDarkMode.value ? CORES_ESCURO : CORES_CLARO));
+
+const FAIXAS = [
+  { classe: 'micro', rotulo: 'Micro (< 2,0)' },
+  { classe: 'leve', rotulo: 'Leve (2,0 a 3,9)' },
+  { classe: 'moderado', rotulo: 'Moderado (4,0 a 4,9)' },
+  { classe: 'forte', rotulo: 'Forte (>= 5,0)' },
+  { classe: 'desconhecido', rotulo: 'Sem magnitude' },
 ];
+
+// Computed porque a cor depende do tema: trocar claro/escuro repinta a legenda.
+const legenda = computed(() => FAIXAS.map((faixa) => ({
+  ...faixa,
+  cor: CORES.value[faixa.classe],
+})));
 
 // A pagina traduz evento -> ponto; toda a mecanica de Leaflet vive no
 // componente. O popup vai estruturado: quem escapa e o componente, porque
@@ -81,7 +152,7 @@ const pontosDoMapa = computed(() => props.eventos.map((evento) => ({
   id: evento.id,
   latitude: evento.latitude,
   longitude: evento.longitude,
-  cor: CORES[evento.classe_magnitude] ?? CORES.desconhecido,
+  cor: CORES.value[evento.classe_magnitude] ?? CORES.value.desconhecido,
   raio: raioPorMagnitude(evento.magnitude),
   popup: {
     titulo: evento.regiao ?? 'Regiao nao informada',
@@ -94,6 +165,47 @@ const pontosDoMapa = computed(() => props.eventos.map((evento) => ({
     ],
   },
 })));
+
+const ROTULOS = {
+  micro: 'Micro',
+  leve: 'Leve',
+  moderado: 'Moderado',
+  forte: 'Forte',
+  desconhecido: 'Sem magnitude',
+};
+
+function corDaClasse(classe) {
+  return CORES.value[classe] ?? CORES.value.desconhecido;
+}
+
+function rotuloDaClasse(classe) {
+  return ROTULOS[classe] ?? ROTULOS.desconhecido;
+}
+
+/*
+ * Paginacao no cliente, nao no servidor: o mapa precisa de TODOS os eventos de
+ * qualquer forma, entao paginar no backend exigiria uma segunda consulta para
+ * ganhar nada. O componente Pagination so precisa do formato do objeto.
+ */
+const POR_PAGINA = 10;
+const pagina = ref(1);
+
+const paginacao = computed(() => ({
+  current_page: pagina.value,
+  per_page: POR_PAGINA,
+  total: props.eventos.length,
+  last_page: Math.max(1, Math.ceil(props.eventos.length / POR_PAGINA)),
+}));
+
+const eventosDaPagina = computed(() => {
+  const inicio = (pagina.value - 1) * POR_PAGINA;
+
+  return props.eventos.slice(inicio, inicio + POR_PAGINA);
+});
+
+function irParaPagina(numero) {
+  pagina.value = Math.min(Math.max(1, numero), paginacao.value.last_page);
+}
 
 // Raio proporcional a magnitude, como o CircleMarker do folium nos notebooks.
 function raioPorMagnitude(magnitude) {
@@ -123,8 +235,22 @@ function formatarDataHora(valor) {
 </script>
 
 <style scoped>
+/*
+ * Um token por papel: as regras abaixo nunca repetem cor por tema. As variantes
+ * escuras vivem no <style> NAO-scoped no fim do arquivo, porque dependem da
+ * classe `dark` que o useTheme poe no <html>, fora deste componente.
+ */
 .sismos-container {
+  --sup: #ffffff;
+  --sup-2: #f1f5f9;
+  --borda: #e2e8f0;
+  --texto: #1e293b;
+  --texto-fraco: #64748b;
+  --overlay: rgba(255, 255, 255, 0.94);
+  --mapa-fallback: #e2e8f0;
+
   padding: 1.5rem;
+  color: var(--texto);
 }
 
 .header-section {
@@ -181,15 +307,16 @@ function formatarDataHora(valor) {
 .mapa-area {
   height: 100%;
   width: 100%;
-  background: #1a1d21; /* fallback enquanto os tiles nao chegam */
+  background: var(--mapa-fallback); /* fallback enquanto os tiles nao chegam */
 }
 
 
 .map-overlay {
   position: absolute;
   z-index: 500;
-  background: rgba(26, 29, 33, 0.9);
-  color: #f8fafc;
+  background: var(--overlay);
+  color: var(--texto);
+  border: 1px solid var(--borda);
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   font-size: 0.8125rem;
@@ -255,6 +382,98 @@ function formatarDataHora(valor) {
  * seguia sobreposta ao mapa no telefone, cobrindo os pontos que explica, sem
  * nenhum sintoma no CSS.
  */
+
+/*
+ * Tabela de eventos. As regras BASE sao o tema claro; as variantes escuras
+ * ficam no <style> nao-scoped no fim do arquivo, trocando so os tokens.
+ */
+.table-container {
+  margin-top: 1rem;
+  background: var(--sup);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  overflow: hidden;
+  overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dados-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dados-table th {
+  background: var(--sup-2);
+  color: var(--texto-fraco);
+  font-weight: 500;
+  font-size: 12px;
+  text-align: left;
+  padding: 12px 16px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--borda);
+  white-space: nowrap;
+}
+
+.dados-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto);
+  font-size: 13px;
+}
+
+.dados-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dados-table tbody tr:hover {
+  background: var(--sup-2);
+}
+
+.code-cell {
+  font-weight: 600;
+}
+
+.sub-text {
+  font-size: 10px;
+  color: var(--texto-fraco);
+  font-weight: normal;
+}
+
+.station-name {
+  font-weight: 500;
+}
+
+.municipio-name {
+  font-size: 11px;
+  color: var(--texto-fraco);
+  text-transform: uppercase;
+}
+
+.value-cell {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge {
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.time-cell,
+.empty-cell {
+  color: var(--texto-fraco);
+  white-space: nowrap;
+}
+
+.empty-cell {
+  text-align: center;
+  padding: 1.5rem;
+}
+
 @media (max-width: 767px) {
   .map-wrapper {
     height: 60vh;
@@ -280,5 +499,24 @@ function formatarDataHora(valor) {
     width: 100%;
     margin-top: 0.75rem;
   }
+}
+</style>
+
+<!--
+  Bloco NAO-scoped de proposito, mesma razao do MapaInmet: a variante escura
+  depende da classe `dark` no <html>, que e ancestral fora deste componente.
+  `:global(.dark) .x` dentro do <style scoped> NAO funciona aqui -- o compilador
+  descarta tudo depois do :global() e emite apenas `.dark`, o que aplicava estas
+  cores ao proprio <html> em vez da pagina.
+-->
+<style>
+.dark .sismos-container {
+  --sup: #1a1d21;
+  --sup-2: #25292f;
+  --borda: #374151;
+  --texto: #e5e7eb;
+  --texto-fraco: #9ca3af;
+  --overlay: rgba(26, 29, 33, 0.9);
+  --mapa-fallback: #1a1d21;
 }
 </style>

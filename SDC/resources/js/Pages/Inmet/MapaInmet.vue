@@ -1,6 +1,6 @@
 <template>
 
-    <div class="inmet-container dark">
+    <div class="inmet-container">
       <!-- Header -->
       <div class="header-section">
         <h1 class="page-title">
@@ -49,7 +49,7 @@
 
       <!-- Tabela de Dados -->
       <div class="table-container">
-        <table class="dark-table">
+        <table class="dados-table">
           <thead>
             <tr>
               <th class="hidden md:table-cell">Código</th>
@@ -60,7 +60,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="estacao in estacoes" :key="estacao.codigo_estacao">
+            <tr v-for="estacao in estacoesDaPagina" :key="estacao.codigo_estacao">
               <td class="code-cell hidden md:table-cell">{{ estacao.codigo_estacao }}<br><span class="sub-text">Automática</span></td>
               <td>
                 <div class="station-name">{{ estacao.nome_estacao }}</div>
@@ -76,8 +76,13 @@
               </td>
               <td class="time-cell hidden sm:table-cell">{{ formatarDataHora(estacao.medido_em) }}</td>
             </tr>
+            <tr v-if="estacoes.length === 0">
+              <td colspan="5" class="empty-cell">Nenhuma estacao com leitura</td>
+            </tr>
           </tbody>
         </table>
+
+        <Pagination :pagination="paginacao" @page-change="irParaPagina" />
       </div>
     </div>
 
@@ -88,7 +93,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
-import { computed } from 'vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import { useTheme } from '@/Composables/ui/useTheme';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   estacoes: { type: Array, default: () => [] },
@@ -96,9 +103,15 @@ const props = defineProps({
   bbox: { type: Object, required: true },
 });
 
-// Mesmas classes da matview gold.inmet_mapa, faixas do LHASA_RIO adaptadas para
-// MG. Se mudarem la, mudam aqui.
-const CORES = {
+/*
+ * Mesmas classes da matview gold.inmet_mapa, faixas do LHASA_RIO adaptadas para
+ * MG. Se mudarem la, mudam aqui.
+ *
+ * Duas paletas: a saturacao que funciona sobre fundo escuro agride sobre
+ * branco. Valor literal, nunca var(--...): estas cores vao para o fillColor do
+ * Leaflet, que vira atributo SVG, onde variavel CSS nao resolve.
+ */
+const CORES_ESCURO = {
   sem_chuva: '#22c55e',
   muito_fraca: '#3b82f6',
   fraca: '#06b6d4',
@@ -109,6 +122,22 @@ const CORES = {
   extrema: '#7f1d1d',
   desconhecido: '#6b7280',
 };
+
+const CORES_CLARO = {
+  sem_chuva: '#15803d',
+  muito_fraca: '#1d4ed8',
+  fraca: '#0e7490',
+  moderada: '#a16207',
+  forte: '#c2410c',
+  muito_forte: '#b91c1c',
+  intensa: '#7f1d1d',
+  extrema: '#581c1c',
+  desconhecido: '#475569',
+};
+
+const { isDarkMode } = useTheme();
+
+const CORES = computed(() => (isDarkMode.value ? CORES_ESCURO : CORES_CLARO));
 
 const ROTULOS = {
   sem_chuva: 'Sem chuva',
@@ -124,23 +153,54 @@ const ROTULOS = {
 
 // A legenda deriva das mesmas faixas, em vez de repetir as cores em markup —
 // era o que permitia a legenda divergir da classificacao sem ninguem notar.
-const legenda = [
-  { classe: 'sem_chuva', cor: CORES.sem_chuva, rotulo: 'Sem chuva (0 mm)' },
-  { classe: 'muito_fraca', cor: CORES.muito_fraca, rotulo: 'Muito fraca (0-5 mm)' },
-  { classe: 'fraca', cor: CORES.fraca, rotulo: 'Fraca (5-15 mm)' },
-  { classe: 'moderada', cor: CORES.moderada, rotulo: 'Moderada (15-35 mm)' },
-  { classe: 'forte', cor: CORES.forte, rotulo: 'Forte (35-60 mm)' },
-  { classe: 'muito_forte', cor: CORES.muito_forte, rotulo: 'Muito forte (60-100 mm)' },
-  { classe: 'intensa', cor: CORES.intensa, rotulo: 'Intensa (100-140 mm)' },
-  { classe: 'extrema', cor: CORES.extrema, rotulo: 'Extrema (> 140 mm)' },
+const FAIXAS = [
+  { classe: 'sem_chuva', rotulo: 'Sem chuva (0 mm)' },
+  { classe: 'muito_fraca', rotulo: 'Muito fraca (0-5 mm)' },
+  { classe: 'fraca', rotulo: 'Fraca (5-15 mm)' },
+  { classe: 'moderada', rotulo: 'Moderada (15-35 mm)' },
+  { classe: 'forte', rotulo: 'Forte (35-60 mm)' },
+  { classe: 'muito_forte', rotulo: 'Muito forte (60-100 mm)' },
+  { classe: 'intensa', rotulo: 'Intensa (100-140 mm)' },
+  { classe: 'extrema', rotulo: 'Extrema (> 140 mm)' },
 ];
 
+// Computed porque a cor depende do tema: trocar claro/escuro repinta a legenda.
+const legenda = computed(() => FAIXAS.map((faixa) => ({
+  ...faixa,
+  cor: CORES.value[faixa.classe],
+})));
+
 function corDaClasse(classe) {
-  return CORES[classe] ?? CORES.desconhecido;
+  return CORES.value[classe] ?? CORES.value.desconhecido;
 }
 
 function rotuloDaClasse(classe) {
   return ROTULOS[classe] ?? ROTULOS.desconhecido;
+}
+
+/*
+ * Paginacao no cliente, nao no servidor: o mapa precisa de TODAS as estacoes de
+ * qualquer forma, entao paginar no backend exigiria uma segunda consulta para
+ * ganhar nada com 57 linhas. O componente Pagination so precisa do formato.
+ */
+const POR_PAGINA = 10;
+const pagina = ref(1);
+
+const paginacao = computed(() => ({
+  current_page: pagina.value,
+  per_page: POR_PAGINA,
+  total: props.estacoes.length,
+  last_page: Math.max(1, Math.ceil(props.estacoes.length / POR_PAGINA)),
+}));
+
+const estacoesDaPagina = computed(() => {
+  const inicio = (pagina.value - 1) * POR_PAGINA;
+
+  return props.estacoes.slice(inicio, inicio + POR_PAGINA);
+});
+
+function irParaPagina(numero) {
+  pagina.value = Math.min(Math.max(1, numero), paginacao.value.last_page);
 }
 
 function formatarMm(valor) {
@@ -183,10 +243,27 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
 
 <style scoped>
 /* Dark Mode Base */
+/*
+ * Regras BASE = tema claro. O escuro vem em :global(.dark), classe que o
+ * useTheme poe no <html>. Antes esta pagina tinha `dark` fixo no proprio
+ * container e cores escuras aqui, entao ignorava o tema do site.
+ */
 .inmet-container {
-  background-color: #111315; /* Cor de fundo bem escura */
+  /*
+   * Um token por papel, em vez de repetir cada regra duas vezes. Trocar o tema
+   * troca so este bloco.
+   */
+  --sup: #ffffff;
+  --sup-2: #f1f5f9;
+  --borda: #e2e8f0;
+  --texto: #1e293b;
+  --texto-fraco: #64748b;
+  --overlay: rgba(255, 255, 255, 0.94);
+  --mapa-fallback: #e2e8f0;
+
+  background-color: #f8fafc;
   min-height: calc(100vh - 64px); /* Account for topbar height */
-  color: #e5e7eb;
+  color: var(--texto);
   font-family: 'Inter', sans-serif;
   padding: 20px;
   width: 100%; /* Ensure it doesn't overflow */
@@ -207,13 +284,13 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
 .page-title {
   font-size: 20px;
   font-weight: 600;
-  color: #e5e7eb;
+  color: var(--texto);
 }
 
 .search-input {
-  background: #1a1d21;
-  border: 1px solid #374151;
-  color: #e5e7eb;
+  background: var(--sup);
+  border: 1px solid var(--borda);
+  color: var(--texto);
   padding: 8px 16px;
   border-radius: 6px;
   width: 300px;
@@ -251,7 +328,7 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
   width: 100%; /* Ensure it doesn't overflow container */
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #374151;
+  border: 1px solid var(--borda);
   margin-bottom: 24px;
   box-sizing: border-box; /* Include border in width calculation */
 }
@@ -260,14 +337,14 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
 .mapa-area {
   height: 100%;
   width: 100%;
-  background: #1a1d21; /* Fallback */
+  background: var(--mapa-fallback); /* Fallback */
 }
 
 /* Overlays */
 .map-overlay {
   position: absolute;
-  background: rgba(26, 29, 33, 0.95);
-  border: 1px solid #374151;
+  background: var(--overlay);
+  border: 1px solid var(--borda);
   border-radius: 8px;
   padding: 16px;
   z-index: 1000;
@@ -291,7 +368,7 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 12px 0;
-  color: #e5e7eb;
+  color: var(--texto);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -302,11 +379,11 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
   justify-content: space-between;
   margin-bottom: 8px;
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--texto-fraco);
 }
 
 .stat-row strong {
-  color: #e5e7eb;
+  color: var(--texto);
 }
 
 .stat-note {
@@ -336,7 +413,7 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--texto-fraco);
 }
 
 .color-box {
@@ -348,60 +425,60 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
 .legend-footer {
   margin-top: 12px;
   font-size: 10px;
-  color: #6b7280;
+  color: var(--texto-fraco);
   font-style: italic;
 }
 
 /* Table */
 .table-container {
-  background: #1a1d21;
+  background: var(--sup);
   border-radius: 8px;
-  border: 1px solid #374151;
+  border: 1px solid var(--borda);
   overflow: hidden;
   width: 100%; /* Ensure it doesn't overflow container */
   box-sizing: border-box; /* Include border in width calculation */
   overflow-x: auto; /* Allow horizontal scroll if needed */
 }
 
-.dark-table {
+.dados-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.dark-table th {
-  background: #25292f;
-  color: #9ca3af;
+.dados-table th {
+  background: var(--sup-2);
+  color: var(--texto-fraco);
   font-weight: 500;
   font-size: 12px;
   text-align: left;
   padding: 12px 16px;
   text-transform: uppercase;
-  border-bottom: 1px solid #374151;
+  border-bottom: 1px solid var(--borda);
 }
 
-.dark-table td {
+.dados-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid #2d333b;
-  color: #e5e7eb;
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto);
   font-size: 13px;
 }
 
-.dark-table tbody tr:last-child td {
+.dados-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.dark-table tbody tr:hover {
-  background: #25292f;
+.dados-table tbody tr:hover {
+  background: var(--sup-2);
 }
 
 .code-cell {
   font-weight: 600;
-  color: #e5e7eb;
+  color: var(--texto);
 }
 
 .sub-text {
   font-size: 10px;
-  color: #6b7280;
+  color: var(--texto-fraco);
   font-weight: normal;
 }
 
@@ -411,7 +488,7 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
 
 .municipio-name {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--texto-fraco);
   text-transform: uppercase;
 }
 
@@ -430,7 +507,7 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
 }
 
 .time-cell {
-  color: #6b7280;
+  color: var(--texto-fraco);
   font-size: 12px;
 }
 
@@ -443,6 +520,13 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
 }
 
 /* Responsive Adjustments */
+.empty-cell {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--texto-fraco);
+}
+
+
 @media (max-width: 768px) {
   .inmet-container {
     padding: 12px 8px;
@@ -496,8 +580,8 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
     position: static; /* Move out of map flow */
     width: 100%;
     margin-bottom: 20px;
-    background: #1a1d21;
-    border: 1px solid #374151;
+    background: var(--sup);
+    border: 1px solid var(--borda);
   }
 
   /* Table adjustments */
@@ -509,7 +593,7 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
     border-right: none;
   }
   
-  .dark-table th, .dark-table td {
+  .dados-table th, .dados-table td {
     padding: 8px 10px;
     font-size: 12px;
   }
@@ -555,5 +639,31 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
     width: 100%;
     margin-top: 12px;
   }
+}
+</style>
+
+<!--
+  Bloco NAO-scoped de proposito.
+
+  A variante escura depende da classe `dark` que o useTheme poe no <html>, ou
+  seja, de um ancestral FORA deste componente. `:global(.dark) .inmet-container`
+  dentro do <style scoped> nao serve: o compilador descarta tudo depois do
+  :global() e emite apenas `.dark`, o que define os tokens no proprio <html> --
+  onde a redefinicao local do container os sobrescreve, e o tema escuro nunca
+  chega. Foi exatamente o defeito visto na tela.
+
+  Qualificar por .inmet-container mantem o alcance na pagina, mesmo sem scope.
+-->
+<style>
+.dark .inmet-container {
+  --sup: #1a1d21;
+  --sup-2: #25292f;
+  --borda: #374151;
+  --texto: #e5e7eb;
+  --texto-fraco: #9ca3af;
+  --overlay: rgba(26, 29, 33, 0.95);
+  --mapa-fallback: #1a1d21;
+
+  background-color: #111315;
 }
 </style>
