@@ -539,6 +539,59 @@ services:
 
     healthcheck: *queue-healthcheck
 
+  # Scheduler. NAO existia em dev: o laravel-scheduler so estava no supervisor,
+  # que e usado nas imagens de producao. O efeito era que NENHUM agendamento do
+  # projeto rodava aqui -- nem o medalhao:ingerir, nem o sdc:check-user-inactivity,
+  # nem o pae:verificar-notificacoes. Quem quisesse ver dado novo tinha de
+  # disparar o comando na mao, e foi assim que o mapa do INMET ficou com dado do
+  # dia anterior.
+  #
+  # O loop de 60s replica o que o supervisor faz em producao. `schedule:run`
+  # decide sozinho o que esta na hora; chamar a cada minuto e o contrato do
+  # Laravel, nao desperdicio.
+  scheduler:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_dev_scheduler
+    hostname: scheduler
+    restart: unless-stopped
+
+    # Nao processa job: so despacha. O trabalho pesado fica nos workers.
+    mem_limit: 512m
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    environment:
+      <<: *queue-env
+      APP_NAME: "SDC Dev Scheduler"
+
+    volumes: *queue-volumes
+
+    depends_on: *queue-depends
+
+    command:
+      - sh
+      - -c
+      - >
+        if [ -n "$${ANEXOS_ROOT:-}" ] && [ ! -e "$${ANEXOS_ROOT}/.sdc_storage_mounted" ]; then
+        echo "ERRO: ANEXOS_ROOT sem o marcador .sdc_storage_mounted (disco de anexos nao montado no host?)" && exit 1;
+        fi &&
+        umask 002 &&
+        composer dump-autoload --optimize --no-interaction &&
+        while true; do
+        php artisan schedule:run --no-interaction >> /dev/stdout 2>&1;
+        sleep 60;
+        done
+
+    # pgrep pelo proprio loop: `schedule:run` termina em segundos, entao
+    # procurar por ele daria falso negativo quase sempre.
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'schedule:run' >/dev/null || pgrep sh >/dev/null || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   db:
     image: postgis/postgis:18-3.6-alpine
     container_name: newsdc_dev_db
