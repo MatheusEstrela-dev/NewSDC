@@ -4,6 +4,7 @@ import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import QrCodeIcon from '@/Components/Icons/QrCodeIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import PassagemHandshakeBanner from '@/Components/Molecules/Plantao/PassagemHandshakeBanner.vue';
@@ -87,6 +88,21 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Prop NAO declarada e `undefined` no template, e `v-if="undefined"` esconde
+  // o botao mesmo com a permissao concedida. Foi o que sumiu com Noticias,
+  // Frota e Ler chave quando eles ganharam guarda de permissao.
+  canNoticias: {
+    type: Boolean,
+    default: false,
+  },
+  canFrota: {
+    type: Boolean,
+    default: false,
+  },
+  canLerChave: {
+    type: Boolean,
+    default: false,
+  },
   canEscala: {
     type: Boolean,
     default: false,
@@ -145,6 +161,10 @@ const abrirAceitarModal = (turno) => {
 
 const handleFrota = () => {
   router.visit(route('plantao.viaturas.index'));
+};
+
+const handleLerChave = () => {
+  router.visit(route('plantao.chave.scan'));
 };
 
 const handleEscala = () => {
@@ -211,6 +231,7 @@ function closePrintModal() {
             escala = violet (planejamento), exportar = success, abrir = primary.
           -->
           <Button
+            v-if="canNoticias"
             variant="info"
             size="md"
             :icon="NewspaperIcon"
@@ -221,6 +242,7 @@ function closePrintModal() {
           </Button>
 
           <Button
+            v-if="canFrota"
             variant="black"
             size="md"
             :icon="TruckIcon"
@@ -228,6 +250,23 @@ function closePrintModal() {
             @click="handleFrota"
           >
             <span class="hidden sm:inline">Frota</span>
+          </Button>
+
+          <!--
+            Leitor da etiqueta do chaveiro. Azul claro proprio (`sky`): e a
+            mesma acao que aparece na Frota e nas Reservas, e cor unica ajuda a
+            achar o botao no celular, onde sobra so o icone.
+          -->
+          <Button
+            v-if="canLerChave"
+            variant="sky"
+            size="md"
+            :icon="QrCodeIcon"
+            icon-position="left"
+            aria-label="Ler chave"
+            @click="handleLerChave"
+          >
+            <span class="hidden sm:inline">Ler chave</span>
           </Button>
 
           <Button
