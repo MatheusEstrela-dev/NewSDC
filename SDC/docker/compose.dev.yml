@@ -62,6 +62,17 @@ services:
       APP_NAME: "SDC Dev"
       APP_ENV: local
       APP_DEBUG: "true"
+      # Broadcast. O app tambem PUBLICA eventos, entao precisa das mesmas
+      # credenciais que os workers. BROADCAST_CONNECTION e as REVERB_* andam
+      # JUNTAS: driver sem chave derruba a aplicacao no boot, porque
+      # channels.php resolve o broadcaster de forma eager. Ver config/app.php.
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-null}
+      REVERB_APP_ID: ${REVERB_APP_ID:-}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
       # Codigo entra por bind mount + git pull: regenerar o classmap no boot
       # evita 500 de classe nova ausente do autoloader da imagem (13/07).
       AUTOLOAD_REFRESH_ON_BOOT: "true"
@@ -331,6 +342,24 @@ services:
       # Sem ":?" de proposito: o pipeline de sismos nao depende dela, e faltar o
       # token nao deve impedir a fila inteira de subir.
       MEDALHAO_INMET_TOKEN: ${MEDALHAO_INMET_TOKEN:-}
+      # Broadcast. BROADCAST_CONNECTION e as REVERB_* andam JUNTAS: com o
+      # BroadcastServiceProvider registrado, channels.php resolve o broadcaster
+      # de forma eager, e driver sem credencial derruba a aplicacao INTEIRA no
+      # boot -- nao apenas o tempo real. Ver o comentario em config/app.php.
+      #
+      # Sem ":?" de proposito: o default `null` e valido e desliga o tempo real
+      # sem quebrar nada, entao faltar credencial nao deve impedir a fila de
+      # subir. O que nao pode e reverb sem chave, e por isso os dois vem do
+      # mesmo docker/.env.
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-null}
+      REVERB_APP_ID: ${REVERB_APP_ID:-}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      # O servidor fala com o Reverb pela rede interna; o navegador, por
+      # localhost:8080 publicado. Valores diferentes para a mesma coisa.
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
       # Mesmo racional do app: classmap regenerado no boot (bind mount + pull).
       AUTOLOAD_REFRESH_ON_BOOT: "true"
       # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
@@ -594,6 +623,53 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'schedule:run' >/dev/null || pgrep sh >/dev/null || exit 1"]
       interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Servidor WebSocket. Espelha o servico reverb de
+  # docker/jenkins/stack.app.onpremise.yml, que existe em producao desde antes
+  # deste trabalho e nunca transmitiu nada -- o Caddy ja roteia /app/* para ele e
+  # o Jenkins ja trata o rolling update.
+  reverb:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_dev_reverb
+    hostname: reverb
+    restart: unless-stopped
+
+    # So mantem conexoes e repassa mensagem: nao processa job nem serve request.
+    mem_limit: 512m
+
+    # Publicado para o NAVEGADOR alcancar. Os outros servicos falam com ele pelo
+    # hostname interno `reverb` e nao precisariam da porta exposta.
+    ports:
+      - "8080:8080"
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    environment:
+      <<: *queue-env
+      APP_NAME: "SDC Dev Reverb"
+      # Dentro do proprio container escuta em todas as interfaces; o valor
+      # `reverb` da ancora e para quem fala COM ele, nao para ele mesmo.
+      REVERB_HOST: 0.0.0.0
+
+    volumes: *queue-volumes
+
+    depends_on: *queue-depends
+
+    command:
+      - sh
+      - -c
+      - >
+        umask 002 &&
+        composer dump-autoload --optimize --no-interaction &&
+        exec php artisan reverb:start --host=0.0.0.0 --port=8080
+
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'reverb:start' >/dev/null || exit 1"]
+      interval: 30s
       timeout: 5s
       retries: 3
       start_period: 30s

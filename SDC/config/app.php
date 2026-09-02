@@ -172,19 +172,31 @@ return [
         App\Providers\AppServiceProvider::class,
         App\Providers\FilesystemServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
-        // NAO registrar App\Providers\BroadcastServiceProvider ainda.
+        // Necessario para tempo real: registra /broadcasting/auth e carrega
+        // routes/channels.php.
         //
-        // Ele e necessario para tempo real (registra /broadcasting/auth e carrega
-        // routes/channels.php), mas o boot dele resolve o broadcaster do driver
-        // ativo. Como o stack de producao ja define BROADCAST_CONNECTION=reverb e
-        // o pacote pusher/pusher-php-server NAO esta no composer.json, registrar
-        // aqui derruba a aplicacao no boot com Class "Pusher\Pusher" not found.
+        // Ficou desligado por um tempo porque o boot resolve o broadcaster do
+        // driver ativo, e com BROADCAST_CONNECTION=reverb sem
+        // pusher/pusher-php-server a aplicacao caia no boot com
+        // Class "Pusher\Pusher" not found.
         //
-        // Para ligar tempo real, as duas coisas precisam entrar JUNTAS:
-        //   1) composer require pusher/pusher-php-server
-        //   2) descomentar a linha abaixo
-        // Enquanto isso o sino opera por polling, que e o fallback do frontend.
-        // App\Providers\BroadcastServiceProvider::class,
+        // Isso deixou de ser um problema, e a nota anterior pedia um
+        // `composer require` que nao e mais necessario: pusher/pusher-php-server
+        // entra transitivamente com laravel/reverb (que pede ^7.2), esta travado
+        // no composer.lock em 7.2.8 e presente no vendor da imagem.
+        //
+        // O risco residual e a natureza do boot, e ele e concreto: channels.php
+        // chama Broadcast::channel(), que resolve o broadcaster de forma eager.
+        // Com BROADCAST_CONNECTION=reverb e sem REVERB_APP_KEY, o Pusher recebe
+        // null e a aplicacao INTEIRA morre no boot -- nao apenas o tempo real:
+        //
+        //   Pusher\Pusher::__construct(): Argument #1 ($auth_key) must be of
+        //   type string, null given
+        //
+        // Ou seja: BROADCAST_CONNECTION e as REVERB_* andam JUNTAS, em qualquer
+        // ambiente. Definir uma sem a outra e o unico jeito de derrubar o SDC
+        // mexendo em tempo real.
+        App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\OctaneServiceProvider::class,

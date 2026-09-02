@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inmet\Jobs;
 
+use App\Modules\Medalhao\Events\GoldAtualizado;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -44,5 +45,10 @@ class AtualizarGoldInmetJob implements ShouldQueue
         // primeiro, senao as estatisticas ficam um ciclo atrasadas.
         DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY gold.inmet_mapa');
         DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY gold.inmet_estatisticas');
+
+        // Avisa DEPOIS do refresh, nao na ingestao: e o refresh que torna o dado
+        // visivel. Avisar antes faria o cliente rebuscar o estado anterior e a
+        // tela piscaria sem mudar nada.
+        GoldAtualizado::dispatch('inmet');
     }
 }

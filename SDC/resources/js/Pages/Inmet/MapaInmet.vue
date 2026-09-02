@@ -94,6 +94,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 defineOptions({ layout: AuthenticatedLayout });
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { useTheme } from '@/Composables/ui/useTheme';
 import { computed, ref } from 'vue';
 
@@ -101,6 +102,15 @@ const props = defineProps({
   estacoes: { type: Array, default: () => [] },
   estatisticas: { type: Object, default: () => ({}) },
   bbox: { type: Object, required: true },
+});
+
+// O pipeline coleta de 10 em 10 minutos; sem isto a tela mostra a coleta
+// anterior ate alguem apertar F5. `bbox` fica de fora do only: e config, nao
+// muda com a coleta.
+useAtualizacaoAoVivo({
+  canal: 'medalhao.inmet',
+  evento: '.GoldAtualizado',
+  props: ['estacoes', 'estatisticas'],
 });
 
 /*
