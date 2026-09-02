@@ -11,10 +11,14 @@ import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import MovimentacaoModal from '@/Components/Organisms/Plantao/MovimentacaoModal.vue';
 import ViaturaFormModal from '@/Components/Organisms/Plantao/ViaturaFormModal.vue';
+import ViaturaQrCodeModal from '@/Components/Organisms/Plantao/ViaturaQrCodeModal.vue';
 import ViaturasGrid from '@/Components/Organisms/Plantao/ViaturasGrid.vue';
 import ViaturasTable from '@/Components/Organisms/Plantao/ViaturasTable.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { moduleIcon } from '@/Support/moduleIcons';
+import { Link } from '@inertiajs/vue3';
+import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
+import QrCodeIcon from '@/Components/Icons/QrCodeIcon.vue';
 import { reactive, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -50,6 +54,16 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  // Rotulo do turno e usuario da sessao: viajam ate o MovimentacaoModal, que
+  // preenche o condutor sozinho e mostra a que plantao a saida se amarra.
+  plantaoAtivoRotulo: {
+    type: String,
+    default: null,
+  },
+  usuarioAtual: {
+    type: Object,
+    default: null,
+  },
   canCreate: {
     type: Boolean,
     default: false,
@@ -63,6 +77,14 @@ const props = defineProps({
     default: false,
   },
   canMovimentar: {
+    type: Boolean,
+    default: false,
+  },
+  canReservar: {
+    type: Boolean,
+    default: false,
+  },
+  canQrCode: {
     type: Boolean,
     default: false,
   },
@@ -136,9 +158,29 @@ const onMovimentacaoSaved = () => {
   emit('filter', { ...props.filters });
 };
 
+const showQrCodeModal = ref(false);
+const viaturaEmEtiqueta = ref(null);
+
+const openQrCodeModal = (id) => {
+  viaturaEmEtiqueta.value = props.viaturas.find((v) => v.id === id) ?? null;
+  showQrCodeModal.value = viaturaEmEtiqueta.value !== null;
+};
+
 // Card de estatistica como filtro rapido: '' (Total) limpa o status.
+// `reservada` sai junto porque os dois recortes se sobrepoem -- deixar o
+// anterior grudado devolveria uma lista vazia sem explicacao.
 const handleStatFilter = (status) => {
-  emit('filter', { ...props.filters, status: status || undefined });
+  emit('filter', { ...props.filters, status: status || undefined, reservada: undefined });
+};
+
+// Disponivel de verdade: DISPONIVEL no banco E sem reserva agendada. Sem o
+// segundo recorte o card mostraria como livre a viatura que alguem ja reservou.
+const handleDisponiveisFilter = () => {
+  emit('filter', { ...props.filters, status: 'DISPONIVEL', reservada: '0' });
+};
+
+const handleReservadasFilter = () => {
+  emit('filter', { ...props.filters, status: 'DISPONIVEL', reservada: '1' });
 };
 
 const aplicarFiltros = () => {
@@ -165,25 +207,50 @@ const limparFiltros = () => {
       :icon-image="moduleIcon('plantao')"
       variant="gradient"
     >
-      <template #actions>
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <ViewModeToggle v-model="viewMode" />
+      <!--
+        Sem container proprio: o PageHeader ja envolve este slot em
+        `flex flex-wrap items-center gap-2 sm:gap-3 md:justify-end`. Um segundo
+        flex aqui dentro virava uma linha unica que nao quebrava junto com as
+        demais e abria uma faixa vazia no header a partir de 4 acoes.
 
-          <Button
-            v-if="canCreate"
-            variant="primary"
-            size="md"
-            :icon="PlusIcon"
-            icon-position="left"
-            @click="openCreateModal"
-          >
-            <span>Nova Viatura</span>
+        Os rotulos das acoes de navegacao somem abaixo de sm e sobra o icone --
+        no celular, quatro controles com texto nao cabem na largura, e a acao
+        primaria (Nova Viatura) e a que deve manter a palavra.
+      -->
+      <template #actions>
+        <ViewModeToggle v-model="viewMode" />
+
+        <!--
+          Ciano para a chave: e a cor que o ActionButton ja usa na acao
+          `qrcode`, entao ler etiqueta tem a mesma cor em toda a interface.
+          Violeta para a agenda, que nao disputa com o azul da acao primaria.
+        -->
+        <Link v-if="canMovimentar" :href="route('plantao.chave.scan')">
+          <Button variant="info" size="md" :icon="QrCodeIcon" icon-position="left" aria-label="Ler chave">
+            <span class="hidden sm:inline">Ler chave</span>
           </Button>
-        </div>
+        </Link>
+
+        <Link v-if="canReservar" :href="route('plantao.reservas.index')">
+          <Button variant="violet" size="md" :icon="CalendarIcon" icon-position="left" aria-label="Reservas">
+            <span class="hidden sm:inline">Reservas</span>
+          </Button>
+        </Link>
+
+        <Button
+          v-if="canCreate"
+          variant="primary"
+          size="md"
+          :icon="PlusIcon"
+          icon-position="left"
+          @click="openCreateModal"
+        >
+          <span>Nova Viatura</span>
+        </Button>
       </template>
     </PageHeader>
 
-    <StatCardsGrid :colunas="4">
+    <StatCardsGrid :colunas="5">
       <StatCard
         title="Total"
         :value="statistics.total"
@@ -196,7 +263,19 @@ const limparFiltros = () => {
         :value="statistics.disponiveis"
         variant="success"
         clickable
-        @click="handleStatFilter('DISPONIVEL')"
+        @click="handleDisponiveisFilter"
+      />
+      <!--
+        Reserva nao e valor de `status` no banco, entao este card filtra por
+        `reservada` e nao pelo status. Ambar: a viatura esta inteira e no patio,
+        mas comprometida com alguem.
+      -->
+      <StatCard
+        title="Reservadas"
+        :value="statistics.reservadas"
+        variant="warning"
+        clickable
+        @click="handleReservadasFilter"
       />
       <StatCard
         title="Em transito"
@@ -281,9 +360,11 @@ const limparFiltros = () => {
       :can-edit="canEdit"
       :can-delete="canDelete"
       :can-movimentar="canMovimentar"
+      :can-qr-code="canQrCode"
       @edit="openEditModal"
       @delete="(id) => emit('delete', id)"
       @movimentacao="openMovimentacaoModal"
+      @qrcode="openQrCodeModal"
     />
 
     <ViaturasTable
@@ -292,9 +373,11 @@ const limparFiltros = () => {
       :can-edit="canEdit"
       :can-delete="canDelete"
       :can-movimentar="canMovimentar"
+      :can-qr-code="canQrCode"
       @edit="openEditModal"
       @delete="(id) => emit('delete', id)"
       @movimentacao="openMovimentacaoModal"
+      @qrcode="openQrCodeModal"
     />
 
     <Pagination
@@ -317,9 +400,17 @@ const limparFiltros = () => {
       :viatura="viaturaEmMovimentacao"
       :condutores="condutores"
       :plantao-ativo-id="plantaoAtivoId"
+      :plantao-ativo-rotulo="plantaoAtivoRotulo"
+      :usuario-atual="usuarioAtual"
       :filter-options="filterOptions"
       @close="closeMovimentacaoModal"
       @saved="onMovimentacaoSaved"
+    />
+
+    <ViaturaQrCodeModal
+      :show="showQrCodeModal"
+      :viatura="viaturaEmEtiqueta"
+      @close="showQrCodeModal = false"
     />
   </div>
 </template>

@@ -6,7 +6,8 @@ import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 
-defineProps({
+// Nomeado porque acoesDe() le as permissoes fora do template.
+const props = defineProps({
   viaturas: {
     type: Array,
     default: () => [],
@@ -23,9 +24,15 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  // Emitir a etiqueta do chaveiro define qual token abre a chave daquela
+  // viatura: fica sob `plantao.reservas.manage`, nao sob `viaturas.view`.
+  canQrCode: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['edit', 'delete', 'movimentacao']);
+const emit = defineEmits(['edit', 'delete', 'movimentacao', 'qrcode']);
 
 // Cor por status literal no .vue: Tailwind nao escaneia app/**/*.php, entao o
 // backend so manda o valor cru (status_valor) e o mapa fica aqui.
@@ -35,9 +42,63 @@ const CORES_STATUS = {
   MANUTENCAO: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
   CEDIDA: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300',
   INDISPONIVEL: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  // Nao existe no enum PHP: e estado de EXIBICAO, derivado de "DISPONIVEL com
+  // reserva agendada". Ambar porque nao esta livre nem avariada -- esta
+  // comprometida com alguem.
+  RESERVADA: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
 };
 
 const getStatusClasses = (statusValor) => CORES_STATUS[statusValor] ?? CORES_STATUS.INDISPONIVEL;
+
+/**
+ * Acoes da linha. Fora do template no padrao do BeneficiariosTable do
+ * Cisternas: alem de comportar comentario, um array literal dentro do atributo
+ * quebra o parser assim que o comentario contem aspas duplas -- elas fecham o
+ * atributo HTML antes da hora.
+ */
+const acoesDe = (item) => [
+  {
+    action: item.movimentacao_aberta_id ? 'finalize' : 'assign',
+    aliasOverride: 'movimentar',
+    label: item.movimentacao_aberta_id ? 'Registrar retorno' : 'Registrar saida',
+    handler: () => emit('movimentacao', item.id),
+    allowed: props.canMovimentar,
+  },
+  {
+    // Menu suspenso com rotulo, no padrao do Cisternas: um icone solto na barra
+    // nao diz que dali sai a etiqueta da chave. O ActionButton ja conhece
+    // 'qrcode' -- icone, rotulo e cor ciano vem dele.
+    action: 'qrcode',
+    placement: 'menu',
+    // Slug consultado: plantao.reservas.manage. A etiqueta pertence ao ciclo da
+    // chave, nao ao cadastro da viatura.
+    resource: 'reservas',
+    aliasOverride: 'manage',
+    label: 'Etiqueta da chave',
+    handler: () => emit('qrcode', item.id),
+    allowed: props.canQrCode,
+  },
+  { action: 'edit', handler: () => emit('edit', item.id), allowed: props.canEdit },
+  { action: 'delete', handler: () => emit('delete', item.id), allowed: props.canDelete },
+];
+
+const formatarJanela = (inicio, fim) => {
+  if (!inicio) return '';
+
+  const opcoes = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' };
+  const de = new Date(inicio).toLocaleString('pt-BR', opcoes);
+
+  if (!fim) return de;
+
+  // Mesmo dia: repetir a data nos dois lados so gasta espaco na celula.
+  const mesmoDia = new Date(inicio).toDateString() === new Date(fim).toDateString();
+  const ate = new Date(fim).toLocaleString(
+    'pt-BR',
+    mesmoDia ? { hour: '2-digit', minute: '2-digit' } : opcoes,
+  );
+
+  return `${de} - ${ate}`;
+};
 </script>
 
 <template>
@@ -73,8 +134,19 @@ const getStatusClasses = (statusValor) => CORES_STATUS[statusValor] ?? CORES_STA
           </td>
           <td class="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{{ item.localizacao }}</td>
           <td class="px-4 py-3 text-center">
-            <span :class="getStatusClasses(item.status_valor)" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-              {{ item.status }}
+            <!--
+              status_exibicao, e nao status: o primeiro mostra RESERVADA quando a
+              viatura esta DISPONIVEL com reserva agendada. Uma viatura reservada
+              nao pode ser oferecida como livre nesta tela.
+            -->
+            <span :class="getStatusClasses(item.status_exibicao_valor)" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              {{ item.status_exibicao }}
+            </span>
+            <span
+              v-if="item.reservada"
+              class="mt-1 block text-[10px] leading-tight text-slate-500 dark:text-slate-400"
+            >
+              {{ item.reserva_agente_nome }}<br>{{ formatarJanela(item.reserva_inicio, item.reserva_fim) }}
             </span>
           </td>
           <td class="px-4 py-3">
@@ -95,17 +167,7 @@ const getStatusClasses = (statusValor) => CORES_STATUS[statusValor] ?? CORES_STA
               <ActionButton
                 module="plantao"
                 resource="viaturas"
-                :actions="[
-                  {
-                    action: item.movimentacao_aberta_id ? 'finalize' : 'assign',
-                    aliasOverride: 'movimentar',
-                    label: item.movimentacao_aberta_id ? 'Registrar retorno' : 'Registrar saida',
-                    handler: () => emit('movimentacao', item.id),
-                    allowed: canMovimentar,
-                  },
-                  { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit },
-                  { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },
-                ]"
+                :actions="acoesDe(item)"
               />
             </div>
           </td>

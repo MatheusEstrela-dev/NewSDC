@@ -15,9 +15,22 @@ class ViaturaService extends BaseService
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Viatura::query()
-            ->with(['ultimoCondutor:id,name', 'movimentacaoAberta'])
+            ->with(['ultimoCondutor:id,name', 'movimentacaoAberta', 'reservaAgendada'])
             ->orderBy('prefixo')
             ->orderBy('placa');
+
+        // Card "Reservadas": recorte proprio, e nao um valor de `status`, porque
+        // reserva nao e estado fisico da viatura -- ela continua DISPONIVEL no
+        // banco, escrito somente pelo MovimentacaoViaturaService.
+        if (array_key_exists('reservada', $filters) && $filters['reservada'] !== null && $filters['reservada'] !== '') {
+            $reservada = filter_var($filters['reservada'], FILTER_VALIDATE_BOOLEAN);
+
+            $query->where(
+                fn($q) => $reservada
+                    ? $q->whereHas('reservaAgendada')
+                    : $q->whereDoesntHave('reservaAgendada')
+            );
+        }
 
         if (!empty($filters['status'])) {
             // Cards agregados (ex.: "Indisponiveis" = MANUTENCAO+CEDIDA+INDISPONIVEL)
@@ -99,7 +112,7 @@ class ViaturaService extends BaseService
     }
 
     /**
-     * @return array{total:int,disponiveis:int,em_transito:int,indisponiveis:int}
+     * @return array{total:int,disponiveis:int,reservadas:int,em_transito:int,indisponiveis:int}
      */
     public function getStatistics(): array
     {
@@ -113,9 +126,19 @@ class ViaturaService extends BaseService
             array_map(fn(StatusViatura $s) => (int) ($porStatus[$s->value] ?? 0), $status)
         );
 
+        // Viatura DISPONIVEL que ja tem reserva agendada NAO entra em
+        // "Disponiveis": oferece-la como livre e o caminho para alguem sair com
+        // ela e furar a reserva de quem chegar no horario. O status no banco
+        // continua DISPONIVEL -- o recorte e de leitura, nao de escrita.
+        $reservadas = Viatura::query()
+            ->where('status', StatusViatura::DISPONIVEL->value)
+            ->whereHas('reservaAgendada')
+            ->count();
+
         return [
             'total' => array_sum($porStatus),
-            'disponiveis' => $conta(StatusViatura::DISPONIVEL),
+            'disponiveis' => max(0, $conta(StatusViatura::DISPONIVEL) - $reservadas),
+            'reservadas' => $reservadas,
             'em_transito' => $conta(StatusViatura::EM_TRANSITO),
             'indisponiveis' => $conta(
                 StatusViatura::MANUTENCAO,

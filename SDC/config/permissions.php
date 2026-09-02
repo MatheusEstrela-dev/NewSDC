@@ -349,6 +349,16 @@ return [
                 // o plantao nao precisa de `edit` so para movimentar.
                 'movimentar' => 'plantao.viaturas.movimentar',
             ],
+            'Reservas' => [
+                'view' => 'plantao.reservas.view',
+                // Reservar para SI. O agente comum tem este slug: a agenda so
+                // funciona se quem usa a viatura conseguir agenda-la sozinho.
+                'create' => 'plantao.reservas.create',
+                // Mexer em reserva ALHEIA: cancelar a de outra pessoa para
+                // liberar a viatura, e emitir/rotacionar a etiqueta do chaveiro.
+                // Supervisao -- o agente comum cancela apenas a propria.
+                'manage' => 'plantao.reservas.manage',
+            ],
             'Escala' => [
                 'view' => 'plantao.escala.view',
                 'create' => 'plantao.escala.create',
@@ -688,6 +698,11 @@ return [
             'plantao.viaturas.create',
             'plantao.viaturas.edit',
             'plantao.viaturas.movimentar',
+            'plantao.reservas.view',
+            'plantao.reservas.create',
+            // Cancelar reserva alheia e emitir a etiqueta do chaveiro: mesmo
+            // perfil de supervisao que encerra turno alheio logo abaixo.
+            'plantao.reservas.manage',
             'plantao.passagem.encerrar',
             // Manager e o perfil de supervisao do modulo (Gestor de area, "pode
             // aprovar e gerenciar modulos"): unico alem do admin que encerra
@@ -874,6 +889,9 @@ return [
             'plantao.viaturas.create',
             'plantao.viaturas.edit',
             'plantao.viaturas.movimentar',
+            'plantao.reservas.view',
+            'plantao.reservas.create',
+            'plantao.reservas.manage',
             'plantao.passagem.encerrar',
             'plantao.passagem.aceitar',
             'plantao.passagem.relatorio',
@@ -990,6 +1008,10 @@ return [
             'plantao.turnos.create',
             'plantao.viaturas.view',
             'plantao.viaturas.create',
+            // So leitura da agenda: sem `plantao.viaturas.movimentar` este
+            // perfil nao retira chave, entao criar reserva daria a ele uma
+            // agenda que nao consegue usar.
+            'plantao.reservas.view',
             'plantao.passagem.relatorio',
             'plantao.escala.view',
             // BI - view

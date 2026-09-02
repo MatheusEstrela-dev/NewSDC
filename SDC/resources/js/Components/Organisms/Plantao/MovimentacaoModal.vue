@@ -37,6 +37,19 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  // Rotulo do turno ativo, so para exibir. O automatismo precisa ser visivel:
+  // amarrar a saida a um plantao sem dizer qual e pedir confianca cega.
+  plantaoAtivoRotulo: {
+    type: String,
+    default: null,
+  },
+  // {value, label} do usuario da sessao. Pre-seleciona o condutor: em quase
+  // toda saida quem registra e quem dirige, e obrigar a procurar o proprio nome
+  // numa lista de todos os usuarios do sistema e trabalho a toa.
+  usuarioAtual: {
+    type: Object,
+    default: null,
+  },
   // filterOptions.niveis ja vem no formato {value, label} do toSelectArray(): nao remapear.
   filterOptions: {
     type: Object,
@@ -79,6 +92,11 @@ watch(
     if (!visivel) return;
     form.clearErrors();
     form.reset();
+
+    // Depois do reset, senao o valor padrao seria apagado junto.
+    if (props.usuarioAtual?.value) {
+      form.condutor_id = props.usuarioAtual.value;
+    }
   },
 );
 
@@ -151,6 +169,21 @@ function handleSubmit() {
         </div>
 
         <template v-if="isSaida">
+          <!--
+            Turno e condutor sao preenchidos pelo sistema. O bloco existe para
+            TORNAR ISSO VISIVEL -- o usuario precisa enxergar a que plantao a
+            saida esta sendo amarrada, e que o condutor ja veio como ele.
+          -->
+          <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800/40">
+            <p class="text-slate-600 dark:text-slate-300">
+              <span class="font-semibold">Turno:</span>
+              {{ plantaoAtivoRotulo ?? 'nenhum turno aberto — a saida sera registrada sem vinculo' }}
+            </p>
+            <p v-if="usuarioAtual" class="mt-0.5 text-slate-500 dark:text-slate-400">
+              Condutor preenchido com voce ({{ usuarioAtual.label }}). Troque abaixo se quem sai for outra pessoa.
+            </p>
+          </div>
+
           <FormSelect
             v-model="form.condutor_id"
             label="Condutor"
