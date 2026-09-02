@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * Camera + leitura de QR Code. Compartilhado entre modulos: emite o texto
+ * decodificado e nao sabe nada sobre o que ele significa -- Treinamento le
+ * ingresso de inscricao, Plantao le etiqueta de chaveiro.
+ *
+ * Vive na raiz de Molecules/ (com FlashNotification e PullToRefresh) e nao numa
+ * pasta de modulo justamente porque o segundo consumidor apareceu.
+ */
 import { onBeforeUnmount, ref } from 'vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 
