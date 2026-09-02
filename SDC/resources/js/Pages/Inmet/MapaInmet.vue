@@ -95,7 +95,7 @@ defineOptions({ layout: AuthenticatedLayout });
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
-import { useTheme } from '@/Composables/ui/useTheme';
+import { usePrecipitacao } from '@/Composables/usePrecipitacao';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
@@ -113,80 +113,9 @@ useAtualizacaoAoVivo({
   props: ['estacoes', 'estatisticas'],
 });
 
-/*
- * Mesmas classes da matview gold.inmet_mapa, faixas do LHASA_RIO adaptadas para
- * MG. Se mudarem la, mudam aqui.
- *
- * Duas paletas: a saturacao que funciona sobre fundo escuro agride sobre
- * branco. Valor literal, nunca var(--...): estas cores vao para o fillColor do
- * Leaflet, que vira atributo SVG, onde variavel CSS nao resolve.
- */
-const CORES_ESCURO = {
-  sem_chuva: '#22c55e',
-  muito_fraca: '#3b82f6',
-  fraca: '#06b6d4',
-  moderada: '#eab308',
-  forte: '#f97316',
-  muito_forte: '#ef4444',
-  intensa: '#991b1b',
-  extrema: '#7f1d1d',
-  desconhecido: '#6b7280',
-};
-
-const CORES_CLARO = {
-  sem_chuva: '#15803d',
-  muito_fraca: '#1d4ed8',
-  fraca: '#0e7490',
-  moderada: '#a16207',
-  forte: '#c2410c',
-  muito_forte: '#b91c1c',
-  intensa: '#7f1d1d',
-  extrema: '#581c1c',
-  desconhecido: '#475569',
-};
-
-const { isDarkMode } = useTheme();
-
-const CORES = computed(() => (isDarkMode.value ? CORES_ESCURO : CORES_CLARO));
-
-const ROTULOS = {
-  sem_chuva: 'Sem chuva',
-  muito_fraca: 'Muito fraca',
-  fraca: 'Fraca',
-  moderada: 'Moderada',
-  forte: 'Forte',
-  muito_forte: 'Muito forte',
-  intensa: 'Intensa',
-  extrema: 'Extrema',
-  desconhecido: 'Sem leitura',
-};
-
-// A legenda deriva das mesmas faixas, em vez de repetir as cores em markup —
-// era o que permitia a legenda divergir da classificacao sem ninguem notar.
-const FAIXAS = [
-  { classe: 'sem_chuva', rotulo: 'Sem chuva (0 mm)' },
-  { classe: 'muito_fraca', rotulo: 'Muito fraca (0-5 mm)' },
-  { classe: 'fraca', rotulo: 'Fraca (5-15 mm)' },
-  { classe: 'moderada', rotulo: 'Moderada (15-35 mm)' },
-  { classe: 'forte', rotulo: 'Forte (35-60 mm)' },
-  { classe: 'muito_forte', rotulo: 'Muito forte (60-100 mm)' },
-  { classe: 'intensa', rotulo: 'Intensa (100-140 mm)' },
-  { classe: 'extrema', rotulo: 'Extrema (> 140 mm)' },
-];
-
-// Computed porque a cor depende do tema: trocar claro/escuro repinta a legenda.
-const legenda = computed(() => FAIXAS.map((faixa) => ({
-  ...faixa,
-  cor: CORES.value[faixa.classe],
-})));
-
-function corDaClasse(classe) {
-  return CORES.value[classe] ?? CORES.value.desconhecido;
-}
-
-function rotuloDaClasse(classe) {
-  return ROTULOS[classe] ?? ROTULOS.desconhecido;
-}
+// Faixas, paletas e formatadores vivem no composable: as mesmas faixas
+// alimentam a tela do CEMADEN e os CASE das matviews.
+const { legenda, corDaClasse, rotuloDaClasse, formatarMm, formatarDataHora } = usePrecipitacao();
 
 /*
  * Paginacao no cliente, nao no servidor: o mapa precisa de TODAS as estacoes de
@@ -211,22 +140,6 @@ const estacoesDaPagina = computed(() => {
 
 function irParaPagina(numero) {
   pagina.value = Math.min(Math.max(1, numero), paginacao.value.last_page);
-}
-
-function formatarMm(valor) {
-  const numero = Number(valor);
-
-  return Number.isFinite(numero) ? `${numero.toFixed(2)} mm` : 'N/A';
-}
-
-function formatarDataHora(valor) {
-  if (!valor) {
-    return '-';
-  }
-
-  const data = new Date(valor);
-
-  return Number.isNaN(data.getTime()) ? String(valor) : data.toLocaleString('pt-BR');
 }
 
 // A pagina traduz estacao -> ponto; a mecanica de Leaflet vive no componente.
