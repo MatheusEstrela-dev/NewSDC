@@ -24,7 +24,8 @@ Levantado por leitura do codigo em 2026-09-02.
 | `laravel/reverb ^1.10` | No `composer.json` |
 | `laravel-echo ^2.3.4`, `pusher-js ^8.5.0` | No `package.json` |
 | `config/reverb.php` | Existe |
-| `BroadcastServiceProvider` | Existe e chama `Broadcast::routes()` |
+| `BroadcastServiceProvider` | Existe, chama `Broadcast::routes()` e carrega `channels.php` — mas **esta comentado** em `config/app.php` |
+| `pusher/pusher-php-server` | **Travado no lock (7.2.8)** como dependencia transitiva do `laravel/reverb`, e presente no vendor da imagem |
 | `routes/channels.php` | Existe, **sem nenhum canal definido** |
 | Servico `reverb` em producao | Definido em `docker/jenkins/stack.app.onpremise.yml`, rodando `reverb:start` |
 | Caddy | Ja faz `reverse_proxy @reverb reverb:8080` para `/app/*` |
@@ -37,6 +38,30 @@ Levantado por leitura do codigo em 2026-09-02.
 
 Ou seja: **o servidor de WebSocket sobe em producao e nunca transmitiu nada.**
 Falta emitir evento, ligar o cliente, e criar o equivalente em dev.
+
+### 2.1 O provider esta desligado de proposito, e o motivo caducou
+
+`config/app.php` tem a linha do `BroadcastServiceProvider` comentada com uma
+justificativa escrita: registrar derrubaria a aplicacao no boot com
+`Class "Pusher\Pusher" not found`, porque `BROADCAST_CONNECTION=reverb` em
+producao e o pacote nao estava disponivel. A nota instrui a fazer duas coisas
+juntas: `composer require pusher/pusher-php-server` e descomentar.
+
+**A primeira metade dessa instrucao nao e mais necessaria.** Verificado em
+2026-09-02:
+
+- `pusher/pusher-php-server 7.2.8` esta travado no `composer.lock`, como
+  dependencia transitiva do `laravel/reverb` (que pede `^7.2`).
+- `Pusher\Pusher` existe no vendor da propria imagem `newsdc-swoole-dev:latest`,
+  conferido em container novo, sem instalacao manual.
+
+Entao descomentar o provider basta, e nao ha `composer require` a fazer. O
+comentario deve ser atualizado junto — deixar uma instrucao caduca no
+`config/app.php` e pior que nao ter nenhuma, porque o proximo leitor vai
+executar um passo desnecessario e concluir que o problema era outro.
+
+Esta e a razao de o provider ser o primeiro passo do plano e ter verificacao
+propria: **ele e o unico ponto que pode derrubar a aplicacao no boot.**
 
 ## 3. Decisoes de arquitetura
 
@@ -105,6 +130,7 @@ O push custa uma conexao ociosa por aba e **um evento quando ha novidade**.
 
 | Arquivo | Papel |
 | --- | --- |
+| `config/app.php` | Descomentar `BroadcastServiceProvider` e corrigir o comentario caduco (ver 2.1) |
 | `app/Modules/Medalhao/Events/GoldAtualizado.php` | Evento `ShouldBroadcast`. Recebe `grupo`; `broadcastOn()` devolve `PrivateChannel("medalhao.{$grupo}")`; `broadcastAs()` devolve `GoldAtualizado` |
 | `routes/channels.php` | `Broadcast::channel('medalhao.{grupo}', fn ($user) => $user !== null)` |
 | `app/Modules/Inmet/Jobs/AtualizarGoldInmetJob.php` | `GoldAtualizado::dispatch('inmet')` apos os dois refresh |
@@ -185,6 +211,13 @@ degradacao sem Echo — precisa de conferencia manual em tela.
 8. Suite verde no escopo do medalhao.
 
 ## 7. Riscos
+
+**Registrar o provider e o unico passo que pode derrubar o boot.** Foi por isso
+que ele ficou comentado. O motivo original caducou (2.1), mas a natureza do risco
+nao: o `boot()` resolve o broadcaster do driver ativo, entao um driver mal
+configurado quebra a aplicacao inteira, nao apenas o tempo real. Por isso e a
+Task 1, com verificacao propria de que a aplicacao ainda sobe, antes de qualquer
+outra coisa.
 
 **Producao nunca transmitiu.** O servico sobe, o Caddy roteia, mas nenhum byte de
 broadcast passou por ali. O upgrade de WebSocket atraves do proxy e a autorizacao
