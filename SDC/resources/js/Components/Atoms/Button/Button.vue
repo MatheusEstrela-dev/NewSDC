@@ -24,7 +24,7 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'black', 'violet'].includes(value),
+    validator: (value) => ['primary', 'secondary', 'outline', 'success', 'danger', 'warning', 'info', 'sky', 'black', 'violet'].includes(value),
   },
   size: {
     type: String,
@@ -63,10 +63,20 @@ defineEmits(['click']);
 const variantClasses = {
   primary: 'bg-blue-600 hover:bg-blue-500 text-white',
   secondary: 'bg-slate-600 hover:bg-slate-500 text-white',
+  // Acao secundaria sobre fundo colorido -- caso do PageHeader `gradient`, cujo
+  // fundo escuro fica quase da cor do `secondary` (slate-600) e apaga o botao.
+  // Aqui o contraste vem da borda e do texto, nao do preenchimento, entao
+  // funciona nos dois temas e nao disputa atencao com o `primary`.
+  outline: 'bg-white/70 hover:bg-white text-slate-700 border border-slate-300 dark:bg-slate-800/60 dark:hover:bg-slate-800 dark:text-slate-100 dark:border-slate-600',
   success: 'bg-emerald-600 hover:bg-emerald-500 text-white',
   danger: 'bg-red-600 hover:bg-red-500 text-white',
   warning: 'bg-amber-600 hover:bg-amber-500 text-white',
   info: 'bg-cyan-600 hover:bg-cyan-500 text-white',
+  // Azul claro. Reservado para a leitura da etiqueta do chaveiro, que aparece
+  // no Plantao, na Frota e nas Reservas -- a mesma acao com a mesma cor nos
+  // tres lugares. Nao usa `primary` (azul-600) para nao competir com a acao de
+  // criacao, nem `info` (ciano-600), que ja e das consultas do modulo.
+  sky: 'bg-sky-500 hover:bg-sky-400 text-white',
   black: 'bg-black hover:bg-neutral-800 text-white',
   violet: 'bg-violet-500 hover:bg-violet-400 text-white',
 };
