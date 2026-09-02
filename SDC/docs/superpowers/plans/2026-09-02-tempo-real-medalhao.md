@@ -133,14 +133,45 @@ BROADCAST_CONNECTION=null /c/tmp/tr.sh php artisan route:list --path=broadcastin
 Expected: a versao do Laravel imprime sem excecao, e `broadcasting/auth` aparece
 na lista de rotas.
 
-- [ ] **Step 4: Verificar que sobe tambem com o driver do Reverb**
+- [ ] **Step 4: Verificar que sobe com o driver do Reverb E as credenciais**
+
+As credenciais sao obrigatorias aqui. `channels.php` chama `Broadcast::channel()`,
+que resolve o broadcaster de forma eager; sem `REVERB_APP_KEY` o `Pusher\Pusher`
+recebe `null` e a aplicacao morre no boot.
+
+```bash
+WT="C:/Users/x24679188/Documents/Github/NewSDC/.claude/worktrees/feat+tempo-real-medalhao/SDC"
+rm -f "$WT/bootstrap/cache/config.php"
+MSYS_NO_PATHCONV=1 docker run --rm --network newsdc-dev_default \
+  -v "$WT:/app" -w /app \
+  -e DB_CONNECTION=pgsql -e DB_HOST=db -e DB_PORT=5432 \
+  -e DB_DATABASE=sdc_medalhao -e DB_USERNAME=sdc -e DB_PASSWORD=secret \
+  -e REDIS_HOST=redis -e BROADCAST_CONNECTION=reverb \
+  -e REVERB_APP_ID=sdc-dev -e REVERB_APP_KEY=sdc-dev-key \
+  -e REVERB_APP_SECRET=sdc-dev-secret \
+  -e REVERB_HOST=reverb -e REVERB_PORT=8080 -e REVERB_SCHEME=http \
+  newsdc-swoole-dev:latest php artisan --version
+```
+
+Expected: `Laravel Framework 12.58.0`.
+
+- [ ] **Step 4b: Conhecer o modo de falha, de proposito**
 
 ```bash
 BROADCAST_CONNECTION=reverb /c/tmp/tr.sh php artisan --version
 ```
 
-Expected: imprime a versao. Este e o cenario que derrubava antes; se falhar com
-`Class "Pusher\Pusher" not found`, reverta o Step 2 e trate como bloqueio.
+Expected: **FALHA**, com
+`Pusher\Pusher::__construct(): Argument #1 ($auth_key) must be of type string, null given`.
+
+Isso nao e defeito a corrigir: e a consequencia de registrar o provider, e o
+motivo pelo qual ele ficou desligado. Rodar este passo serve para o executor
+reconhecer o erro se topar com ele depois, em vez de perder tempo procurando bug
+no codigo.
+
+**A regra que sai daqui:** `BROADCAST_CONNECTION=reverb` sem as `REVERB_*` derruba
+a aplicacao INTEIRA, nao apenas o tempo real. Os dois valores andam juntos, em
+qualquer ambiente. Producao ja os define; a Task 5 os define em dev.
 
 - [ ] **Step 5: Commit**
 
