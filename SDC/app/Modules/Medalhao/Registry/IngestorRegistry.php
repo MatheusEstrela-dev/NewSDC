@@ -22,10 +22,26 @@ final class IngestorRegistry
     /** @var array<string, NormalizadorSilver> */
     private array $normalizadores = [];
 
+    /** @var array<string, string> chave -> grupo, para fontes sem ingestor. */
+    private array $gruposPush = [];
+
     public function registrar(FonteIngestor $ingestor, NormalizadorSilver $normalizador): void
     {
         $this->ingestores[$ingestor->chave()] = $ingestor;
         $this->normalizadores[$ingestor->chave()] = $normalizador;
+    }
+
+    /**
+     * Registra uma fonte que NAO e coletada: o conteudo chega por upload.
+     *
+     * Existe porque FonteIngestor::coletar() e contrato de pull agendado, e
+     * upload nao tem o que coletar. Forcar um ingestor com coletar() que nunca
+     * e chamado seria mentir no contrato para satisfazer o registro.
+     */
+    public function registrarPush(string $chave, string $grupo, NormalizadorSilver $normalizador): void
+    {
+        $this->normalizadores[$chave] = $normalizador;
+        $this->gruposPush[$chave] = $grupo;
     }
 
     public function ingestor(string $chave): FonteIngestor
@@ -47,6 +63,12 @@ final class IngestorRegistry
 
         foreach ($this->ingestores as $chave => $ingestor) {
             if ($ingestor->grupo() === $grupo) {
+                $chaves[] = $chave;
+            }
+        }
+
+        foreach ($this->gruposPush as $chave => $grupoPush) {
+            if ($grupoPush === $grupo) {
                 $chaves[] = $chave;
             }
         }
