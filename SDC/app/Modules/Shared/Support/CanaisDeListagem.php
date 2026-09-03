@@ -37,6 +37,15 @@ final class CanaisDeListagem
         'pedidos-ah' => 'humanitaria.pedidos.view',
 
         // routes/modules/rat.php -> can:rat.protocolos.view
+        //
+        // DECLARADO, MAS AINDA NAO EMITE. O canal esta autorizado e correto; o
+        // que falta e o dispatch e a assinatura na pagina. Nao foi fiado porque
+        // `RatOcorrencia` e escrito de oito lugares em tres classes, e parte por
+        // query builder (`where(...)->update()`, `->delete()`), onde observer do
+        // Eloquent nao dispara -- qualquer atalho daria cobertura parcial, que e
+        // pior que nenhuma numa tela cujo proposito e dizer se o dado esta
+        // velho. Consolidar a superficie de escrita vem primeiro. Ver secao 8 do
+        // spec.
         'rat' => 'rat.protocolos.view',
 
         // routes/modules/pmda.php -> can:pmda.analise.view

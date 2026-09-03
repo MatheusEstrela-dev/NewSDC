@@ -470,60 +470,37 @@ git commit -m "✨ feat(pmda): fila de analises atualiza sem F5, escopada por mu
 
 ---
 
-### Task 7: RAT
+### Task 7: RAT -- NAO EXECUTADA
 
-Ultima, e a que tem mais chance de nao dar certo: e a unica sem ponto de mudanca
-de status declarado como unico.
+**Status: adiada em 2026-09-03, por decisao do autor, depois que o Step 1 falhou.**
 
-**Files:**
-- Modify: `SDC/app/Modules/Rat/Services/RatOcorrenciaService.php`
-- Modify: `SDC/resources/js/Pages/RatIndex.vue`
+O Step 1 mandava parar e reavaliar se houvesse escrita de `status` fora do
+`RatOcorrenciaService`. Havia:
 
-- [ ] **Step 1: Confirmar que ha um unico ponto de escrita de `status`**
-
-```bash
-cd SDC && grep -rn "'status'" app/Modules/Rat/ --include=*.php | grep -v Resource | grep -v DTO
+```
+RatOcorrenciaService::manageOcorrencia   updateOrCreate
+RatWriteService                          6 pontos (create x3, update x3)
+EloquentRatRepository                    create, updateStatus, delete
 ```
 
-Se aparecer escrita de `status` fora do `RatOcorrenciaService`, **pare e reavalie**:
-emitir de um ponto so faria a pagina perder eventos em silencio, que e pior que
-nao ter tempo real (risco 3 do spec). A saida, nesse caso, e um observer no
-`RatOcorrencia`, nao um `dispatch` em cada chamador.
+Oito pontos, tres classes. E a saida que este plano sugeria -- observer no model
+-- **nao resolve**: `EloquentRatRepository::updateStatus()`,
+`EloquentRatRepository::delete()` e um dos pontos do `RatWriteService` usam query
+builder (`RatOcorrencia::where(...)->update()` / `->delete()`), e observer do
+Eloquent nao dispara para esses.
 
-- [ ] **Step 2: Escrever o teste, rodar, ver falhar, emitir, ver passar**
+Qualquer atalho entrega cobertura PARCIAL: uma tela que atualiza as vezes e nao
+avisa quando nao atualizou. Numa listagem cujo proposito e eliminar a duvida
+sobre estar vendo dado velho, isso e pior que nao ter tempo real nenhum.
 
-Mesma forma das Tasks 5 e 6.
+**O que ficou pronto para quando o RAT for fiado:** a entrada `rat` em
+`CanaisDeListagem`, o canal `listagem.rat` autorizado por `rat.protocolos.view`, e
+os testes que provam a autorizacao. Falta o dispatch e o
+`useAtualizacaoAoVivo` na pagina.
 
-- [ ] **Step 3: Fiar a pagina, SEM `statistics`**
-
-```js
-useAtualizacaoAoVivo({
-    canal: 'listagem.rat',
-    evento: '.RecursoAtualizado',
-    props: ['rats'],
-});
-```
-
-`statistics` fica fora porque e `Cache::remember(..., 300, ...)`: rebuscar
-devolveria o valor cacheado por ate 5 minutos e a tela mostraria tabela nova com
-contador velho -- pior que os dois velhos juntos. Decisao registrada em 3.4 do
-spec; invalidar a chave foi considerado e recusado porque transformaria cada
-mudanca em recomputo dos quatro counts para o estado inteiro.
-
-- [ ] **Step 4: Verificar**
-
-```bash
-cd SDC && npx vite build 2>&1 | tail -3
-/c/tmp/trl.sh php vendor/bin/phpunit --filter="Rat"
-```
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add SDC/app/Modules/Rat/Services/RatOcorrenciaService.php \
-        SDC/resources/js/Pages/RatIndex.vue
-git commit -m "✨ feat(rat): listagem de protocolos atualiza sem F5"
-```
+**Pre-requisito:** consolidar a superficie de escrita do `RatOcorrencia` num ponto
+unico, ou converter as escritas de query builder para escrita via model. Trabalho
+de outra natureza, com risco proprio, e merece plano proprio.
 
 ---
 
@@ -567,7 +544,7 @@ log do Octane por viewer, nao dez.
 docker logs --since 2m newsdc_dev_app 2>&1 | grep -c "GET /ajuda-humanitaria/pedidos"
 ```
 
-- [ ] **Step 7: Quem nao tem a permissao nao assina**
+- [x] **Step 7: Quem nao tem a permissao nao assina**
 
 ```bash
 curl -s -o /dev/null -w "sem sessao http=%{http_code}\n" -X POST --max-time 10 \
@@ -578,20 +555,20 @@ curl -s -o /dev/null -w "sem sessao http=%{http_code}\n" -X POST --max-time 10 \
 Expected: `403` ou `302`, nunca `200`. O caso de usuario autenticado SEM a
 permissao esta coberto por `CanalListagemTest` (Task 3), porque exige sessao.
 
-- [ ] **Step 8: COMPDEC de outro municipio nao assina o canal PMDA** — coberto por `CanalPmdaEscopoTest`; conferir que o teste esta verde.
+- [x] **Step 8: COMPDEC de outro municipio nao assina o canal PMDA** — coberto por `CanalPmdaEscopoTest`; conferir que o teste esta verde.
 
 - [ ] **Step 9: O payload nao leva dado de dominio**
 
 DevTools, aba Network, filtro WS, inspecionar o frame. Expected: apenas
 `recurso`, `escopo` e `atualizado_em`.
 
-- [ ] **Step 10: Suite do escopo**
+- [x] **Step 10: Suite do escopo**
 
-Run: `BROADCAST_CONNECTION=reverb /c/tmp/trl.sh php vendor/bin/phpunit --filter="TempoReal|AjudaHumanitaria|Rat|Pmda"`
+Run: `BROADCAST_CONNECTION=reverb /c/tmp/trl.sh php vendor/bin/phpunit --filter="TempoReal|AjudaHumanitaria|Pmda"`
 Expected: verde. Rodar tambem contra `sdc_tempo_real` em pgsql, para nao aceitar como
 verde uma suite em que metade pulou.
 
-- [ ] **Step 11: Conferencia contra os criterios do spec**
+- [x] **Step 11: Conferencia contra os criterios do spec**
 
 Percorrer os 10 criterios da secao 6 e marcar cada um. **O que nao puder ser
 verificado fica escrito como nao verificado**, com o motivo -- foi a Task 9 do
@@ -604,6 +581,55 @@ que motivou esta instrucao.
 git add SDC/docs/superpowers/plans/2026-09-03-tempo-real-listagens.md
 git commit -m "✅ test(tempo-real): verificacao ponta a ponta das listagens"
 ```
+
+---
+
+## Resultado da verificacao (Task 8)
+
+Executada em 2026-09-03, sobre Pedidos e PMDA. O RAT ficou fora (Task 7).
+
+### A limitacao que define o que foi possivel verificar
+
+**O codigo desta branch nao esta rodando em lugar nenhum.** O stack de dev
+(`newsdc_dev_app`) monta `NewSDC/SDC`, a worktree PRINCIPAL -- conferido em
+`docker inspect`, e `grep -c listagem` no `channels.php` de la devolve `0`.
+
+Isso invalida qualquer verificacao por HTTP contra `localhost:8000`: um `curl` no
+`/broadcasting/auth` devolve 403 para os canais novos porque eles **nao existem
+ali**, e nao porque a autorizacao funcionou. Um 403 pelo motivo errado e pior que
+nenhuma verificacao, porque parece prova.
+
+Para verificar de ponta a ponta e preciso que a branch rode no stack: merge em
+`dev`, ou remontar os volumes do container para esta worktree.
+
+### Verificado, por teste
+
+| Criterio (secao 6 do spec) | Como |
+| --- | --- |
+| 7. Sem a permissao nao assina | `CanalListagemTest`: autenticado SEM `humanitaria.pedidos.view` recebe 403; permissao de um recurso nao abre o canal de outro; recurso inexistente 403 |
+| 8. COMPDEC de outro municipio nao assina | `CanalPmdaEscopoTest`: COMPDEC de BH recebe 403 no canal de Contagem; COMPDEC recebe 403 no canal `todos`; CEDEC e super-admin autorizam |
+| 9. Payload sem dado de dominio | `RecursoAtualizadoTest`: exatamente `recurso`, `escopo`, `atualizado_em` |
+| 10. Suite verde no escopo | **46 testes, 76 assercoes, 0 falhas** (`TempoReal|AjudaHumanitaria|Pmda`), contra PostgreSQL |
+
+Alem dos criterios do spec, ficaram provados por teste: o evento so despacha
+depois do commit; transicao bloqueada nao emite; as props do `only:` existem no
+GET e no reload parcial; e recurso escopado transmite nos dois canais.
+
+### NAO verificado: depende de navegador E da branch rodando
+
+Os criterios 1 a 6 exigem os dois, e nenhum estava disponivel -- os MCP de
+browser desta sessao nao conectaram, e a branch nao esta montada no stack.
+
+- **1.** Degradacao com broadcasting desligado, sem erro no console.
+- **2.** Duas sessoes na fila de pedidos, uma tramita, a outra reflete sem F5.
+- **3.** O reload vem DEPOIS do commit (a linha aparece com o status novo).
+- **4.** Scroll e pagina corrente sobrevivem.
+- **5.** Aba em segundo plano nao rebusca; ao voltar, atualiza uma vez.
+- **6.** Dez mudancas em rajada geram UM reload por viewer.
+
+O criterio 3 tem cobertura indireta forte (o `ShouldDispatchAfterCommit` tem
+teste proprio), e o 6 tambem (o debounce e determinista). Os outros quatro nao
+tem substituto: precisam de olho na tela.
 
 ---
 

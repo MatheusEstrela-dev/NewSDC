@@ -239,6 +239,21 @@ outra natureza. Ver secao 8.
 
 ## 8. Fora de escopo
 
+- **O RAT** (decidido em 2026-09-03, depois de o risco da secao 7 se confirmar).
+  O canal e a entrada em `CanaisDeListagem` ficam declarados e testados; o que
+  nao entra e o dispatch nem a assinatura na pagina.
+
+  O motivo nao e falta de tempo: `RatOcorrencia` e escrito de oito lugares em
+  tres classes, e parte por query builder, onde observer do Eloquent nao dispara.
+  Toda saida barata entrega cobertura PARCIAL -- uma tela que atualiza as vezes e
+  nao avisa quando nao atualizou. Numa tela cujo proposito e justamente eliminar
+  a duvida sobre estar vendo dado velho, isso e pior que nao ter tempo real.
+
+  O pre-requisito e consolidar a superficie de escrita do RAT num ponto unico (ou
+  converter as escritas de query builder para escrita via model, para um observer
+  cobrir tudo). E trabalho de outra natureza, com risco proprio, e merece plano
+  proprio.
+
 - As outras 25 listagens. O mecanismo e generico; a fiacao e por pagina e por dor.
 - Refletir a PROPRIA acao sem F5 (a resposta do Inertia do proprio POST ja faz isso).
 - Presenca (quem mais esta com esta tela aberta).
