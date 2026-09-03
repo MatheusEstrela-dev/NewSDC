@@ -94,6 +94,15 @@ chmod +x /c/tmp/trl.sh
 nao apenas o tempo real: `channels.php` resolve o broadcaster de forma eager. Por
 isso o helper ja define as duas coisas juntas.
 
+**Todo teste que toca `/broadcasting/auth` exige `BROADCAST_CONNECTION=reverb`**,
+e o padrao do helper e `null`. Sob o driver null a rota recusa tudo e a suite
+acusa falhas que nao existem -- aconteceu na Task 5, com 8 falsos negativos que
+sumiram ao repetir com o driver certo. Prefixe sempre:
+
+```bash
+BROADCAST_CONNECTION=reverb /c/tmp/trl.sh php vendor/bin/phpunit --filter=...
+```
+
 `.env.testing` usa `sqlite :memory:`, e sob ele 60 testes do escopo do medalhao
 sao PULADOS. **`sdc_test` nao serve**: os mesmos 60 dao ERRO nele (falta schema e
 dado semeado). O banco que funciona nasce do `template_postgis`, que ja existe no
@@ -362,21 +371,21 @@ protege.
 - Modify: `SDC/resources/js/Pages/AjudaHumanitaria/Pedidos/Index.vue`
 - Test: adicao em `SDC/tests/Feature/AjudaHumanitaria/TramitacaoServiceTest.php`
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 `Event::fake()` e assercao de que `tramitar()` emite `RecursoAtualizado` com
 recurso `pedidos-ah`. Provar tambem que `finalizarPorHomologacao()` emite -- os
 dois caminhos passam por `executar()`, e o teste garante que continuem passando.
 
-- [ ] **Step 2: Rodar e ver falhar.**
+- [x] **Step 2: Rodar e ver falhar.**
 
-- [ ] **Step 3: Emitir no `executar()`**
+- [x] **Step 3: Emitir no `executar()`**
 
 Dentro de `executar()`, apos a `DB::transaction`. Como o evento e
 `ShouldDispatchAfterCommit`, despachar de dentro do bloco tambem funciona -- e
 mais seguro, porque nao depende de alguem lembrar de manter a chamada fora.
 
-- [ ] **Step 4: Fiar a pagina**
+- [x] **Step 4: Fiar a pagina**
 
 ```js
 useAtualizacaoAoVivo({
@@ -389,18 +398,18 @@ useAtualizacaoAoVivo({
 `estatisticas` entra aqui porque e closure de agregacao sem cache -- rebusca junto
 e fica coerente com a tabela. E o oposto do RAT (Task 7), e a diferenca e o cache.
 
-- [ ] **Step 5: Verificar**
+- [x] **Step 5: Verificar**
 
 ```bash
 cd SDC && npx vite build 2>&1 | tail -3
-/c/tmp/trl.sh php vendor/bin/phpunit --filter="AjudaHumanitaria"
+BROADCAST_CONNECTION=reverb /c/tmp/trl.sh php vendor/bin/phpunit --filter="AjudaHumanitaria"
 ```
 
 Expected: build sem erro, suite verde. A suite prova que as props que o `only:`
 pede existem com esses nomes -- se alguem renomear `pedidos`, o `only:` passaria a
 pedir prop inexistente e o reload silenciosamente nao atualizaria nada.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add SDC/app/Modules/AjudaHumanitaria/Services/TramitacaoService.php \
@@ -578,7 +587,7 @@ DevTools, aba Network, filtro WS, inspecionar o frame. Expected: apenas
 
 - [ ] **Step 10: Suite do escopo**
 
-Run: `/c/tmp/trl.sh php vendor/bin/phpunit --filter="TempoReal|AjudaHumanitaria|Rat|Pmda"`
+Run: `BROADCAST_CONNECTION=reverb /c/tmp/trl.sh php vendor/bin/phpunit --filter="TempoReal|AjudaHumanitaria|Rat|Pmda"`
 Expected: verde. Rodar tambem contra `sdc_tempo_real` em pgsql, para nao aceitar como
 verde uma suite em que metade pulou.
 
