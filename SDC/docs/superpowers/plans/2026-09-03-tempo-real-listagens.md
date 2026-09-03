@@ -41,6 +41,24 @@ Confira `SDC/vendor/autoload.php` **e** `SDC/vendor/bin/phpunit` antes de seguir
 sem `COMPOSER_PROCESS_TIMEOUT=0` o install morre no meio, e com pipe o exit code
 engana.
 
+**O install VAI falhar no fim, e nao e fatal** (visto em 2026-09-03): depois de
+instalar os 216 pacotes ele morre em
+`Could not delete /app/vendor/composer/<hash>/.../src/Schema`, limpeza de
+diretorio temporario no bind mount do Windows. O sintoma engana --
+`vendor/bin/phpunit` existe e `vendor/autoload.php` NAO, porque a geracao do
+autoloader nunca rodou. Resolver com um passo separado:
+
+```bash
+MSYS_NO_PATHCONV=1 docker run --rm -e COMPOSER_ALLOW_SUPERUSER=1 \
+  -v "$(pwd -W)/SDC:/app" -w /app newsdc-swoole-dev:latest \
+  composer dump-autoload --optimize --no-scripts --no-interaction
+```
+
+O `--optimize` **nao e opcional**: o projeto tem classe declarada em arquivo de
+outro nome -- `PmdaAnaliseController` vive dentro de
+`app/Modules/Pmda/Controllers/PmdaController.php` -- e sem o classmap a rota
+`pmda.analises.index` morre com "Target class does not exist".
+
 O PHP do host e 8.1 (Laragon tem 8.3) e o vendor exige 8.4, entao **tudo roda em
 container**. Crie o helper:
 
@@ -76,15 +94,40 @@ chmod +x /c/tmp/trl.sh
 nao apenas o tempo real: `channels.php` resolve o broadcaster de forma eager. Por
 isso o helper ja define as duas coisas juntas.
 
-`.env.testing` usa `sqlite :memory:`, entao teste que precisa de tabela exige
-`RefreshDatabase` -- e os que dependem de PostgreSQL sao pulados. Para rodar
-contra Postgres, use o banco dedicado `sdc_test` (NUNCA `sdc`, que e o de dev):
+`.env.testing` usa `sqlite :memory:`, e sob ele 60 testes do escopo do medalhao
+sao PULADOS. **`sdc_test` nao serve**: os mesmos 60 dao ERRO nele (falta schema e
+dado semeado). O banco que funciona nasce do `template_postgis`, que ja existe no
+container com PostGIS 3.6.3:
+
+```bash
+docker exec newsdc_dev_db psql -U sdc -d postgres \
+  -c "CREATE DATABASE sdc_tempo_real TEMPLATE template_postgis;"
+```
+
+Depois `php artisan migrate --force` (246 passos, verde) e
+`php artisan db:seed --class=MunicipiosMGSeeder` (853 municipios). Sem o seed,
+teste que busca municipio real falha com `Undefined array key 0`.
 
 ```bash
 # acrescente ao helper quando precisar de pgsql
--e DB_CONNECTION=pgsql -e DB_HOST=newsdc_db -e DB_PORT=5432 \
--e DB_DATABASE=sdc_test -e DB_USERNAME=sdc -e DB_PASSWORD=secret
+-e DB_CONNECTION=pgsql -e DB_HOST=db -e DB_PORT=5432 \
+-e DB_DATABASE=sdc_tempo_real -e DB_USERNAME=sdc -e DB_PASSWORD=secret
 ```
+
+**`DB_HOST` e `db`, nao `newsdc_db`.** Os aliases do container do banco na rede
+sao `newsdc_dev_db` e `db`; `newsdc_db` -- que e o valor do `.env` -- escapa para
+o DNS externo e resolve num IP publico (`200.198.15.68`). A falha aparece como
+`SQLSTATE[08006] server closed the connection unexpectedly`, que parece banco
+caido e nao nome errado.
+
+Os testes deste projeto usam **`DatabaseTransactions`**, nao `RefreshDatabase`:
+rodam contra o schema existente e desfazem por rollback. Isso preserva o seed dos
+municipios entre rodadas -- `RefreshDatabase` faria `migrate:fresh` e o dropparia.
+
+**Os arquivos de teste de outros modulos NAO estao aqui.** `tests` e gitignored,
+entao cada suite vive so na worktree onde foi escrita. Para rodar o escopo do
+medalhao e preciso copiar `SDC/tests/{Feature,Unit}/{Inmet,Sismos,Medalhao}` e
+`SDC/tests/Fixtures` da worktree principal.
 
 ### Como olhar o Reverb sem navegador
 
@@ -133,7 +176,7 @@ permissivo entrar sem que ninguem note.
 **Interfaces:**
 - Produces: `CanaisDeListagem::permissaoDe(string $recurso): ?string` e `CanaisDeListagem::recursos(): array`. Tasks 3 e 6 dependem disso.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 Cobrir, no minimo: recurso desconhecido devolve `null`; cada recurso conhecido
 devolve a permissao da sua rota (`pedidos-ah` -> `humanitaria.pedidos.view`,
@@ -143,12 +186,12 @@ lista de recursos nao contem duplicata.
 O teste que importa e o do recurso desconhecido: e ele que prova a recusa por
 padrao, que e a razao de a classe existir.
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `/c/tmp/trl.sh php vendor/bin/phpunit --filter=CanaisDeListagemTest`
 Expected: FAIL — classe nao existe.
 
-- [ ] **Step 3: Criar a classe**
+- [x] **Step 3: Criar a classe**
 
 Uma constante `MAPA` de recurso -> permissao e dois metodos estaticos. Sem
 config, sem container: e uma tabela, e a razao de nao ser config e que ela precisa
@@ -158,12 +201,12 @@ Documentar no cabecalho que **o valor tem de ser a mesma permissao do
 `middleware('can:...')` da rota**, e que divergencia entre os dois e o vazamento
 de escopo descrito no risco 1 do spec.
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 Run: `/c/tmp/trl.sh php vendor/bin/phpunit --filter=CanaisDeListagemTest`
 Expected: PASS.
 
-- [ ] **Step 5: Commit** — junto com a Task 2 (ver nota de atomicidade abaixo).
+- [x] **Step 5: Commit** — junto com a Task 2 (ver nota de atomicidade abaixo).
 
 ---
 
@@ -176,7 +219,7 @@ Expected: PASS.
 **Interfaces:**
 - Produces: `RecursoAtualizado::__construct(string $recurso, ?int $escopo = null)`; `broadcastOn(): PrivateChannel`; `broadcastAs(): string` = `RecursoAtualizado`; `broadcastWith(): array{recurso,escopo,atualizado_em}`. Tasks 5, 6 e 7 despacham; Task 4 escuta o nome.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 Provar: implementa `ShouldBroadcast` **e** `ShouldDispatchAfterCommit`; sem
 escopo o canal e `private-listagem.pedidos-ah`; com escopo e
@@ -187,9 +230,9 @@ O teste do `ShouldDispatchAfterCommit` e o mais importante do plano: e a
 diferenca entre atualizar a tela e mostrar dado velho com cara de novo (secao 2.1
 do spec).
 
-- [ ] **Step 2: Rodar e ver falhar** — classe nao existe.
+- [x] **Step 2: Rodar e ver falhar** — classe nao existe.
 
-- [ ] **Step 3: Criar o evento**
+- [x] **Step 3: Criar o evento**
 
 Vive em `Modules/Shared/Events` e nao em cada dominio porque e generico por
 construcao: recurso novo nao precisa de classe nova. Documentar no cabecalho por
@@ -197,9 +240,9 @@ que o payload nao leva a linha alterada -- alem de duplicar a serializacao do
 `Resource`, furaria o escopo, porque a linha visivel para um assinante pode nao
 ser visivel para outro no mesmo canal.
 
-- [ ] **Step 4: Rodar e ver passar.**
+- [x] **Step 4: Rodar e ver passar.**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add SDC/app/Modules/Shared/Support/CanaisDeListagem.php \
@@ -222,7 +265,7 @@ deixaria um commit com um evento que ninguem pode assinar (regra de ouro 12).
 - Consumes: `CanaisDeListagem` (Task 1), `/broadcasting/auth` (ja registrado).
 - Produces: canais autorizados. Task 8 verifica.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 `CanalListagemTest`: visitante 403; usuario COM a permissao autoriza; usuario SEM
 a permissao 403; recurso inexistente 403. Os dois ultimos sao o ponto -- um canal
@@ -234,9 +277,9 @@ B; CEDEC (sem municipio) autoriza qualquer um.
 Precisam de `RefreshDatabase` (usuario, permissao e orgao no banco) e rodam sob
 `BROADCAST_CONNECTION=reverb`.
 
-- [ ] **Step 2: Rodar e ver falhar** — os canais nao existem, tudo 403 (inclusive o que deveria autorizar).
+- [x] **Step 2: Rodar e ver falhar** — os canais nao existem, tudo 403 (inclusive o que deveria autorizar).
 
-- [ ] **Step 3: Declarar os canais**
+- [x] **Step 3: Declarar os canais**
 
 Dois `Broadcast::channel`, ambos delegando a `CanaisDeListagem`: o de recurso sem
 escopo e o de recurso com escopo. O de escopo tambem confere o perfil, via
@@ -245,9 +288,9 @@ escopo e o de recurso com escopo. O de escopo tambem confere o perfil, via
 Comentar que a permissao NAO esta escrita aqui de proposito: esta na tabela, para
 que a divergencia com a rota apareca como teste vermelho.
 
-- [ ] **Step 4: Rodar e ver passar.**
+- [x] **Step 4: Rodar e ver passar.**
 
-- [ ] **Step 5: Verificar que a aplicacao ainda sobe com o driver do Reverb**
+- [x] **Step 5: Verificar que a aplicacao ainda sobe com o driver do Reverb**
 
 ```bash
 BROADCAST_CONNECTION=reverb /c/tmp/trl.sh php artisan --version
@@ -257,7 +300,7 @@ Expected: a versao imprime. Se morrer com
 `Pusher\Pusher::__construct(): Argument #1 ($auth_key) must be of type string, null given`,
 as `REVERB_*` nao chegaram -- nao e bug do canal.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add SDC/routes/channels.php
@@ -277,7 +320,7 @@ uma janela em que uma rajada de mudanca de status multiplica reload por viewer.
 **Interfaces:**
 - Produces: opcao `debounceMs` (padrao 400). Tasks 5 a 7 consomem.
 
-- [ ] **Step 1: Implementar**
+- [x] **Step 1: Implementar**
 
 Um timer que reinicia a cada evento e so entao chama `recarregar()`. Cancelar o
 timer no `onBeforeUnmount`, junto do `visibilitychange` e do `leave()` -- sem
@@ -290,7 +333,7 @@ Manter o padrao em 400ms e nao em zero: o medalhao nao precisava de debounce e
 passar a precisar de configuracao explicita em cada pagina seria armadilha para
 quem fiar a proxima.
 
-- [ ] **Step 2: Verificar que o medalhao nao regrediu**
+- [x] **Step 2: Verificar que o medalhao nao regrediu**
 
 ```bash
 cd SDC && npx vite build 2>&1 | tail -3
@@ -299,7 +342,7 @@ cd SDC && npx vite build 2>&1 | tail -3
 Expected: build sem erro. As duas paginas do medalhao passam a debouncar 400ms,
 o que e invisivel para um pipeline que coleta a cada 10 minutos.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add SDC/resources/js/Composables/useAtualizacaoAoVivo.js
@@ -389,6 +432,11 @@ E o ponto privado unico das transicoes, entao todos os caminhos publicos
 chamadores, e nao assumindo.
 
 - [ ] **Step 4: Fiar a pagina**
+
+**O controller de analises nao e um arquivo proprio.** `PmdaAnaliseController` e
+uma segunda classe declarada dentro de
+`app/Modules/Pmda/Controllers/PmdaController.php`, e so resolve por causa do
+classmap otimizado -- procurar por nome de arquivo nao acha.
 
 O canal precisa do municipio, que vem de prop do controller. Para CEDEC (sem
 municipio no escopo) assinar o canal coringa. **Se a prop nao existir, adicionar
@@ -531,7 +579,7 @@ DevTools, aba Network, filtro WS, inspecionar o frame. Expected: apenas
 - [ ] **Step 10: Suite do escopo**
 
 Run: `/c/tmp/trl.sh php vendor/bin/phpunit --filter="TempoReal|AjudaHumanitaria|Rat|Pmda"`
-Expected: verde. Rodar tambem contra `sdc_test` em pgsql, para nao aceitar como
+Expected: verde. Rodar tambem contra `sdc_tempo_real` em pgsql, para nao aceitar como
 verde uma suite em que metade pulou.
 
 - [ ] **Step 11: Conferencia contra os criterios do spec**
