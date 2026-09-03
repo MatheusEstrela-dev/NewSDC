@@ -426,21 +426,21 @@ git commit -m "✨ feat(humanitaria): fila de pedidos atualiza sem F5"
 - Modify: `SDC/resources/js/Pages/Pmda/Analises/Index.vue`
 - Test: adicao no teste de servico do PMDA
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 Assercao de que `transicionar()` emite `RecursoAtualizado('pmda-analises', <municipio do plano>)`.
 O escopo e o ponto: um evento sem escopo aqui avisaria COMPDEC de outro
 municipio, que e o vazamento por canal lateral da secao 2.2 do spec.
 
-- [ ] **Step 2: Rodar e ver falhar.**
+- [x] **Step 2: Rodar e ver falhar.**
 
-- [ ] **Step 3: Emitir no `transicionar()`**
+- [x] **Step 3: Emitir no `transicionar()`**
 
 E o ponto privado unico das transicoes, entao todos os caminhos publicos
 (`enviar`, aprovar, rejeitar) passam por ele de graca. Confirmar lendo os
 chamadores, e nao assumindo.
 
-- [ ] **Step 4: Fiar a pagina**
+- [x] **Step 4: Fiar a pagina**
 
 **O controller de analises nao e um arquivo proprio.** `PmdaAnaliseController` e
 uma segunda classe declarada dentro de
@@ -453,14 +453,14 @@ ao controller e nao inventar o valor no cliente** -- o cliente nao sabe o escopo
 do perfil, e adivinhar erra para super-admin lotado em COMPDEC (ver o comentario
 de `municipioDoEscopo()`).
 
-- [ ] **Step 5: Verificar**
+- [x] **Step 5: Verificar**
 
 ```bash
 cd SDC && npx vite build 2>&1 | tail -3
 /c/tmp/trl.sh php vendor/bin/phpunit --filter="Pmda"
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add SDC/app/Modules/Pmda/Services/PmdaService.php \

@@ -98,7 +98,26 @@ real sem classe nova, que foi o que fez `GoldAtualizado` envelhecer bem.
 - `listagem.pedidos-ah` -> `humanitaria.pedidos.view`
 - `listagem.rat` -> `rat.protocolos.view`
 - `listagem.pmda-analises.{municipio}` -> `pmda.analise.view` **e** escopo de
-  perfil compativel (CEDEC assina qualquer municipio)
+  perfil compativel
+- `listagem.pmda-analises.todos` -> `pmda.analise.view` **e**
+  `municipioDoEscopo() === null`
+
+### 3.2.1 Recurso escopado transmite em DOIS canais
+
+Corrigido em 2026-09-03, ao fiar a pagina do PMDA: o desenho original mandava o
+evento so para `...{recurso}.{municipio}`, e com isso quem le o estado inteiro
+NAO ouviria nada. Um usuario da CEDEC teria de assinar os 853 canais de
+municipio, um por um -- ou seja, o tempo real nao funcionaria justamente para
+quem mais usa a Central de Analises.
+
+`broadcastOn()` devolve dois canais: o do municipio e `...{recurso}.todos`. Sao
+dois canais e nao dois eventos -- um dispatch, uma transmissao, e a autorizacao
+de cada canal decide quem recebe.
+
+O `todos` e autorizado **apenas** a quem le o escopo inteiro (CEDEC, REDEC,
+super-admin). Para um COMPDEC ele seria exatamente o vazamento que o escopo
+existe para impedir. O sufixo nunca colide com id de municipio porque id e sempre
+numerico, e a autorizacao usa essa diferenca para separar os dois casos.
 
 A tabela recurso -> permissao vive em UM lugar, e nao espalhada por
 `channels.php`. Recurso sem permissao declarada e recusado por padrao: canal novo
@@ -204,11 +223,19 @@ banco em cenario de concorrencia. E o comportamento de hoje, nao uma regressao -
 mas nas duas paginas o tempo real nao tem a garantia que Pedidos tem, e isso
 precisa estar dito antes de alguem confiar nele para decisao operacional.
 
-**Mais de um ponto de escrita.** `RatOcorrenciaService::manageOcorrencia()` e um
-`updateOrCreate` chamado de fluxos diferentes, e o RAT nao tem observer. Se
-houver caminho que altere `status` sem passar por ele, essa pagina perde eventos
-em silencio. Confirmar antes de fiar o RAT -- Pedidos e PMDA tem ponto unico
-declarado, o RAT nao.
+**O RAT nao tem ponto unico de escrita, e isso foi confirmado.** Levantado em
+2026-09-03: `RatOcorrencia` e escrito de pelo menos oito lugares, em tres classes
+(`RatOcorrenciaService::manageOcorrencia`, seis pontos em `RatWriteService`,
+`EloquentRatRepository::create/updateStatus/delete`). Emitir de um ponto so faria
+a pagina perder eventos em silencio.
+
+E a saida obvia -- um observer no model -- **nao resolve sozinha**: parte dessas
+escritas usa query builder (`RatOcorrencia::where(...)->update(...)` e
+`->delete()`), e observer do Eloquent nao dispara para essas. Um observer daria
+cobertura PARCIAL, falhando exatamente nos caminhos mais dificeis de notar.
+
+Fiar o RAT exige antes consolidar a superficie de escrita, que e trabalho de
+outra natureza. Ver secao 8.
 
 ## 8. Fora de escopo
 
