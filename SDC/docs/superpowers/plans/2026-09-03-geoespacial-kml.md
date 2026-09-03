@@ -35,6 +35,12 @@ Leaflet, PHPUnit 11, Octane/Swoole, fila `medalhao`.
   compilador emite `.dark` pelado. Usar bloco `<style>` nao-scoped qualificado
   pelo container, e conferir no CSS **compilado**.
 - Nada de `.value` em template Vue: desestruturar refs de topo.
+- **Arquivo de teste NAO entra em commit.** `SDC/.gitignore:39` ignora `tests`
+  inteiro, e a regra de ouro 10 do projeto diz o mesmo. Os testes deste plano
+  existem para serem RODADOS, e ficam fora do controle de versao. Nenhum
+  `git add` deve citar `SDC/tests/...` -- o `git add` aborta com "paths are
+  ignored" e NADA e stageado, entao o commit inteiro se perde. Nunca usar
+  `git add -f` para contornar.
 
 ## Ambiente de execucao
 
@@ -60,6 +66,19 @@ DB_USERNAME=sdc DB_PASSWORD=secret APP_CONFIG_CACHE=/nao/existe/config.php \
 ```
 
 Use `127.0.0.1`, nunca `localhost`: resolve para IPv6 e a conexao falha.
+
+**O `artisan migrate` na base de verificacao precisa de mais variaveis que o
+comando de teste.** A base criada de `template_postgis` esta vazia, entao o
+migrate roda a suite INTEIRA, e `2025_12_24_000001_create_permission_tables`
+estoura com `Class "Redis" not found` -- o PHP 8.3 do Laragon nao tem a
+extensao. Some ao comando de migrate:
+
+```
+CACHE_STORE=array CACHE_DRIVER=array SESSION_DRIVER=array \
+QUEUE_CONNECTION=sync BROADCAST_CONNECTION=null
+```
+
+O comando de *teste* nao precisa delas; so o de migrate.
 
 Depois de criar classe nova, o container precisa de
 `docker exec newsdc_dev_app sh -c 'cd /var/www && composer dump-autoload'` — o
@@ -379,8 +398,7 @@ Expected: PASS (5 testes)
 ```bash
 docker exec newsdc_dev_app sh -c 'cd /var/www && php artisan migrate --force'
 git add SDC/database/migrations/2026_09_03_000003_create_silver_geoespacial.php \
-        SDC/database/migrations/2026_09_03_000004_create_gold_geoespacial_views.php \
-        SDC/tests/Feature/Geoespacial/SchemaGeoespacialTest.php
+        SDC/database/migrations/2026_09_03_000004_create_gold_geoespacial_views.php
 git commit -m "🗃️ db(geoespacial): schema Silver e Gold das camadas de KML"
 ```
 
@@ -506,8 +524,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add SDC/app/Modules/Medalhao/Registry/IngestorRegistry.php \
-        SDC/tests/Feature/Medalhao/RegistroPushTest.php
+git add SDC/app/Modules/Medalhao/Registry/IngestorRegistry.php
 git commit -m "✨ feat(medalhao): kernel aceita fonte so-push, sem ingestor"
 ```
 
@@ -537,8 +554,7 @@ git commit -m "✨ feat(medalhao): kernel aceita fonte so-push, sem ingestor"
 
 ```bash
 mkdir -p SDC/tests/Fixtures/geoespacial
-cp .claude/ALERTA-RISCO-GEOLOGICO-MODERADO-28022026.kml \
-   SDC/tests/Fixtures/geoespacial/alerta-geologico.kml
+cp .claude/ALERTA-RISCO-GEOLOGICO-MODERADO-28022026.kml
 ```
 
 - [ ] **Step 2: Escrever o teste que falha**
@@ -883,8 +899,7 @@ Expected: PASS (8 testes)
 - [ ] **Step 7: Commit**
 
 ```bash
-git add SDC/app/Modules/Geoespacial/ SDC/tests/Feature/Geoespacial/KmlExtratorTest.php \
-        SDC/tests/Fixtures/geoespacial/alerta-geologico.kml
+git add SDC/app/Modules/Geoespacial/
 git commit -m "✨ feat(geoespacial): extrator de KML e KMZ com guardas de XXE e zip bomb"
 ```
 
@@ -1201,7 +1216,7 @@ MG.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add SDC/app/Modules/Geoespacial/ SDC/tests/Feature/Geoespacial/GeoCamadaRepositoryTest.php
+git add SDC/app/Modules/Geoespacial/
 git commit -m "✨ feat(geoespacial): repositorio com geometria no PostGIS e cruzamento espacial"
 ```
 
@@ -1570,7 +1585,7 @@ Expected: PASS (6 testes)
 
 ```bash
 git add SDC/app/Modules/Geoespacial/ SDC/config/geoespacial.php SDC/config/medalhao.php \
-        SDC/config/app.php SDC/tests/Feature/Geoespacial/PipelineGeoespacialTest.php
+        SDC/config/app.php
 git commit -m "✨ feat(geoespacial): normalizador, gold e registro no kernel do medalhao"
 ```
 
@@ -1895,7 +1910,7 @@ Expected: PASS (5 testes)
 
 ```bash
 git add SDC/app/Modules/Geoespacial/ SDC/routes/modules/geoespacial.php SDC/routes/web.php \
-        SDC/resources/js/ziggy.js SDC/tests/Feature/Geoespacial/GeoUploadControllerTest.php
+        SDC/resources/js/ziggy.js
 git commit -m "✨ feat(geoespacial): upload de KML/KMZ sem parse dentro do Octane"
 ```
 
@@ -2301,7 +2316,6 @@ de cada um. Nao marque como feito criterio que nao foi exercitado.
 
 ```bash
 git add SDC/app/Modules/Inmet/Controllers/InmetIndexController.php \
-        SDC/resources/js/Pages/Inmet/MapaInmet.vue \
-        SDC/tests/Feature/Geoespacial/CamadaNaMeteorologiaTest.php
+        SDC/resources/js/Pages/Inmet/MapaInmet.vue
 git commit -m "✨ feat(geoespacial): area de risco como camada no mapa da Meteorologia"
 ```
