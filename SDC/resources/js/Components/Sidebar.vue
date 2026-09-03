@@ -311,17 +311,6 @@
           Meteorologia
         </NavItem>
 
-        <!-- Chuva (rede CEMADEN) -->
-        <NavItem
-          v-if="canSeeMeteorologia && _routes.hasCemaden"
-          :href="route('cemaden.index', undefined, false)"
-          :active="isRouteActive('cemaden.*')"
-          icon="cloud"
-          :collapsed="isCollapsed"
-        >
-          Chuva (CEMADEN)
-        </NavItem>
-
         <!-- Sismos -->
         <NavItem
           v-if="canSeeSismos && _routes.hasSismos"
@@ -799,7 +788,6 @@ const _routes = {
   hasTreinamentos: route().has('treinamentos.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
-  hasCemaden: route().has('cemaden.index'),
   hasSismos: route().has('sismos.index'),
 };
 

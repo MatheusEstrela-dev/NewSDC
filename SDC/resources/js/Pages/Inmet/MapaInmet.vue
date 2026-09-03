@@ -11,6 +11,25 @@
         </div>
       </div>
 
+      <!--
+        Seletor de rede. As duas redes medem a mesma grandeza com as mesmas
+        faixas; o que muda e a cadencia e a densidade. Por isso filtro na mesma
+        pagina, e nao duas paginas.
+      -->
+      <div class="rede-filtro">
+        <button
+          v-for="opcao in opcoesDeRede"
+          :key="opcao.valor"
+          type="button"
+          class="rede-chip"
+          :class="{ 'is-ativo': redeSelecionada === opcao.valor }"
+          @click="selecionarRede(opcao.valor)"
+        >
+          {{ opcao.rotulo }}
+          <span class="rede-contagem">{{ opcao.total }}</span>
+        </button>
+      </div>
+
       <!-- Mapa Container -->
       <div class="map-wrapper">
         <MapaLeaflet :pontos="pontosDoMapa" :bbox="bbox" class="mapa-area" />
@@ -20,18 +39,38 @@
           <h3 class="overlay-title">Estatísticas</h3>
           <div class="stat-row">
             <span>Média:</span>
-            <strong>{{ estatisticas.precipitacao_media?.toFixed(2) || '0.00' }} mm</strong>
+            <strong>{{ resumo.media.toFixed(2) }} mm</strong>
           </div>
           <div class="stat-row">
             <span>Máxima:</span>
-            <strong>{{ estatisticas.precipitacao_maxima?.toFixed(2) || '0.00' }} mm</strong>
+            <strong>{{ resumo.maxima.toFixed(2) }} mm</strong>
+          </div>
+          <div class="stat-row">
+            <span>Com chuva:</span>
+            <strong>{{ resumo.comChuva }}</strong>
           </div>
           <div class="stat-row">
             <span>Estações:</span>
-            <strong>{{ estatisticas.total_estacoes }}</strong>
+            <strong>{{ resumo.total }}</strong>
+          </div>
+          <!--
+            Estacao sem telemetria nao e estacao sem chuva. Sem este numero, a
+            maioria dos 830 pontos do CEMADEN em cinza pareceria perda de dado.
+          -->
+          <div v-if="resumo.semLeitura > 0" class="stat-row">
+            <span>Sem leitura:</span>
+            <strong>{{ resumo.semLeitura }}</strong>
+          </div>
+          <!--
+            Um horario por rede, e nao um so: e exatamente aqui que a diferenca
+            de cadencia aparece. O INMET anda de hora em hora porque o HR_MEDICAO
+            da API e horario; o CEMADEN anda a cada ~10 minutos.
+          -->
+          <div class="stat-note">
+            <span class="dot-indicator"></span> INMET: {{ formatarDataHora(estatisticas.inmet?.ultima_atualizacao) }}
           </div>
           <div class="stat-note">
-            <span class="dot-indicator"></span> Modo: Estações individuais
+            <span class="dot-indicator"></span> CEMADEN: {{ formatarDataHora(estatisticas.cemaden?.ultima_atualizacao) }}
           </div>
         </div>
 
@@ -54,17 +93,21 @@
             <tr>
               <th class="hidden md:table-cell">Código</th>
               <th>Estação / Município</th>
+              <th class="hidden sm:table-cell">Rede</th>
               <th>Chuva (mm)</th>
               <th>Nível</th>
               <th class="hidden sm:table-cell">Data/Hora</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="estacao in estacoesDaPagina" :key="estacao.codigo_estacao">
-              <td class="code-cell hidden md:table-cell">{{ estacao.codigo_estacao }}<br><span class="sub-text">Automática</span></td>
+            <tr v-for="estacao in estacoesDaPagina" :key="estacao.id">
+              <td class="code-cell hidden md:table-cell">{{ estacao.codigo_estacao }}<br><span class="sub-text">{{ estacao.tipo }}</span></td>
               <td>
                 <div class="station-name">{{ estacao.nome_estacao }}</div>
                 <div class="municipio-name">{{ estacao.municipio }}</div>
+              </td>
+              <td class="hidden sm:table-cell">
+                <span class="rede-badge" :class="`rede-badge-${estacao.rede.toLowerCase()}`">{{ estacao.rede }}</span>
               </td>
               <td class="value-cell" :style="{ color: corDaClasse(estacao.classe_precipitacao) }">
                 {{ formatarMm(estacao.precipitacao) }}
@@ -76,8 +119,8 @@
               </td>
               <td class="time-cell hidden sm:table-cell">{{ formatarDataHora(estacao.medido_em) }}</td>
             </tr>
-            <tr v-if="estacoes.length === 0">
-              <td colspan="5" class="empty-cell">Nenhuma estacao com leitura</td>
+            <tr v-if="estacoesFiltradas.length === 0">
+              <td colspan="6" class="empty-cell">Nenhuma estacao com leitura</td>
             </tr>
           </tbody>
         </table>
@@ -96,46 +139,118 @@ import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { usePrecipitacao } from '@/Composables/usePrecipitacao';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
+  // Lista ja unificada pelo controller: cada item traz 'rede' e o campo de
+  // chuva sob o nome unico 'precipitacao'.
   estacoes: { type: Array, default: () => [] },
+  // Uma entrada por rede: { inmet: {...}, cemaden: {...} }.
   estatisticas: { type: Object, default: () => ({}) },
   bbox: { type: Object, required: true },
 });
 
-// O pipeline coleta de 10 em 10 minutos; sem isto a tela mostra a coleta
-// anterior ate alguem apertar F5. `bbox` fica de fora do only: e config, nao
-// muda com a coleta.
+/*
+ * Um assinante por rede, porque cada pipeline avisa no seu proprio canal e as
+ * duas alimentam esta mesma tela. As chamadas nao conflitam: cada uma mantem a
+ * propria assinatura no closure.
+ *
+ * `bbox` fica de fora do only: e config, nao muda com a coleta.
+ */
 useAtualizacaoAoVivo({
   canal: 'medalhao.inmet',
   evento: '.GoldAtualizado',
   props: ['estacoes', 'estatisticas'],
 });
 
+useAtualizacaoAoVivo({
+  canal: 'medalhao.cemaden',
+  evento: '.GoldAtualizado',
+  props: ['estacoes', 'estatisticas'],
+});
+
 // Faixas, paletas e formatadores vivem no composable: as mesmas faixas
-// alimentam a tela do CEMADEN e os CASE das matviews.
+// alimentam os CASE das matviews gold.inmet_mapa e gold.cemaden_mapa.
 const { legenda, corDaClasse, rotuloDaClasse, formatarMm, formatarDataHora } = usePrecipitacao();
+
+const redeSelecionada = ref('TODAS');
+
+const estacoesFiltradas = computed(() => {
+  if (redeSelecionada.value === 'TODAS') {
+    return props.estacoes;
+  }
+
+  return props.estacoes.filter((estacao) => estacao.rede === redeSelecionada.value);
+});
+
+const opcoesDeRede = computed(() => {
+  const porRede = (rede) => props.estacoes.filter((estacao) => estacao.rede === rede).length;
+
+  return [
+    { valor: 'TODAS', rotulo: 'Todas', total: props.estacoes.length },
+    { valor: 'INMET', rotulo: 'INMET', total: porRede('INMET') },
+    { valor: 'CEMADEN', rotulo: 'CEMADEN', total: porRede('CEMADEN') },
+  ];
+});
+
+function selecionarRede(valor) {
+  redeSelecionada.value = valor;
+}
+
+/*
+ * Resumo derivado do que esta EM TELA, e nao das matviews de estatistica.
+ *
+ * As matviews agregam cada rede isoladamente, e nao existe uma terceira para o
+ * conjunto filtrado. Derivar aqui garante que o numero mostrado corresponda ao
+ * filtro ativo -- ler a matview com o filtro em CEMADEN mostraria a media das
+ * duas redes. As matviews continuam servindo o 'ultima_atualizacao' por rede,
+ * que e dado de origem e nao agregacao.
+ */
+const resumo = computed(() => {
+  const lista = estacoesFiltradas.value;
+  const comLeitura = lista
+    .map((estacao) => Number(estacao.precipitacao))
+    .filter((valor) => Number.isFinite(valor));
+
+  const soma = comLeitura.reduce((acumulado, valor) => acumulado + valor, 0);
+
+  return {
+    total: lista.length,
+    semLeitura: lista.length - comLeitura.length,
+    comChuva: comLeitura.filter((valor) => valor > 0).length,
+    media: comLeitura.length > 0 ? soma / comLeitura.length : 0,
+    maxima: comLeitura.length > 0 ? Math.max(...comLeitura) : 0,
+  };
+});
 
 /*
  * Paginacao no cliente, nao no servidor: o mapa precisa de TODAS as estacoes de
- * qualquer forma, entao paginar no backend exigiria uma segunda consulta para
- * ganhar nada com 57 linhas. O componente Pagination so precisa do formato.
+ * qualquer forma, entao paginar no backend exigiria uma segunda consulta.
+ *
+ * Com as duas redes sao 890 estacoes. Ainda cabe no cliente -- o controller
+ * manda so os campos que a tela usa -- mas e o limite: se a rede dobrar, o mapa
+ * deve passar a receber um agregado por municipio em vez de ponto por estacao.
  */
 const POR_PAGINA = 10;
 const pagina = ref(1);
 
+// Trocar de rede sem isto deixaria o operador numa pagina que nao existe mais
+// no recorte novo, e a tabela apareceria vazia.
+watch(redeSelecionada, () => {
+  pagina.value = 1;
+});
+
 const paginacao = computed(() => ({
   current_page: pagina.value,
   per_page: POR_PAGINA,
-  total: props.estacoes.length,
-  last_page: Math.max(1, Math.ceil(props.estacoes.length / POR_PAGINA)),
+  total: estacoesFiltradas.value.length,
+  last_page: Math.max(1, Math.ceil(estacoesFiltradas.value.length / POR_PAGINA)),
 }));
 
 const estacoesDaPagina = computed(() => {
   const inicio = (pagina.value - 1) * POR_PAGINA;
 
-  return props.estacoes.slice(inicio, inicio + POR_PAGINA);
+  return estacoesFiltradas.value.slice(inicio, inicio + POR_PAGINA);
 });
 
 function irParaPagina(numero) {
@@ -144,16 +259,19 @@ function irParaPagina(numero) {
 
 // A pagina traduz estacao -> ponto; a mecanica de Leaflet vive no componente.
 // O popup vai estruturado: quem escapa e o componente, o que importa porque
-// nome de estacao e municipio vem da API do INMET.
-const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
+// nome de estacao e municipio vem de API externa.
+const pontosDoMapa = computed(() => estacoesFiltradas.value.map((estacao) => ({
   id: estacao.id,
   latitude: estacao.latitude,
   longitude: estacao.longitude,
   cor: corDaClasse(estacao.classe_precipitacao),
-  raio: 6,
+  // O CEMADEN tem 830 pontos contra 60 do INMET: raio menor evita que a mancha
+  // do CEMADEN cubra o estado e esconda as estacoes do INMET embaixo.
+  raio: estacao.rede === 'CEMADEN' ? 5 : 7,
   popup: {
     titulo: estacao.nome_estacao,
     linhas: [
+      { rotulo: 'Rede', valor: estacao.rede },
       { rotulo: 'Municipio', valor: estacao.municipio },
       { rotulo: 'Chuva', valor: formatarMm(estacao.precipitacao) },
       { rotulo: 'Nivel', valor: rotuloDaClasse(estacao.classe_precipitacao) },
@@ -563,6 +681,79 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
     margin-top: 12px;
   }
 }
+
+/*
+ * Seletor de rede e badge da tabela. Usam os mesmos tokens do container, entao
+ * acompanham claro/escuro sem par de regras duplicado.
+ */
+.rede-filtro {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.rede-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--sup);
+  color: var(--texto-fraco);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.rede-chip:hover {
+  color: var(--texto);
+  border-color: var(--texto-fraco);
+}
+
+.rede-chip.is-ativo {
+  background: var(--sup-2);
+  border-color: #3b82f6;
+  color: var(--texto);
+}
+
+.rede-contagem {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--sup-2);
+  color: var(--texto-fraco);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rede-chip.is-ativo .rede-contagem {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.rede-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--borda);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--texto-fraco);
+}
+
+/* Cor por rede para distinguir a origem num relance, sem depender da coluna. */
+.rede-badge-inmet {
+  border-color: #0e7490;
+  color: #0e7490;
+}
+
+.rede-badge-cemaden {
+  border-color: #7c3aed;
+  color: #7c3aed;
+}
 </style>
 
 <!--
@@ -588,5 +779,20 @@ const pontosDoMapa = computed(() => props.estacoes.map((estacao) => ({
   --mapa-fallback: #1a1d21;
 
   background-color: #111315;
+}
+
+/*
+ * As cores dos badges de rede sao literais, nao tokens: distinguem origem e nao
+ * papel de superficie. Sobre fundo escuro as versoes fechadas do tema claro
+ * ficam ilegiveis, entao clareiam aqui.
+ */
+.dark .inmet-container .rede-badge-inmet {
+  border-color: #22d3ee;
+  color: #22d3ee;
+}
+
+.dark .inmet-container .rede-badge-cemaden {
+  border-color: #a78bfa;
+  color: #a78bfa;
 }
 </style>

@@ -185,7 +185,6 @@ Route::middleware('auth')->group(function () {
     require __DIR__ . '/modules/rat.php';
     require __DIR__ . '/modules/plancon.php';
     require __DIR__ . '/modules/inmet.php';
-    require __DIR__ . '/modules/cemaden.php';
     require __DIR__ . '/modules/sismos.php';
 });
 
