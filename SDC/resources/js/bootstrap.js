@@ -59,6 +59,14 @@ export const initAxios = async () => {
  * Retorna a instancia de Echo, ou null quando o websocket nao esta configurado
  * ou falhou ao conectar. Null e um resultado esperado, nao um erro: o chamador
  * cai para polling.
+ *
+ * E o UNICO ponto que cria Echo na aplicacao. Um segundo ponto existiu (o
+ * resources/js/echo.js, eager no app.js) e custou duas conexoes por aba, a
+ * primeira orfa, mais laravel-echo e pusher-js dentro do chunk eager.
+ *
+ * As VITE_* sao lidas em BUILD TIME. Mudar host ou porta exige rebuild do
+ * frontend, nao apenas restart de container -- e o tipo de coisa que vira uma
+ * hora de diagnostico quando ninguem avisou.
  */
 let echoPromise = null;
 
@@ -85,6 +93,10 @@ export const initEcho = () => {
             window.Echo = new Echo({
                 broadcaster: 'reverb',
                 key,
+                // O NAVEGADOR alcanca o Reverb por localhost; o servidor, pelo
+                // hostname de rede. Sao valores diferentes para a mesma coisa, e
+                // por isso o host vem de uma VITE_ propria em vez de reaproveitar
+                // REVERB_HOST.
                 wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
                 wsPort: Number(porta),
                 wssPort: Number(porta),
