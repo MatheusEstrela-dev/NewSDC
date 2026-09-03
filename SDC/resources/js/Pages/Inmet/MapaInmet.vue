@@ -217,6 +217,24 @@ useAtualizacaoAoVivo({
   props: ['estacoes', 'estatisticas', 'verificado_em'],
 });
 
+/*
+ * Terceiro canal, so para a LISTA de camadas.
+ *
+ * Sem ele, uma area de risco recem-importada so aparecia no seletor depois de
+ * um F5 -- justamente o comportamento que o tempo real veio eliminar. E o
+ * cenario nao e raro: quem sobe o KML costuma ir direto olhar a chuva sobre a
+ * area.
+ *
+ * `feicoesGeo` fica de fora do only de proposito: elas dependem da camada que o
+ * operador escolheu, e rebusca-las aqui trocaria a geometria em tela por conta
+ * propria enquanto ele olha.
+ */
+useAtualizacaoAoVivo({
+  canal: 'medalhao.geoespacial',
+  evento: '.GoldAtualizado',
+  props: ['camadasGeo'],
+});
+
 // Faixas, paletas e formatadores vivem no composable: as mesmas faixas
 // alimentam os CASE das matviews gold.inmet_mapa e gold.cemaden_mapa.
 const { legenda, corDaClasse, rotuloDaClasse, formatarMm, formatarDataHora } = usePrecipitacao();
