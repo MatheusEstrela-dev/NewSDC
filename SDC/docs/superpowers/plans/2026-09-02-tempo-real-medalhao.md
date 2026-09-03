@@ -949,7 +949,7 @@ Expected: continua na pagina 3, na mesma posicao de scroll.
 Deixe `/inmet` aberto, mude de aba, dispare a coleta, aguarde, volte.
 Expected: nada e rebuscado enquanto oculta; ao voltar, atualiza uma vez.
 
-- [ ] **Step 5: Visitante nao assina o canal**
+- [x] **Step 5: Visitante nao assina o canal**
 
 ```bash
 curl -s -o /dev/null -w "auth sem sessao http=%{http_code}\n" -X POST \
@@ -959,18 +959,18 @@ curl -s -o /dev/null -w "auth sem sessao http=%{http_code}\n" -X POST \
 
 Expected: `403` ou `302` para login — nunca `200`.
 
-- [ ] **Step 6: O payload nao leva dado de dominio**
+- [x] **Step 6: O payload nao leva dado de dominio**
 
 No DevTools, aba Network, filtro WS, inspecione o frame do evento.
 Expected: apenas `grupo` e `atualizado_em`. Nenhuma leitura de estacao.
 
-- [ ] **Step 7: Coleta sem novidade nao gera evento**
+- [x] **Step 7: Coleta sem novidade nao gera evento**
 
 Dispare `medalhao:ingerir inmet` duas vezes seguidas.
 Expected: na segunda o log mostra `conteudo identico ao anterior, ignorado`, o
 job de Gold **nao** roda, e a tela nao pisca.
 
-- [ ] **Step 8: Suite do escopo**
+- [x] **Step 8: Suite do escopo**
 
 Run: `/c/tmp/tr.sh php vendor/bin/phpunit --filter="TempoReal|Medalhao|Inmet|Sismos"`
 Expected: verde.
@@ -989,6 +989,60 @@ git commit -m "✅ test(tempo-real): verificacao ponta a ponta"
 ```
 
 ---
+
+## Resultado da verificacao (Task 9)
+
+Executada em 2026-09-03, com o Reverb de pe (`newsdc_dev_reverb` healthy) e
+`BROADCAST_CONNECTION=reverb` no `.env` de dev.
+
+### Verificado
+
+| Criterio (secao 6 do spec) | Como foi provado |
+| --- | --- |
+| 5. Visitante nao assina o canal | `POST /broadcasting/auth` sem sessao devolve **403**, tanto em `private-medalhao.inmet` quanto em `private-App.Models.User.1`. Confirmado tambem por `CanalMedalhaoTest::test_visitante_nao_autoriza_o_canal`. |
+| 6. Payload sem dado de dominio | `GoldAtualizadoTest`: 4 testes verdes, incluindo `test_o_payload_nao_leva_dado_de_dominio` (apenas `grupo` e `atualizado_em`). |
+| 7. Coleta sem novidade nao gera evento | Provado NOS DADOS: `bronze.ingestao_bruta` id 87 foi coletada 17:42:42 e apenas **reverificada** 18:00:52 pelo `medalhao:ingerir inmet`. Hash identico, nenhuma linha nova, `queues:medalhao` vazia, nenhum `GET /inmet` no log do Octane. |
+| 8. Suite verde no escopo | `--filter="TempoReal|Medalhao|Inmet|Sismos"`: 121 testes, 145 assercoes, **0 falhas**, 60 pulados (os que exigem PostgreSQL, sob o sqlite do `.env.testing`). |
+
+Verificacao extra, fora dos criterios do spec: o canal `private-medalhao.inmet`
+aparece assinado no Reverb por uma sessao autenticada de navegador
+(`subscription_count=1`), o que cobre em runtime o caso que o
+`CanalMedalhaoTest::test_usuario_autenticado_autoriza_o_canal` cobriria (esse
+teste exige `RefreshDatabase`, que nao roda no sqlite em memoria).
+
+**Como inspecionar o Reverb sem navegador** (o `pusher/pusher-php-server` esta no
+vendor da imagem, entao nao precisa de ferramenta nova):
+
+```bash
+docker exec newsdc_dev_app php -r '
+require "/var/www/vendor/autoload.php";
+$p = new Pusher\Pusher("sdc-dev-key","sdc-dev-secret","sdc-dev",
+    ["host"=>"reverb","port"=>8080,"scheme"=>"http","useTLS"=>false]);
+echo json_encode($p->get_channels()->channels).PHP_EOL;
+echo json_encode($p->get("/connections")).PHP_EOL;'
+```
+
+### NAO verificado: depende de navegador
+
+Os criterios 1, 2 e 3 exigem olhar a tela, e os MCP de browser desta sessao
+(`playwright`) nao conectaram. Ficam abertos:
+
+- **1.** Degradacao com broadcasting desligado, sem erro no console.
+- **2.** Tabela e estatisticas trocando sem F5 apos `medalhao:ingerir inmet`.
+- **3.** Scroll e pagina corrente da tabela sobrevivendo a atualizacao.
+
+O caminho de broadcast FOI exercitado: `GoldAtualizado::dispatch("inmet")` foi
+despachado, a fila `default` drenou o `BroadcastEvent` e o canal segue assinado.
+O que nao houve foi reload da pagina -- e a aba estava em segundo plano, que e
+exatamente o comportamento do criterio 4. Isso e evidencia indireta do 4 e
+inconclusivo para o 2: um reload observado com a aba em foco continua faltando.
+
+### Efeito colateral encontrado e corrigido
+
+A verificacao encontrou DOIS pontos criando Echo (`resources/js/echo.js` eager e
+o `initEcho` do `bootstrap.js`), o que dava duas conexoes por aba e um `leave()`
+atuando na instancia errada. Corrigido em `feat/tempo-real-echo-unico`; o Reverb
+agora mostra **1 conexao com 3 canais** multiplexados.
 
 ## Notas de execucao
 
