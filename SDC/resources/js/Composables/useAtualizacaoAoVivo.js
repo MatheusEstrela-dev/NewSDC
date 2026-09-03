@@ -21,13 +21,15 @@ import { initEcho } from '@/bootstrap';
  * @param {string}   opcoes.evento  Nome do evento. Com ponto na frente para usar
  *                                  o broadcastAs em vez do FQCN da classe.
  * @param {string[]} opcoes.props   Props a rebuscar, no formato do Inertia.
+ * @param {number}   [opcoes.debounceMs] Janela de coalescencia, em ms.
  */
-export function useAtualizacaoAoVivo({ canal, evento, props }) {
+export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400 }) {
     let echo = null;
     let assinatura = null;
     let pendente = false;
     let desmontado = false;
     let visibilidadeHandler = null;
+    let timerDebounce = null;
 
     const recarregar = () => {
         // preserveState mantem a pagina da tabela e o estado local; sem
@@ -40,6 +42,32 @@ export function useAtualizacaoAoVivo({ canal, evento, props }) {
         });
     };
 
+    /*
+     * Coalesce rajada num unico reload.
+     *
+     * Aprovar dez pedidos em sequencia emite dez eventos, e sem esta janela todo
+     * viewer roda dez vezes o index do controller -- no PMDA sao tres queries
+     * paginadas mais o catalogo de municipios por rodada. O timer reinicia a cada
+     * evento, entao a rajada custa um reload em vez de N.
+     *
+     * Fica no CLIENTE porque e aqui que se sabe se um reload ja esta em voo;
+     * coalescer no servidor exigiria estado compartilhado entre workers para uma
+     * economia que um setTimeout resolve.
+     *
+     * Nao substitui a logica de aba oculta: aba oculta nem chega aqui, marca
+     * pendencia e resolve no visibilitychange.
+     */
+    const agendarRecarga = () => {
+        if (timerDebounce) {
+            clearTimeout(timerDebounce);
+        }
+
+        timerDebounce = setTimeout(() => {
+            timerDebounce = null;
+            recarregar();
+        }, debounceMs);
+    };
+
     const aoReceber = () => {
         // Aba em segundo plano nao rebusca: ninguem esta olhando e cada
         // recarregamento custa um ciclo de request. Marca pendencia e resolve
@@ -50,7 +78,7 @@ export function useAtualizacaoAoVivo({ canal, evento, props }) {
             return;
         }
 
-        recarregar();
+        agendarRecarga();
     };
 
     const assinar = async () => {
@@ -78,7 +106,7 @@ export function useAtualizacaoAoVivo({ canal, evento, props }) {
         visibilidadeHandler = () => {
             if (!document.hidden && pendente) {
                 pendente = false;
-                recarregar();
+                agendarRecarga();
             }
         };
 
@@ -92,6 +120,13 @@ export function useAtualizacaoAoVivo({ canal, evento, props }) {
 
     onBeforeUnmount(() => {
         desmontado = true;
+
+        // Sem cancelar o timer, um reload agendado dispararia depois do unmount e
+        // navegaria uma pagina que nao existe mais.
+        if (timerDebounce) {
+            clearTimeout(timerDebounce);
+            timerDebounce = null;
+        }
 
         if (visibilidadeHandler) {
             document.removeEventListener('visibilitychange', visibilidadeHandler);
