@@ -34,7 +34,11 @@ class NormalizarSilverJob implements ShouldQueue
     public function handle(IngestorRegistry $registry): void
     {
         $bronze = IngestaoBruta::findOrFail($this->ingestaoId);
-        $grupo = $registry->ingestor($this->chave)->grupo();
+
+        // Pelo registry, e nao por ingestor()->grupo(): fonte recebida por
+        // upload nao tem ingestor, e perguntar o grupo ao coletor quebrava a
+        // normalizacao inteira dela.
+        $grupo = $registry->grupo($this->chave);
 
         $dtos = $registry->normalizador($this->chave)->normalizar(
             new PayloadBruto($bronze->conteudo_bruto, $bronze->formato, $bronze->meta ?? [])

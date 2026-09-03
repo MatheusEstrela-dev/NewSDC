@@ -56,6 +56,24 @@ final class IngestorRegistry
             ?? throw new InvalidArgumentException("Normalizador nao registrado: {$chave}");
     }
 
+    /**
+     * Grupo de uma fonte, seja ela coletada ou recebida por upload.
+     *
+     * Existe porque o NormalizarSilverJob precisa do grupo para achar o
+     * persistidor, e antes o obtinha de ingestor()->grupo() -- o que quebrava
+     * toda fonte so-push, que por definicao nao tem ingestor. Perguntar o grupo
+     * e perguntar sobre a FONTE, nao sobre o coletor dela.
+     */
+    public function grupo(string $chave): string
+    {
+        if (isset($this->ingestores[$chave])) {
+            return $this->ingestores[$chave]->grupo();
+        }
+
+        return $this->gruposPush[$chave]
+            ?? throw new InvalidArgumentException("Fonte nao registrada: {$chave}");
+    }
+
     /** @return list<string> */
     public function chavesDoGrupo(string $grupo): array
     {
