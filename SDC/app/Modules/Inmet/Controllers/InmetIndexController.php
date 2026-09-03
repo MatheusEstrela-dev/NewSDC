@@ -7,6 +7,8 @@ namespace App\Modules\Inmet\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Cemaden\Repositories\CemadenRepository;
 use App\Modules\Inmet\Repositories\InmetRepository;
+use App\Modules\Medalhao\Models\IngestaoBruta;
+use App\Modules\Medalhao\Registry\IngestorRegistry;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,6 +18,7 @@ class InmetIndexController extends Controller
     public function __construct(
         private readonly InmetRepository $inmet,
         private readonly CemadenRepository $cemaden,
+        private readonly IngestorRegistry $registry,
     ) {
     }
 
@@ -32,6 +35,14 @@ class InmetIndexController extends Controller
             'estatisticas' => [
                 'inmet' => $this->inmet->estatisticas(),
                 'cemaden' => $this->cemaden->estatisticas(),
+            ],
+            // Quando cada rede foi consultada pela ultima vez, independente de
+            // ter trazido novidade. O 'ultima_atualizacao' das matviews diz a
+            // idade do DADO; este campo diz se o coletor esta vivo. Sao
+            // perguntas diferentes, e antes nenhuma das duas era respondida.
+            'verificado_em' => [
+                'inmet' => IngestaoBruta::verificadoEm($this->registry->chavesDoGrupo('inmet')),
+                'cemaden' => IngestaoBruta::verificadoEm($this->registry->chavesDoGrupo('cemaden')),
             ],
             'bbox' => config('medalhao.inmet.bbox'),
         ]);

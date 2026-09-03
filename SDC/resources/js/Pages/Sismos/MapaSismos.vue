@@ -4,9 +4,25 @@
       <h1 class="page-title">Sismos</h1>
       <p class="page-subtitle">
         Eventos sismicos no quadrante de Minas Gerais
-        <span v-if="estatisticas.ultima_atualizacao" class="update-note">
-          &middot; atualizado em {{ formatarDataHora(estatisticas.ultima_atualizacao) }}
+        <!--
+          Data do evento mais recente, e nao o instante do REFRESH do gold, que
+          era o que aparecia aqui: aquele campo so avanca quando ha conteudo
+          novo, entao congelava e a tela dizia "atualizado ontem" enquanto o
+          coletor rodava a cada 15 minutos.
+        -->
+        <span v-if="estatisticas.ultimo_evento" class="update-note">
+          &middot; ultimo evento em {{ formatarDataHora(estatisticas.ultimo_evento) }}
         </span>
+      </p>
+      <!--
+        O nome das fontes e o indicador: verde enquanto elas respondem, vermelho
+        quando param. Em sismo isso e o que separa "nao tremeu" de "o coletor
+        caiu" -- foram 6 eventos em 90 dias, entao silencio e o normal.
+      -->
+      <p class="fonte-status" :class="fontesAtivas ? 'is-ao-vivo' : 'is-sem-resposta'">
+        <span class="dot-indicator"></span>
+        <strong class="fonte-nome">USP-FDSN &middot; UnB-OBSIS</strong>
+        <span class="fonte-estado">{{ fontesRotulo }} &middot; verificado {{ fontesDesde }}</span>
       </p>
     </div>
 
@@ -74,7 +90,7 @@
                 {{ rotuloDaClasse(evento.classe_magnitude) }}
               </span>
             </td>
-            <td class="hidden sm:table-cell">{{ evento.profundidade_km ?? '-' }} km</td>
+            <td class="hidden sm:table-cell">{{ formatarProfundidade(evento.profundidade_km) }}</td>
             <td class="time-cell hidden sm:table-cell">{{ formatarDataHora(evento.origem_utc) }}</td>
           </tr>
           <tr v-if="eventos.length === 0">
@@ -96,23 +112,42 @@ defineOptions({ layout: AuthenticatedLayout });
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
+import { useMonitorFonte } from '@/Composables/useMonitorFonte';
 import { useTheme } from '@/Composables/ui/useTheme';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
   eventos: { type: Array, default: () => [] },
   estatisticas: { type: Object, default: () => ({}) },
+  // Instante da ultima consulta as fontes, mesmo sem novidade.
+  verificado_em: { type: String, default: null },
   bbox: { type: Object, required: true },
 });
 
 // A coleta roda a cada 15 minutos, mas o dedup por hash so deixa passar quando
 // ha evento novo -- entao esta pagina raramente vai piscar, e quando piscar sera
 // porque algo aconteceu de verdade.
+//
+// verificado_em entra no only mesmo mudando a cada ciclo: o evento GoldAtualizado
+// e disparado apenas quando ha conteudo novo, entao o horario de verificacao so
+// acompanha nessa hora. E o limite aceito de proposito -- transmitir um aviso a
+// cada verificacao seria trafego constante para informar que nada aconteceu.
 useAtualizacaoAoVivo({
   canal: 'medalhao.sismos',
   evento: '.GoldAtualizado',
-  props: ['eventos', 'estatisticas'],
+  props: ['eventos', 'estatisticas', 'verificado_em'],
 });
+
+/*
+ * Tolerancia de 35 minutos: a coleta de sismos roda a cada 15 min, entao isto
+ * permite perder dois ciclos antes de acusar queda. E maior que os 25 min da
+ * Meteorologia porque o intervalo de coleta tambem e maior.
+ */
+const TOLERANCIA_MIN = 35;
+
+const {
+  ativo: fontesAtivas, rotulo: fontesRotulo, desde: fontesDesde,
+} = useMonitorFonte(() => props.verificado_em, TOLERANCIA_MIN);
 
 /*
  * Mesmas faixas da matview gold.sismos_mapa. Se mudarem la, mudam aqui.
@@ -168,7 +203,7 @@ const pontosDoMapa = computed(() => props.eventos.map((evento) => ({
     titulo: evento.regiao ?? 'Regiao nao informada',
     linhas: [
       { rotulo: 'Magnitude', valor: `${formatarMagnitude(evento.magnitude)} ${evento.escala_magnitude ?? ''}`.trim() },
-      { rotulo: 'Profundidade', valor: `${evento.profundidade_km ?? '-'} km` },
+      { rotulo: 'Profundidade', valor: formatarProfundidade(evento.profundidade_km) },
       { rotulo: 'Origem (UTC)', valor: formatarDataHora(evento.origem_utc) },
       { rotulo: 'Fonte', valor: evento.fonte },
       { rotulo: 'ID', valor: evento.evento_id },
@@ -228,6 +263,23 @@ function formatarMagnitude(valor) {
   const numero = Number(valor);
 
   return Number.isFinite(numero) && numero !== 0 ? numero.toFixed(1) : '-';
+}
+
+/*
+ * O catalogo FDSN da USP publica Depth/km = 0.0 quando a profundidade nao foi
+ * determinada, o que e o caso de todos os micro-eventos de MG. Mostrar
+ * "0.000 km" afirmava que o tremor foi na superficie, que e coisa diferente --
+ * e parecia defeito nosso. A UnB, quando contribui, manda profundidade real
+ * (86,6 km no evento do Peru), entao o campo nao e inutil: e opcional.
+ */
+function formatarProfundidade(valor) {
+  const numero = Number(valor);
+
+  if (!Number.isFinite(numero) || numero === 0) {
+    return 'nao determinada';
+  }
+
+  return `${numero.toFixed(1)} km`;
 }
 
 function formatarDataHora(valor) {
@@ -510,6 +562,62 @@ function formatarDataHora(valor) {
     margin-top: 0.75rem;
   }
 }
+
+/*
+ * Status das fontes. Mesma linguagem visual da tela de Meteorologia: o nome da
+ * API e o indicador, e a cor significa estado -- nao decoracao.
+ */
+.fonte-status {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.fonte-nome {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.fonte-estado {
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+/* currentColor: o ponto herda a cor do estado, sem par de regras duplicado. */
+.dot-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.fonte-status.is-ao-vivo {
+  color: #15803d;
+}
+
+.fonte-status.is-sem-resposta {
+  color: #dc2626;
+}
+
+/* Pulso so no verde: e o unico estado que precisa comunicar continuidade. */
+.fonte-status.is-ao-vivo .dot-indicator {
+  animation: pulso-ao-vivo 2s ease-in-out infinite;
+}
+
+@keyframes pulso-ao-vivo {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Movimento continuo e gatilho vestibular; a cor sozinha ja informa o estado. */
+@media (prefers-reduced-motion: reduce) {
+  .fonte-status.is-ao-vivo .dot-indicator {
+    animation: none;
+  }
+}
 </style>
 
 <!--
@@ -520,6 +628,14 @@ function formatarDataHora(valor) {
   cores ao proprio <html> em vez da pagina.
 -->
 <style>
+.dark .sismos-container .fonte-status.is-ao-vivo {
+  color: #4ade80;
+}
+
+.dark .sismos-container .fonte-status.is-sem-resposta {
+  color: #f87171;
+}
+
 .dark .sismos-container {
   --sup: #1a1d21;
   --sup-2: #25292f;

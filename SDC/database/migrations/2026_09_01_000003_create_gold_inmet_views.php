@@ -72,7 +72,10 @@ return new class extends Migration
                 max(precipitacao)                        AS precipitacao_maxima,
                 count(*) FILTER (WHERE precipitacao > 0) AS estacoes_com_chuva,
                 round(avg(temperatura), 2)               AS temperatura_media,
-                now()                                    AS ultima_atualizacao
+                -- Idade do DADO, nao do refresh: e o que a tela pergunta.
+                -- Espelha o gold.cemaden_estatisticas, para que as duas
+                -- redes signifiquem a mesma coisa no mesmo overlay.
+                max(medido_em)                           AS ultima_atualizacao
             FROM gold.inmet_mapa
         SQL);
 

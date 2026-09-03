@@ -6,8 +6,22 @@
         <h1 class="page-title">
           Meteorologia
         </h1>
+        <!--
+          O input era decorativo: nao tinha v-model, entao digitar nele nao
+          filtrava nada nem mandava nada para o mapa.
+        -->
         <div class="search-bar">
-          <input type="text" placeholder="Buscar Cidade..." class="search-input" />
+          <input
+            v-model="busca"
+            type="text"
+            placeholder="Buscar estacao ou municipio..."
+            class="search-input"
+            aria-label="Buscar estacao ou municipio"
+            @keyup.enter="focarPrimeiroResultado"
+          >
+          <p v-if="busca && estacoesFiltradas.length === 0" class="search-aviso">
+            Nenhuma estacao encontrada.
+          </p>
         </div>
       </div>
 
@@ -32,7 +46,7 @@
 
       <!-- Mapa Container -->
       <div class="map-wrapper">
-        <MapaLeaflet :pontos="pontosDoMapa" :bbox="bbox" class="mapa-area" />
+        <MapaLeaflet ref="mapaRef" :pontos="pontosDoMapa" :bbox="bbox" class="mapa-area" />
 
         <!-- Overlay: Estatísticas -->
         <div class="map-overlay stats-overlay">
@@ -66,12 +80,24 @@
             de cadencia aparece. O INMET anda de hora em hora porque o HR_MEDICAO
             da API e horario; o CEMADEN anda a cada ~10 minutos.
           -->
-          <div class="stat-note">
-            <span class="dot-indicator"></span> INMET: {{ formatarDataHora(estatisticas.inmet?.ultima_atualizacao) }}
+          <!--
+            O nome da fonte E o indicador. Antes as duas linhas eram vermelhas
+            por estilo fixo, o que sugeria alarme permanente sem significar
+            nada. Agora verde so quando o coletor respondeu dentro da janela.
+          -->
+          <div class="fonte-status" :class="inmetAtivo ? 'is-ao-vivo' : 'is-sem-resposta'">
+            <span class="dot-indicator"></span>
+            <strong class="fonte-nome">INMET</strong>
+            <span class="fonte-estado">{{ inmetRotulo }} &middot; {{ inmetDesde }}</span>
           </div>
-          <div class="stat-note">
-            <span class="dot-indicator"></span> CEMADEN: {{ formatarDataHora(estatisticas.cemaden?.ultima_atualizacao) }}
+          <div class="fonte-dado">dado de {{ formatarDataHora(estatisticas.inmet?.ultima_atualizacao) }}</div>
+
+          <div class="fonte-status" :class="cemadenAtivo ? 'is-ao-vivo' : 'is-sem-resposta'">
+            <span class="dot-indicator"></span>
+            <strong class="fonte-nome">CEMADEN</strong>
+            <span class="fonte-estado">{{ cemadenRotulo }} &middot; {{ cemadenDesde }}</span>
           </div>
+          <div class="fonte-dado">dado de {{ formatarDataHora(estatisticas.cemaden?.ultima_atualizacao) }}</div>
         </div>
 
         <!-- Overlay: Legenda -->
@@ -139,6 +165,7 @@ import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { usePrecipitacao } from '@/Composables/usePrecipitacao';
+import { useMonitorFonte } from '@/Composables/useMonitorFonte';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -147,6 +174,8 @@ const props = defineProps({
   estacoes: { type: Array, default: () => [] },
   // Uma entrada por rede: { inmet: {...}, cemaden: {...} }.
   estatisticas: { type: Object, default: () => ({}) },
+  // Idem, mas com o instante da ultima consulta a fonte, mesmo sem novidade.
+  verificado_em: { type: Object, default: () => ({}) },
   bbox: { type: Object, required: true },
 });
 
@@ -160,28 +189,87 @@ const props = defineProps({
 useAtualizacaoAoVivo({
   canal: 'medalhao.inmet',
   evento: '.GoldAtualizado',
-  props: ['estacoes', 'estatisticas'],
+  props: ['estacoes', 'estatisticas', 'verificado_em'],
 });
 
 useAtualizacaoAoVivo({
   canal: 'medalhao.cemaden',
   evento: '.GoldAtualizado',
-  props: ['estacoes', 'estatisticas'],
+  props: ['estacoes', 'estatisticas', 'verificado_em'],
 });
 
 // Faixas, paletas e formatadores vivem no composable: as mesmas faixas
 // alimentam os CASE das matviews gold.inmet_mapa e gold.cemaden_mapa.
 const { legenda, corDaClasse, rotuloDaClasse, formatarMm, formatarDataHora } = usePrecipitacao();
 
+/*
+ * Tolerancia de 25 minutos: as duas redes sao coletadas a cada 10 min, entao
+ * isso permite perder dois ciclos antes de acusar queda. Apertar mais faria a
+ * etiqueta piscar vermelho a cada atraso de fila; afrouxar faria uma fonte
+ * morta parecer viva por tempo demais.
+ */
+const TOLERANCIA_MIN = 25;
+
+// Desestruturado para o template receber refs de topo, que o Vue desembrulha
+// sozinho: acessar .value dentro do template funciona mas nao e idiomatico.
+const {
+  ativo: inmetAtivo, rotulo: inmetRotulo, desde: inmetDesde,
+} = useMonitorFonte(() => props.verificado_em.inmet, TOLERANCIA_MIN);
+
+const {
+  ativo: cemadenAtivo, rotulo: cemadenRotulo, desde: cemadenDesde,
+} = useMonitorFonte(() => props.verificado_em.cemaden, TOLERANCIA_MIN);
+
 const redeSelecionada = ref('TODAS');
 
+const busca = ref('');
+const mapaRef = ref(null);
+
+/**
+ * Normaliza para comparar sem acento e sem caixa: o catalogo traz "CAETE" e
+ * "CAETÉ", e o operador digita dos dois jeitos. Sem isto, "francisco sa" nao
+ * acha "FRANCISCO SÁ".
+ */
+function normalizar(texto) {
+  return String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 const estacoesFiltradas = computed(() => {
-  if (redeSelecionada.value === 'TODAS') {
-    return props.estacoes;
+  const porRede = redeSelecionada.value === 'TODAS'
+    ? props.estacoes
+    : props.estacoes.filter((estacao) => estacao.rede === redeSelecionada.value);
+
+  const termo = normalizar(busca.value);
+
+  if (termo === '') {
+    return porRede;
   }
 
-  return props.estacoes.filter((estacao) => estacao.rede === redeSelecionada.value);
+  // Nome da estacao E municipio: a tabela mostra os dois juntos, e o operador
+  // as vezes sabe a cidade e nao o nome do pluviometro.
+  return porRede.filter((estacao) => normalizar(estacao.nome_estacao).includes(termo)
+    || normalizar(estacao.municipio).includes(termo));
 });
+
+/**
+ * Leva o mapa ate a primeira estacao que casa com a busca.
+ *
+ * Chamado no Enter e tambem quando a busca fica com um unico resultado -- ai
+ * nao ha ambiguidade sobre qual estacao o operador quer ver.
+ */
+function focarPrimeiroResultado() {
+  const alvo = estacoesFiltradas.value[0];
+
+  if (!alvo) {
+    return;
+  }
+
+  mapaRef.value?.focarPonto(alvo.id);
+}
 
 const opcoesDeRede = computed(() => {
   const porRede = (rede) => props.estacoes.filter((estacao) => estacao.rede === rede).length;
@@ -234,9 +322,9 @@ const resumo = computed(() => {
 const POR_PAGINA = 10;
 const pagina = ref(1);
 
-// Trocar de rede sem isto deixaria o operador numa pagina que nao existe mais
-// no recorte novo, e a tabela apareceria vazia.
-watch(redeSelecionada, () => {
+// Trocar de rede ou buscar sem isto deixaria o operador numa pagina que nao
+// existe mais no recorte novo, e a tabela apareceria vazia.
+watch([redeSelecionada, busca], () => {
   pagina.value = 1;
 });
 
@@ -343,6 +431,19 @@ const pontosDoMapa = computed(() => estacoesFiltradas.value.map((estacao) => ({
   border-color: #3b82f6;
 }
 
+/* Fora do fluxo: em fluxo normal ele empurraria o seletor de rede para baixo a
+   cada busca sem resultado, e a pagina saltaria enquanto o operador digita. */
+.search-aviso {
+  position: absolute;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #f59e0b;
+}
+
+.search-bar {
+  position: relative;
+}
+
 /* Map Wrapper */
 /*
  * `isolation: isolate` conserta o mapa aparecendo SOBRE a sidebar.
@@ -427,20 +528,69 @@ const pontosDoMapa = computed(() => estacoesFiltradas.value.map((estacao) => ({
   color: var(--texto);
 }
 
-.stat-note {
-  margin-top: 12px;
-  font-size: 11px;
-  color: #ef4444;
+/*
+ * Status por fonte. A regra .stat-note saiu: pintava as duas linhas de #ef4444
+ * fixo, o que deixava a tela em alarme permanente sem que a cor significasse
+ * nada. Agora a cor e estado, e o nome da API e o proprio indicador.
+ */
+.fonte-status {
+  margin-top: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 11px;
 }
 
+.fonte-nome {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.fonte-estado {
+  margin-left: auto;
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.fonte-dado {
+  margin-top: 2px;
+  margin-left: 12px;
+  font-size: 10px;
+  color: var(--texto-fraco);
+}
+
+/* currentColor: o ponto herda a cor do estado, sem par de regras duplicado. */
 .dot-indicator {
   width: 6px;
   height: 6px;
-  background: #ef4444;
   border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.fonte-status.is-ao-vivo {
+  color: #15803d;
+}
+
+.fonte-status.is-sem-resposta {
+  color: #dc2626;
+}
+
+/* Pulso so no verde: e o unico estado que precisa comunicar continuidade. */
+.fonte-status.is-ao-vivo .dot-indicator {
+  animation: pulso-ao-vivo 2s ease-in-out infinite;
+}
+
+@keyframes pulso-ao-vivo {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Movimento continuo e gatilho vestibular; a cor sozinha ja informa o estado. */
+@media (prefers-reduced-motion: reduce) {
+  .fonte-status.is-ao-vivo .dot-indicator {
+    animation: none;
+  }
 }
 
 .legend-grid {
@@ -786,6 +936,14 @@ const pontosDoMapa = computed(() => estacoesFiltradas.value.map((estacao) => ({
  * papel de superficie. Sobre fundo escuro as versoes fechadas do tema claro
  * ficam ilegiveis, entao clareiam aqui.
  */
+.dark .inmet-container .fonte-status.is-ao-vivo {
+  color: #4ade80;
+}
+
+.dark .inmet-container .fonte-status.is-sem-resposta {
+  color: #f87171;
+}
+
 .dark .inmet-container .rede-badge-inmet {
   border-color: #22d3ee;
   color: #22d3ee;

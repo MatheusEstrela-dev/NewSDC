@@ -39,7 +39,7 @@ final class SismoRepository
     }
 
     /**
-     * @return array{total_eventos: int, magnitude_media: float, magnitude_maxima: float, ultima_atualizacao: ?string}
+     * @return array{total_eventos: int, magnitude_media: float, magnitude_maxima: float, ultimo_evento: ?string}
      */
     public function estatisticas(): array
     {
@@ -49,8 +49,19 @@ final class SismoRepository
             'total_eventos' => (int) ($linha->total_eventos ?? 0),
             'magnitude_media' => (float) ($linha->magnitude_media ?? 0),
             'magnitude_maxima' => (float) ($linha->magnitude_maxima ?? 0),
-            'ultima_atualizacao' => $linha->ultima_atualizacao ?? null,
+            // Data do evento mais recente, e nao o 'ultima_atualizacao' da
+            // matview -- aquele campo e now() no momento do REFRESH, que so
+            // acontece quando ha conteudo novo. Como o dedup por hash recusa
+            // payload identico, ele congelava e a tela dizia "atualizado ontem"
+            // enquanto o coletor rodava a cada 15 minutos.
+            'ultimo_evento' => $this->ultimoEvento(),
         ];
+    }
+
+    /** Origem do evento mais recente na janela do mapa. */
+    private function ultimoEvento(): ?string
+    {
+        return DB::scalar('SELECT max(origem_utc) FROM gold.sismos_mapa');
     }
 
     /**

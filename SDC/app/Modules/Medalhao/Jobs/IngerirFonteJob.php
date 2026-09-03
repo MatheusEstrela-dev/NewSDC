@@ -40,12 +40,17 @@ class IngerirFonteJob implements ShouldQueue
 
         $hash = $payload->hash();
 
-        $jaExiste = IngestaoBruta::query()
+        // Marca a verificacao ANTES de decidir sobre o conteudo: a fonte foi
+        // consultada com sucesso, e isso vale registrar mesmo que nada tenha
+        // mudado. Sem esta linha, um coletor saudavel que nao encontra novidade
+        // e indistinguivel de um coletor morto -- que era o caso dos sismos,
+        // onde "sem evento novo" e a resposta certa na maioria dos ciclos.
+        $atualizadas = IngestaoBruta::query()
             ->where('fonte', $this->chave)
             ->where('hash_conteudo', $hash)
-            ->exists();
+            ->update(['verificado_em' => now()]);
 
-        if ($jaExiste) {
+        if ($atualizadas > 0) {
             Log::info('medalhao: conteudo identico ao anterior, ignorado', ['fonte' => $this->chave]);
 
             return;
@@ -58,6 +63,7 @@ class IngerirFonteJob implements ShouldQueue
             'hash_conteudo' => $hash,
             'meta' => $payload->meta,
             'coletado_em' => now(),
+            'verificado_em' => now(),
         ]);
 
         NormalizarSilverJob::dispatch((int) $bronze->id, $this->chave);
