@@ -41,6 +41,14 @@ final class RecursoAtualizado implements ShouldBroadcast, ShouldDispatchAfterCom
     use InteractsWithSockets;
     use SerializesModels;
 
+    /**
+     * Sufixo do canal de quem le o escopo inteiro.
+     *
+     * Nao pode colidir com id de municipio, e nao colide: id e sempre numerico.
+     * A autorizacao usa essa diferenca para separar os dois casos.
+     */
+    public const ESCOPO_TODOS = 'todos';
+
     public function __construct(
         public readonly string $recurso,
         public readonly ?int $escopo = null,
@@ -71,13 +79,30 @@ final class RecursoAtualizado implements ShouldBroadcast, ShouldDispatchAfterCom
         }
     }
 
-    public function broadcastOn(): PrivateChannel
+    /**
+     * Recurso global vai para um canal; recurso escopado vai para DOIS.
+     *
+     * O segundo, `...{recurso}.todos`, existe porque quem le o estado inteiro
+     * (CEDEC, REDEC, super-admin) nao teria como escutar: a alternativa seria
+     * assinar os 853 canais de municipio, um por um. O canal do escopo serve
+     * quem esta restrito aquele municipio; o `todos` serve quem nao esta
+     * restrito a nenhum.
+     *
+     * Sao dois canais e nao dois eventos: um dispatch, uma transmissao, e a
+     * autorizacao de cada canal decide quem recebe.
+     *
+     * @return PrivateChannel|list<PrivateChannel>
+     */
+    public function broadcastOn(): PrivateChannel|array
     {
-        $canal = $this->escopo === null
-            ? "listagem.{$this->recurso}"
-            : "listagem.{$this->recurso}.{$this->escopo}";
+        if ($this->escopo === null) {
+            return new PrivateChannel("listagem.{$this->recurso}");
+        }
 
-        return new PrivateChannel($canal);
+        return [
+            new PrivateChannel("listagem.{$this->recurso}.{$this->escopo}"),
+            new PrivateChannel("listagem.{$this->recurso}." . self::ESCOPO_TODOS),
+        ];
     }
 
     /** O front escuta por este nome; manter estavel. */

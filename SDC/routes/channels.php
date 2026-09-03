@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Pmda\Support\PerfilPmda;
+use App\Modules\Shared\Events\RecursoAtualizado;
 use App\Modules\Shared\Support\CanaisDeListagem;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -72,7 +73,12 @@ Broadcast::channel('listagem.{recurso}.{escopo}', function ($user, string $recur
         return false;
     }
 
-    if (! ctype_digit($escopo)) {
+    // Id de municipio e sempre numerico, e `todos` nunca e: e essa diferenca
+    // que separa "assino o meu municipio" de "assino o estado inteiro". Qualquer
+    // outra coisa e recusada.
+    $ehTodos = $escopo === RecursoAtualizado::ESCOPO_TODOS;
+
+    if (! $ehTodos && ! ctype_digit($escopo)) {
         return false;
     }
 
@@ -87,11 +93,16 @@ Broadcast::channel('listagem.{recurso}.{escopo}', function ($user, string $recur
      * recusa -- o default nao libera.
      */
     return match ($recurso) {
-        'pmda-analises' => (function () use ($user, $escopo): bool {
+        'pmda-analises' => (function () use ($user, $escopo, $ehTodos): bool {
             $municipioDoUsuario = PerfilPmda::deUsuario($user)->municipioDoEscopo();
 
-            // Null = le o estado inteiro (CEDEC, REDEC, super-admin): assina
-            // qualquer municipio, como a listagem ja mostra qualquer municipio.
+            // Null = le o estado inteiro (CEDEC, REDEC, super-admin). So esses
+            // assinam o canal `todos`: para um COMPDEC ele seria justamente o
+            // vazamento que o escopo existe para impedir.
+            if ($ehTodos) {
+                return $municipioDoUsuario === null;
+            }
+
             return $municipioDoUsuario === null
                 || $municipioDoUsuario === (int) $escopo;
         })(),
