@@ -163,6 +163,7 @@ import { computed, reactive, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { usePermissions } from '@/Composables/usePermissions';
+import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { useToast } from '@/Composables/useToast.js';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
@@ -193,7 +194,33 @@ const props = defineProps({
   solicitacoes: { type: Object, default: () => ({ data: [], meta: {} }) },
   filtros: { type: Object, default: () => ({}) },
   municipios: { type: Array, default: () => [] },
-  perfil: { type: Object, default: () => ({ e_compdec: false, e_cedec: false }) },
+  perfil: {
+    type: Object,
+    default: () => ({ e_compdec: false, e_cedec: false, municipio_escopo: null }),
+  },
+});
+
+/*
+ * A Central de Analises reflete acao de outro analista sem F5.
+ *
+ * O canal e escopado porque a listagem tambem e: `aplicarEscopo()` recorta o
+ * COMPDEC ao proprio municipio. Um canal global aqui nao seria so reload
+ * inutil -- avisaria um COMPDEC de que houve mudanca em municipio alheio.
+ *
+ * `municipio_escopo` null significa "le o estado inteiro" (CEDEC, REDEC,
+ * super-admin), e ai a assinatura vai para o canal `todos`. A alternativa seria
+ * assinar os 853 canais de municipio, um por um.
+ *
+ * O valor vem do SERVIDOR: o cliente nao sabe resolver o recorte de perfil, e
+ * adivinhar erra para o super-admin lotado num COMPDEC.
+ *
+ * As duas props entram no reload porque a tela tem dois paineis, e as duas
+ * mudam pelos mesmos fluxos.
+ */
+useAtualizacaoAoVivo({
+  canal: `listagem.pmda-analises.${props.perfil?.municipio_escopo ?? 'todos'}`,
+  evento: '.RecursoAtualizado',
+  props: ['analises', 'solicitacoes'],
 });
 
 const analises = computed(() => props.analises?.data ?? []);

@@ -20,6 +20,7 @@ use App\Modules\Pmda\Models\PmdaPonto;
 use App\Modules\Pmda\Models\PmdaRepresentante;
 use App\Modules\Shared\BaseService;
 use App\Support\Cache\CachedRepository;
+use App\Modules\Shared\Events\RecursoAtualizado;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -266,6 +267,15 @@ class PmdaPlanoService extends BaseService
         ]);
 
         PmdaPlanoEvento::registrar($plano, $tipo, $origem, $destino, $userId, $motivo, $nome);
+
+        // Avisa a Central de Analises da CEDEC, escopada pelo municipio DO PLANO
+        // -- nao pelo do usuario. Quem analisa e a CEDEC, que nao tem municipio;
+        // tirar o escopo do ator daria null e o evento nem seria construivel.
+        //
+        // A derivacao RASCUNHO <-> COMPLETO nao passa por aqui de proposito, e
+        // isso NAO e um buraco: `pendentesAnalise()` filtra por EM_ANALISE, entao
+        // plano nesses estados nao esta na fila que a tela mostra.
+        RecursoAtualizado::dispatch('pmda-analises', (int) $plano->municipio_id);
 
         return $plano->refresh();
     }
@@ -615,6 +625,14 @@ class ComunidadeSolicitacaoService
                 'analisado_em'  => now(),
             ]);
 
+            // A Central de Analises e uma tela de DOIS paineis, e este e o da
+            // direita. Avisar so no fluxo dos planos deixaria a fila de
+            // solicitacoes parada sem sinal nenhum.
+            //
+            // Despachado de dentro da transacao: o evento e
+            // ShouldDispatchAfterCommit, entao so sai depois do commit.
+            RecursoAtualizado::dispatch('pmda-analises', (int) $solicitacao->municipio_id);
+
             return $comunidade;
         });
     }
@@ -632,6 +650,8 @@ class ComunidadeSolicitacaoService
             'analisado_por'   => $userId,
             'analisado_em'    => now(),
         ]);
+
+        RecursoAtualizado::dispatch('pmda-analises', (int) $solicitacao->municipio_id);
     }
 }
 
