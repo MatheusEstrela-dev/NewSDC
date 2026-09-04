@@ -254,6 +254,10 @@ services:
       - "host.docker.internal:host-gateway"
 
     volumes:
+      # Override de opcache SO em dev: a imagem fixa validate_timestamps=0,
+      # e com o codigo montado por bind isso faz arquivo editado nao ter
+      # efeito nenhum nos workers. Ver docker/swoole/dev-opcache.ini.
+      - ./swoole/dev-opcache.ini:/usr/local/etc/php/conf.d/zz-dev-opcache.ini:ro
       # Codigo da app sobre o build Swoole; vendor fica na imagem.
       - ../app:/var/www/app
       - ../core:/var/www/core
@@ -409,6 +413,10 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
 
     volumes: &queue-volumes
+      # Override de opcache SO em dev: a imagem fixa validate_timestamps=0,
+      # e com o codigo montado por bind isso faz arquivo editado nao ter
+      # efeito nenhum nos workers. Ver docker/swoole/dev-opcache.ini.
+      - ./swoole/dev-opcache.ini:/usr/local/etc/php/conf.d/zz-dev-opcache.ini:ro
       # Bind-mount identico ao app; vendor fica na imagem.
       - ../app:/var/www/app
       - ../core:/var/www/core
