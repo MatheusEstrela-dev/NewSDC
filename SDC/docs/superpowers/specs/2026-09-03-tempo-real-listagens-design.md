@@ -223,36 +223,23 @@ banco em cenario de concorrencia. E o comportamento de hoje, nao uma regressao -
 mas nas duas paginas o tempo real nao tem a garantia que Pedidos tem, e isso
 precisa estar dito antes de alguem confiar nele para decisao operacional.
 
-**O RAT nao tem ponto unico de escrita, e isso foi confirmado.** Levantado em
-2026-09-03: `RatOcorrencia` e escrito de pelo menos oito lugares, em tres classes
-(`RatOcorrenciaService::manageOcorrencia`, seis pontos em `RatWriteService`,
-`EloquentRatRepository::create/updateStatus/delete`). Emitir de um ponto so faria
-a pagina perder eventos em silencio.
+**O RAT emite por observer, e o observer tem um ponto cego.** `RatOcorrencia` e
+escrito de treze lugares em tres classes, e nenhum e "o" ponto de decisao -- dai
+o observer, em vez dos dispatches espalhados de Pedidos e PMDA.
 
-E a saida obvia -- um observer no model -- **nao resolve sozinha**: parte dessas
-escritas usa query builder (`RatOcorrencia::where(...)->update(...)` e
-`->delete()`), e observer do Eloquent nao dispara para essas. Um observer daria
-cobertura PARCIAL, falhando exatamente nos caminhos mais dificeis de notar.
+Quatro dessas escritas usavam query builder
+(`RatOcorrencia::where(...)->update()` / `->delete()`), para as quais observer do
+Eloquent NAO dispara. As quatro foram convertidas para escrita via modelo
+(`find($id)?->...`), e ha teste para cada uma. Mas a lacuna e estrutural: uma
+escrita por query builder acrescentada no futuro nao emite, e nada acusa. Nao ha
+teste que pegue isso; o que existe e o aviso no cabecalho do
+`RatOcorrenciaObserver`.
 
-Fiar o RAT exige antes consolidar a superficie de escrita, que e trabalho de
-outra natureza. Ver secao 8.
+Efeito colateral aceito: o observer dispara em QUALQUER update, inclusive num
+toque so de `updated_by`. E mais evento que o necessario, e o debounce de 3.3
+absorve.
 
 ## 8. Fora de escopo
-
-- **O RAT** (decidido em 2026-09-03, depois de o risco da secao 7 se confirmar).
-  O canal e a entrada em `CanaisDeListagem` ficam declarados e testados; o que
-  nao entra e o dispatch nem a assinatura na pagina.
-
-  O motivo nao e falta de tempo: `RatOcorrencia` e escrito de oito lugares em
-  tres classes, e parte por query builder, onde observer do Eloquent nao dispara.
-  Toda saida barata entrega cobertura PARCIAL -- uma tela que atualiza as vezes e
-  nao avisa quando nao atualizou. Numa tela cujo proposito e justamente eliminar
-  a duvida sobre estar vendo dado velho, isso e pior que nao ter tempo real.
-
-  O pre-requisito e consolidar a superficie de escrita do RAT num ponto unico (ou
-  converter as escritas de query builder para escrita via model, para um observer
-  cobrir tudo). E trabalho de outra natureza, com risco proprio, e merece plano
-  proprio.
 
 - As outras 25 listagens. O mecanismo e generico; a fiacao e por pagina e por dor.
 - Refletir a PROPRIA acao sem F5 (a resposta do Inertia do proprio POST ja faz isso).

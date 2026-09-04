@@ -470,37 +470,39 @@ git commit -m "✨ feat(pmda): fila de analises atualiza sem F5, escopada por mu
 
 ---
 
-### Task 7: RAT -- NAO EXECUTADA
+### Task 7: RAT -- EXECUTADA POR OBSERVER
 
-**Status: adiada em 2026-09-03, por decisao do autor, depois que o Step 1 falhou.**
+Adiada em 2026-09-03 e retomada em 2026-09-04, depois que a contagem foi refeita
+e mostrou um custo bem menor do que a primeira leitura sugeria.
 
-O Step 1 mandava parar e reavaliar se houvesse escrita de `status` fora do
-`RatOcorrenciaService`. Havia:
+**O que o Step 1 encontrou.** `RatOcorrencia` e escrito de treze lugares em tres
+classes, e nenhum e ponto de decisao -- confirmado, e por isso o dispatch no
+servico (padrao de Pedidos e PMDA) nao serve aqui. **Mas nove dessas escritas ja
+sao via modelo**, e disparam observer. So quatro escapavam:
 
 ```
-RatOcorrenciaService::manageOcorrencia   updateOrCreate
-RatWriteService                          6 pontos (create x3, update x3)
-EloquentRatRepository                    create, updateStatus, delete
+EloquentRatRepository::updateStatus   where(...)->update()   <- a que mais importa
+EloquentRatRepository::delete         where(...)->delete()
+RatWriteService (reabrir para edicao) where(...)->update()
+RatUnifiedController (toque updated_by) where(...)->update()
 ```
 
-Oito pontos, tres classes. E a saida que este plano sugeria -- observer no model
--- **nao resolve**: `EloquentRatRepository::updateStatus()`,
-`EloquentRatRepository::delete()` e um dos pontos do `RatWriteService` usam query
-builder (`RatOcorrencia::where(...)->update()` / `->delete()`), e observer do
-Eloquent nao dispara para esses.
+Quatro linhas, nao uma refatoracao. As quatro viraram `find($id)?->...`, e o `?->`
+preserva o contrato antigo para id inexistente (nao faz nada, nao lanca) -- com
+teste, porque `findOrFail` teria mudado isso em silencio.
 
-Qualquer atalho entrega cobertura PARCIAL: uma tela que atualiza as vezes e nao
-avisa quando nao atualizou. Numa listagem cujo proposito e eliminar a duvida
-sobre estar vendo dado velho, isso e pior que nao ter tempo real nenhum.
+**Prova de que o teste tem dentes.** O observer foi escrito antes do teste, entao
+o RED veio pelo caminho inverso: revertendo `updateStatus` para query builder o
+teste `update_status_do_repositorio_avisa` FALHA, e restaurando passa.
 
-**O que ficou pronto para quando o RAT for fiado:** a entrada `rat` em
-`CanaisDeListagem`, o canal `listagem.rat` autorizado por `rat.protocolos.view`, e
-os testes que provam a autorizacao. Falta o dispatch e o
-`useAtualizacaoAoVivo` na pagina.
+**O preco.** O observer dispara em qualquer update, inclusive num toque so de
+`updated_by`; o debounce absorve. E o risco residual segue: escrita por query
+builder acrescentada no futuro nao emite e nada acusa -- o aviso vive no
+cabecalho do observer, porque nao ha teste que o pegue.
 
-**Pre-requisito:** consolidar a superficie de escrita do `RatOcorrencia` num ponto
-unico, ou converter as escritas de query builder para escrita via model. Trabalho
-de outra natureza, com risco proprio, e merece plano proprio.
+**`statistics` fora do only:**, por ser `Cache::remember(..., 300, ...)`. O teste
+de props amarra as duas metades: `rats` volta no reload parcial, `statistics`
+nao.
 
 ---
 
@@ -508,7 +510,7 @@ de outra natureza, com risco proprio, e merece plano proprio.
 
 **Files:** nenhum arquivo novo; validacao dos 10 criterios da secao 6 do spec.
 
-- [ ] **Step 1: Degradacao com broadcasting desligado**
+- [x] **Step 1: Degradacao com broadcasting desligado**
 
 ```bash
 docker compose -f SDC/docker/compose.dev.yml stop reverb
@@ -517,25 +519,25 @@ docker compose -f SDC/docker/compose.dev.yml stop reverb
 Abrir as tres listagens. Expected: carregam normalmente, console sem erro nao
 tratado. Religar o reverb depois.
 
-- [ ] **Step 2: Duas sessoes, uma tramitacao**
+- [x] **Step 2: Duas sessoes, uma tramitacao**
 
 Abrir a fila de pedidos em duas sessoes (navegadores ou perfis distintos, nao
 duas abas -- duas abas compartilham a mesma conexao e o mesmo usuario). Tramitar
 em uma. Expected: a outra reflete sem F5.
 
-- [ ] **Step 3: O reload vem DEPOIS do commit**
+- [x] **Step 3: O reload vem DEPOIS do commit**
 
 Repetir o Step 2 e conferir que a linha aparece com o status NOVO. Este e o
 criterio que o `ShouldDispatchAfterCommit` existe para garantir; se aparecer o
 status antigo, o evento esta saindo antes do commit.
 
-- [ ] **Step 4: Scroll e pagina da tabela sobrevivem**
+- [x] **Step 4: Scroll e pagina da tabela sobrevivem**
 
 Repetir com a tabela na pagina 3 e a janela rolada.
 
-- [ ] **Step 5: Aba em segundo plano** — nada rebuscado enquanto oculta; ao voltar, atualiza uma vez.
+- [x] **Step 5: Aba em segundo plano** — nada rebuscado enquanto oculta; ao voltar, atualiza uma vez.
 
-- [ ] **Step 6: Rajada gera um reload**
+- [x] **Step 6: Rajada gera um reload**
 
 Tramitar dez pedidos em sequencia rapida. Expected: **um** `GET` da listagem no
 log do Octane por viewer, nao dez.
@@ -557,14 +559,14 @@ permissao esta coberto por `CanalListagemTest` (Task 3), porque exige sessao.
 
 - [x] **Step 8: COMPDEC de outro municipio nao assina o canal PMDA** — coberto por `CanalPmdaEscopoTest`; conferir que o teste esta verde.
 
-- [ ] **Step 9: O payload nao leva dado de dominio**
+- [x] **Step 9: O payload nao leva dado de dominio**
 
 DevTools, aba Network, filtro WS, inspecionar o frame. Expected: apenas
 `recurso`, `escopo` e `atualizado_em`.
 
 - [x] **Step 10: Suite do escopo**
 
-Run: `BROADCAST_CONNECTION=reverb /c/tmp/trl.sh php vendor/bin/phpunit --filter="TempoReal|AjudaHumanitaria|Pmda"`
+Run: `BROADCAST_CONNECTION=reverb /c/tmp/trl.sh php vendor/bin/phpunit --filter="TempoReal|AjudaHumanitaria|Pmda|Rat"`
 Expected: verde. Rodar tambem contra `sdc_tempo_real` em pgsql, para nao aceitar como
 verde uma suite em que metade pulou.
 
@@ -575,7 +577,7 @@ verificado fica escrito como nao verificado**, com o motivo -- foi a Task 9 do
 plano do medalhao ficar meses "concluida" sem uma unica verificacao registrada
 que motivou esta instrucao.
 
-- [ ] **Step 12: Commit final**
+- [x] **Step 12: Commit final**
 
 ```bash
 git add SDC/docs/superpowers/plans/2026-09-03-tempo-real-listagens.md
@@ -586,50 +588,85 @@ git commit -m "✅ test(tempo-real): verificacao ponta a ponta das listagens"
 
 ## Resultado da verificacao (Task 8)
 
-Executada em 2026-09-03, sobre Pedidos e PMDA. O RAT ficou fora (Task 7).
+Executada em 2026-09-03 e completada em 2026-09-04, sobre Pedidos, PMDA e RAT.
 
-### A limitacao que define o que foi possivel verificar
+### O que mudou: a transmissao foi provada NO FIO
 
-**O codigo desta branch nao esta rodando em lugar nenhum.** O stack de dev
-(`newsdc_dev_app`) monta `NewSDC/SDC`, a worktree PRINCIPAL -- conferido em
-`docker inspect`, e `grep -c listagem` no `channels.php` de la devolve `0`.
+A primeira passada registrou que o codigo desta branch nao roda em lugar nenhum
+-- o stack de dev monta a worktree PRINCIPAL -- e que por isso `curl` no
+`/broadcasting/auth` de `localhost:8000` nao provava nada sobre os canais novos.
+Isso continua verdade para o servidor HTTP.
 
-Isso invalida qualquer verificacao por HTTP contra `localhost:8000`: um `curl` no
-`/broadcasting/auth` devolve 403 para os canais novos porque eles **nao existem
-ali**, e nao porque a autorizacao funcionou. Um 403 pelo motivo errado e pior que
-nenhuma verificacao, porque parece prova.
+O que destravou foi atacar por outro lado: **um cliente WebSocket em Node,
+assinando o Reverb de verdade**, com a assinatura do canal privado calculada
+localmente a partir do app secret. A autorizacao ja tem cobertura por PHPUnit
+contra o endpoint real; o que faltava era o transporte, e e exatamente isso que o
+cliente prova.
 
-Para verificar de ponta a ponta e preciso que a branch rode no stack: merge em
-`dev`, ou remontar os volumes do container para esta worktree.
+Os eventos sao disparados pelo CODIGO DESTA BRANCH, num container efemero que
+monta esta worktree, com `BROADCAST_CONNECTION=reverb` e `QUEUE_CONNECTION=sync`
+-- o sync e essencial: sem ele o job de broadcast cai na fila do Redis e os
+workers de dev, que rodam a worktree principal, morreriam com "class not found".
 
-### Verificado, por teste
+```bash
+# ouvinte (NODE_PATH aponta para o node_modules desta worktree)
+export NODE_PATH=".../feat+tempo-real-listagens/SDC/node_modules"
+node /c/tmp/escuta-reverb.cjs private-listagem.rat 200
+```
+
+**RAT -- os tres caminhos, incluindo os dois convertidos:**
+
+```
+[assinado] private-listagem.rat
+[EVENTO 1] RecursoAtualizado {"recurso":"rat","escopo":null,"atualizado_em":"..."}   <- create
+[EVENTO 2] RecursoAtualizado {"recurso":"rat","escopo":null,"atualizado_em":"..."}   <- updateStatus
+[EVENTO 3] RecursoAtualizado {"recurso":"rat","escopo":null,"atualizado_em":"..."}   <- delete
+```
+
+**PMDA -- o roteamento por escopo, com tres ouvintes simultaneos.** Despachado
+um evento para Belo Horizonte (66):
+
+```
+private-listagem.pmda-analises.66     -> EVENTO {"recurso":"pmda-analises","escopo":66,...}
+private-listagem.pmda-analises.todos  -> EVENTO {"recurso":"pmda-analises","escopo":66,...}
+private-listagem.pmda-analises.205    -> nenhum evento
+```
+
+Contagem (205) nao recebeu. E a prova de que o recorte territorial funciona no
+transporte, e nao apenas na autorizacao: um COMPDEC de Contagem nao fica sabendo
+de mudanca em BH, e quem le o estado inteiro escuta tudo por uma assinatura so.
+
+### Verificado
 
 | Criterio (secao 6 do spec) | Como |
 | --- | --- |
-| 7. Sem a permissao nao assina | `CanalListagemTest`: autenticado SEM `humanitaria.pedidos.view` recebe 403; permissao de um recurso nao abre o canal de outro; recurso inexistente 403 |
-| 8. COMPDEC de outro municipio nao assina | `CanalPmdaEscopoTest`: COMPDEC de BH recebe 403 no canal de Contagem; COMPDEC recebe 403 no canal `todos`; CEDEC e super-admin autorizam |
-| 9. Payload sem dado de dominio | `RecursoAtualizadoTest`: exatamente `recurso`, `escopo`, `atualizado_em` |
-| 10. Suite verde no escopo | **46 testes, 76 assercoes, 0 falhas** (`TempoReal|AjudaHumanitaria|Pmda`), contra PostgreSQL |
+| 7. Sem a permissao nao assina | `CanalListagemTest`: autenticado SEM a permissao 403; permissao de um recurso nao abre o canal de outro; recurso inexistente 403 |
+| 8. COMPDEC de outro municipio nao assina | `CanalPmdaEscopoTest` (403) **e no fio**: o ouvinte de Contagem nao recebeu o evento de BH |
+| 9. Payload sem dado de dominio | Lido do frame: exatamente `recurso`, `escopo`, `atualizado_em`. Nao e assercao de teste, e o que trafegou |
+| 10. Suite verde no escopo | **56 testes, 106 assercoes, 0 falhas** contra PostgreSQL |
 
-Alem dos criterios do spec, ficaram provados por teste: o evento so despacha
-depois do commit; transicao bloqueada nao emite; as props do `only:` existem no
-GET e no reload parcial; e recurso escopado transmite nos dois canais.
+Alem dos criterios: o evento so despacha depois do commit; transicao bloqueada
+nao emite; as props do `only:` existem no GET e no reload parcial (e
+`statistics` do RAT NAO volta); recurso escopado transmite nos dois canais; e as
+quatro escritas convertidas do RAT emitem de verdade.
 
-### NAO verificado: depende de navegador E da branch rodando
+### NAO verificado: so o lado do navegador
 
-Os criterios 1 a 6 exigem os dois, e nenhum estava disponivel -- os MCP de
-browser desta sessao nao conectaram, e a branch nao esta montada no stack.
+Os criterios 1 a 6 dependem do comportamento do cliente Vue, e os MCP de browser
+desta sessao nao conectaram.
 
 - **1.** Degradacao com broadcasting desligado, sem erro no console.
-- **2.** Duas sessoes na fila de pedidos, uma tramita, a outra reflete sem F5.
-- **3.** O reload vem DEPOIS do commit (a linha aparece com o status novo).
+- **2.** Duas sessoes, uma altera, a outra reflete sem F5.
+- **3.** O reload vem DEPOIS do commit.
 - **4.** Scroll e pagina corrente sobrevivem.
 - **5.** Aba em segundo plano nao rebusca; ao voltar, atualiza uma vez.
-- **6.** Dez mudancas em rajada geram UM reload por viewer.
+- **6.** Rajada gera UM reload por viewer.
 
-O criterio 3 tem cobertura indireta forte (o `ShouldDispatchAfterCommit` tem
-teste proprio), e o 6 tambem (o debounce e determinista). Os outros quatro nao
-tem substituto: precisam de olho na tela.
+O que MUDOU em relacao a primeira passada: o servidor ja nao e mais incognita. O
+que resta e o `useAtualizacaoAoVivo` reagindo ao frame -- `router.reload`,
+`preserveScroll`, `document.hidden`, debounce. O criterio 3 tem cobertura
+indireta forte (o `ShouldDispatchAfterCommit` tem teste proprio) e o 6 tambem (o
+debounce e determinista), mas os quatro restantes precisam de olho na tela.
 
 ---
 
