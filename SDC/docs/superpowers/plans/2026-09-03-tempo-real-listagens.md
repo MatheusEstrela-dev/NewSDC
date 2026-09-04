@@ -510,7 +510,13 @@ nao.
 
 **Files:** nenhum arquivo novo; validacao dos 10 criterios da secao 6 do spec.
 
-- [x] **Step 1: Degradacao com broadcasting desligado**
+> **Steps 1 a 6 continuam ABERTOS.** Dependem de navegador, e os MCP de browser
+> das sessoes de 03 e 04/09/2026 nao conectaram. O que cada um cobre esta na
+> secao "Resultado da verificacao" logo abaixo; o lado do servidor ja foi provado
+> no fio, mas nada disso substitui olhar a tela.
+
+
+- [ ] **Step 1: Degradacao com broadcasting desligado**
 
 ```bash
 docker compose -f SDC/docker/compose.dev.yml stop reverb
@@ -519,25 +525,25 @@ docker compose -f SDC/docker/compose.dev.yml stop reverb
 Abrir as tres listagens. Expected: carregam normalmente, console sem erro nao
 tratado. Religar o reverb depois.
 
-- [x] **Step 2: Duas sessoes, uma tramitacao**
+- [ ] **Step 2: Duas sessoes, uma tramitacao**
 
 Abrir a fila de pedidos em duas sessoes (navegadores ou perfis distintos, nao
 duas abas -- duas abas compartilham a mesma conexao e o mesmo usuario). Tramitar
 em uma. Expected: a outra reflete sem F5.
 
-- [x] **Step 3: O reload vem DEPOIS do commit**
+- [ ] **Step 3: O reload vem DEPOIS do commit**
 
 Repetir o Step 2 e conferir que a linha aparece com o status NOVO. Este e o
 criterio que o `ShouldDispatchAfterCommit` existe para garantir; se aparecer o
 status antigo, o evento esta saindo antes do commit.
 
-- [x] **Step 4: Scroll e pagina da tabela sobrevivem**
+- [ ] **Step 4: Scroll e pagina da tabela sobrevivem**
 
 Repetir com a tabela na pagina 3 e a janela rolada.
 
-- [x] **Step 5: Aba em segundo plano** — nada rebuscado enquanto oculta; ao voltar, atualiza uma vez.
+- [ ] **Step 5: Aba em segundo plano** — nada rebuscado enquanto oculta; ao voltar, atualiza uma vez.
 
-- [x] **Step 6: Rajada gera um reload**
+- [ ] **Step 6: Rajada gera um reload**
 
 Tramitar dez pedidos em sequencia rapida. Expected: **um** `GET` da listagem no
 log do Octane por viewer, nao dez.
