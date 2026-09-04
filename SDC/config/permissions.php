@@ -404,6 +404,19 @@ return [
                 'logs' => 'webhooks.logs.view',
             ],
         ],
+        'Geoespacial' => [
+            'Camadas' => [
+                'view' => 'geoespacial.camadas.view',
+                // Envio municipal. Alem desta permissao, o usuario precisa de
+                // vinculo com um COMPDEC que tenha municipio_id: sem municipio
+                // nao ha a quem atribuir a camada, e o envio e recusado com
+                // essa razao explicita em vez de gravar orfao.
+                'enviar' => 'geoespacial.camadas.enviar',
+                // Aprovar e recusar. Separada de 'enviar' de proposito: quem
+                // envia nao revisa o proprio envio.
+                'revisar' => 'geoespacial.camadas.revisar',
+            ],
+        ],
         'COMPDEC' => [
             'Orgaos' => [
                 'view'   => 'compdec.orgaos.view',

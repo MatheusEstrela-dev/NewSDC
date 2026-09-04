@@ -81,6 +81,12 @@ return [
     |
     */
     'modulos' => [
+        'geoespacial' => [
+            'label' => 'Camadas de Risco',
+            'nome_curto' => 'Geo',
+            'descricao' => 'Envio municipal de camadas e decisoes de revisao.',
+            'icone' => 'MapIcon',
+        ],
         'rat' => [
             'label' => 'Relatorios (RAT)',
             'nome_curto' => 'RAT',

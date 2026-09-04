@@ -39,6 +39,16 @@ final class GeoKmlNormalizador implements NormalizadorSilver
             // duplicada.
             hashArquivo: hash('sha256', $kml),
             feicoes: $this->extrator->feicoes($kml),
+            // Procedencia vem do envelope, montado pelo controller a partir do
+            // usuario autenticado -- nunca de campo de formulario. Ausente,
+            // cai no default estadual/aprovada, que e o caminho da CEDEC e da
+            // ingestao automatica.
+            origem: (string) ($envelope['origem'] ?? 'estadual'),
+            municipioId: isset($envelope['municipio_id']) ? (int) $envelope['municipio_id'] : null,
+            orgaoId: isset($envelope['orgao_id']) ? (int) $envelope['orgao_id'] : null,
+            enviadoPor: isset($envelope['enviado_por']) ? (int) $envelope['enviado_por'] : null,
+            status: (string) ($envelope['status'] ?? 'aprovada'),
+            arquivoCaminho: $envelope['arquivo_caminho'] ?? null,
         );
     }
 }

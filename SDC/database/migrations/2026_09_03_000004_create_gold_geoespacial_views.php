@@ -25,6 +25,9 @@ return new class extends Migration
                 c.nome        AS camada_nome,
                 c.nivel,
                 c.emitido_em,
+                c.origem,
+                c.municipio_id,
+                m.nome        AS municipio_nome,
                 f.nome        AS feicao_nome,
                 f.propriedades,
                 ST_GeometryType(f.geom)                     AS tipo_geometria,
@@ -33,6 +36,12 @@ return new class extends Migration
                 f.geom
             FROM silver.geo_feicoes f
             JOIN silver.geo_camadas c ON c.id = f.camada_id
+            LEFT JOIN municipios m ON m.id = c.municipio_id
+            -- So o que foi aprovado chega ao mapa operacional. E o ponto da
+            -- moderacao: 893 municipios podem enviar geometria errada,
+            -- desatualizada ou fora do proprio territorio, e poligono ruim em
+            -- mapa de plantao tem consequencia.
+            WHERE c.status = 'aprovada'
         SQL);
 
         DB::statement('CREATE UNIQUE INDEX IF NOT EXISTS uq_gold_geo_feicao_mapa_id ON gold.geo_feicao_mapa (id)');
@@ -58,6 +67,7 @@ return new class extends Migration
               ON ST_Contains(f.geom, ST_SetSRID(ST_MakePoint(m.longitude::float8, m.latitude::float8), 4326))
             WHERE m.latitude IS NOT NULL
               AND m.longitude IS NOT NULL
+              AND c.status = 'aprovada'
             GROUP BY c.id, m.id, m.nome, m.uf
         SQL);
 

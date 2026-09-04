@@ -315,11 +315,26 @@
         <NavItem
           v-if="canSeeMeteorologia && _routes.hasGeoespacial"
           :href="route('geoespacial.index', undefined, false)"
-          :active="isRouteActive('geoespacial.*')"
+          :active="isRouteActive('geoespacial.index')"
           icon="map"
           :collapsed="isCollapsed"
         >
           Camadas de Risco
+        </NavItem>
+
+        <!--
+          Fila de revisao. Item separado e nao aba dentro da tela porque quem
+          revisa e a CEDEC e quem envia e o municipio: sao pessoas diferentes,
+          e o item so aparece para quem tem a permissao.
+        -->
+        <NavItem
+          v-if="canRevisarCamadas && _routes.hasGeoespacialRevisao"
+          :href="route('geoespacial.revisao', undefined, false)"
+          :active="isRouteActive('geoespacial.revisao')"
+          icon="checkbadge"
+          :collapsed="isCollapsed"
+        >
+          Revisar Camadas
         </NavItem>
 
         <!-- Sismos -->
@@ -801,6 +816,7 @@ const _routes = {
   hasInmet: route().has('inmet.index'),
   hasSismos: route().has('sismos.index'),
   hasGeoespacial: route().has('geoespacial.index'),
+  hasGeoespacialRevisao: route().has('geoespacial.revisao'),
 };
 
 // ============================================================================
@@ -856,7 +872,10 @@ const _activeRoutes = computed(() => {
     'sismos.*': route().current('sismos.*'),
     // isRouteActive so acende o item quando o padrao e chave DESTE mapa: sem a
     // linha abaixo o item nasceria permanentemente apagado, mesmo na pagina.
-    'geoespacial.*': route().current('geoespacial.*'),
+    // 'geoespacial.*' casava tambem geoespacial.revisao, e os dois itens do
+    // menu acendiam juntos na tela de revisao.
+    'geoespacial.index': route().current('geoespacial.index'),
+    'geoespacial.revisao': route().current('geoespacial.revisao'),
     'admin.permissions.*': route().current('admin.permissions.*'),
     'log-viewer.*': route().current('log-viewer.*'),
     'portal.treinamento.catalogo': route().current('portal.treinamento.catalogo'),
@@ -992,6 +1011,12 @@ const canSeePlanCon = computed(() => {
 
 const canSeePlantao = computed(() => {
   return hasPermission(['plantao.turnos.view']);
+});
+
+const canRevisarCamadas = computed(() => {
+  // Diferente dos modulos de consulta liberados: revisar camada municipal
+  // publica geometria no mapa estadual, entao exige permissao de verdade.
+  return hasPermission(['geoespacial.camadas.revisar']);
 });
 
 const canSeeMeteorologia = computed(() => {

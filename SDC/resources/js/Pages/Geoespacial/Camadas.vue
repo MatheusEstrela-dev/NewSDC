@@ -133,7 +133,21 @@
             {{ rotularDominio(camada.dominio) }}
             &middot; {{ rotularNivel(camada.nivel) }}
             &middot; {{ formatarData(camada.emitido_em) }}
+            <template v-if="camada.origem === 'municipal'">&middot; municipal</template>
           </span>
+          <!--
+            Status so aparece quando NAO e a aprovada estadual: marcar as
+            aprovadas com "aprovada" seria ruido em toda a lista.
+          -->
+          <span v-if="camada.status !== 'aprovada'" class="camada-status" :class="`is-${camada.status}`">
+            {{ camada.status === 'pendente' ? 'aguardando aprovacao' : 'recusada' }}
+          </span>
+          <!--
+            O motivo da recusa fica na tela do municipio, e nao so na
+            notificacao: sem ele o remetente reenvia o mesmo arquivo, o dedup
+            recusa por hash igual, e ninguem entende o que aconteceu.
+          -->
+          <span v-if="camada.motivo_recusa" class="camada-motivo">{{ camada.motivo_recusa }}</span>
         </button>
 
         <p v-if="camadas.length === 0" class="lista-vazia">
@@ -831,6 +845,31 @@ function formatarData(valor) {
     margin-top: 0.75rem;
   }
 }
+
+.camada-status {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.camada-status.is-pendente {
+  color: #c2410c;
+}
+
+.camada-status.is-recusada {
+  color: #dc2626;
+}
+
+.camada-motivo {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.7rem;
+  color: var(--texto-fraco);
+  white-space: normal;
+}
 </style>
 
 <!--
@@ -858,6 +897,14 @@ function formatarData(valor) {
  * papel de superficie. Os tons fechados do tema claro ficam ilegiveis sobre
  * fundo escuro, entao clareiam aqui.
  */
+.dark .geoespacial-container .camada-status.is-pendente {
+  color: #fb923c;
+}
+
+.dark .geoespacial-container .camada-status.is-recusada {
+  color: #f87171;
+}
+
 .dark .geoespacial-container .campo-erro {
   color: #f87171;
 }

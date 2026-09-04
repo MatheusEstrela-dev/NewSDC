@@ -27,13 +27,56 @@ return new class extends Migration
                 nivel        varchar(40)  NULL,
                 hash_arquivo char(64)     NOT NULL,
                 ingestao_id  bigint       NULL REFERENCES bronze.ingestao_bruta (id) ON DELETE SET NULL,
+
+                -- Procedencia. O municipio NAO informa municipio_id no
+                -- formulario: ele e derivado do usuario autenticado, via
+                -- compdec_orgao_user -> compdec_orgaos.municipio_id. Campo em
+                -- formulario permitiria o municipio A enviar como B.
+                origem       varchar(12)  NOT NULL DEFAULT 'estadual',
+                -- RESTRICT e nao SET NULL: com SET NULL, apagar um municipio
+                -- que tem camada municipal zeraria municipio_id e a linha
+                -- passaria a violar ck_silver_geo_camadas_municipal -- o
+                -- DELETE abortaria com erro de check, incompreensivel para
+                -- quem so quis remover um municipio.
+                municipio_id bigint       NULL REFERENCES municipios (id) ON DELETE RESTRICT,
+                orgao_id     bigint       NULL,
+                enviado_por  bigint       NULL REFERENCES users (id) ON DELETE SET NULL,
+
+                -- Moderacao. Default 'aprovada' para nao invalidar as camadas
+                -- estaduais que ja existem: envio da CEDEC publica direto, e o
+                -- envio municipal nasce 'pendente' por regra do controller.
+                -- Colocar o default em 'pendente' faria toda camada estadual
+                -- existente desaparecer do mapa no momento da migration.
+                status        varchar(12) NOT NULL DEFAULT 'aprovada',
+                revisado_por  bigint      NULL REFERENCES users (id) ON DELETE SET NULL,
+                revisado_em   timestamptz NULL,
+                motivo_recusa text        NULL,
+
+                -- Caminho no disco geo_municipal, do arquivo COMO O MUNICIPIO
+                -- ENVIOU. O Bronze guarda o KML extraido; este guarda o
+                -- documento original, inclusive KMZ compactado, que e o
+                -- artefato auditavel.
+                arquivo_caminho varchar(500) NULL,
+
                 created_at   timestamptz  NOT NULL DEFAULT now(),
                 updated_at   timestamptz  NOT NULL DEFAULT now(),
-                CONSTRAINT uq_silver_geo_camadas_hash UNIQUE (hash_arquivo)
+                CONSTRAINT uq_silver_geo_camadas_hash UNIQUE (hash_arquivo),
+                CONSTRAINT ck_silver_geo_camadas_origem CHECK (origem IN ('estadual', 'municipal')),
+                CONSTRAINT ck_silver_geo_camadas_status CHECK (status IN ('pendente', 'aprovada', 'recusada')),
+                -- Camada municipal sem municipio nao tem como ser revisada nem
+                -- atribuida a ninguem.
+                CONSTRAINT ck_silver_geo_camadas_municipal CHECK (
+                    origem <> 'municipal' OR municipio_id IS NOT NULL
+                )
             )
         SQL);
 
         DB::statement('CREATE INDEX IF NOT EXISTS idx_silver_geo_camadas_dominio ON silver.geo_camadas (dominio, emitido_em DESC)');
+
+        // Os dois recortes que as telas fazem: o mapa filtra por status, e a
+        // lista do municipio filtra pelo proprio municipio.
+        DB::statement('CREATE INDEX IF NOT EXISTS idx_silver_geo_camadas_status ON silver.geo_camadas (origem, status)');
+        DB::statement('CREATE INDEX IF NOT EXISTS idx_silver_geo_camadas_municipio ON silver.geo_camadas (municipio_id, status)');
 
         // Uma linha por Placemark. geometry(Geometry,4326) e nao MultiPolygon:
         // verificado que um campo unico com um GIST serve poligono, linha e
