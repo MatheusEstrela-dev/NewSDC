@@ -51,6 +51,24 @@ class GeoUploadController extends Controller
         $arquivo = $request->file('arquivo');
         $kml = $this->extrator->conteudoDeArquivo($arquivo->getRealPath());
 
+        // O dedup real acontece no Silver, por hash da GEOMETRIA -- trocar o
+        // nome ou o nivel na tela nao deve duplicar a mesma area no mapa.
+        //
+        // Sem esta checagem aqui, porem, o upload respondia "Camada enviada" e
+        // sumia: o job rodava, o ON CONFLICT recusava, e o operador ficava
+        // olhando uma lista que nao mudava, sem saber por que. Antecipar a
+        // resposta custa um hash e uma leitura por indice unico.
+        $jaExiste = $this->repository->camadaDoHash(hash('sha256', $kml));
+
+        if ($jaExiste !== null) {
+            return back()->withErrors([
+                'arquivo' => "Esta geometria ja foi importada como \"{$jaExiste->nome}\""
+                    . ($jaExiste->emitido_em !== null ? " (emitida em {$jaExiste->emitido_em})" : '')
+                    . '. O sistema compara o conteudo do arquivo, nao o nome: para trazer areas'
+                    . ' diferentes, envie um KML diferente.',
+            ]);
+        }
+
         $envelope = json_encode([
             'dominio' => $request->string('dominio')->toString(),
             'nome' => $request->string('nome')->toString(),

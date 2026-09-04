@@ -60,6 +60,20 @@ final class GeoCamadaRepository
         return count($dto->feicoes);
     }
 
+    /**
+     * Camada ja importada com esta geometria, ou null.
+     *
+     * Serve para o upload responder na hora em vez de aceitar, enfileirar e
+     * deixar o ON CONFLICT recusar em silencio no worker.
+     */
+    public function camadaDoHash(string $hashArquivo): ?object
+    {
+        return DB::table('silver.geo_camadas')
+            ->select(['id', 'nome', 'emitido_em'])
+            ->where('hash_arquivo', $hashArquivo)
+            ->first();
+    }
+
     /** @return Collection<int, object> */
     public function camadas(): Collection
     {
