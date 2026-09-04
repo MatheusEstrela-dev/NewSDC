@@ -54,8 +54,12 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400 })
      * coalescer no servidor exigiria estado compartilhado entre workers para uma
      * economia que um setTimeout resolve.
      *
-     * Nao substitui a logica de aba oculta: aba oculta nem chega aqui, marca
-     * pendencia e resolve no visibilitychange.
+     * A ABA PODE SUMIR DENTRO DA JANELA. Conferir document.hidden so na chegada
+     * do evento nao basta: entre o agendamento e o disparo passam debounceMs, e
+     * quem troca de aba nesse intervalo levaria o reload assim mesmo. O timer
+     * reconfere e, se a aba ja estiver oculta, converte o reload em pendencia --
+     * o mesmo estado em que um evento recebido com a aba oculta ja cai, resolvido
+     * pelo visibilitychange.
      */
     const agendarRecarga = () => {
         if (timerDebounce) {
@@ -64,6 +68,13 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400 })
 
         timerDebounce = setTimeout(() => {
             timerDebounce = null;
+
+            if (document.hidden) {
+                pendente = true;
+
+                return;
+            }
+
             recarregar();
         }, debounceMs);
     };
