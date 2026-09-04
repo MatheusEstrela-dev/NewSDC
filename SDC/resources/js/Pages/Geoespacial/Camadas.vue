@@ -244,13 +244,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="feicao in feicoes" :key="feicao.id">
+          <tr v-for="feicao in feicoesDaPagina" :key="feicao.id">
             <td class="code-cell">
               {{ feicao.camada_nome }}
-              <div class="municipio-name md:hidden">{{ feicao.feicao_nome ?? 'sem nome' }}</div>
+              <div class="municipio-name md:hidden">{{ rotularFeicao(feicao) }}</div>
             </td>
             <td class="hidden md:table-cell">
-              {{ feicao.feicao_nome ?? 'sem nome' }}
+              {{ rotularFeicao(feicao) }}
               <span class="sub-text">{{ feicao.tipo_geometria }}</span>
             </td>
             <td class="hidden sm:table-cell">
@@ -270,6 +270,8 @@
           </tr>
         </tbody>
       </table>
+
+      <Pagination :pagination="paginacao" @page-change="irParaPagina" />
     </div>
   </div>
 </template>
@@ -280,9 +282,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 defineOptions({ layout: AuthenticatedLayout });
 
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { router, useForm } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   camadas: { type: Array, default: () => [] },
@@ -349,6 +352,57 @@ function decodificarGeojson(valor) {
 // variavel CSS nao resolve e a area sairia preta.
 function corDoDominio(dominio) {
   return props.dominios[dominio]?.cor ?? '#b45309';
+}
+
+/*
+ * Paginacao no cliente, e nao no servidor: o mapa precisa de TODAS as feicoes
+ * de qualquer forma para desenhar, entao paginar no backend exigiria uma
+ * segunda consulta para ganhar nada. Mesmo desenho das telas de Meteorologia e
+ * Sismos, com o mesmo componente.
+ */
+const POR_PAGINA = 15;
+const pagina = ref(1);
+
+// Trocar de camada com a pagina 4 aberta deixaria a tabela vazia.
+watch(() => props.feicoes, () => { pagina.value = 1; });
+
+const paginacao = computed(() => ({
+  current_page: pagina.value,
+  per_page: POR_PAGINA,
+  total: props.feicoes.length,
+  last_page: Math.max(1, Math.ceil(props.feicoes.length / POR_PAGINA)),
+}));
+
+const feicoesDaPagina = computed(() => {
+  const inicio = (pagina.value - 1) * POR_PAGINA;
+
+  return props.feicoes.slice(inicio, inicio + POR_PAGINA);
+});
+
+function irParaPagina(numero) {
+  pagina.value = Math.min(Math.max(1, numero), paginacao.value.last_page);
+}
+
+/*
+ * Rotulo da feicao.
+ *
+ * "sem nome" em toda linha nao informava nada e parecia defeito. E NAO e perda
+ * de dado: no KML de alerta todo Placemark vem com <name>0</name>, que e
+ * placeholder do gerador e nao nome. O extrator converte "0" em null de
+ * proposito, entao o banco guarda a verdade -- nao existe nome a guardar.
+ *
+ * O indice e por CAMADA, e nao global: "Area 3 de ALERTA X" so faz sentido
+ * dentro daquela camada.
+ */
+function rotularFeicao(feicao) {
+  if (feicao.feicao_nome) {
+    return feicao.feicao_nome;
+  }
+
+  const daCamada = props.feicoes.filter((f) => f.camada_id === feicao.camada_id);
+  const posicao = daCamada.findIndex((f) => f.id === feicao.id);
+
+  return posicao >= 0 ? `Area ${posicao + 1}` : 'Area';
 }
 
 const poligonosDoMapa = computed(() => props.feicoes.map((feicao) => ({
