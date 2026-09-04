@@ -1,8 +1,5 @@
 import '../css/app.css';
 import { initAxios } from './bootstrap';
-// Define window.Echo apenas quando ha VITE_REVERB_APP_KEY. Sem ela, nao faz
-// nada e o tempo real fica desligado sem quebrar pagina nenhuma.
-import './echo';
 import { installClientIpInterceptor } from '@/Composables/auth/useClientIp';
 
 import { createInertiaApp, router } from '@inertiajs/vue3';

@@ -311,6 +311,17 @@
           Meteorologia
         </NavItem>
 
+        <!-- Camadas geoespaciais -->
+        <NavItem
+          v-if="canSeeMeteorologia && _routes.hasGeoespacial"
+          :href="route('geoespacial.index', undefined, false)"
+          :active="isRouteActive('geoespacial.*')"
+          icon="map"
+          :collapsed="isCollapsed"
+        >
+          Camadas de Risco
+        </NavItem>
+
         <!-- Sismos -->
         <NavItem
           v-if="canSeeSismos && _routes.hasSismos"
@@ -789,6 +800,7 @@ const _routes = {
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
   hasSismos: route().has('sismos.index'),
+  hasGeoespacial: route().has('geoespacial.index'),
 };
 
 // ============================================================================
@@ -842,6 +854,9 @@ const _activeRoutes = computed(() => {
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
     'sismos.*': route().current('sismos.*'),
+    // isRouteActive so acende o item quando o padrao e chave DESTE mapa: sem a
+    // linha abaixo o item nasceria permanentemente apagado, mesmo na pagina.
+    'geoespacial.*': route().current('geoespacial.*'),
     'admin.permissions.*': route().current('admin.permissions.*'),
     'log-viewer.*': route().current('log-viewer.*'),
     'portal.treinamento.catalogo': route().current('portal.treinamento.catalogo'),

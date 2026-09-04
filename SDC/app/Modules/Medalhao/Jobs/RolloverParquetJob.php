@@ -65,6 +65,7 @@ class RolloverParquetJob implements ShouldQueue
                 'meta' => json_encode($r->meta ?? [], JSON_UNESCAPED_UNICODE),
                 'coletado_em' => (string) $r->coletado_em?->toIso8601String(),
                 'processado_em' => (string) $r->processado_em?->toIso8601String(),
+                'verificado_em' => (string) $r->verificado_em?->toIso8601String(),
             ])->all();
 
             // Escreve e verifica ANTES de podar. Se qualquer coisa falhar, a

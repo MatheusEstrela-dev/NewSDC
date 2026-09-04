@@ -44,9 +44,23 @@
         </button>
       </div>
 
+      <!--
+        Camada de risco desenhada por cima das estacoes. Fica ao lado do filtro
+        de rede porque as duas perguntas se respondem juntas: onde choveu e
+        sobre qual area de alerta.
+      -->
+      <div class="rede-filtro">
+        <select v-model="camadaGeoSelecionada" class="camada-select" @change="trocarCamadaGeo">
+          <option :value="null">Sem camada de risco</option>
+          <option v-for="camada in camadasGeo" :key="camada.id" :value="camada.id">
+            {{ camada.nome }} ({{ camada.nivel }})
+          </option>
+        </select>
+      </div>
+
       <!-- Mapa Container -->
       <div class="map-wrapper">
-        <MapaLeaflet ref="mapaRef" :pontos="pontosDoMapa" :bbox="bbox" class="mapa-area" />
+        <MapaLeaflet ref="mapaRef" :pontos="pontosDoMapa" :poligonos="poligonosGeo" :bbox="bbox" class="mapa-area" />
 
         <!-- Overlay: Estatísticas -->
         <div class="map-overlay stats-overlay">
@@ -166,6 +180,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { usePrecipitacao } from '@/Composables/usePrecipitacao';
 import { useMonitorFonte } from '@/Composables/useMonitorFonte';
+import { router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -177,6 +192,10 @@ const props = defineProps({
   // Idem, mas com o instante da ultima consulta a fonte, mesmo sem novidade.
   verificado_em: { type: Object, default: () => ({}) },
   bbox: { type: Object, required: true },
+  // Cabecalho das camadas de risco, so o que o seletor mostra.
+  camadasGeo: { type: Array, default: () => [] },
+  // Feicoes da camada escolhida. Chega vazia ate o operador escolher uma.
+  feicoesGeo: { type: Array, default: () => [] },
 });
 
 /*
@@ -196,6 +215,24 @@ useAtualizacaoAoVivo({
   canal: 'medalhao.cemaden',
   evento: '.GoldAtualizado',
   props: ['estacoes', 'estatisticas', 'verificado_em'],
+});
+
+/*
+ * Terceiro canal, so para a LISTA de camadas.
+ *
+ * Sem ele, uma area de risco recem-importada so aparecia no seletor depois de
+ * um F5 -- justamente o comportamento que o tempo real veio eliminar. E o
+ * cenario nao e raro: quem sobe o KML costuma ir direto olhar a chuva sobre a
+ * area.
+ *
+ * `feicoesGeo` fica de fora do only de proposito: elas dependem da camada que o
+ * operador escolheu, e rebusca-las aqui trocaria a geometria em tela por conta
+ * propria enquanto ele olha.
+ */
+useAtualizacaoAoVivo({
+  canal: 'medalhao.geoespacial',
+  evento: '.GoldAtualizado',
+  props: ['camadasGeo'],
 });
 
 // Faixas, paletas e formatadores vivem no composable: as mesmas faixas
@@ -367,6 +404,55 @@ const pontosDoMapa = computed(() => estacoesFiltradas.value.map((estacao) => ({
       { rotulo: 'Medido em', valor: formatarDataHora(estacao.medido_em) },
     ],
   },
+})));
+
+const camadaGeoSelecionada = ref(null);
+
+/*
+ * only: ['feicoesGeo'] e o que evita rebuscar as 890 estacoes a cada troca de
+ * camada. preserveState mantem a pagina da tabela e o filtro de rede, que o
+ * operador nao mexeu.
+ */
+function trocarCamadaGeo() {
+  router.get(
+    route('inmet.index'),
+    { camada_geo: camadaGeoSelecionada.value },
+    { only: ['feicoesGeo'], preserveState: true, preserveScroll: true },
+  );
+}
+
+/*
+ * O geojson vem do gold como TEXTO, e nao como objeto: o PDO do Postgres
+ * entrega jsonb como string, e o L.geoJSON exige objeto -- passar a string
+ * desenha nada e nao levanta erro nenhum. Aceita objeto tambem porque o dia em
+ * que o repositorio decodificar, esta tela nao precisa mudar.
+ */
+function decodificarGeojson(valor) {
+  if (!valor) {
+    return null;
+  }
+
+  if (typeof valor !== 'string') {
+    return valor;
+  }
+
+  try {
+    return JSON.parse(valor);
+  } catch {
+    return null;
+  }
+}
+
+// A area e recorte de risco, nao medicao: o rotulo diz de que camada ela veio e
+// o tamanho, porque no mapa uma mancha sozinha nao se identifica.
+//
+// Cor literal e nao var(--...): o Leaflet joga isto em atributo SVG, onde
+// variavel CSS nao resolve e a area sairia preta.
+const poligonosGeo = computed(() => props.feicoesGeo.map((feicao) => ({
+  id: feicao.id,
+  geojson: decodificarGeojson(feicao.geojson),
+  cor: '#b45309',
+  rotulo: `${feicao.camada_nome} — ${feicao.area_km2} km2`,
 })));
 </script>
 
@@ -881,6 +967,35 @@ const pontosDoMapa = computed(() => estacoesFiltradas.value.map((estacao) => ({
 .rede-chip.is-ativo .rede-contagem {
   background: #3b82f6;
   color: #ffffff;
+}
+
+/*
+ * Mesmos tokens do container, como o .rede-chip: sem eles o select herda o
+ * branco do agente do navegador e nasce ilegivel no tema escuro.
+ */
+.camada-select {
+  padding: 6px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--sup);
+  color: var(--texto);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.camada-select:hover {
+  border-color: var(--texto-fraco);
+}
+
+/*
+ * A lista aberta e desenhada pelo sistema operacional e nao herda a cor do
+ * select, entao a option recebe o par de novo.
+ */
+.camada-select option {
+  background: var(--sup);
+  color: var(--texto);
 }
 
 .rede-badge {

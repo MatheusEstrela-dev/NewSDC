@@ -15,6 +15,7 @@ return [
         'sismos' => \App\Modules\Sismos\Repositories\SismoRepository::class,
         'inmet' => \App\Modules\Inmet\Repositories\InmetRepository::class,
         'cemaden' => \App\Modules\Cemaden\Repositories\CemadenRepository::class,
+        'geoespacial' => \App\Modules\Geoespacial\Repositories\GeoCamadaRepository::class,
     ],
 
     // Mapa grupo -> job que refaz as matviews da camada Gold. Fica em config
@@ -24,6 +25,7 @@ return [
         'sismos' => \App\Modules\Sismos\Jobs\AtualizarGoldSismosJob::class,
         'inmet' => \App\Modules\Inmet\Jobs\AtualizarGoldInmetJob::class,
         'cemaden' => \App\Modules\Cemaden\Jobs\AtualizarGoldCemadenJob::class,
+        'geoespacial' => \App\Modules\Geoespacial\Jobs\AtualizarGoldGeoJob::class,
     ],
 
     'sismos' => [

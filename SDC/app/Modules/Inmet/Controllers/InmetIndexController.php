@@ -6,6 +6,7 @@ namespace App\Modules\Inmet\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Cemaden\Repositories\CemadenRepository;
+use App\Modules\Geoespacial\Repositories\GeoCamadaRepository;
 use App\Modules\Inmet\Repositories\InmetRepository;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Medalhao\Registry\IngestorRegistry;
@@ -19,11 +20,17 @@ class InmetIndexController extends Controller
         private readonly InmetRepository $inmet,
         private readonly CemadenRepository $cemaden,
         private readonly IngestorRegistry $registry,
+        private readonly GeoCamadaRepository $geoespacial,
     ) {
     }
 
     public function __invoke(Request $request): Response
     {
+        // Camada de risco escolhida no seletor. Vem pela query e nao por sessao
+        // porque o link com a camada aberta precisa ser compartilhavel entre
+        // operadores de plantao.
+        $camadaGeoId = $request->integer('camada_geo') ?: null;
+
         // Toda a agregacao ja esta materializada na camada Gold: aqui so se le e
         // se normaliza o formato das duas redes num contrato unico.
         //
@@ -45,6 +52,12 @@ class InmetIndexController extends Controller
                 'cemaden' => IngestaoBruta::verificadoEm($this->registry->chavesDoGrupo('cemaden')),
             ],
             'bbox' => config('medalhao.inmet.bbox'),
+            // Lista enxuta: so o que o seletor precisa. As feicoes da camada
+            // escolhida vem por partial reload, e nao todas de uma vez -- com
+            // varias camadas carregadas, mandar toda geometria seria payload
+            // morto para o operador que olha uma.
+            'camadasGeo' => $this->geoespacial->camadas()->all(),
+            'feicoesGeo' => $camadaGeoId !== null ? $this->geoespacial->mapa($camadaGeoId)->all() : [],
         ]);
     }
 

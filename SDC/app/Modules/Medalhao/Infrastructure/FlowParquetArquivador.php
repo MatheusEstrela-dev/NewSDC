@@ -84,6 +84,12 @@ final class FlowParquetArquivador implements ArquivadorBronze
             FlatColumn::string('meta'),
             FlatColumn::string('coletado_em'),
             FlatColumn::string('processado_em'),
+            // Sem esta coluna o arquivo deixaria de ser fiel a tabela: quem
+            // reconstruir o Bronze a partir do Parquet perderia o registro de
+            // quando a fonte foi checada. Acrescentada antes de existir
+            // arquivo real, para nao criar dataset com schema divergente entre
+            // particoes -- foi assim que o pyarrow quebrou com a coluna fonte.
+            FlatColumn::string('verificado_em'),
         );
     }
 }
