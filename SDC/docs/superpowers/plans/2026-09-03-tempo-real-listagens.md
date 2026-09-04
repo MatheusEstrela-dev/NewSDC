@@ -531,7 +531,7 @@ Abrir a fila de pedidos em duas sessoes (navegadores ou perfis distintos, nao
 duas abas -- duas abas compartilham a mesma conexao e o mesmo usuario). Tramitar
 em uma. Expected: a outra reflete sem F5.
 
-- [ ] **Step 3: O reload vem DEPOIS do commit**
+- [x] **Step 3: O reload vem DEPOIS do commit**
 
 Repetir o Step 2 e conferir que a linha aparece com o status NOVO. Este e o
 criterio que o `ShouldDispatchAfterCommit` existe para garantir; se aparecer o
@@ -662,12 +662,55 @@ de mudanca em BH, e quem le o estado inteiro escuta tudo por uma assinatura so.
 | 7. Sem a permissao nao assina | `CanalListagemTest`: autenticado SEM a permissao 403; permissao de um recurso nao abre o canal de outro; recurso inexistente 403 |
 | 8. COMPDEC de outro municipio nao assina | `CanalPmdaEscopoTest` (403) **e no fio**: o ouvinte de Contagem nao recebeu o evento de BH |
 | 9. Payload sem dado de dominio | Lido do frame: exatamente `recurso`, `escopo`, `atualizado_em`. Nao e assercao de teste, e o que trafegou |
-| 10. Suite verde no escopo | **56 testes, 106 assercoes, 0 falhas** contra PostgreSQL |
+| 3. O reload vem depois do commit | `AvisoDepoisDoCommitTest`, com contraprova (ver abaixo) |
+| 4. Pagina corrente sobrevive | `ReloadPreservaPaginaTest`: metade servidor. O scroll nao -- ver abaixo |
+| 10. Suite verde no escopo | **60 testes, 116 assercoes, 0 falhas** contra PostgreSQL |
 
 Alem dos criterios: o evento so despacha depois do commit; transicao bloqueada
 nao emite; as props do `only:` existem no GET e no reload parcial (e
 `statistics` do RAT NAO volta); recurso escopado transmite nos dois canais; e as
 quatro escritas convertidas do RAT emitem de verdade.
+
+### Criterio 3: o teste que existia provava a coisa errada
+
+`RecursoAtualizadoTest::test_so_despacha_depois_do_commit` prova que a INTERFACE
+`ShouldDispatchAfterCommit` esta implementada. Nao prova o comportamento: o
+`Event::fake()` grava o dispatch e nao passa pela logica de after-commit do
+dispatcher real. Chamar isso de "criterio 3 coberto" seria enganoso.
+
+`AvisoDepoisDoCommitTest` cobre o comportamento, e para isso abre mao de duas
+comodidades:
+
+- **sem `DatabaseTransactions`** -- sob o wrapper de transacao dos testes nao
+  existiria commit real para o after-commit esperar, e o teste provaria o
+  oposto do que pretende. Escreve no banco dedicado e limpa no `tearDown`.
+- **sem `Event::fake()`** -- precisa do dispatcher real.
+
+A transacao EXTERNA e o que torna o teste uma prova. Sem ela a transacao interna
+do `TramitacaoService` seria a mais externa, comitaria sozinha, e o evento sairia
+depois do commit mesmo sem a interface: o teste passaria por acidente. Com ela,
+reproduz-se o caso do comentario do servico -- `executar()` chamado de dentro de
+outra transacao.
+
+O listener confere `DB::transactionLevel()` e le o status no instante do aviso.
+Resultado: nivel 0 e status NOVO. A contraprova (`test_evento_comum_no_mesmo_ponto...`)
+despacha um evento comum no mesmo ponto e mostra que ele chega com transacao
+aberta -- e a interface, e nao a posicao da chamada, que faz a diferenca.
+
+### Criterio 4: metade provada, metade nao
+
+`ReloadPreservaPaginaTest` cobre a pagina corrente, e escolhe o PMDA de
+proposito. Pedidos e RAT usam `page` + `withQueryString()`, o caminho padrao e
+sem gracas. O PMDA tem dois paineis paginando independente, com nomes proprios
+(`analises_page`, `solicitacoes_page`) e `withPath()` em vez de
+`withQueryString()` -- e onde um erro de nome de parametro passaria despercebido,
+devolvendo sempre a pagina 1 e jogando o usuario para o topo da fila a cada
+evento. Os dois testes provam que a pagina 2 volta como pagina 2, e que mexer num
+painel nao arrasta o outro.
+
+**O scroll nao esta coberto e nao tem como estar daqui.** E `preserveScroll` do
+Inertia, roda inteiro no navegador. Nao ha teste de servidor que diga onde a
+janela ficou.
 
 ### NAO verificado: so o lado do navegador
 
@@ -676,16 +719,15 @@ desta sessao nao conectaram.
 
 - **1.** Degradacao com broadcasting desligado, sem erro no console.
 - **2.** Duas sessoes, uma altera, a outra reflete sem F5.
-- **3.** O reload vem DEPOIS do commit.
-- **4.** Scroll e pagina corrente sobrevivem.
+- **4.** O SCROLL sobrevive (a pagina corrente ja esta provada acima).
 - **5.** Aba em segundo plano nao rebusca; ao voltar, atualiza uma vez.
 - **6.** Rajada gera UM reload por viewer.
 
 O que MUDOU em relacao a primeira passada: o servidor ja nao e mais incognita. O
 que resta e o `useAtualizacaoAoVivo` reagindo ao frame -- `router.reload`,
-`preserveScroll`, `document.hidden`, debounce. O criterio 3 tem cobertura
-indireta forte (o `ShouldDispatchAfterCommit` tem teste proprio) e o 6 tambem (o
-debounce e determinista), mas os quatro restantes precisam de olho na tela.
+`preserveScroll`, `document.hidden`, debounce. O criterio 3 saiu desta lista: tem
+teste de comportamento agora, nao so da interface. O 6 tem cobertura indireta
+forte (o debounce e determinista). Sobram 1, 2, 5 e o scroll do 4.
 
 **Como fechar cada um sem DevTools**, agora que `dev` serve o codigo. Com a tela
 aberta, o log do Octane e a API do Reverb bastam:
