@@ -118,23 +118,46 @@ final class GeoCamadaRepository
             [$camadaId]
         );
 
+        // As DUAS redes, e nao so o CEMADEN: as 61 do INMET vivem em
+        // estacoes_meteorologicas e ficavam de fora da conta. Hoje nenhuma cai
+        // nas areas carregadas, entao o numero nao mudava -- mas isso era
+        // coincidencia da geometria, nao correcao do codigo.
+        //
+        // ST_Intersects e nao ST_Contains: estacao exatamente sobre a divisa
+        // entra. Errar incluindo e melhor que errar excluindo num alerta.
         $estacoes = (int) DB::scalar(
-            'SELECT count(DISTINCT e.id)
-               FROM silver.estacoes_cemaden e
-               JOIN silver.geo_feicoes f ON ST_Contains(f.geom, e.geom)
-              WHERE f.camada_id = ?',
-            [$camadaId]
+            'SELECT
+                (SELECT count(*) FROM silver.estacoes_cemaden e
+                  WHERE EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                                 WHERE f.camada_id = ? AND ST_Intersects(f.geom, e.geom)))
+              + (SELECT count(*) FROM estacoes_meteorologicas m
+                  WHERE m.geom IS NOT NULL
+                    AND EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                                 WHERE f.camada_id = ? AND ST_Intersects(f.geom, m.geom)))',
+            [$camadaId, $camadaId]
         );
 
+        // Chuva das duas redes numa serie so: as duas medem acumulado de 24h
+        // com as mesmas faixas, entao separa-las na estatistica diria que
+        // choveu duas coisas diferentes na mesma area.
         $chuva = DB::selectOne(
-            'SELECT round(avg(g.acumulado_24h), 2) AS media,
-                    max(g.acumulado_24h)           AS maxima,
-                    count(*)                       AS com_leitura
-               FROM gold.cemaden_mapa g
-               JOIN silver.geo_feicoes f ON ST_Contains(f.geom, g.geom)
-              WHERE f.camada_id = ?
-                AND g.acumulado_24h IS NOT NULL',
-            [$camadaId]
+            'SELECT round(avg(mm)::numeric, 2) AS media,
+                    max(mm)                    AS maxima,
+                    count(*)                   AS com_leitura
+               FROM (
+                 SELECT g.acumulado_24h::float8 AS mm
+                   FROM gold.cemaden_mapa g
+                  WHERE g.acumulado_24h IS NOT NULL
+                    AND EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                                 WHERE f.camada_id = ? AND ST_Intersects(f.geom, g.geom))
+                 UNION ALL
+                 SELECT i.precipitacao::float8
+                   FROM gold.inmet_mapa i
+                  WHERE i.precipitacao IS NOT NULL
+                    AND EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                                 WHERE f.camada_id = ? AND ST_Intersects(f.geom, i.geom))
+               ) AS leituras',
+            [$camadaId, $camadaId]
         );
 
         return [

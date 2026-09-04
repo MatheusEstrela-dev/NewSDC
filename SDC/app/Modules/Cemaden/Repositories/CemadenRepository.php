@@ -20,19 +20,44 @@ final class CemadenRepository
      *
      * @return Collection<int, object>
      */
-    public function mapa(): Collection
+    /**
+     * Le a camada Gold para o mapa.
+     *
+     * Com $camadaGeoId, devolve APENAS as estacoes dentro das feicoes daquela
+     * camada de risco. O recorte acontece no banco, por ST_Intersects sobre o
+     * indice GIST: trazer as 890 e filtrar em PHP jogaria fora 290 KB de JSON
+     * por request para mostrar algumas dezenas.
+     *
+     * ST_Intersects e nao ST_Contains: estacao exatamente sobre a divisa da
+     * area entra. Num sistema de Defesa Civil, errar incluindo e melhor que
+     * errar excluindo.
+     *
+     * @return Collection<int, object>
+     */
+    public function mapa(?int $camadaGeoId = null): Collection
     {
-        return DB::table('gold.cemaden_mapa')
+        $query = DB::table('gold.cemaden_mapa')
             ->select([
                 'id', 'codigo_estacao', 'nome_estacao', 'municipio', 'codigo_ibge',
                 'uf', 'tipo', 'medido_em', 'latitude', 'longitude',
                 'acumulado_24h', 'classe_precipitacao',
-            ])
-            // NULLS LAST para que estacao sem telemetria nao ocupe o topo da
-            // tabela: com 476 das 830 sem transmitir, o default do Postgres
-            // (NULLS FIRST no DESC) esconderia toda a chuva na ultima pagina.
-            ->orderByRaw('acumulado_24h DESC NULLS LAST')
-            ->get();
+            ]);
+
+        if ($camadaGeoId !== null) {
+            // EXISTS e nao JOIN: estacao dentro de duas feicoes da mesma camada
+            // apareceria duplicada, e o mapa desenharia dois marcadores no
+            // mesmo ponto.
+            $query->whereRaw(
+                'EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                          WHERE f.camada_id = ? AND ST_Intersects(f.geom, gold.cemaden_mapa.geom))',
+                [$camadaGeoId]
+            );
+        }
+
+        // NULLS LAST para que estacao sem telemetria nao ocupe o topo da
+        // tabela: com 476 das 830 sem transmitir, o default do Postgres
+        // (NULLS FIRST no DESC) esconderia toda a chuva na ultima pagina.
+        return $query->orderByRaw('acumulado_24h DESC NULLS LAST')->get();
     }
 
     /**

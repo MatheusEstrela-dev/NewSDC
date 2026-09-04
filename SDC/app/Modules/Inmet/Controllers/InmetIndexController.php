@@ -38,7 +38,7 @@ class InmetIndexController extends Controller
         // requisicao. E a bbox aqui nao filtra nada — serve para o mapa se
         // enquadrar em MG.
         return Inertia::render('Inmet/MapaInmet', [
-            'estacoes' => $this->estacoesUnificadas(),
+            'estacoes' => $this->estacoesUnificadas($camadaGeoId),
             'estatisticas' => [
                 'inmet' => $this->inmet->estatisticas(),
                 'cemaden' => $this->cemaden->estatisticas(),
@@ -77,12 +77,12 @@ class InmetIndexController extends Controller
      *
      * @return list<array<string, mixed>>
      */
-    private function estacoesUnificadas(): array
+    private function estacoesUnificadas(?int $camadaGeoId = null): array
     {
         // Só os campos que a tela realmente usa. As matviews carregam umidade,
         // pressao e vento, que nenhuma coluna nem popup le: com 890 estacoes,
         // manda-los seria payload morto.
-        $estacoes = $this->inmet->mapa()->map(static fn (object $e): array => [
+        $estacoes = $this->inmet->mapa($camadaGeoId)->map(static fn (object $e): array => [
             // Prefixo obrigatorio: os ids vem de bigserial independentes em cada
             // matview e colidem entre as redes, o que quebraria o :key do v-for
             // e a identidade dos marcadores no mapa.
@@ -100,7 +100,7 @@ class InmetIndexController extends Controller
             'temperatura' => $e->temperatura,
         ])->all();
 
-        $estacoes = array_merge($estacoes, $this->cemaden->mapa()->map(static fn (object $e): array => [
+        $estacoes = array_merge($estacoes, $this->cemaden->mapa($camadaGeoId)->map(static fn (object $e): array => [
             'id' => "cemaden-{$e->id}",
             'rede' => 'CEMADEN',
             'codigo_estacao' => $e->codigo_estacao,

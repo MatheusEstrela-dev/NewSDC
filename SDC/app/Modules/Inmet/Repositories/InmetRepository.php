@@ -20,16 +20,52 @@ final class InmetRepository
      *
      * @return Collection<int, object>
      */
-    public function mapa(): Collection
+    /**
+     * Le a camada Gold para o mapa.
+     *
+     * Com $camadaGeoId, devolve APENAS as estacoes dentro das feicoes daquela
+     * camada de risco. O recorte acontece no banco, por ST_Intersects sobre o
+     * indice GIST: trazer as 890 e filtrar em PHP jogaria fora 290 KB de JSON
+     * por request para mostrar algumas dezenas.
+     *
+     * ST_Intersects e nao ST_Contains: estacao exatamente sobre a divisa da
+     * area entra. Num sistema de Defesa Civil, errar incluindo e melhor que
+     * errar excluindo.
+     *
+     * @return Collection<int, object>
+     */
+    public function mapa(?int $camadaGeoId = null): Collection
     {
-        return DB::table('gold.inmet_mapa')
+        $query = DB::table('gold.inmet_mapa')
             ->select([
                 'id', 'codigo_estacao', 'nome_estacao', 'municipio', 'uf',
                 'medido_em', 'latitude', 'longitude', 'temperatura', 'umidade',
                 'precipitacao', 'velocidade_vento', 'pressao', 'classe_precipitacao',
-            ])
-            ->orderByDesc('precipitacao')
-            ->get();
+            ]);
+
+        $this->recortarPorCamada($query, $camadaGeoId, 'gold.inmet_mapa');
+
+        return $query->orderByDesc('precipitacao')->get();
+    }
+
+    /**
+     * Recorte espacial compartilhado pelas duas redes.
+     *
+     * EXISTS e nao JOIN: estacao dentro de duas feicoes da mesma camada
+     * apareceria duplicada no JOIN, e o mapa desenharia dois marcadores no
+     * mesmo ponto.
+     */
+    private function recortarPorCamada(object $query, ?int $camadaGeoId, string $tabela): void
+    {
+        if ($camadaGeoId === null) {
+            return;
+        }
+
+        $query->whereRaw(
+            "EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                      WHERE f.camada_id = ? AND ST_Intersects(f.geom, {$tabela}.geom))",
+            [$camadaGeoId]
+        );
     }
 
     /**
