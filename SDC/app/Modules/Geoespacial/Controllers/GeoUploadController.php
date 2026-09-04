@@ -34,8 +34,17 @@ class GeoUploadController extends Controller
     {
         $camadaId = $request->integer('camada') ?: null;
 
+        // Quem revisa ve tudo; o municipio ve as proprias e as aprovadas. Sem
+        // este recorte, o municipio A lia as pendentes e recusadas do B,
+        // inclusive o texto da recusa.
+        $veTudo = $request->user()?->can('geoespacial.camadas.revisar') ?? false;
+        $procedencia = $veTudo ? null : $this->procedencia->para($request->user());
+
         return Inertia::render('Geoespacial/Camadas', [
-            'camadas' => $this->repository->camadas()->all(),
+            'camadas' => $this->repository->camadas(
+                municipioId: $procedencia?->municipioId,
+                veTudo: $veTudo,
+            )->all(),
             'feicoes' => $this->repository->mapa($camadaId)->all(),
             'cruzamento' => $camadaId !== null ? $this->repository->cruzamento($camadaId) : null,
             'camadaSelecionada' => $camadaId,
@@ -130,16 +139,11 @@ class GeoUploadController extends Controller
 
         NormalizarSilverJob::dispatch((int) $bronze->id, 'geo-upload');
 
-        if (! $publicaDireto) {
-            // Depois do dispatch, e nao antes: se a normalizacao falhar, o
-            // revisor foi avisado de algo que nao chegou na fila dele.
-            $this->revisao->avisarRevisores(
-                (int) DB::scalar(
-                    "SELECT id FROM silver.geo_camadas WHERE ingestao_id = ? ORDER BY id DESC LIMIT 1",
-                    [$bronze->id]
-                ) ?: 0
-            );
-        }
+
+        // A notificacao aos revisores NAO sai daqui. NormalizarSilverJob e
+        // assincrono: neste ponto a camada ainda nao existe no Silver, e a
+        // consulta pelo ingestao_id voltava vazia. Quem avisa e o repositorio,
+        // que e onde a camada de fato nasce -- ver GeoCamadaRepository.
 
         return back()->with('sucesso', $publicaDireto
             ? 'Camada enviada. O processamento acontece em segundo plano.'

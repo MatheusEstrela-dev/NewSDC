@@ -52,6 +52,19 @@ final class GeoCamadaRepository
             return 0;
         }
 
+        // Avisa os revisores AQUI, e nao no controller: o NormalizarSilverJob
+        // e assincrono, e no momento do upload esta linha ainda nao existia.
+        // Este e o ponto em que a camada pendente passa a existir de verdade.
+        //
+        // Repositorio despachando notificacao e um desvio de camada, aceito
+        // conscientemente: a alternativa seria um evento de dominio so para
+        // este caso, e o kernel do medalhao -- que chama este upsertLote --
+        // nao conhece dominio nenhum de proposito.
+        if ($dto->status === 'pendente') {
+            app(\App\Modules\Geoespacial\Services\RevisaoDeCamadas::class)
+                ->avisarRevisores((int) $id);
+        }
+
         foreach ($dto->feicoes as $feicao) {
             DB::statement(
                 'INSERT INTO silver.geo_feicoes (camada_id, nome, propriedades, geom, created_at, updated_at)
@@ -77,10 +90,34 @@ final class GeoCamadaRepository
             ->first();
     }
 
-    /** @return Collection<int, object> */
-    public function camadas(): Collection
+    /**
+     * Camadas visiveis para quem esta olhando.
+     *
+     * A regra acordada: o municipio ve as PROPRIAS em qualquer status --
+     * inclusive pendente e recusada, para acompanhar -- e as aprovadas de
+     * qualquer origem. Quem revisa ve tudo.
+     *
+     * Sem este recorte, o municipio A lia as pendentes e recusadas do B,
+     * inclusive o texto da recusa. O indice (municipio_id, status) existe
+     * exatamente para esta consulta.
+     *
+     * @return Collection<int, object>
+     */
+    public function camadas(?int $municipioId = null, bool $veTudo = false): Collection
     {
-        return DB::table('silver.geo_camadas')
+        $query = DB::table('silver.geo_camadas');
+
+        if (! $veTudo) {
+            $query->where(function ($q) use ($municipioId): void {
+                $q->where('status', 'aprovada');
+
+                if ($municipioId !== null) {
+                    $q->orWhere('municipio_id', $municipioId);
+                }
+            });
+        }
+
+        return $query
             ->select(['id', 'dominio', 'nome', 'arquivo_nome', 'emitido_em', 'valido_ate', 'nivel', 'created_at', 'origem', 'status', 'municipio_id', 'motivo_recusa'])
             ->orderByDesc('emitido_em')
             ->orderByDesc('id')

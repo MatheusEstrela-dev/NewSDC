@@ -77,7 +77,12 @@
           </button>
         </div>
       </div>
-      <p v-if="erros[`motivo-${camada.id}`]" class="campo-erro">{{ erros[`motivo-${camada.id}`] }}</p>
+      <!--
+        A chave e 'motivo', como o servidor devolve. Antes eu lia
+        `motivo-<id>`, que nunca existia, e a falha de validacao da recusa
+        nao aparecia em lugar nenhum.
+      -->
+      <p v-if="erros.motivo" class="campo-erro">{{ erros.motivo }}</p>
     </div>
   </div>
 </template>
@@ -94,6 +99,9 @@ const props = defineProps({
   pendentes: { type: Array, default: () => [] },
   dominios: { type: Object, default: () => ({}) },
   bbox: { type: Object, required: true },
+  // Precisa ser DECLARADA: sem isto props.errors era undefined e nenhum erro
+  // de validacao ou de conflito chegava a aparecer na tela.
+  errors: { type: Object, default: () => ({}) },
 });
 
 /*

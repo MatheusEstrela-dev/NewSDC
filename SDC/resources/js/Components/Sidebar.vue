@@ -315,7 +315,7 @@
         <NavItem
           v-if="canSeeMeteorologia && _routes.hasGeoespacial"
           :href="route('geoespacial.index', undefined, false)"
-          :active="isRouteActive('geoespacial.*')"
+          :active="isRouteActive('geoespacial.index')"
           icon="map"
           :collapsed="isCollapsed"
         >
@@ -872,7 +872,9 @@ const _activeRoutes = computed(() => {
     'sismos.*': route().current('sismos.*'),
     // isRouteActive so acende o item quando o padrao e chave DESTE mapa: sem a
     // linha abaixo o item nasceria permanentemente apagado, mesmo na pagina.
-    'geoespacial.*': route().current('geoespacial.*'),
+    // 'geoespacial.*' casava tambem geoespacial.revisao, e os dois itens do
+    // menu acendiam juntos na tela de revisao.
+    'geoespacial.index': route().current('geoespacial.index'),
     'geoespacial.revisao': route().current('geoespacial.revisao'),
     'admin.permissions.*': route().current('admin.permissions.*'),
     'log-viewer.*': route().current('log-viewer.*'),

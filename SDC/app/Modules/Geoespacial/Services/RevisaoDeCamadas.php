@@ -40,6 +40,11 @@ final class RevisaoDeCamadas
                 (SELECT count(*) FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS feicoes,
                 (SELECT round(sum(ST_Area(f.geom::geography) / 1000000)::numeric, 0)
                    FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS area_km2,
+                -- Geometria do SILVER, e nao do gold: pendente nao esta na
+                -- matview, e sem isto o revisor aprovaria sem ver a area que
+                -- esta publicando.
+                (SELECT jsonb_agg(ST_AsGeoJSON(f.geom)::jsonb)
+                   FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS geojson,
                 -- Plausibilidade territorial: distancia entre o centroide da
                 -- geometria enviada e o centroide do municipio do remetente.
                 -- E AVISO, nao bloqueio: nao existe poligono municipal no
@@ -62,13 +67,25 @@ final class RevisaoDeCamadas
     {
         $camada = $this->pendenteOuFalha($camadaId);
 
-        DB::table('silver.geo_camadas')->where('id', $camadaId)->update([
-            'status' => 'aprovada',
-            'revisado_por' => $revisorId,
-            'revisado_em' => now(),
-            'motivo_recusa' => null,
-            'updated_at' => now(),
-        ]);
+        // O predicado de status vai no UPDATE, e nao so na leitura anterior:
+        // ler-depois-escrever sem trava deixa duas decisoes concorrentes
+        // passarem as duas. Aqui o banco decide quem chegou primeiro.
+        $aplicou = DB::table('silver.geo_camadas')
+            ->where('id', $camadaId)
+            ->where('status', 'pendente')
+            ->update([
+                'status' => 'aprovada',
+                'revisado_por' => $revisorId,
+                'revisado_em' => now(),
+                'motivo_recusa' => null,
+                'updated_at' => now(),
+            ]);
+
+        if ($aplicou === 0) {
+            throw new RuntimeException(
+                "A camada \"{$camada->nome}\" foi decidida por outra pessoa enquanto esta tela estava aberta."
+            );
+        }
 
         // Sem isto a camada fica aprovada no Silver e invisivel no mapa: o
         // gold.geo_feicao_mapa filtra por status e nao se refaz sozinho.
@@ -97,13 +114,22 @@ final class RevisaoDeCamadas
 
         $camada = $this->pendenteOuFalha($camadaId);
 
-        DB::table('silver.geo_camadas')->where('id', $camadaId)->update([
-            'status' => 'recusada',
-            'revisado_por' => $revisorId,
-            'revisado_em' => now(),
-            'motivo_recusa' => $motivo,
-            'updated_at' => now(),
-        ]);
+        $aplicou = DB::table('silver.geo_camadas')
+            ->where('id', $camadaId)
+            ->where('status', 'pendente')
+            ->update([
+                'status' => 'recusada',
+                'revisado_por' => $revisorId,
+                'revisado_em' => now(),
+                'motivo_recusa' => $motivo,
+                'updated_at' => now(),
+            ]);
+
+        if ($aplicou === 0) {
+            throw new RuntimeException(
+                "A camada \"{$camada->nome}\" foi decidida por outra pessoa enquanto esta tela estava aberta."
+            );
+        }
 
         // Sem refresh do Gold aqui de proposito: recusada nunca esteve no mapa,
         // porque nasceu pendente. Refazer a matview seria I/O para nada.
@@ -129,14 +155,13 @@ final class RevisaoDeCamadas
             return;
         }
 
-        $revisores = DB::table('users as u')
-            ->join('model_has_permissions as mp', function ($j): void {
-                $j->on('mp.model_id', '=', 'u.id')->where('mp.model_type', '=', \App\Models\User::class);
-            })
-            ->join('permissions as p', 'p.id', '=', 'mp.permission_id')
-            ->where('p.name', 'geoespacial.camadas.revisar')
-            ->whereNull('u.deleted_at')
-            ->pluck('u.id')
+        // Scope do Spatie, e nao join em model_has_permissions: nesta base
+        // 1042 permissoes vem por ROLE contra 69 diretas, entao olhar so a
+        // tabela direta perderia praticamente todos os revisores. E a
+        // convencao do projeto (PassagemServicoService, DestinatariosPmda).
+        $revisores = \App\Models\User::permission('geoespacial.camadas.revisar')
+            ->whereNull('deleted_at')
+            ->pluck('id')
             ->all();
 
         if ($revisores === []) {

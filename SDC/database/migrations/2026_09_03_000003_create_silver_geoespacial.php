@@ -33,7 +33,12 @@ return new class extends Migration
                 -- compdec_orgao_user -> compdec_orgaos.municipio_id. Campo em
                 -- formulario permitiria o municipio A enviar como B.
                 origem       varchar(12)  NOT NULL DEFAULT 'estadual',
-                municipio_id bigint       NULL REFERENCES municipios (id) ON DELETE SET NULL,
+                -- RESTRICT e nao SET NULL: com SET NULL, apagar um municipio
+                -- que tem camada municipal zeraria municipio_id e a linha
+                -- passaria a violar ck_silver_geo_camadas_municipal -- o
+                -- DELETE abortaria com erro de check, incompreensivel para
+                -- quem so quis remover um municipio.
+                municipio_id bigint       NULL REFERENCES municipios (id) ON DELETE RESTRICT,
                 orgao_id     bigint       NULL,
                 enviado_por  bigint       NULL REFERENCES users (id) ON DELETE SET NULL,
 
