@@ -52,14 +52,22 @@ class EloquentRatRepository
             ->toArray();
     }
 
+    /**
+     * Escrita via MODELO, e nao `where(...)->delete()`.
+     *
+     * Observer do Eloquent nao dispara para escrita em massa, e a listagem de
+     * protocolos depende do observer para atualizar sem F5. O `?->` mantem o
+     * comportamento anterior para id inexistente: nao faz nada, sem lancar.
+     */
     public function delete(string $id): void
     {
-        RatOcorrencia::where('id', $id)->delete();
+        RatOcorrencia::find($id)?->delete();
     }
 
+    /** Idem: via modelo, para o observer ver. E a mudanca que mais interessa a listagem. */
     public function updateStatus(string $id, int $status): void
     {
-        RatOcorrencia::where('id', $id)->update([
+        RatOcorrencia::find($id)?->update([
             'status'     => $status,
             'updated_by' => Auth::id(),
         ]);

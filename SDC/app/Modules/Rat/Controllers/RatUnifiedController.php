@@ -414,7 +414,9 @@ class RatUnifiedController extends BaseController
                 $this->writeService->saveHistorico($id, RatHistoricoDTO::fromArray(['historico' => $request->input('historico')]));
             }
 
-            RatOcorrencia::where('id', $id)->update(['updated_by' => Auth::id()]);
+            // Via modelo, e nao `where(...)->update()`: observer do Eloquent nao
+            // dispara para escrita em massa, e a listagem depende dele.
+            RatOcorrencia::find($id)?->update(['updated_by' => Auth::id()]);
         });
 
         if ($request->expectsJson() || $request->wantsJson()) {
