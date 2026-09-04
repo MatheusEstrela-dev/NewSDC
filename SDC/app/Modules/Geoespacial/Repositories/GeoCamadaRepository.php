@@ -33,14 +33,17 @@ final class GeoCamadaRepository
         // hash_arquivo e unico.
         $id = DB::scalar(
             'INSERT INTO silver.geo_camadas
-                (dominio, nome, arquivo_nome, emitido_em, valido_ate, nivel, hash_arquivo, ingestao_id, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, now(), now())
+                (dominio, nome, arquivo_nome, emitido_em, valido_ate, nivel, hash_arquivo, ingestao_id,
+                 origem, municipio_id, orgao_id, enviado_por, status, arquivo_caminho, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())
              ON CONFLICT (hash_arquivo) DO NOTHING
              RETURNING id',
             [
                 $dto->dominio, $dto->nome, $dto->arquivoNome,
                 $dto->emitidoEm, $dto->validoAte, $dto->nivel,
                 $dto->hashArquivo, $ingestaoId,
+                $dto->origem, $dto->municipioId, $dto->orgaoId,
+                $dto->enviadoPor, $dto->status, $dto->arquivoCaminho,
             ]
         );
 
@@ -78,7 +81,7 @@ final class GeoCamadaRepository
     public function camadas(): Collection
     {
         return DB::table('silver.geo_camadas')
-            ->select(['id', 'dominio', 'nome', 'arquivo_nome', 'emitido_em', 'valido_ate', 'nivel', 'created_at'])
+            ->select(['id', 'dominio', 'nome', 'arquivo_nome', 'emitido_em', 'valido_ate', 'nivel', 'created_at', 'origem', 'status', 'municipio_id', 'motivo_recusa'])
             ->orderByDesc('emitido_em')
             ->orderByDesc('id')
             ->get();

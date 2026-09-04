@@ -8,10 +8,13 @@ use App\Http\Controllers\Controller;
 use App\Modules\Geoespacial\Repositories\GeoCamadaRepository;
 use App\Modules\Geoespacial\Requests\SubirCamadaRequest;
 use App\Modules\Geoespacial\Services\KmlExtrator;
+use App\Modules\Geoespacial\Services\ProcedenciaDoEnvio;
 use App\Modules\Medalhao\Jobs\NormalizarSilverJob;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Shared\Geo\CaixaEnvolvente;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,6 +24,7 @@ class GeoUploadController extends Controller
     public function __construct(
         private readonly GeoCamadaRepository $repository,
         private readonly KmlExtrator $extrator,
+        private readonly ProcedenciaDoEnvio $procedencia,
     ) {
     }
 
@@ -70,6 +74,28 @@ class GeoUploadController extends Controller
             ]);
         }
 
+        // A ORIGEM vem da capacidade do usuario, nunca do formulario. Quem
+        // revisa (CEDEC) publica direto; quem so envia manda para aprovacao.
+        // Um campo 'origem' no HTML permitiria o municipio se declarar
+        // estadual e pular a moderacao.
+        $publicaDireto = $request->user()?->can('geoespacial.camadas.revisar') ?? false;
+
+        $procedencia = null;
+        $caminhoArquivo = null;
+
+        if (! $publicaDireto) {
+            $procedencia = $this->procedencia->para($request->user());
+
+            if (! $procedencia->permitido) {
+                return back()->withErrors(['arquivo' => $procedencia->motivo]);
+            }
+
+            // Guarda o arquivo COMO O MUNICIPIO ENVIOU, inclusive KMZ
+            // compactado. O Bronze guarda o KML ja extraido do ZIP, entao sem
+            // isto nao ha como provar depois o que o municipio mandou.
+            $caminhoArquivo = $this->guardarOriginal($arquivo, $procedencia->municipioId());
+        }
+
         $envelope = json_encode([
             'dominio' => $request->string('dominio')->toString(),
             'nome' => $request->string('nome')->toString(),
@@ -77,6 +103,12 @@ class GeoUploadController extends Controller
             'emitido_em' => $request->date('emitido_em')?->toDateString(),
             'valido_ate' => $request->date('valido_ate')?->toDateString(),
             'nivel' => $request->string('nivel')->toString(),
+            'origem' => $publicaDireto ? 'estadual' : 'municipal',
+            'status' => $publicaDireto ? 'aprovada' : 'pendente',
+            'municipio_id' => $procedencia?->municipioId,
+            'orgao_id' => $procedencia?->orgaoId,
+            'enviado_por' => $request->user()?->id,
+            'arquivo_caminho' => $caminhoArquivo,
             'kml' => $kml,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -96,6 +128,41 @@ class GeoUploadController extends Controller
 
         NormalizarSilverJob::dispatch((int) $bronze->id, 'geo-upload');
 
-        return back()->with('sucesso', 'Camada enviada. O processamento acontece em segundo plano.');
+        return back()->with('sucesso', $publicaDireto
+            ? 'Camada enviada. O processamento acontece em segundo plano.'
+            : 'Camada enviada para aprovacao da CEDEC. Ela aparece no mapa depois de aprovada.');
+    }
+
+    /**
+     * Grava o arquivo original no disco geo_municipal.
+     *
+     * Layout espelhando o particionamento do Bronze:
+     * municipio=<ibge>/<ano>/<hash12>.<ext>. Particionar por municipio e ano
+     * mantem o diretorio navegavel a olho no bind mount -- 893 municipios num
+     * diretorio plano seriam ilegiveis.
+     *
+     * O nome vem do hash, e nao do nome enviado: nome de arquivo de terceiro
+     * chega com acento, espaco, barra e caractere de controle, e vira
+     * travessia de diretorio se usado cru. A extensao e recuperada da
+     * assinatura, nao do que o usuario escreveu.
+     */
+    private function guardarOriginal(\Illuminate\Http\UploadedFile $arquivo, int $municipioId): string
+    {
+        $ibge = DB::table('municipios')->where('id', $municipioId)->value('codigo_ibge') ?? $municipioId;
+
+        $conteudo = (string) file_get_contents($arquivo->getRealPath());
+        $extensao = str_starts_with($conteudo, 'PK') ? 'kmz' : 'kml';
+
+        $caminho = sprintf(
+            'municipio=%s/%s/%s.%s',
+            $ibge,
+            now()->format('Y'),
+            substr(hash('sha256', $conteudo), 0, 12),
+            $extensao
+        );
+
+        Storage::disk('geo_municipal')->put($caminho, $conteudo);
+
+        return $caminho;
     }
 }

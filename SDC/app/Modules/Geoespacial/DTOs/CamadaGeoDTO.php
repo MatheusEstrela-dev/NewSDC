@@ -16,6 +16,15 @@ final readonly class CamadaGeoDTO
         public ?string $nivel,
         public string $hashArquivo,
         public array $feicoes,
+        // Procedencia e moderacao. Default 'estadual'/'aprovada' para que a
+        // ingestao existente -- e qualquer envio da CEDEC -- siga publicando
+        // direto, sem precisar informar nada.
+        public string $origem = 'estadual',
+        public ?int $municipioId = null,
+        public ?int $orgaoId = null,
+        public ?int $enviadoPor = null,
+        public string $status = 'aprovada',
+        public ?string $arquivoCaminho = null,
     ) {
     }
 }
