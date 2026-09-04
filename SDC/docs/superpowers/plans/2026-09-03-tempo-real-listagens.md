@@ -598,10 +598,23 @@ Executada em 2026-09-03 e completada em 2026-09-04, sobre Pedidos, PMDA e RAT.
 
 ### O que mudou: a transmissao foi provada NO FIO
 
-A primeira passada registrou que o codigo desta branch nao roda em lugar nenhum
+A primeira passada registrou que o codigo desta branch nao rodava em lugar nenhum
 -- o stack de dev monta a worktree PRINCIPAL -- e que por isso `curl` no
 `/broadcasting/auth` de `localhost:8000` nao provava nada sobre os canais novos.
-Isso continua verdade para o servidor HTTP.
+
+**Isso deixou de valer em 04/09/2026:** o trabalho foi para `dev`, o frontend foi
+rebuildado (`public/build` e gitignored, entao sem o rebuild a pagina nao assina
+canal nenhum -- o merge do backend sozinho e inerte) e o Octane foi recarregado.
+O stack de dev agora serve este codigo. Conferido: `channels.php` servido tem os
+canais de listagem, os tres canais aparecem nos chunks servidos
+(`listagem.rat` em `RatIndex-*.js`), o observer esta registrado no evento
+`eloquent.updated`, e `newsdc_dev_app` e `newsdc_dev_queue` resolvem
+`RecursoAtualizado` e `RatOcorrenciaObserver` -- o worker importa porque e ele
+que roda o job de broadcast, e classe nova fora do classmap falharia em silencio.
+
+**Consequencia pratica:** os criterios 1 a 6, que seguem abertos, agora sao
+reproduziveis so abrindo `/rat`, `/ajuda-humanitaria/pedidos` ou
+`/pmda/analises` no navegador. Nao dependem mais de remontar volume nenhum.
 
 O que destravou foi atacar por outro lado: **um cliente WebSocket em Node,
 assinando o Reverb de verdade**, com a assinatura do canal privado calculada
@@ -673,6 +686,19 @@ que resta e o `useAtualizacaoAoVivo` reagindo ao frame -- `router.reload`,
 `preserveScroll`, `document.hidden`, debounce. O criterio 3 tem cobertura
 indireta forte (o `ShouldDispatchAfterCommit` tem teste proprio) e o 6 tambem (o
 debounce e determinista), mas os quatro restantes precisam de olho na tela.
+
+**Como fechar cada um sem DevTools**, agora que `dev` serve o codigo. Com a tela
+aberta, o log do Octane e a API do Reverb bastam:
+
+| Criterio | Como observar |
+| --- | --- |
+| 2. reflete sem F5 | `docker logs --since 2m newsdc_dev_app \| grep "GET /rat"` deve ganhar UMA linha por mudanca |
+| 5. aba oculta | minimizar a aba, provocar mudanca: NENHUM GET; ao voltar, um GET |
+| 6. rajada | dez mudancas seguidas geram UM GET, nao dez |
+| 1. flag desligado | `BROADCAST_CONNECTION=null` + rebuild: a pagina carrega e nao abre socket (`/connections` fica em zero) |
+
+Os criterios 3 e 4 (status novo na linha, scroll preservado) sao os unicos que
+exigem de fato olhar a tela.
 
 ---
 
