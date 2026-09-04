@@ -10,6 +10,7 @@ use App\Modules\Geoespacial\Requests\SubirCamadaRequest;
 use App\Modules\Geoespacial\Services\KmlExtrator;
 use App\Modules\Medalhao\Jobs\NormalizarSilverJob;
 use App\Modules\Medalhao\Models\IngestaoBruta;
+use App\Modules\Shared\Geo\CaixaEnvolvente;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,7 +34,7 @@ class GeoUploadController extends Controller
             'cruzamento' => $camadaId !== null ? $this->repository->cruzamento($camadaId) : null,
             'camadaSelecionada' => $camadaId,
             'dominios' => config('geoespacial.dominios'),
-            'bbox' => config('medalhao.inmet.bbox'),
+            'bbox' => CaixaEnvolvente::deConfig(config('medalhao.inmet.bbox'))->paraArray(),
         ]);
     }
 

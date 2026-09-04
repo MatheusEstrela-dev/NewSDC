@@ -10,6 +10,7 @@ use App\Modules\Geoespacial\Repositories\GeoCamadaRepository;
 use App\Modules\Inmet\Repositories\InmetRepository;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Medalhao\Registry\IngestorRegistry;
+use App\Modules\Shared\Geo\CaixaEnvolvente;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,7 +52,7 @@ class InmetIndexController extends Controller
                 'inmet' => IngestaoBruta::verificadoEm($this->registry->chavesDoGrupo('inmet')),
                 'cemaden' => IngestaoBruta::verificadoEm($this->registry->chavesDoGrupo('cemaden')),
             ],
-            'bbox' => config('medalhao.inmet.bbox'),
+            'bbox' => CaixaEnvolvente::deConfig(config('medalhao.inmet.bbox'))->paraArray(),
             // Lista enxuta: so o que o seletor precisa. As feicoes da camada
             // escolhida vem por partial reload, e nao todas de uma vez -- com
             // varias camadas carregadas, mandar toda geometria seria payload
