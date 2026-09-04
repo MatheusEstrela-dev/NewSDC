@@ -150,6 +150,42 @@ class GeoUploadController extends Controller
             : 'Camada enviada para aprovacao da CEDEC. Ela aparece no mapa depois de aprovada.');
     }
 
+    /**
+     * Tela propria de envio.
+     *
+     * Separada do mapa de proposito. Quem envia e a COMPDEC, que quer tratar do
+     * proprio municipio; o mapa de /geoespacial mostra o estado inteiro e as
+     * camadas de todos. Misturar as duas coisas fazia o formulario aparecer no
+     * meio de informacao que nao e do remetente, e obrigava a pessoa a entender
+     * a tela de consulta para conseguir enviar um arquivo.
+     */
+    public function enviar(Request $request): Response
+    {
+        $procedencia = $this->procedencia->para($request->user());
+        $veTudo = $request->user()?->can('geoespacial.camadas.revisar') ?? false;
+
+        return Inertia::render('Geoespacial/Enviar', [
+            // A procedencia desce para a tela poder dizer EM NOME DE QUEM o
+            // envio vai, antes de a pessoa escolher o arquivo -- e para
+            // explicar o que falta quando nao da.
+            'procedencia' => [
+                'permitido' => $procedencia->permitido,
+                'municipio' => $procedencia->municipioNome,
+                'orgao' => $procedencia->orgaoNome,
+                'motivo' => $procedencia->motivo,
+            ],
+            'podePublicarDireto' => $veTudo,
+            // So as proprias, e sempre: quem envia quer acompanhar o que
+            // enviou, inclusive o que foi recusado e por que.
+            'minhasCamadas' => $this->repository->minhasCamadas(
+                municipioId: $procedencia->municipioId,
+                enviadoPor: (int) $request->user()->id,
+            )->all(),
+            'dominios' => config('geoespacial.dominios'),
+            'limiteMb' => (int) round(((int) config('geoespacial.upload_max_kb')) / 1024),
+        ]);
+    }
+
     /** Fila de revisao da CEDEC. */
     public function revisao(Request $request): Response
     {

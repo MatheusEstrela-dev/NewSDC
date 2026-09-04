@@ -16,92 +16,16 @@
       chega com um arquivo do CEMADEN na mao. A lista e o mapa sao a consulta,
       que vem depois do ato.
     -->
-    <form class="upload-card" enctype="multipart/form-data" @submit.prevent="enviar">
-      <h2 class="card-title">Enviar camada</h2>
-
-      <div class="upload-grid">
-        <label class="campo campo-largo">
-          <span class="campo-rotulo">Arquivo (.kml ou .kmz)</span>
-          <!--
-            :key forca um input novo a cada envio bem-sucedido. form.reset() nao
-            limpa input de arquivo: o valor dele e do DOM e o navegador nao
-            deixa reescrever, entao sem isto o nome do arquivo antigo ficaria na
-            tela sugerindo que ele ainda seria enviado.
-          -->
-          <input
-            :key="chaveArquivo"
-            type="file"
-            accept=".kml,.kmz"
-            class="campo-input campo-arquivo"
-            @change="selecionarArquivo"
-          >
-          <span v-if="form.errors.arquivo" class="campo-erro">{{ form.errors.arquivo }}</span>
-        </label>
-
-        <label class="campo">
-          <span class="campo-rotulo">Dominio</span>
-          <select v-model="form.dominio" class="campo-input" @change="trocarDominio">
-            <option v-for="(config, chave) in dominios" :key="chave" :value="chave">
-              {{ config.rotulo }}
-            </option>
-          </select>
-          <span v-if="form.errors.dominio" class="campo-erro">{{ form.errors.dominio }}</span>
-        </label>
-
-        <label class="campo">
-          <span class="campo-rotulo">Nivel</span>
-          <select v-model="form.nivel" class="campo-input">
-            <option v-for="nivel in niveisDoDominio" :key="nivel" :value="nivel">
-              {{ rotularNivel(nivel) }}
-            </option>
-          </select>
-          <span v-if="form.errors.nivel" class="campo-erro">{{ form.errors.nivel }}</span>
-        </label>
-
-        <label class="campo campo-largo">
-          <span class="campo-rotulo">Nome da camada</span>
-          <input
-            v-model="form.nome"
-            type="text"
-            maxlength="255"
-            placeholder="ALERTA MODERADO 28/02"
-            class="campo-input"
-          >
-          <span v-if="form.errors.nome" class="campo-erro">{{ form.errors.nome }}</span>
-        </label>
-
-        <label class="campo">
-          <!--
-            Emissao, validade e nivel NAO estao dentro do KML: so no nome do
-            arquivo, que e contrato que ninguem garante. Por isso o operador
-            informa em vez de a tela adivinhar.
-          -->
-          <span class="campo-rotulo">Emitido em</span>
-          <input v-model="form.emitido_em" type="date" class="campo-input">
-          <span v-if="form.errors.emitido_em" class="campo-erro">{{ form.errors.emitido_em }}</span>
-        </label>
-
-        <label class="campo">
-          <span class="campo-rotulo">Valido ate (opcional)</span>
-          <input v-model="form.valido_ate" type="date" class="campo-input">
-          <span v-if="form.errors.valido_ate" class="campo-erro">{{ form.errors.valido_ate }}</span>
-        </label>
-      </div>
-
-      <div class="upload-acoes">
-        <button type="submit" class="botao-primario" :disabled="form.processing">
-          {{ form.processing ? 'Enviando...' : 'Enviar camada' }}
-        </button>
-        <!--
-          O processamento e assincrono: o request so grava o cru e despacha o
-          job. Dizer "enviada" e nao "importada" e o que evita o operador achar
-          que a area ja deveria estar no mapa no mesmo instante.
-        -->
-        <span v-if="form.recentlySuccessful" class="aviso-sucesso">
-          Camada enviada. O desenho aparece quando a fila terminar.
-        </span>
-      </div>
-    </form>
+    <!--
+      O formulario saiu daqui. Esta tela e de CONSULTA: mapa do estado,
+      lista de camadas e cruzamento. Quem envia e a COMPDEC, que quer
+      tratar do proprio municipio, e a tela de envio explica o processo --
+      ver Geoespacial/Enviar.vue.
+    -->
+    <div class="atalho-envio">
+      <Link :href="route('geoespacial.enviar')" class="atalho-link">Enviar camada de risco</Link>
+      <span class="atalho-nota">Envio de KML ou KMZ, com o processo explicado passo a passo.</span>
+    </div>
 
     <div class="conteudo-grid">
       <div class="lista-card">
@@ -247,10 +171,10 @@
           <tr v-for="feicao in feicoesDaPagina" :key="feicao.id">
             <td class="code-cell">
               {{ feicao.camada_nome }}
-              <div class="municipio-name md:hidden">{{ rotularFeicao(feicao) }}</div>
+              <div class="municipio-name md:hidden">{{ feicao.feicao_nome }}</div>
             </td>
             <td class="hidden md:table-cell">
-              {{ rotularFeicao(feicao) }}
+              {{ feicao.feicao_nome }}
               <span class="sub-text">{{ feicao.tipo_geometria }}</span>
             </td>
             <td class="hidden sm:table-cell">
@@ -284,7 +208,7 @@ defineOptions({ layout: AuthenticatedLayout });
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
-import { router, useForm } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -306,21 +230,6 @@ useAtualizacaoAoVivo({
   evento: '.GoldAtualizado',
   props: ['camadas', 'feicoes', 'cruzamento'],
 });
-
-const chavesDeDominio = Object.keys(props.dominios);
-
-const form = useForm({
-  arquivo: null,
-  dominio: chavesDeDominio[0] ?? 'geologico',
-  nome: '',
-  emitido_em: '',
-  valido_ate: '',
-  nivel: props.dominios[chavesDeDominio[0]]?.niveis?.[0] ?? '',
-});
-
-const chaveArquivo = ref(0);
-
-const niveisDoDominio = computed(() => props.dominios[form.dominio]?.niveis ?? []);
 
 const camadaAtual = computed(
   () => props.camadas.find((camada) => camada.id === props.camadaSelecionada) ?? null,
@@ -383,57 +292,12 @@ function irParaPagina(numero) {
   pagina.value = Math.min(Math.max(1, numero), paginacao.value.last_page);
 }
 
-/*
- * Rotulo da feicao.
- *
- * "sem nome" em toda linha nao informava nada e parecia defeito. E NAO e perda
- * de dado: no KML de alerta todo Placemark vem com <name>0</name>, que e
- * placeholder do gerador e nao nome. O extrator converte "0" em null de
- * proposito, entao o banco guarda a verdade -- nao existe nome a guardar.
- *
- * O indice e por CAMADA, e nao global: "Area 3 de ALERTA X" so faz sentido
- * dentro daquela camada.
- */
-function rotularFeicao(feicao) {
-  if (feicao.feicao_nome) {
-    return feicao.feicao_nome;
-  }
-
-  const daCamada = props.feicoes.filter((f) => f.camada_id === feicao.camada_id);
-  const posicao = daCamada.findIndex((f) => f.id === feicao.id);
-
-  return posicao >= 0 ? `Area ${posicao + 1}` : 'Area';
-}
-
 const poligonosDoMapa = computed(() => props.feicoes.map((feicao) => ({
   id: feicao.id,
   geojson: decodificarGeojson(feicao.geojson),
   cor: corDoDominio(feicao.dominio),
   rotulo: `${feicao.camada_nome} - ${formatarArea(feicao.area_km2)}`,
 })));
-
-function selecionarArquivo(evento) {
-  form.arquivo = evento.target.files?.[0] ?? null;
-}
-
-// Nivel e vocabulario do dominio: trocar de dominio sem trocar o nivel deixaria
-// no formulario um valor que o select nem mostra mais.
-function trocarDominio() {
-  form.nivel = niveisDoDominio.value[0] ?? '';
-}
-
-function enviar() {
-  // forceFormData obrigatorio: sem ele o Inertia serializa como JSON e o
-  // arquivo simplesmente nao sobe, sem erro nenhum na tela.
-  form.post(route('geoespacial.upload'), {
-    forceFormData: true,
-    preserveScroll: true,
-    onSuccess: () => {
-      form.reset('arquivo', 'nome');
-      chaveArquivo.value += 1;
-    },
-  });
-}
 
 /*
  * preserveState mantem o formulario preenchido enquanto o operador compara
@@ -923,6 +787,29 @@ function formatarData(valor) {
   font-size: 0.7rem;
   color: var(--texto-fraco);
   white-space: normal;
+}
+
+.atalho-envio {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.atalho-link {
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.atalho-nota {
+  font-size: 0.75rem;
+  color: var(--texto-fraco);
 }
 </style>
 

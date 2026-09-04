@@ -65,11 +65,24 @@ final class GeoCamadaRepository
                 ->avisarRevisores((int) $id);
         }
 
-        foreach ($dto->feicoes as $feicao) {
+        foreach ($dto->feicoes as $indice => $feicao) {
+            // Nome de verdade no BANCO, e nao rotulo calculado em cada tela.
+            //
+            // O KML de alerta traz <name>0</name> em todo Placemark -- que e
+            // placeholder do gerador, nao nome -- e o extrator converte isso em
+            // null por fidelidade ao arquivo. Mas gravar null deixava a coluna
+            // vazia para 19 feicoes, e cada consumidor (tela, export, API)
+            // teria de inventar o proprio rotulo, cada um do seu jeito.
+            //
+            // "Area N" e derivado, nao inventado: e a posicao da feicao DENTRO
+            // da camada, que e a unica identificacao que o arquivo permite. Se
+            // o KML trouxer nome de verdade, ele vence.
+            $nome = $feicao->nome ?? sprintf('Area %d', $indice + 1);
+
             DB::statement(
                 'INSERT INTO silver.geo_feicoes (camada_id, nome, propriedades, geom, created_at, updated_at)
                  VALUES (?, ?, ?::jsonb, ST_MakeValid(ST_Force2D(ST_GeomFromKML(?))), now(), now())',
-                [(int) $id, $feicao->nome, '{}', $feicao->kmlGeometria]
+                [(int) $id, $nome, '{}', $feicao->kmlGeometria]
             );
         }
 
@@ -88,6 +101,35 @@ final class GeoCamadaRepository
             ->select(['id', 'nome', 'emitido_em'])
             ->where('hash_arquivo', $hashArquivo)
             ->first();
+    }
+
+    /**
+     * As camadas do proprio remetente, para a tela de envio.
+     *
+     * Casa por municipio OU por quem enviou. Os dois porque a COMPDEC pode ter
+     * mais de uma pessoa: o agente que enviou ontem quer ver o envio do colega
+     * do mesmo municipio, e o usuario estadual que nao tem municipio ainda
+     * precisa ver o que ele mesmo mandou.
+     *
+     * @return Collection<int, object>
+     */
+    public function minhasCamadas(?int $municipioId, int $enviadoPor): Collection
+    {
+        return DB::table('silver.geo_camadas')
+            ->select([
+                'id', 'nome', 'dominio', 'nivel', 'emitido_em', 'valido_ate',
+                'arquivo_nome', 'origem', 'status', 'motivo_recusa',
+                'revisado_em', 'created_at',
+            ])
+            ->where(function ($q) use ($municipioId, $enviadoPor): void {
+                $q->where('enviado_por', $enviadoPor);
+
+                if ($municipioId !== null) {
+                    $q->orWhere('municipio_id', $municipioId);
+                }
+            })
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     /**

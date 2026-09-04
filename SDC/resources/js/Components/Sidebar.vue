@@ -323,6 +323,22 @@
         </NavItem>
 
         <!--
+          Envio. Item proprio porque a COMPDEC entra no sistema para ENVIAR, e
+          nao para consultar o mapa do estado: obrigar a passar pela tela de
+          consulta para achar um formulario e desenho ruim para quem so quer
+          mandar o mapeamento do proprio municipio.
+        -->
+        <NavItem
+          v-if="canEnviarCamadas && _routes.hasGeoespacialEnviar"
+          :href="route('geoespacial.enviar', undefined, false)"
+          :active="isRouteActive('geoespacial.enviar')"
+          icon="cloud"
+          :collapsed="isCollapsed"
+        >
+          Enviar Camada
+        </NavItem>
+
+        <!--
           Fila de revisao. Item separado e nao aba dentro da tela porque quem
           revisa e a CEDEC e quem envia e o municipio: sao pessoas diferentes,
           e o item so aparece para quem tem a permissao.
@@ -817,6 +833,7 @@ const _routes = {
   hasSismos: route().has('sismos.index'),
   hasGeoespacial: route().has('geoespacial.index'),
   hasGeoespacialRevisao: route().has('geoespacial.revisao'),
+  hasGeoespacialEnviar: route().has('geoespacial.enviar'),
 };
 
 // ============================================================================
@@ -876,6 +893,7 @@ const _activeRoutes = computed(() => {
     // menu acendiam juntos na tela de revisao.
     'geoespacial.index': route().current('geoespacial.index'),
     'geoespacial.revisao': route().current('geoespacial.revisao'),
+    'geoespacial.enviar': route().current('geoespacial.enviar'),
     'admin.permissions.*': route().current('admin.permissions.*'),
     'log-viewer.*': route().current('log-viewer.*'),
     'portal.treinamento.catalogo': route().current('portal.treinamento.catalogo'),
@@ -1011,6 +1029,10 @@ const canSeePlanCon = computed(() => {
 
 const canSeePlantao = computed(() => {
   return hasPermission(['plantao.turnos.view']);
+});
+
+const canEnviarCamadas = computed(() => {
+  return hasPermission(['geoespacial.camadas.enviar']);
 });
 
 const canRevisarCamadas = computed(() => {

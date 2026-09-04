@@ -11,6 +11,12 @@ Route::prefix('geoespacial')->name('geoespacial.')->group(function () {
         ->middleware('can:geoespacial.camadas.view')
         ->name('index');
 
+    // Tela propria de envio, com o processo explicado. Exige a mesma permissao
+    // do POST: nao adianta mostrar o formulario para quem nao pode enviar.
+    Route::get('/enviar', [GeoUploadController::class, 'enviar'])
+        ->middleware('can:geoespacial.camadas.enviar')
+        ->name('enviar');
+
     Route::post('/', [GeoUploadController::class, 'upload'])
         ->middleware('can:geoespacial.camadas.enviar')
         ->name('upload');
