@@ -177,6 +177,31 @@
           <p class="cruzamento-nota">
             De {{ cruzamento.estacoes_com_leitura }} estacoes com leitura.
           </p>
+
+          <!--
+            Altimetria por AMOSTRAGEM das estacoes, e nao relevo do terreno.
+            Dizer isso na tela importa: com 5 pontos medidos numa area de
+            milhares de km2, apresentar "719 a 1200 m" como a cota da area
+            seria afirmar mais do que o dado sustenta. O relevo de verdade
+            depende do MDE por raster.
+          -->
+          <div v-if="cruzamento.altimetria?.minima !== null" class="cruzamento-linha">
+            <span>Altitude na area</span>
+            <strong>
+              {{ Math.round(cruzamento.altimetria.minima) }} a
+              {{ Math.round(cruzamento.altimetria.maxima) }} m
+            </strong>
+          </div>
+          <p v-if="cruzamento.altimetria?.minima !== null" class="cruzamento-nota">
+            Media {{ Math.round(cruzamento.altimetria.media) }} m, amostrada em
+            {{ cruzamento.altimetria.estacoes_com_cota }}
+            {{ cruzamento.altimetria.estacoes_com_cota === 1 ? 'estacao' : 'estacoes' }}
+            com cota: e amostra, nao o relevo do terreno.
+          </p>
+          <p v-else class="cruzamento-nota">
+            Sem altitude: nenhuma estacao com cota dentro da area. So a rede do
+            INMET publica cota.
+          </p>
         </div>
 
         <div class="map-overlay legend-overlay">

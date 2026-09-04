@@ -109,7 +109,7 @@ final class GeoCamadaRepository
      * CENTROIDE -- a tabela municipios nao tem geometria de area. O numero e
      * piso, nao total, e a tela precisa dizer isso.
      *
-     * @return array{municipios: int, estacoes: int, chuva_media: float, chuva_maxima: float, estacoes_com_leitura: int}
+     * @return array{municipios: int, estacoes: int, chuva_media: float, chuva_maxima: float, estacoes_com_leitura: int, altimetria: array{minima: ?float, maxima: ?float, media: ?float, estacoes_com_cota: int, fonte: string}}
      */
     public function cruzamento(int $camadaId): array
     {
@@ -160,12 +160,44 @@ final class GeoCamadaRepository
             [$camadaId, $camadaId]
         );
 
+        // Relevo da area, hoje pela cota das estacoes que caem dentro dela.
+        //
+        // E amostragem, nao o relevo do terreno: sao 4 a 61 pontos medidos, e
+        // nao o MDE. A pergunta que governa deslizamento -- qual a declividade
+        // da encosta -- so o raster responde, com
+        // ST_SummaryStats(ST_Clip(rast, geom)) e ST_Slope. A extensao
+        // postgis_raster esta disponivel no banco e ainda nao instalada; quando
+        // o modulo Hidro entrar, esta consulta ganha as duas fontes e a tela
+        // passa a dizer de qual delas o numero veio.
+        //
+        // So o INMET publica cota (61 de 61); o feed do CEMADEN nao traz.
+        $relevo = DB::selectOne(
+            'SELECT min(i.altitude)               AS minima,
+                    max(i.altitude)               AS maxima,
+                    round(avg(i.altitude), 0)     AS media,
+                    count(*)                      AS com_cota
+               FROM gold.inmet_mapa i
+              WHERE i.altitude IS NOT NULL
+                AND EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                             WHERE f.camada_id = ? AND ST_Intersects(f.geom, i.geom))',
+            [$camadaId]
+        );
+
         return [
             'municipios' => $municipios,
             'estacoes' => $estacoes,
             'chuva_media' => (float) ($chuva->media ?? 0),
             'chuva_maxima' => (float) ($chuva->maxima ?? 0),
             'estacoes_com_leitura' => (int) ($chuva->com_leitura ?? 0),
+            'altimetria' => [
+                'minima' => $relevo?->minima !== null ? (float) $relevo->minima : null,
+                'maxima' => $relevo?->maxima !== null ? (float) $relevo->maxima : null,
+                'media' => $relevo?->media !== null ? (float) $relevo->media : null,
+                'estacoes_com_cota' => (int) ($relevo->com_cota ?? 0),
+                // 'estacao' hoje; 'mde' quando o raster entrar. A tela usa isto
+                // para nao apresentar amostragem como se fosse o terreno.
+                'fonte' => 'estacao',
+            ],
         ];
     }
 }

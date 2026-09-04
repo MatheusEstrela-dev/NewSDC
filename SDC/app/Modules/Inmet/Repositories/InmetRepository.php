@@ -38,7 +38,7 @@ final class InmetRepository
     {
         $query = DB::table('gold.inmet_mapa')
             ->select([
-                'id', 'codigo_estacao', 'nome_estacao', 'municipio', 'uf',
+                'id', 'codigo_estacao', 'nome_estacao', 'municipio', 'uf', 'altitude',
                 'medido_em', 'latitude', 'longitude', 'temperatura', 'umidade',
                 'precipitacao', 'velocidade_vento', 'pressao', 'classe_precipitacao',
             ]);

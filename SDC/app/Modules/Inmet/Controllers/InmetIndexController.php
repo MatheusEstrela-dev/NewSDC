@@ -99,6 +99,8 @@ class InmetIndexController extends Controller
             'precipitacao' => $e->precipitacao,
             'classe_precipitacao' => $e->classe_precipitacao,
             'temperatura' => $e->temperatura,
+            // Cota vinda do inventario do INMET: 61 de 61 preenchidas.
+            'altitude' => $e->altitude,
         ])->all();
 
         $estacoes = array_merge($estacoes, $this->cemaden->mapa($camadaGeoId)->map(static fn (object $e): array => [
@@ -115,6 +117,10 @@ class InmetIndexController extends Controller
             'classe_precipitacao' => $e->classe_precipitacao,
             // O feed do CEMADEN nao traz temperatura: e rede pluviometrica.
             'temperatura' => null,
+            // Nem cota. As 830 ficam sem altimetria ate o MDE entrar por
+            // raster -- ai a cota vem de ST_Value(rast, geom), igual para as
+            // duas redes, e deixa de depender do que a fonte publica.
+            'altitude' => null,
         ])->all());
 
         // Ordena o conjunto ja unificado, e nao cada rede: senao as 60 do INMET

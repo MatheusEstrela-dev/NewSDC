@@ -401,6 +401,9 @@ const pontosDoMapa = computed(() => estacoesFiltradas.value.map((estacao) => ({
       { rotulo: 'Chuva', valor: formatarMm(estacao.precipitacao) },
       { rotulo: 'Nivel', valor: rotuloDaClasse(estacao.classe_precipitacao) },
       { rotulo: 'Temperatura', valor: estacao.temperatura !== null ? `${estacao.temperatura} C` : '-' },
+      // So o INMET publica cota; o CEMADEN vem null e a linha some, em vez de
+      // mostrar um traco em 830 popups.
+      ...(estacao.altitude !== null ? [{ rotulo: 'Altitude', valor: `${Number(estacao.altitude).toFixed(0)} m` }] : []),
       { rotulo: 'Medido em', valor: formatarDataHora(estacao.medido_em) },
     ],
   },

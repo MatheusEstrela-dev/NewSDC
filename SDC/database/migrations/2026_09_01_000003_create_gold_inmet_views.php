@@ -29,6 +29,10 @@ return new class extends Migration
                 e.nome            AS nome_estacao,
                 e.municipio,
                 e.uf,
+                -- Cota medida na estacao. Altimetria de PONTO e atributo
+                -- escalar, e nao ordenada Z: o PostGIS ignora o Z em ST_Area,
+                -- ST_Contains e ST_Intersects.
+                e.altitude,
                 l.medido_em,
                 ST_Y(e.geom)      AS latitude,
                 ST_X(e.geom)      AS longitude,
