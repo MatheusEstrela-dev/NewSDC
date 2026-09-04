@@ -63,24 +63,42 @@ municipio A enviar como B.
 
 ## Arquivo e bind mount
 
-Novo mount no compose (app e fila), no molde do `ANEXOS_HOST_PATH`:
+**Correcao ao que este plano propunha primeiro.** A versao inicial pedia um
+mount novo (`GEO_MUNICIPAL_HOST_PATH`). O `config/filesystems.php` ja resolve
+isso, e melhor: o comentario do proprio arquivo diz que o host monta UM disco
+dedicado em `/data/anexos` e cada disco de modulo aponta para
+`ANEXOS_ROOT/{MODULO}` -- "Modulo novo = so um disk novo aqui". Um segundo
+mount fisico brigaria com esse desenho.
 
-```
-- ${GEO_MUNICIPAL_HOST_PATH:-../storage/geo-municipal}:/data/geo-municipal
+Entao o modulo entra como um disco a mais, no molde do `medalhao`:
+
+```php
+'geo_municipal' => $azureOrLocal(
+    env('AZURE_STORAGE_CONTAINER_GEO_MUNICIPAL', 'sdc-geo-municipal'),
+    'GEO_MUNICIPAL',
+    'app/geo-municipal'
+),
 ```
 
-Disco Flysystem `geo_municipal` em `config/filesystems.php`, apontando para
-`/data/geo-municipal`. Layout espelhando o particionamento do Bronze:
+Isso da os tres ambientes de graca: Azure Blob quando ha connection string,
+bind mount em `ANEXOS_ROOT/GEO_MUNICIPAL` na VM on-prem, e `storage/app` em dev
+puro. Verificado neste ambiente: o disco resolve para
+`/data/anexos/GEO_MUNICIPAL` e a escrita funciona.
+
+Sem `$localUrl`, de proposito: o disco nao expoe URL publica. Geometria de area
+de risco enviada por terceiro nao deve ser acessivel por URL adivinhavel.
+
+Layout, espelhando o particionamento do Bronze:
 
 ```
 municipio=<codigo_ibge>/<ano>/<hash12>.<kml|kmz>
 ```
 
-**Duplicacao consciente:** o arquivo original fica no bind mount E o KML
-extraido fica no envelope do Bronze. Sao coisas diferentes: o bind mount guarda
-o documento COMO O MUNICIPIO ENVIOU (inclusive o KMZ compactado), que e o
-artefato auditavel; o Bronze guarda a entrada do pipeline. Custa ~42 KB por
-envio, e sem o original nao ha como provar depois o que o municipio mandou.
+**Duplicacao consciente:** o arquivo original fica no disco E o KML extraido
+fica no envelope do Bronze. Sao coisas diferentes: o disco guarda o documento
+COMO O MUNICIPIO ENVIOU (inclusive o KMZ compactado), que e o artefato
+auditavel; o Bronze guarda a entrada do pipeline. Custa ~42 KB por envio, e sem
+o original nao ha como provar depois o que o municipio mandou.
 
 ## Permissoes
 
