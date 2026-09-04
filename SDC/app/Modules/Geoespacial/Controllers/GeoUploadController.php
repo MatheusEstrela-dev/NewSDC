@@ -9,6 +9,7 @@ use App\Modules\Geoespacial\Repositories\GeoCamadaRepository;
 use App\Modules\Geoespacial\Requests\SubirCamadaRequest;
 use App\Modules\Geoespacial\Services\KmlExtrator;
 use App\Modules\Geoespacial\Services\ProcedenciaDoEnvio;
+use App\Modules\Geoespacial\Services\RevisaoDeCamadas;
 use App\Modules\Medalhao\Jobs\NormalizarSilverJob;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Shared\Geo\CaixaEnvolvente;
@@ -25,6 +26,7 @@ class GeoUploadController extends Controller
         private readonly GeoCamadaRepository $repository,
         private readonly KmlExtrator $extrator,
         private readonly ProcedenciaDoEnvio $procedencia,
+        private readonly RevisaoDeCamadas $revisao,
     ) {
     }
 
@@ -128,9 +130,65 @@ class GeoUploadController extends Controller
 
         NormalizarSilverJob::dispatch((int) $bronze->id, 'geo-upload');
 
+        if (! $publicaDireto) {
+            // Depois do dispatch, e nao antes: se a normalizacao falhar, o
+            // revisor foi avisado de algo que nao chegou na fila dele.
+            $this->revisao->avisarRevisores(
+                (int) DB::scalar(
+                    "SELECT id FROM silver.geo_camadas WHERE ingestao_id = ? ORDER BY id DESC LIMIT 1",
+                    [$bronze->id]
+                ) ?: 0
+            );
+        }
+
         return back()->with('sucesso', $publicaDireto
             ? 'Camada enviada. O processamento acontece em segundo plano.'
             : 'Camada enviada para aprovacao da CEDEC. Ela aparece no mapa depois de aprovada.');
+    }
+
+    /** Fila de revisao da CEDEC. */
+    public function revisao(Request $request): Response
+    {
+        abort_unless($request->user()?->can('geoespacial.camadas.revisar'), 403);
+
+        return Inertia::render('Geoespacial/Revisao', [
+            'pendentes' => $this->revisao->pendentes()->all(),
+            'dominios' => config('geoespacial.dominios'),
+            'bbox' => CaixaEnvolvente::deConfig(config('medalhao.inmet.bbox'))->paraArray(),
+        ]);
+    }
+
+    public function aprovar(Request $request, int $camada): RedirectResponse
+    {
+        abort_unless($request->user()?->can('geoespacial.camadas.revisar'), 403);
+
+        try {
+            $this->revisao->aprovar($camada, (int) $request->user()->id);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['camada' => $e->getMessage()]);
+        }
+
+        return back()->with('sucesso', 'Camada aprovada e publicada no mapa.');
+    }
+
+    public function recusar(Request $request, int $camada): RedirectResponse
+    {
+        abort_unless($request->user()?->can('geoespacial.camadas.revisar'), 403);
+
+        $dados = $request->validate([
+            // Obrigatorio por decisao de produto: recusa sem justificativa
+            // deixa o municipio sem saber o que corrigir, e ele reenvia o
+            // mesmo arquivo.
+            'motivo' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        try {
+            $this->revisao->recusar($camada, (int) $request->user()->id, $dados['motivo']);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['camada' => $e->getMessage()]);
+        }
+
+        return back()->with('sucesso', 'Camada recusada e o municipio foi avisado.');
     }
 
     /**
