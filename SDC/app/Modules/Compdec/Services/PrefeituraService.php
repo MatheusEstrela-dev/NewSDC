@@ -44,6 +44,16 @@ class PrefeituraService
             $payload = $dto->toArray();
             $payload['municipio_id'] = $orgao->municipio_id;
 
+            // legacy_id e a ponte com o registro de origem no legado e tem
+            // indice proprio. O formulario nao envia esse campo, porque
+            // UpsertPrefeituraRequest nao o valida: o DTO chega com null e o
+            // toArray() emite a chave assim mesmo, entao o updateOrCreate
+            // apagaria a rastreabilidade de quem ja veio do ETL. Quem escreve
+            // nessa coluna e so quem passa o valor explicito.
+            if ($dto->legacyId === null) {
+                unset($payload['legacy_id']);
+            }
+
             return Prefeitura::updateOrCreate(
                 ['municipio_id' => $orgao->municipio_id],
                 $payload,
