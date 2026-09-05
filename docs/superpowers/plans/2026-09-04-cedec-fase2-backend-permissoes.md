@@ -1022,6 +1022,15 @@ git commit -m "✨ feat(cedec): listagem, estatisticas e indicadores municipais 
 
 **Contrato que este metodo fixa:** `uploadFoto()` cria a linha de `compdec_prefeituras` se ainda nao existir (`firstOrCreate`) — a CEDEC pode enviar a foto de um municipio que nunca teve outro dado preenchido, porque a navegacao e por `Municipio`, nao por `Prefeitura`.
 
+**Nota — correcao de code review aplicada mais tarde (Task 7, Steps 7-10):** a versao
+de `upsertPorMunicipio()` escrita nesta task ainda NAO trata `legacy_id`; o payload de
+`$dto->toArray()` grava `legacy_id` mesmo quando ele e `null`. Isso so vira um problema
+observavel quando existe a rota `cedec.prefeituras.update` para reproduzir o caso via
+HTTP (um municipio ja migrado pelo ETL da fase 1, editado pela tela da CEDEC), entao o
+teste de regressao e a correcao ficam na Task 7, depois que o controller e as rotas
+existirem — nao aqui. Os testes desta task continuam validos sem alteracao: nenhum
+deles cria uma prefeitura com `legacy_id` previo antes de chamar `upsertPorMunicipio()`.
+
 - [ ] **Step 1: Escrever o teste que falha**
 
 Criar `tests/Feature/Cedec/CedecPrefeituraServiceUpsertFotoTest.php`:
@@ -1497,10 +1506,47 @@ git commit -m "✨ feat(cedec): validacao do update de prefeitura"
 
 ## Task 7: `PrefeituraController`, rotas e testes de autorizacao/HTTP
 
+**Correcao de code review (2026-09-05) — `update()` nao pode apagar `legacy_id`.**
+`PrefeituraController::update()` monta o `PrefeituraDTO` so com `$request->validated()`.
+`UpdatePrefeituraRequest::rules()` (Task 6) nao inclui `legacy_id` — corretamente, nao e
+campo de formulario da CEDEC — entao `PrefeituraDTO::fromRequest()` devolve `legacyId:
+null`, e `PrefeituraDTO::toArray()` (fase 1) SEMPRE emite a chave `legacy_id` no array.
+Sem cuidado extra, o `updateOrCreate()` de `upsertPorMunicipio()` (Task 4) grava esse
+`null` por cima do valor existente — a coluna e a rastreabilidade do registro de origem
+do ETL da fase 1, com indice proprio na migration (secao 1 do contrato). No primeiro
+save que um usuario da CEDEC fizer num municipio ja migrado, `legacy_id` vai a NULL em
+silencio, sem nada falhar ou avisar.
+
+**Correcao:** em `CedecPrefeituraService::upsertPorMunicipio()` (Task 4), remover a
+chave `legacy_id` do payload quando `$dto->legacyId` for `null`, antes do
+`updateOrCreate()`. Isso preserva o valor ja gravado (a coluna simplesmente nao entra no
+`UPDATE`/`INSERT`) e nao interfere em nenhum consumidor que venha a passar um
+`legacyId` de verdade — o ETL da fase 1, alias, nem usa este metodo:
+`PrefeituraService::migrarLegado()` (Compdec) monta o proprio array e chama
+`Prefeitura::query()->updateOrCreate()` diretamente (ver
+`docs/superpowers/plans/2026-09-04-cedec-fase1-dados-etl.md`, Task 6), sem passar por
+`CedecPrefeituraService`. A correcao entra nos Steps 7-10 abaixo, depois que a rota
+`cedec.prefeituras.update` existir (o teste de regressao precisa dela), e fecha no MESMO
+commit desta task (Step 11).
+
+**Achado adjacente no Compdec — mesmo defeito, FORA de escopo, nao corrigido aqui.** A
+aba do Compdec tem o defeito identico: `App\Modules\Compdec\Controllers\
+PrefeituraController::upsert()` (`SDC/app/Modules/Compdec/Controllers/
+PrefeituraController.php:42`) monta o DTO com `PrefeituraDTO::fromRequest($orgao->
+municipio_id, $request->validated())` — `UpsertPrefeituraRequest` tambem nao valida
+`legacy_id` — e repassa para `PrefeituraService::upsertPorOrgao()`
+(`SDC/app/Modules/Compdec/Services/PrefeituraService.php:44-50`), que monta
+`$payload = $dto->toArray(); ...; return Prefeitura::updateOrCreate(['municipio_id' =>
+$orgao->municipio_id], $payload);` sem nenhum tratamento de `legacy_id` nulo. Salvar
+pela tela do Compdec tambem apaga `legacy_id` em silencio. Registrado aqui como
+pendencia — corrigir e escopo de quem tocar `PrefeituraService::upsertPorOrgao()` ou de
+uma fase de manutencao do Compdec, nao desta fase do Cedec.
+
 **Files:**
 - Create: `app/Modules/Cedec/Controllers/PrefeituraController.php`
 - Create: `routes/modules/cedec.php`
 - Modify: `routes/web.php`
+- Modify: `app/Modules/Cedec/Services/CedecPrefeituraService.php` (Steps 7-10: correcao do `legacy_id`)
 - Test: `tests/Feature/Cedec/CedecPrefeituraControllerTest.php`
 
 **Interfaces:**
@@ -1513,6 +1559,7 @@ git commit -m "✨ feat(cedec): validacao do update de prefeitura"
 - `prefeituras` e o `LengthAwarePaginator` inteiro (nao `Resource::collection(...)->response()`): `toArray()` do paginador ja produz o formato achatado `{data, current_page, last_page, per_page, total, from, to, ...}` que o contrato exige, bastando transformar a `Collection` interna para a forma do Resource antes.
 - `edit()` funciona para municipio SEM prefeitura (`prefeitura: null` na prop).
 - `uploadFoto()` valida mime (`jpeg,png,webp`) e tamanho (`config('compdec.upload_limits.foto_prefeito')`), do mesmo jeito que `Compdec\Controllers\PrefeituraController::uploadFoto()` ja faz.
+- `update()` **nunca** altera `legacy_id`, nem para `null` nem para outro valor: a coluna e escrita SOMENTE pelo ETL da fase 1, nunca pela tela da CEDEC (ver correcao de code review acima).
 
 **Armadilha de teste apurada no vendor:** `Inertia\Testing\AssertableInertia::component()` verifica no DISCO se o arquivo Vue existe (`config('inertia.testing.ensure_pages_exist')` = `true` neste projeto — `config/inertia.php:39`) e falha o teste com "Inertia page component file [...] does not exist" mesmo quando a rota e o controller estao corretos. Como as paginas `Cedec/Prefeituras/Index.vue` e `Edit.vue` so nascem nas fases 3 e 4, todo teste desta fase que chama `->component(...)` PRECISA passar `false` como segundo argumento (`->component('Cedec/Prefeituras/Index', false)`) para pular essa checagem — e o parametro `$shouldExist` que o proprio pacote `inertiajs/inertia-laravel` expoe para este caso exato (`vendor/inertiajs/inertia-laravel/src/Testing/AssertableInertia.php:45-54`).
 
@@ -1948,14 +1995,124 @@ docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraCon
 ```
 Expected: `route:list` lista as 5 rotas `cedec.prefeituras.*`; os testes PASSAM (12 metodos). Como as permissoes `cedec.*` ainda nao existem em `config/permissions.php` (Task 8), os testes de 403 e os de sucesso funcionam igual: `Permission::firstOrCreate()` no `setUp()` cria a permissao direto no banco de teste, sem depender do config.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Escrever o teste que prova a correcao de code review (legacy_id)**
+
+So agora a rota `cedec.prefeituras.update` existe, entao da para reproduzir o achado de
+ponta a ponta. Em `tests/Feature/Cedec/CedecPrefeituraControllerTest.php`, acrescentar o
+metodo abaixo ao final da classe (antes do `}` de fechamento):
+
+```php
+    public function test_update_pela_cedec_nao_apaga_o_legacy_id_da_prefeitura(): void
+    {
+        $municipio = Municipio::factory()->create();
+        $prefeitura = Prefeitura::factory()->create([
+            'municipio_id' => $municipio->id,
+            'legacy_id' => 9001,
+        ]);
+
+        $this->actingAs($this->usuario(self::PERMISSOES))
+            ->put(route('cedec.prefeituras.update', $municipio->id), [
+                'prefeito_nome' => 'Gestora Pos Etl',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(9001, $prefeitura->fresh()->legacy_id);
+    }
+```
+
+`legacy_id` e preenchido direto na fixture (simulando um municipio ja migrado pelo ETL
+da fase 1); o payload do `PUT` NAO inclui `legacy_id` (a tela da CEDEC nunca manda esse
+campo — `UpdatePrefeituraRequest::rules()` nem o valida). A asserção confere que o valor
+original sobrevive ao update.
+
+- [ ] **Step 8: Rodar o teste para ver falhar**
+
+Run: `docker exec newsdc_frankenphp_local php artisan test --filter=test_update_pela_cedec_nao_apaga_o_legacy_id_da_prefeitura`
+Expected: FAIL — `Failed asserting that null matches expected 9001.` `upsertPorMunicipio()`
+(Task 4) monta `$payload = $dto->toArray()`, que sempre traz `'legacy_id' => null`
+(porque `$dto->legacyId` e null), e o `updateOrCreate()` grava esse `null` por cima do
+`9001` da fixture.
+
+- [ ] **Step 9: Implementar a correcao em `CedecPrefeituraService::upsertPorMunicipio()`**
+
+Em `app/Modules/Cedec/Services/CedecPrefeituraService.php` (criado na Task 3, com o
+metodo `upsertPorMunicipio()` acrescentado na Task 4), trocar:
+
+```php
+    public function upsertPorMunicipio(int $municipioId, PrefeituraDTO $dto): Prefeitura
+    {
+        return DB::transaction(function () use ($municipioId, $dto): Prefeitura {
+            $payload = $dto->toArray();
+            $payload['municipio_id'] = $municipioId;
+
+            return Prefeitura::query()->updateOrCreate(['municipio_id' => $municipioId], $payload);
+        });
+    }
+```
+
+por:
+
+```php
+    /**
+     * updateOrCreate por municipio_id, em transacao.
+     *
+     * legacy_id NUNCA e sobrescrito por este caminho quando o DTO nao traz um
+     * valor: UpdatePrefeituraRequest (tela da CEDEC) nao valida legacy_id --
+     * corretamente, nao e campo de formulario -- entao PrefeituraDTO::toArray()
+     * sempre emite a chave com null. Sem este cuidado, o primeiro save da
+     * CEDEC apagaria em silencio a rastreabilidade de origem do ETL (fase 1).
+     * Quando o DTO TRAZ um legacy_id de verdade, a chave permanece no payload
+     * normalmente -- este metodo nao e usado pelo ETL (que grava direto via
+     * Compdec\Services\PrefeituraService::migrarLegado()), mas fica correto
+     * para qualquer chamador futuro que precise gravar o campo.
+     */
+    public function upsertPorMunicipio(int $municipioId, PrefeituraDTO $dto): Prefeitura
+    {
+        return DB::transaction(function () use ($municipioId, $dto): Prefeitura {
+            $payload = $dto->toArray();
+            $payload['municipio_id'] = $municipioId;
+
+            if ($dto->legacyId === null) {
+                unset($payload['legacy_id']);
+            }
+
+            return Prefeitura::query()->updateOrCreate(['municipio_id' => $municipioId], $payload);
+        });
+    }
+```
+
+- [ ] **Step 10: Rodar os testes para ver passar**
+
+Run:
+```bash
+docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Services/CedecPrefeituraService.php
+docker exec newsdc_frankenphp_local php artisan octane:reload
+docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraControllerTest
+docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraService
+```
+Expected: PASS em toda a `CedecPrefeituraControllerTest` (inclui o teste novo do Step 7)
+e em toda a `CedecPrefeituraServiceUpsertFotoTest`/`CedecPrefeituraServiceListagemTest` —
+a mudanca so afeta o caso `legacyId === null`, que e exatamente o caso que os testes de
+upsert da Task 4 ja cobrem (nenhum deles cria prefeitura com `legacy_id` previo, entao
+`unset()` e um no-op transparente para eles).
+
+- [ ] **Step 11: Commit**
 
 ```bash
 git add app/Modules/Cedec/Controllers/PrefeituraController.php \
+        app/Modules/Cedec/Services/CedecPrefeituraService.php \
         routes/modules/cedec.php \
         routes/web.php \
         tests/Feature/Cedec/CedecPrefeituraControllerTest.php
-git commit -m "✨ feat(cedec): controller e rotas de prefeituras"
+git commit -m "$(cat <<'EOF'
+✨ feat(cedec): controller e rotas de prefeituras
+
+Inclui a correcao de code review: upsertPorMunicipio() nao apaga legacy_id quando
+o DTO da tela da CEDEC chega sem esse campo (UpdatePrefeituraRequest nao o valida
+de proposito). Sem isso, o primeiro save de um municipio ja migrado pelo ETL da
+fase 1 zerava a rastreabilidade de origem em silencio.
+EOF
+)"
 ```
 
 ---
@@ -2260,3 +2417,4 @@ Expected: todas as classes de `Tests\Feature\Cedec` passam; `route:list` lista a
 2. **Fonte do filtro/coluna REDEC nao esta no contrato.** Resolvida reusando `App\Modules\Decretacoes\Services\RedecService` (import cross-modulo, mesmo padrao ja usado para `Compdec\Models\Orgao`/`Prefeitura`). Nenhuma fase posterior (3/4/5) referencia `RedecService` diretamente — elas so consomem a prop `redecs: [{value,label}]`, que e exatamente o que este controller produz, entao a decisao e transparente para elas.
 3. **Coluna real e `cedec_municipio.macroregiao`** (uma letra r), enquanto o dominio (enum, DTO, chave de `indicadoresMunicipais()`) usa `macrorregiao`. Documentado no service; nenhuma fase posterior le essa coluna diretamente.
 4. **"Perfis CEDEC estaduais" nao tem correspondencia 1:1 nos cargos do sistema** (`admin`/`manager`/`analyst`/`operator`/`viewer`/`user`/`citizen` sao niveis de hierarquia, nao um eixo municipal/estadual). Resolvido replicando o padrao ja usado por `compdec.prefeitura.edit` e `pmda.analise.*`: `admin` + `manager` + `analyst`. Se a intencao real for outra, e decisao de produto a revisitar — nao um defeito de implementacao.
+5. **(Code review 2026-09-05) O Compdec tem o mesmo defeito de `legacy_id`, NAO corrigido nesta fase.** `App\Modules\Compdec\Controllers\PrefeituraController::upsert()` (`SDC/app/Modules/Compdec/Controllers/PrefeituraController.php:42`) monta `PrefeituraDTO::fromRequest($orgao->municipio_id, $request->validated())` — `UpsertPrefeituraRequest` tambem nao valida `legacy_id` — e `PrefeituraService::upsertPorOrgao()` (`SDC/app/Modules/Compdec/Services/PrefeituraService.php:44-50`) grava o payload inteiro via `updateOrCreate()` sem nenhum tratamento para `legacy_id` nulo. Salvar pela aba do Compdec tambem apaga `legacy_id` em silencio no primeiro save de um municipio ja migrado. A correcao desta fase (Task 7, Steps 7-10) so cobre `CedecPrefeituraService::upsertPorMunicipio()` — o caminho do Compdec fica como pendencia registrada, fora do escopo desta fase do Cedec.

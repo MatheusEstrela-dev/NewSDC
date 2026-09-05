@@ -1123,14 +1123,23 @@ e-mail invalido -> null + log), e copia a foto do prefeito para a Media Library.
 - Produces: `PrefeituraService::migrarLegado(int $chunk = 100, bool $dryRun = false):
   MigracaoReport` — MESMA assinatura de hoje, comportamento corrigido. Consumido por
   Task 7 (Command).
-- **Adicao alem do contrato:** quatro metodos privados novos dentro de
+- **Adicao alem do contrato:** sete metodos privados novos dentro de
   `PrefeituraService` — `sanitizarEmail(?string): ?string`,
   `sanitizarTelefone(?string): ?string`, `limparCampoSujo(?string): ?string`,
   `validarOuDescartarEmail(?string, ?int, string, object, bool): ?string`,
+  `resolverEmailComPrecedencia(array, ?int, string, object, bool): ?string`,
+  `sanitizarCoordenada(mixed): ?float`,
   `migrarFotoPrefeito(Prefeitura, ?string, ?int, bool): void`. O contrato (secao 9) so
   descreve a higienizacao em prosa ("trim...e-mail para minusculas...'-' vira null");
   estes metodos sao a implementacao dessa prosa, privados e sem uso fora desta classe,
   entao nao colidem com nomes que outras fases consomem.
+  `resolverEmailComPrecedencia` valida CADA candidato (higienizado) antes de
+  escolher, na ordem de precedencia, em vez de escolher o primeiro preenchido e so
+  depois validar (isso perdia o fallback valido quando o candidato de maior
+  precedencia era um e-mail malformado). `sanitizarCoordenada` filtra null/vazio/"-"
+  antes de chamar `LegacyParser::toDecimalBR`, que nunca devolve null (vazio vira
+  0.0, coordenada real no Golfo da Guine) — sem alterar `LegacyParser`, compartilhado
+  por outros ETLs.
 
 - [ ] **Step 1: Escrever os testes que falham**
 
@@ -1268,9 +1277,26 @@ class PrefeituraEtlMigracaoTest extends TestCase
         ], $dados));
     }
 
+    /**
+     * SDC/phpunit.xml NAO isola banco de teste (linhas de sqlite comentadas): os
+     * testes rodam contra o Postgres de desenvolvimento, que ja tem 853 municipios
+     * reais, alguns com o mesmo codigo_ibge que este teste precisa. firstOrCreate
+     * evita a violacao da UNIQUE em municipios.codigo_ibge -- reaproveita a linha
+     * se ja existir, so cria quando faltar. O lado legado (sqlite, cedec_municipio/
+     * cedec_prefeitura) continua sob controle total do teste; so o Postgres tem
+     * dados pre-existentes.
+     */
+    private function municipioComCodigo(string $codigoIbge): Municipio
+    {
+        return Municipio::firstOrCreate(
+            ['codigo_ibge' => $codigoIbge],
+            ['nome' => 'Municipio Teste '.$codigoIbge, 'uf' => 'MG'],
+        );
+    }
+
     public function test_dry_run_nao_escreve_prefeitura_nem_log(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100104']);
+        $municipio = $this->municipioComCodigo('3100104');
         $this->inserirMunicipioLegado(['id_municipio' => 501, 'Codmundv' => '3100104', 'prefeito' => 'Ana Teste']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 501, 'id_municipio' => 501]);
 
@@ -1287,7 +1313,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_tel2_com_traco_vira_null(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100203']);
+        $municipio = $this->municipioComCodigo('3100203');
         $this->inserirMunicipioLegado(['id_municipio' => 502, 'Codmundv' => '3100203']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 502, 'id_municipio' => 502, 'tel2' => '-']);
 
@@ -1300,7 +1326,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_email_com_espaco_a_esquerda_e_normalizado_para_minusculas(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100302']);
+        $municipio = $this->municipioComCodigo('3100302');
         $this->inserirMunicipioLegado(['id_municipio' => 503, 'Codmundv' => '3100302', 'email' => '   Prefeitura@Cidade.MG.GOV.BR']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 503, 'id_municipio' => 503]);
 
@@ -1312,7 +1338,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_email_invalido_vira_null_e_gera_log_skipped(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100401']);
+        $municipio = $this->municipioComCodigo('3100401');
         $this->inserirMunicipioLegado(['id_municipio' => 504, 'Codmundv' => '3100401', 'email' => 'prefeitura@prefeitura@gmail.com1']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 504, 'id_municipio' => 504]);
 
@@ -1358,7 +1384,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_precedencia_email_prefeitura_e_municipio_sobre_prefeitura(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100609']);
+        $municipio = $this->municipioComCodigo('3100609');
         $this->inserirMunicipioLegado(['id_municipio' => 507, 'Codmundv' => '3100609', 'email' => 'municipio@cidade.gov.br']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 507, 'id_municipio' => 507, 'email' => 'antigo@yahoo.com']);
 
@@ -1370,7 +1396,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_email_da_prefeitura_e_usado_como_fallback_quando_municipio_esta_vazio(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100708']);
+        $municipio = $this->municipioComCodigo('3100708');
         $this->inserirMunicipioLegado(['id_municipio' => 508, 'Codmundv' => '3100708', 'email' => null]);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 508, 'id_municipio' => 508, 'email' => 'fallback@hotmail.com']);
 
@@ -1380,9 +1406,28 @@ class PrefeituraEtlMigracaoTest extends TestCase
         $this->assertSame('fallback@hotmail.com', $prefeitura->email_prefeitura);
     }
 
+    /**
+     * Corrige o bug de precedencia: escolher o candidato de maior precedencia ANTES
+     * de validar o formato perde o fallback valido quando esse candidato e um
+     * e-mail malformado. cedec_municipio.email malformado nao pode anular
+     * cedec_prefeitura.email, que e valido -- o correto e validar cada candidato e
+     * so entao escolher o primeiro valido, na ordem de precedencia.
+     */
+    public function test_email_da_prefeitura_e_usado_quando_email_do_municipio_e_invalido(): void
+    {
+        $municipio = $this->municipioComCodigo('3100500');
+        $this->inserirMunicipioLegado(['id_municipio' => 506, 'Codmundv' => '3100500', 'email' => 'prefeitura@prefeitura@gmail.com1']);
+        $this->inserirPrefeituraLegada(['id_prefeitura' => 506, 'id_municipio' => 506, 'email' => 'fallback.valido@cidade.gov.br']);
+
+        app(PrefeituraService::class)->migrarLegado(100, false);
+
+        $prefeitura = Prefeitura::where('municipio_id', $municipio->id)->first();
+        $this->assertSame('fallback.valido@cidade.gov.br', $prefeitura->email_prefeitura);
+    }
+
     public function test_prefeito_nome_vem_de_cedec_municipio_nunca_de_cedec_prefeitura_prefeiro(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100807']);
+        $municipio = $this->municipioComCodigo('3100807');
         $this->inserirMunicipioLegado(['id_municipio' => 509, 'Codmundv' => '3100807', 'prefeito' => 'Prefeito Atual']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 509, 'id_municipio' => 509, 'prefeiro' => 'Prefeito Mandato Anterior']);
 
@@ -1406,7 +1451,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
         imagejpeg($imagem, $diretorioLegado.'/'.$nomeArquivo);
         imagedestroy($imagem);
 
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100906']);
+        $municipio = $this->municipioComCodigo('3100906');
         $this->inserirMunicipioLegado(['id_municipio' => 510, 'Codmundv' => '3100906']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 510, 'id_municipio' => 510, 'fotoPref' => $nomeArquivo]);
 
@@ -1426,7 +1471,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
     {
         config(['compdec.legacy_paths.foto_prefeito' => sys_get_temp_dir().'/cedec_diretorio_inexistente_'.uniqid()]);
 
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3101003']);
+        $municipio = $this->municipioComCodigo('3101003');
         $this->inserirMunicipioLegado(['id_municipio' => 511, 'Codmundv' => '3101003']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 511, 'id_municipio' => 511, 'fotoPref' => 'arquivo_que_nao_existe.jpg']);
 
@@ -1436,6 +1481,26 @@ class PrefeituraEtlMigracaoTest extends TestCase
         $this->assertNotNull($prefeitura);
         $this->assertNull($prefeitura->getFirstMedia(Prefeitura::MEDIA_FOTO_PREFEITO));
         $this->assertDatabaseHas('compdec_etl_log', ['legacy_id' => 511, 'acao' => 'skipped']);
+    }
+
+    /**
+     * LegacyParser::toDecimalBR nunca devolve null (vazio/null viram 0.0), e 0.0
+     * lat/long e um ponto real no Golfo da Guine -- nao pode representar "sem
+     * coordenada". O ETL precisa filtrar null/vazio/"-" ANTES de chamar
+     * toDecimalBR, sem alterar o LegacyParser (compartilhado por outros ETLs).
+     */
+    public function test_latitude_vazia_e_longitude_com_traco_viram_null_em_vez_de_zero(): void
+    {
+        $municipio = $this->municipioComCodigo('3101302');
+        $this->inserirMunicipioLegado(['id_municipio' => 512, 'Codmundv' => '3101302', 'latitude_dec' => '', 'longitude_dec' => '-']);
+        $this->inserirPrefeituraLegada(['id_prefeitura' => 512, 'id_municipio' => 512]);
+
+        app(PrefeituraService::class)->migrarLegado(100, false);
+
+        $prefeitura = Prefeitura::where('municipio_id', $municipio->id)->first();
+        $this->assertNotNull($prefeitura);
+        $this->assertNull($prefeitura->latitude);
+        $this->assertNull($prefeitura->longitude);
     }
 }
 ```
@@ -1553,8 +1618,11 @@ classe (linhas 84-198 do arquivo original) por:
         $municipioId = (int) $mapaMunicipios->get($codmundv);
 
         try {
-            $emailPrefeitura = $this->validarOuDescartarEmail(
-                $this->sanitizarEmail($row->email_municipio ?? null) ?? $this->sanitizarEmail($row->email_prefeitura_legado ?? null),
+            $emailPrefeitura = $this->resolverEmailComPrecedencia(
+                [
+                    'cedec_municipio.email' => $row->email_municipio ?? null,
+                    'cedec_prefeitura.email' => $row->email_prefeitura_legado ?? null,
+                ],
                 $legacyId, 'email_prefeitura', $row, $dryRun,
             );
 
@@ -1590,8 +1658,8 @@ classe (linhas 84-198 do arquivo original) por:
                 'endereco' => LegacyParser::toStringOrNull($row->endereco ?? null),
                 'bairro' => LegacyParser::toStringOrNull($row->bairro ?? null),
                 'cep' => LegacyParser::toStringOrNull($row->cep ?? null),
-                'latitude' => isset($row->latitude) && $row->latitude !== null ? LegacyParser::toDecimalBR($row->latitude) : null,
-                'longitude' => isset($row->longitude) && $row->longitude !== null ? LegacyParser::toDecimalBR($row->longitude) : null,
+                'latitude' => $this->sanitizarCoordenada($row->latitude ?? null),
+                'longitude' => $this->sanitizarCoordenada($row->longitude ?? null),
                 'inss_tem_cobranca' => LegacyParser::toBool($row->cobra_iss ?? null),
                 'inss_aliquota' => isset($row->aliquota_iss) && $row->aliquota_iss !== null ? LegacyParser::toDecimalBR($row->aliquota_iss) : null,
                 'inss_lei_cobranca' => LegacyParser::toStringOrNull($row->num_lei_iss ?? null),
@@ -1692,6 +1760,60 @@ classe (linhas 84-198 do arquivo original) por:
         return null;
     }
 
+    /**
+     * Resolve um campo com fallback (ex.: email_prefeitura = cedec_municipio.email,
+     * senao cedec_prefeitura.email) validando CADA candidato antes de escolher --
+     * nao escolher o primeiro preenchido e so depois validar. Isso corrige o bug em
+     * que um e-mail malformado na fonte de maior precedencia anulava o resultado e
+     * impedia o fallback valido de ser usado. Se nenhum candidato for valido, grava
+     * null e registra em compdec_etl_log quais candidatos foram descartados e por
+     * que (formato invalido); candidatos vazios/ausentes nao contam como descarte.
+     *
+     * @param  array<string, mixed>  $candidatos  fonte (para o log) => valor bruto, na ordem de precedencia
+     */
+    private function resolverEmailComPrecedencia(array $candidatos, ?int $legacyId, string $campo, object $row, bool $dryRun): ?string
+    {
+        $descartados = [];
+
+        foreach ($candidatos as $fonte => $valorBruto) {
+            $email = $this->sanitizarEmail($valorBruto);
+
+            if ($email === null) {
+                continue;
+            }
+
+            if (filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
+                return $email;
+            }
+
+            $descartados[] = "{$fonte}={$email}";
+        }
+
+        if ($descartados !== []) {
+            $this->logEtl(
+                $legacyId, null, 'skipped',
+                "{$campo} invalido no legado, nenhum candidato valido: ".implode('; ', $descartados),
+                $row, $dryRun,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * LegacyParser::toDecimalBR nunca devolve null: vazio ou null viram 0.0, que e
+     * um ponto real no Golfo da Guine e passaria a ser tratado como coordenada
+     * valida. Filtra null/vazio/"-" ANTES de chamar toDecimalBR, na borda deste ETL
+     * -- reusa limparCampoSujo (mesma higienizacao de telefone) em vez de alterar o
+     * LegacyParser, que e compartilhado por outros ETLs.
+     */
+    private function sanitizarCoordenada(mixed $valor): ?float
+    {
+        $texto = $this->limparCampoSujo($valor === null ? null : (string) $valor);
+
+        return $texto === null ? null : LegacyParser::toDecimalBR($texto);
+    }
+
     private function logEtl(
         ?int $legacyId,
         ?int $newId,
@@ -1728,7 +1850,7 @@ continuam servindo a aba do Compdec, intactos.
 docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraEtlMigracaoTest
 ```
 
-Expected: PASS em todos os 11 testes. Se `test_foto_do_prefeito_e_copiada...` falhar
+Expected: PASS em todos os 13 testes. Se `test_foto_do_prefeito_e_copiada...` falhar
 por falta da extensao GD (`imagecreatetruecolor`/`imagejpeg` indefinidas), confirme
 `php -m | grep -i gd` no container — a extensao ja e usada pelas conversoes de thumb
 do Spatie Image (`Prefeitura::registerMediaConversions()`), entao deve estar presente.
@@ -1837,9 +1959,23 @@ class ImportarPrefeiturasCommandTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * Mesma justificativa de PrefeituraEtlMigracaoTest::municipioComCodigo(): o
+     * banco de teste nao e isolado (SDC/phpunit.xml) e o Postgres de desenvolvimento
+     * ja tem 853 municipios reais. firstOrCreate evita colidir com a UNIQUE em
+     * municipios.codigo_ibge.
+     */
+    private function municipioComCodigo(string $codigoIbge): Municipio
+    {
+        return Municipio::firstOrCreate(
+            ['codigo_ibge' => $codigoIbge],
+            ['nome' => 'Municipio Teste '.$codigoIbge, 'uf' => 'MG'],
+        );
+    }
+
     public function test_dry_run_nao_grava_prefeitura_nenhuma(): void
     {
-        Municipio::factory()->create(['codigo_ibge' => '3101104']);
+        $this->municipioComCodigo('3101104');
 
         DB::connection('legado_gestaocedec')->table('cedec_municipio')->insert([
             'id_municipio' => 601,
@@ -1861,7 +1997,7 @@ class ImportarPrefeiturasCommandTest extends TestCase
 
     public function test_comando_importa_de_fato_sem_dry_run(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3101203']);
+        $municipio = $this->municipioComCodigo('3101203');
 
         DB::connection('legado_gestaocedec')->table('cedec_municipio')->insert([
             'id_municipio' => 602,

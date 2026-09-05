@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Entregar a tela `Cedec/Prefeituras/Index` — cabecalho, quatro stat cards (tres deles filtro rapido), secao de filtros colapsavel, tabela em `lg+` com bloco no mobile, paginacao e estado vazio — consumindo as props que a fase 2 ja publica.
+**Goal:** Entregar a tela `Cedec/Prefeituras/Index` — cabecalho, quatro stat cards (todos filtro rapido, o Total limpa a pendência), secao de filtros colapsavel, tabela em `lg+` com bloco no mobile, paginacao e estado vazio — consumindo as props que a fase 2 ja publica.
 
-**Architecture:** Tres componentes novos sobre os componentes canonicos do projeto (`PageHeader`, `StatCardsGrid`/`StatCard`, `CollapsibleSection`, `Pagination`, `ListEmptyState`, `ActionButton`) e uma pagina que orquestra. A pagina e o unico lugar que fala com o servidor, e sempre por reload PARCIAL (`only: ['prefeituras', 'filtros']`), para que a prop closure `estatisticas` nao seja recalculada a cada troca de filtro. A molecula so emite; os organismos concentram a interacao.
+**Architecture:** Tres componentes novos sobre os componentes canonicos do projeto (`PageHeader`, `StatCardsGrid`/`StatCard`, `Filter/FilterSection`+`FilterField`+`FilterActions`, `Pagination`, `ListEmptyState`, `ActionButton`) e uma pagina que orquestra. A pagina e o unico lugar que fala com o servidor, e sempre por reload PARCIAL (`only: ['prefeituras', 'filtros']`), para que a prop closure `estatisticas` nao seja recalculada a cada troca de filtro. As moleculas so emitem; os organismos concentram a interacao.
 
 **Tech Stack:** Vue 3 (`<script setup>`), Inertia 2, Tailwind 3 (`darkMode: 'class'`), Vite, Ziggy, Heroicons v2, Playwright para o E2E de responsividade.
 
@@ -50,8 +50,8 @@ runtime e o `npm run build` NAO acusa (Ziggy resolve em tempo de execucao).
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `resources/js/Components/Molecules/Cedec/PrefeituraStatCards.vue` | Quatro numeros. Tres deles emitem `filter(pendencia)`. Nao navega. |
-| `resources/js/Components/Organisms/Cedec/PrefeituraFiltersSection.vue` | Formulario de busca/REDEC/macrorregiao dentro de `CollapsibleSection namespace="cedec"`. Emite `apply` e `clear`. Nao navega. |
+| `resources/js/Components/Organisms/Cedec/PrefeituraStatCards.vue` | Quatro numeros, todos emitem `filter(pendencia)` (o Total emite `null` e limpa a pendência). Nao navega. |
+| `resources/js/Components/Organisms/Cedec/PrefeituraFiltersSection.vue` | Formulario de busca/REDEC/macrorregiao dentro de `Filter/FilterSection` + `FilterField` + `FilterActions`. Emite `apply` e `clear`. Nao navega. |
 | `resources/js/Components/Organisms/Cedec/PrefeituraTable.vue` | Tabela em `lg+`, bloco abaixo. Estado vazio. Navega para o Edit. |
 | `resources/js/Pages/Cedec/Prefeituras/Index.vue` | Orquestra: recebe as props do contrato, traduz eventos em reload parcial, monta a paginacao. |
 | `resources/js/Support/moduleIcons.js` | Uma linha, so se a fase 2 nao tiver registrado `prefeituras`. |
@@ -59,10 +59,10 @@ runtime e o `npm run build` NAO acusa (Ziggy resolve em tempo de execucao).
 
 ---
 
-### Task 1: Molecula PrefeituraStatCards
+### Task 1: Organismo PrefeituraStatCards
 
 **Files:**
-- Create: `resources/js/Components/Molecules/Cedec/PrefeituraStatCards.vue`
+- Create: `resources/js/Components/Organisms/Cedec/PrefeituraStatCards.vue`
 - Modify (condicional, ver Step 1): `resources/js/Support/moduleIcons.js`
 
 **Interfaces:**
@@ -74,7 +74,7 @@ runtime e o `npm run build` NAO acusa (Ziggy resolve em tempo de execucao).
   - `resources/js/Support/moduleIcons.js` — `moduleIcon(modulo: string): string|null`, `MODULE_ICONS`, `ICONS`.
 
 - Produces (usado pela Task 4):
-  - Componente `PrefeituraStatCards`, prop `estatisticas: Object`, emit `filter` com payload `'sem_email' | 'sem_telefone' | 'sem_foto'`.
+  - Componente `PrefeituraStatCards`, prop `estatisticas: Object`, emit `filter` com payload `'sem_email' | 'sem_telefone' | 'sem_foto' | null` (`null` limpa a pendência — vem do card Total).
 
 - [ ] **Step 1: Garantir o icone do modulo no registry**
 
@@ -96,18 +96,20 @@ Se nao houver saida, a fase 2 nao registrou. Abra
 
 Se o grep ja acusar a linha, nao mexa no arquivo.
 
-- [ ] **Step 2: Criar a molecula**
+- [ ] **Step 2: Criar o organismo**
 
-Crie `resources/js/Components/Molecules/Cedec/PrefeituraStatCards.vue` com este conteudo
+Crie `resources/js/Components/Organisms/Cedec/PrefeituraStatCards.vue` com este conteudo
 completo:
 
 ```vue
 <template>
   <!--
-    Molecula: so exibe numero e emite intencao de filtro. Nao navega, nao le
-    estado global e nao conhece rota -- quem traduz `filter` em visita ao
-    servidor e a pagina (contrato de camada da secao 8 do contrato de
-    interfaces).
+    Organismo (secao 8 do contrato de interfaces, correcao 2026-09-04): os
+    cinco equivalentes do projeto -- PmdaStatisticsCards, CisternaStatisticsCards,
+    Demandas/Statistics, Rat/Statistics, Tdap/Statistics -- vivem todos em
+    Organisms/. Quem e molecula e o StatCardsGrid/StatCard que ele compoe. Ainda
+    assim nao navega, nao le estado global e nao conhece rota -- quem traduz
+    `filter` em visita ao servidor e a pagina (contrato de camada da secao 8).
 
     `espaco-inferior=false` porque a raiz da pagina usa `space-y-6` (Forma B da
     regra 2 de "03 - Layout"). Com a `mb-6` propria do grid somando ao
@@ -116,17 +118,23 @@ completo:
   -->
   <StatCardsGrid :espaco-inferior="false">
     <!--
-      O card de total NAO leva `clickable`: nao existe filtro "todos os
-      municipios" atras dele. Card clicavel que nao filtra nada ensina o
-      usuario a clicar e nao acontecer nada. Quem limpa a pendencia e o botao
-      Limpar da secao de filtros.
+      O card de total TAMBEM e `clickable` (correcao 2026-09-04 do contrato,
+      revogando a versao anterior): segue `Organisms/Pmda/PmdaStatisticsCards.vue`,
+      que faz `clickable @click="$emit('filter', '')"` no card Total. Limpar
+      filtro E um filtro -- aqui emite `null`, que e o que
+      `PrefeituraFiltroDTO::$pendencia` aceita (junto com as tres strings).
+      `filtrarPorPendencia()` da pagina (Task 4) ja trata `pendencia ?? ''` e
+      `paraQuery()` descarta a chave vazia, entao o efeito e identico ao de
+      `PmdaStatisticsCards`.
     -->
     <StatCard
       title="Municípios"
       :value="estatisticas.total"
-      subtitle="Cadastro estadual de prefeituras"
+      subtitle="Ver todos os municípios"
       variant="info"
       :icon="BuildingOffice2Icon"
+      clickable
+      @click="$emit('filter', null)"
     />
 
     <StatCard
@@ -173,7 +181,7 @@ defineProps({
   },
 });
 
-/** Payload: 'sem_email' | 'sem_telefone' | 'sem_foto'. */
+/** Payload: 'sem_email' | 'sem_telefone' | 'sem_foto' | null (null limpa a pendência). */
 defineEmits(['filter']);
 </script>
 ```
@@ -198,7 +206,9 @@ nao um commit por arquivo).
 
 - Consumes (da fase 2 e do projeto):
   - props Inertia da pagina `Cedec/Prefeituras/Index`: `filtros: { busca: ?string, redec_id: ?int, macrorregiao: ?string, pendencia: ?string }`, `redecs: Array<{value:number,label:string}>`, `macrorregioes: Array<{value:string,label:string}>` (esta ultima vem de `App\Modules\Cedec\Enums\Macrorregiao::opcoes()`).
-  - `resources/js/Components/Molecules/CollapsibleSection.vue` — props `namespace: String (required)`, `sectionId: String (required)`, `title: String (required)`, `subtitle: String`, `icon: Object|Function`, `tom: 'info'|'success'|'warning'|'danger'|'neutro'`, `statusText: String`, `expandidoPorPadrao: Boolean (default true)`; slots default e `icon`. Persiste o estado em `localStorage` sob a chave `${namespace}-sections-state` via `Composables/core/useCollapsibleSection`.
+  - `resources/js/Components/Molecules/Filter/FilterSection.vue` — props `title: String (default 'Filtros de Pesquisa')`, `columns: Number (2|3|4|5|6, default 4)`, `defaultCollapsed: Boolean (default true)`; slot default. E o componente CANONICO de secao de filtro (correcao 2026-09-04 do contrato: 28 consumidores contra 9 do `CollapsibleSection`, e 11 dos 12 `*FiltersSection.vue` do projeto usam ele). `CollapsibleSection` continua valido so para secao de FORMULARIO (fase 4).
+  - `resources/js/Components/Molecules/Filter/FilterField.vue` — props `modelValue: String|Number|Object (default '')`, `label: String (required)`, `type: 'text'|'select'|'date'|'search' (default 'text')`, `options: Array (default [])`, `placeholder: String`, `disabled: Boolean`; emit `update:modelValue`. Para `type="select"` renderiza `Atoms/Input/SelectInput.vue`, que aceita `options: Array<{value,label}>` e usa `placeholder` como opcao vazia.
+  - `resources/js/Components/Molecules/Filter/FilterActions.vue` — sem props; emits `search` e `clear`.
 
 - Produces (usado pela Task 4):
   - Componente `PrefeituraFiltersSection`, props `filters: Object`, `redecs: Array`, `macrorregioes: Array`.
@@ -208,82 +218,63 @@ nao um commit por arquivo).
 - [ ] **Step 1: Criar o organismo**
 
 Crie `resources/js/Components/Organisms/Cedec/PrefeituraFiltersSection.vue` com este
-conteudo completo:
+conteudo completo, na mesma forma de `Organisms/Compdec/OrgaosFiltersSection.vue` e
+`Organisms/Pmda/PmdaFiltersSection.vue` (os dois `*FiltersSection.vue` reais do projeto
+que usam o componente canonico):
 
 ```vue
 <template>
   <!--
-    `namespace="cedec"` e obrigatorio: o estado de secao vive em
-    `localStorage['cedec-sections-state']`. Sem namespace proprio, a preferencia
-    desta tela disputaria registro com a de outro modulo.
+    `FilterSection` e o componente CANONICO de secao de filtro (correcao
+    2026-09-04 do contrato de interfaces, secao 8): 28 consumidores contra 9 do
+    `CollapsibleSection`, e 11 dos 12 `*FiltersSection.vue` do projeto usam ele.
+    `CollapsibleSection` seria reimplementacao de campo aqui -- seu lugar e a
+    secao de FORMULARIO da fase 4.
 
-    Recolhido por padrao: aberto, o painel empurra a lista para fora da primeira
-    dobra e a tela abre mostrando formulario em vez de dado. O `status-text` diz
-    quantos filtros estao valendo, entao recolher nao esconde informacao.
+    `default-collapsed` (que ja e `true` por padrao) mantem o painel fechado ao
+    abrir a tela: aberto, ele empurraria a lista para fora da primeira dobra.
+    Como `FilterSection` nao tem um slot de status separado, o titulo carrega a
+    contagem de filtros ativos -- e o unico jeito de nao esconder essa
+    informacao sem tocar no componente canonico.
   -->
-  <CollapsibleSection
-    namespace="cedec"
-    section-id="prefeituras-filtros"
-    title="Filtros de pesquisa"
-    :icon="FunnelIcon"
-    tom="neutro"
-    :status-text="resumoAtivos"
-    :expandido-por-padrao="false"
-  >
-    <form class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" @submit.prevent="aplicar">
-      <label class="block">
-        <span class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Município</span>
-        <input
-          v-model="local.busca"
-          type="text"
-          placeholder="Nome ou parte do nome"
-          :class="INPUT"
-        >
-      </label>
+  <FilterSection :title="tituloComContagem" :columns="3" :default-collapsed="true">
+    <FilterField
+      label="Município"
+      type="text"
+      :model-value="local.busca"
+      placeholder="Nome ou parte do nome"
+      @update:model-value="local.busca = $event"
+    />
 
-      <label class="block">
-        <span class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">REDEC</span>
-        <!--
-          `String(r.value)` no option e no normalizar(): o select devolve
-          exatamente o que esta no atributo, e um id numerico vindo do servidor
-          nunca casaria com a string do `v-model` -- a opcao correta apareceria
-          como "nao selecionada" depois de recarregar com o filtro aplicado.
-          A conversao de volta para Number acontece em paraFiltros().
-        -->
-        <select v-model="local.redec_id" :class="INPUT">
-          <option value="">Todas</option>
-          <option v-for="r in redecs" :key="r.value" :value="String(r.value)">{{ r.label }}</option>
-        </select>
-      </label>
+    <FilterField
+      label="REDEC"
+      type="select"
+      :model-value="local.redec_id"
+      :options="redecs"
+      placeholder="Todas"
+      @update:model-value="local.redec_id = $event"
+    />
 
-      <label class="block">
-        <span class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Macrorregião</span>
-        <select v-model="local.macrorregiao" :class="INPUT">
-          <option value="">Todas</option>
-          <option v-for="m in macrorregioes" :key="m.value" :value="m.value">{{ m.label }}</option>
-        </select>
-      </label>
+    <FilterField
+      label="Macrorregião"
+      type="select"
+      :model-value="local.macrorregiao"
+      :options="macrorregioes"
+      placeholder="Todas"
+      @update:model-value="local.macrorregiao = $event"
+    />
 
-      <div class="flex items-end justify-end gap-3 sm:col-span-2 lg:col-span-3">
-        <!--
-          `type="button"` e obrigatorio: dentro de <form>, botao sem type e
-          submit, e Limpar acabaria pesquisando.
-        -->
-        <button type="button" :class="BOTAO_SECUNDARIO" @click="limpar">
-          Limpar
-        </button>
-        <button type="submit" :class="BOTAO_PRIMARIO">
-          Pesquisar
-        </button>
-      </div>
-    </form>
-  </CollapsibleSection>
+    <div class="md:col-span-2 lg:col-span-3 flex items-end justify-end pt-1">
+      <FilterActions @search="aplicar" @clear="limpar" />
+    </div>
+  </FilterSection>
 </template>
 
 <script setup>
 import { computed, reactive, watch } from 'vue';
-import { FunnelIcon } from '@heroicons/vue/24/outline';
-import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
+import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
+import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
+import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
 
 /**
  * Organismo de filtros. Nao navega e nao conhece rota: emite `apply` com o
@@ -296,11 +287,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['apply', 'clear']);
-
-// h-10 = 40px, o alvo de toque minimo da regra 8 de "04 - Responsividade".
-const INPUT = 'h-10 w-full rounded-md border-slate-300 bg-white text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100';
-const BOTAO_SECUNDARIO = 'h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
-const BOTAO_PRIMARIO = 'h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
 
 const VAZIO = { busca: '', redec_id: '', macrorregiao: '' };
 
@@ -321,15 +307,15 @@ function normalizar(filters) {
 
   return {
     busca: f.busca ?? '',
-    redec_id: f.redec_id === undefined || f.redec_id === null || f.redec_id === '' ? '' : String(f.redec_id),
+    redec_id: f.redec_id ?? '',
     macrorregiao: f.macrorregiao ?? '',
   };
 }
 
 /**
  * Quantos filtros estao valendo, incluindo a pendencia escolhida por stat card
- * -- que nao tem campo aqui. Sem contar a pendencia, a lista apareceria
- * recortada com o cabecalho dizendo "Nenhum filtro aplicado".
+ * -- que nao tem campo aqui. Sem contar a pendencia, o titulo apareceria
+ * dizendo "Nenhum filtro aplicado" com a lista ja recortada.
  */
 const resumoAtivos = computed(() => {
   const doFormulario = Object.values(local).filter((valor) => valor !== '').length;
@@ -340,6 +326,8 @@ const resumoAtivos = computed(() => {
 
   return ativos === 1 ? '1 filtro aplicado' : `${ativos} filtros aplicados`;
 });
+
+const tituloComContagem = computed(() => `Filtros de pesquisa — ${resumoAtivos.value}`);
 
 function paraFiltros() {
   return {
@@ -713,7 +701,7 @@ import { usePermissions } from '@/Composables/usePermissions';
 import { moduleIcon } from '@/Support/moduleIcons';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import PrefeituraStatCards from '@/Components/Molecules/Cedec/PrefeituraStatCards.vue';
+import PrefeituraStatCards from '@/Components/Organisms/Cedec/PrefeituraStatCards.vue';
 import PrefeituraFiltersSection from '@/Components/Organisms/Cedec/PrefeituraFiltersSection.vue';
 import PrefeituraTable from '@/Components/Organisms/Cedec/PrefeituraTable.vue';
 
@@ -832,7 +820,7 @@ Expected: `1` ou mais.
 
 Run:
 ```bash
-grep -rn "style scoped" SDC/resources/js/Pages/Cedec SDC/resources/js/Components/Organisms/Cedec SDC/resources/js/Components/Molecules/Cedec
+grep -rn "style scoped" SDC/resources/js/Pages/Cedec SDC/resources/js/Components/Organisms/Cedec
 ```
 Expected: nenhuma saida.
 
@@ -852,7 +840,7 @@ cd SDC
 git add resources/js/Pages/Cedec/Prefeituras/Index.vue \
         resources/js/Components/Organisms/Cedec/PrefeituraFiltersSection.vue \
         resources/js/Components/Organisms/Cedec/PrefeituraTable.vue \
-        resources/js/Components/Molecules/Cedec/PrefeituraStatCards.vue
+        resources/js/Components/Organisms/Cedec/PrefeituraStatCards.vue
 git add resources/js/Support/moduleIcons.js
 git commit -m "✨ feat(cedec): indice de prefeituras com stat cards, filtros e tabela responsiva"
 ```
@@ -993,7 +981,7 @@ tudo ja foi para o commit da Task 4.
 - `Pages/Cedec/Prefeituras/Edit.vue`, `PrefeituraFormSections`, `IndicadoresMunicipaisPanel`, foto e o refit de `Organisms/Compdec/PrefeituraForm.vue` — fase 4.
 - `Pages/Cedec/Contatos/Index.vue`, `ContatoBloco`, `ContatoBlocosOutlook`, export CSV — fase 5.
 - Qualquer alteracao em controller, service, resource, rota ou `config/permissions.php` — fase 2. Se algo faltar no backend, PARE e relate; nao contorne no front.
-- Alterar `Molecules/Navigation/Pagination.vue`, `Organisms/PageHeader.vue`, `StatCard.vue` ou `CollapsibleSection.vue`. Se um deles nao atender, a regra do projeto e **adicionar prop no componente canonico**, nunca criar um paralelo — e isso e mudanca de escopo, que precisa ser combinada antes.
+- Alterar `Molecules/Navigation/Pagination.vue`, `Organisms/PageHeader.vue`, `StatCard.vue`, `CollapsibleSection.vue` ou `Molecules/Filter/FilterSection.vue`/`FilterField.vue`/`FilterActions.vue`. Se um deles nao atender, a regra do projeto e **adicionar prop no componente canonico**, nunca criar um paralelo — e isso e mudanca de escopo, que precisa ser combinada antes.
 
 ---
 
@@ -1008,7 +996,3 @@ tudo ja foi para o commit da Task 4.
    `visiblePages` mais dois `Button` com rotulo escondido abaixo de `md`. Cumprir a regra ao
    pe da letra exigiria mudar o componente compartilhado, o que afeta 20 consumidores — fora
    do escopo desta fase. Use o componente como esta e nao escreva paginacao propria.
-3. **O card de total nao e clicavel.** A secao 5 de `.claude/skills/frontend/01 - Frontend`
-   e o `PmdaStatisticsCards` fazem o card "Total" limpar o filtro. Aqui o contrato manda o
-   contrario: "card sem filtro atras nao leva `clickable`". O contrato vence. Quem limpa a
-   pendencia e o botao Limpar.

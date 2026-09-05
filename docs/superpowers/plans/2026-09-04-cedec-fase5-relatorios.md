@@ -168,19 +168,41 @@ Criterio: `excesso` **0** nas duas larguras.
 
 `phpunit.xml` **nao troca a conexao de banco** (as linhas de sqlite estao comentadas). Os
 testes rodam contra o banco de desenvolvimento, que ja tem as 853 prefeituras reais
-carregadas. Um teste que conte blocos sem neutralizar esse acervo vai falhar de forma
-aleatoria.
+carregadas.
 
-Solucao usada em todas as classes de teste deste plano, dentro do `setUp()` e portanto
-**dentro da transacao** (o `DatabaseTransactions` desfaz tudo ao final):
+**Correcao de code review, 2026-09-05: nenhum teste deste plano pode fazer UPDATE ou DELETE
+em massa sobre linha que ele nao criou.** Uma versao anterior desta nota mandava zerar os 8
+campos de contato de TODAS as prefeituras dentro do `setUp()`
+(`DB::table('compdec_prefeituras')->update(self::CAMPOS_DE_CONTATO)`), protegido so pelo
+rollback do `DatabaseTransactions`. Como `phpunit.xml` **nao isola o banco de teste**,
+qualquer interrupcao antes do rollback — Ctrl+C, fatal error, timeout do container, OOM —
+apagava em definitivo os contatos das 853 prefeituras carregados pelo ETL, sem backup. Um
+teste nao pode ter como modo de falha a destruicao do banco de desenvolvimento.
 
-```php
-DB::table('compdec_prefeituras')->update(self::CAMPOS_DE_CONTATO); // zera os 8 campos de contato
-```
+A regra deste plano, em toda classe de teste: **cada teste opera so sobre as linhas que ele
+proprio cria.** Duas tecnicas cobrem os casos que esta fase precisa:
 
-Nenhuma linha e apagada — so os campos de contato viram `null`, e o rollback devolve os
-valores originais. Contagens que dependem do numero total de municipios (o CSV tem uma linha
-por municipio) leem a base primeiro: `DB::table('municipios')->count()`.
+1. **A fronteira de bloco (50/51/100/101) e a sanitizacao (`higienizar`/`higienizarEmail`)
+   sao testadas via `ReflectionMethod` sobre os metodos privados do service**
+   (`blocar()`, `contatos()`, `higienizar()`, `higienizarEmail()`), alimentados com um array
+   ou uma `Collection` montados a mao pelo proprio teste. Nenhuma dessas chamadas toca o
+   banco — e o mesmo caminho de codigo que `blocosDeEmail()` e `blocosDeTelefone()` executam
+   por baixo, so que sem depender de quantos contatos ja existem no banco de desenvolvimento.
+   Ver `ContatoRelatorioServiceTest` (Task 1).
+2. **Onde o teste precisa mesmo ler do banco real** (higienizacao ponta a ponta, o
+   `municipio_id` que aparece na listagem, quantidade de linhas do CSV, props do Inertia), a
+   asserçao e de PERTENCIMENTO ou RELATIVA ao "antes" medido no proprio teste — nunca de
+   indice fixo nem de total exato sobre uma consulta que enxerga as 853 prefeituras inteiras.
+   Exemplos: `->firstWhere('municipio_id', $municipio->id)` numa `Collection`, um closure de
+   `Collection::contains(...)` dentro do `where()` do `AssertableInertia`,
+   `assertStringContainsString(...)` no `texto` de um bloco pedido com `$tamanho` bem alto (o
+   que forca um unico bloco e evita depender de quebra de fronteira), ou
+   `$antes = DB::table('municipios')->count()` seguido de `assertCount($antes + N + 1, ...)`.
+
+Nenhuma classe de teste desta fase faz `update()` ou `delete()` sem `where` restrito as linhas
+que o proprio teste inseriu. As fixtures continuam dentro da transacao do
+`DatabaseTransactions`, que desfaz tudo ao final — agora como uma segunda camada de protecao,
+nao a unica.
 
 ---
 
@@ -242,9 +264,11 @@ use App\Models\Municipio;
 use App\Modules\Cedec\Services\ContatoRelatorioService;
 use App\Modules\Compdec\Models\Prefeitura;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -253,16 +277,29 @@ use Tests\TestCase;
  * O legado blocava contando ($key + 1) % 50 sobre TODAS as linhas, inclusive as
  * de e-mail vazio: a "Parte 1" prometia 50 destinatarios e entregava menos.
  * Aqui o vazio e descartado antes de blocar, e os testes de fronteira provam.
+ *
+ * Correcao de code review, 2026-09-05: esta classe NAO faz UPDATE ou DELETE em
+ * massa em `compdec_prefeituras`. O banco de teste e o de desenvolvimento
+ * (phpunit.xml nao troca a conexao), com as 853 prefeituras reais carregadas
+ * pelo ETL, sem backup. A fronteira de bloco e a sanitizacao sao testadas via
+ * `ReflectionMethod` sobre os metodos privados do service, com um array ou
+ * uma Collection montados pelo proprio teste — o mesmo caminho de codigo que
+ * `blocosDeEmail()`/`blocosDeTelefone()` executam por baixo, sem depender de
+ * quantos contatos ja existem no banco. Os testes que precisam mesmo ler do
+ * banco real criam a propria fixture e verificam PERTENCIMENTO
+ * (`firstWhere`/`str_contains`) ou uma contagem RELATIVA ao "antes" — nunca
+ * indice fixo nem total exato sobre uma consulta que enxerga as 853
+ * prefeituras inteiras. Ver "Nota obrigatoria sobre o banco de teste", acima.
  */
 class ContatoRelatorioServiceTest extends TestCase
 {
     use DatabaseTransactions;
 
     /**
-     * Os oito campos de contato zerados no setUp. O banco de teste e o de
-     * desenvolvimento (phpunit.xml nao troca a conexao) e ja tem as 853
-     * prefeituras reais: sem zerar, a contagem de blocos nao e deterministica.
-     * Nada e apagado — o rollback da transacao devolve os valores.
+     * Usado so para zerar os 8 campos de contato da PROPRIA fixture que o
+     * teste cria, dentro de prefeituraCom() — nunca em UPDATE de massa. Sem
+     * isso, os valores que PrefeituraFactory sorteia para os campos que o
+     * teste nao mencionou poderiam contaminar as asserçoes.
      */
     private const CAMPOS_DE_CONTATO = [
         'email_prefeitura' => null,
@@ -274,13 +311,6 @@ class ContatoRelatorioServiceTest extends TestCase
         'prefeito_telefone' => null,
         'prefeito_celular' => null,
     ];
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        DB::table('compdec_prefeituras')->update(self::CAMPOS_DE_CONTATO);
-    }
 
     private function servico(): ContatoRelatorioService
     {
@@ -308,6 +338,58 @@ class ContatoRelatorioServiceTest extends TestCase
         }
     }
 
+    /**
+     * Chama o `blocar()` privado e estatico do service diretamente, sem
+     * passar pelo banco. E o mesmo agrupamento que blocosDeEmail() e
+     * blocosDeTelefone() aplicam depois de consultar e higienizar — testa-lo
+     * isolado prova a fronteira sem depender de quantos contatos reais ja
+     * existem no banco de desenvolvimento.
+     *
+     * @param  array<int, string>  $contatos
+     * @return array<int, array{indice: int, total: int, texto: string}>
+     */
+    private function blocar(array $contatos, int $tamanho = ContatoRelatorioService::TAMANHO_BLOCO_PADRAO): array
+    {
+        $metodo = new ReflectionMethod(ContatoRelatorioService::class, 'blocar');
+        $metodo->setAccessible(true);
+
+        return $metodo->invoke(null, $contatos, $tamanho);
+    }
+
+    /**
+     * Chama o `contatos()` privado do service diretamente, sobre uma
+     * Collection montada a mao — sem passar pelo banco.
+     *
+     * @param  Collection<int, array<string, mixed>>  $linhas
+     * @param  array<int, string>  $campos
+     * @return array<int, string>
+     */
+    private function contatos(Collection $linhas, array $campos): array
+    {
+        $metodo = new ReflectionMethod(ContatoRelatorioService::class, 'contatos');
+        $metodo->setAccessible(true);
+
+        return $metodo->invoke($this->servico(), $linhas, $campos);
+    }
+
+    /** Chama o `higienizarEmail()` privado e estatico do service diretamente. */
+    private function higienizarEmail(?string $valor): ?string
+    {
+        $metodo = new ReflectionMethod(ContatoRelatorioService::class, 'higienizarEmail');
+        $metodo->setAccessible(true);
+
+        return $metodo->invoke(null, $valor);
+    }
+
+    /** Chama o `higienizar()` privado e estatico do service diretamente. */
+    private function higienizar(?string $valor): ?string
+    {
+        $metodo = new ReflectionMethod(ContatoRelatorioService::class, 'higienizar');
+        $metodo->setAccessible(true);
+
+        return $metodo->invoke(null, $valor);
+    }
+
     /** @return array<string, array{int, array<int, int>}> */
     public static function fronteirasDeBloco(): array
     {
@@ -319,43 +401,72 @@ class ContatoRelatorioServiceTest extends TestCase
         ];
     }
 
-    /** @param array<int, int> $totaisEsperados */
+    /**
+     * O coracao desta fase: a fronteira de bloco, testada direto sobre
+     * `blocar()`, sem tocar o banco. A prova e a mesma de antes — so que
+     * deterministica por construcao, em vez de depender de zerar as 853
+     * prefeituras reais para ter uma contagem global previsivel.
+     *
+     * @param  array<int, int>  $totaisEsperados
+     */
     #[DataProvider('fronteirasDeBloco')]
-    public function test_blocos_de_email_respeitam_a_fronteira_de_cinquenta(int $quantidade, array $totaisEsperados): void
+    public function test_blocar_respeita_a_fronteira_de_cinquenta(int $quantidade, array $totaisEsperados): void
     {
-        $this->criarComEmail($quantidade);
+        $contatos = array_map(
+            static fn (int $i): string => sprintf('prefeitura%03d@exemplo.mg.gov.br', $i),
+            range(1, $quantidade),
+        );
 
-        $blocos = $this->servico()->blocosDeEmail();
+        $blocos = $this->blocar($contatos);
 
         $this->assertCount(count($totaisEsperados), $blocos);
         $this->assertSame($totaisEsperados, array_column($blocos, 'total'));
         $this->assertSame(range(1, count($totaisEsperados)), array_column($blocos, 'indice'));
     }
 
+    public function test_higienizar_email_descarta_os_sentinelas_do_legado(): void
+    {
+        foreach ([null, '', '   ', '-'] as $sujo) {
+            $this->assertNull($this->higienizarEmail($sujo), var_export($sujo, true).' deveria virar null.');
+        }
+    }
+
+    /**
+     * Reproduz "os quatro contatos sujos nao podem virar um segundo bloco"
+     * sem tocar o banco: os quatro `null` abaixo sao exatamente o que
+     * `higienizarEmail()` ja produz para null/''/'   '/'-' dentro de
+     * linhas() — provado a parte no teste anterior.
+     */
     public function test_contato_vazio_e_descartado_antes_de_blocar(): void
     {
-        $this->criarComEmail(50);
+        $linhas = new Collection(array_merge(
+            array_map(
+                static fn (int $i): array => ['email_prefeitura' => sprintf('prefeitura%03d@exemplo.mg.gov.br', $i)],
+                range(1, 50),
+            ),
+            [
+                ['email_prefeitura' => null],
+                ['email_prefeitura' => null],
+                ['email_prefeitura' => null],
+                ['email_prefeitura' => null],
+            ],
+        ));
 
-        foreach ([null, '', '   ', '-'] as $sujo) {
-            $this->prefeituraCom(['email_prefeitura' => $sujo]);
-        }
-
-        $blocos = $this->servico()->blocosDeEmail();
+        $blocos = $this->blocar($this->contatos($linhas, ['email_prefeitura']));
 
         $this->assertCount(1, $blocos, 'Os quatro contatos sujos nao podem virar um segundo bloco.');
         $this->assertSame(50, $blocos[0]['total']);
         $this->assertSame(49, substr_count($blocos[0]['texto'], '; '), 'Cinquenta e-mails tem 49 separadores.');
     }
 
-    public function test_telefone_com_hifen_do_legado_e_descartado(): void
+    public function test_higienizar_descarta_o_sentinela_hifen_do_legado(): void
     {
-        $this->prefeituraCom(['tel_prefeitura' => '-', 'tel_prefeitura_2' => '(31) 3333-2222']);
-
-        $blocos = $this->servico()->blocosDeTelefone();
-
-        $this->assertCount(1, $blocos);
-        $this->assertSame(1, $blocos[0]['total']);
-        $this->assertSame('(31) 3333-2222', $blocos[0]['texto']);
+        $this->assertNull($this->higienizar('-'), 'O sentinela "-" do legado tem de virar null.');
+        $this->assertSame(
+            '(31) 3333-2222',
+            $this->higienizar('(31) 3333-2222'),
+            'Hifen DENTRO de um telefone formatado nao e o sentinela.',
+        );
     }
 
     public function test_tamanho_de_bloco_menor_que_um_lanca_excecao_para_email(): void
@@ -377,9 +488,13 @@ class ContatoRelatorioServiceTest extends TestCase
         $municipio = $this->prefeituraCom(['email_prefeitura' => '  PREFEITURA@Exemplo.MG.GOV.BR ']);
 
         $linha = $this->servico()->emails()->firstWhere('municipio_id', $municipio->id);
-
         $this->assertSame('prefeitura@exemplo.mg.gov.br', $linha['email_prefeitura']);
-        $this->assertSame('prefeitura@exemplo.mg.gov.br', $this->servico()->blocosDeEmail()[0]['texto']);
+
+        // Tamanho bem alto forca um unico bloco: isola o teste de quantos
+        // e-mails reais ja existem na base. O objetivo aqui e provar que a
+        // sanitizacao chega ao texto do bloco, nao contar quantos blocos existem.
+        $blocos = $this->servico()->blocosDeEmail(1_000_000);
+        $this->assertStringContainsString('prefeitura@exemplo.mg.gov.br', $blocos[0]['texto']);
     }
 
     public function test_bloco_de_telefone_reune_os_cinco_campos_na_ordem_do_contrato(): void
@@ -392,11 +507,14 @@ class ContatoRelatorioServiceTest extends TestCase
             'fax_prefeitura' => '(31) 3333-5555',
         ]);
 
-        $blocos = $this->servico()->blocosDeTelefone();
+        // Tamanho bem alto forca um unico bloco: os cinco campos desta mesma
+        // prefeitura ficam sempre consecutivos no array achatado (contatos()
+        // percorre as linhas em ordem, e dentro de cada linha percorre os
+        // campos na ordem do contrato) — a substring abaixo aparece intacta
+        // independente de quantos outros telefones ja existem na base.
+        $blocos = $this->servico()->blocosDeTelefone(1_000_000);
 
-        $this->assertCount(1, $blocos);
-        $this->assertSame(5, $blocos[0]['total']);
-        $this->assertSame(
+        $this->assertStringContainsString(
             '(31) 3333-1111; (31) 3333-2222; (31) 3333-3333; (31) 98888-4444; (31) 3333-5555',
             $blocos[0]['texto'],
         );
@@ -791,7 +909,11 @@ class ContatoRelatorioHttpTest extends TestCase
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        DB::table('compdec_prefeituras')->update(self::CAMPOS_DE_CONTATO);
+        // NAO zerar contato em massa aqui. O banco de teste e o de
+        // desenvolvimento (phpunit.xml tem as linhas de sqlite comentadas), e
+        // um UPDATE sem where sobre compdec_prefeituras apaga em definitivo o
+        // que o ETL carregou se o processo morrer antes do rollback. Cada
+        // teste cria a propria fixture em prefeituraCom() e assere sobre ELA.
     }
 
     /** @param array<int, string> $permissoes */
@@ -838,22 +960,35 @@ class ContatoRelatorioHttpTest extends TestCase
     {
         $this->prefeituraCom(['email_prefeitura' => 'PREFEITURA@Exemplo.MG.GOV.BR']);
 
-        $this->actingAs($this->usuario(self::PERMISSOES))
-            ->get(route('cedec.contatos.index'))
-            ->assertOk()
+        $resposta = $this->actingAs($this->usuario(self::PERMISSOES))
+            ->get(route('cedec.contatos.index'));
+
+        $resposta->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Cedec/Contatos/Index')
+                // O segundo argumento false desliga o ensure_pages_exist de
+                // config/inertia.php, que confere o arquivo .vue NO DISCO. A
+                // pagina Cedec/Contatos/Index so nasce na Task 5; sem o false
+                // este teste falha por pagina inexistente em vez de validar props.
+                ->component('Cedec/Contatos/Index', false)
                 ->where('aba', 'emails')
                 ->where('tamanho_bloco', 50)
                 ->has('emails')
                 ->has('telefones')
-                ->has('blocos', 1)
-                ->where('blocos.0.indice', 1)
-                ->where('blocos.0.total', 1)
-                ->where('blocos.0.texto', 'prefeitura@exemplo.mg.gov.br')
+                ->has('blocos')
                 ->has('totais.emails_preenchidos')
                 ->has('totais.telefones_preenchidos')
                 ->has('totais.municipios'));
+
+        // Conteudo se assere por PERTENCIMENTO, nunca por indice fixo nem
+        // total exato: o banco de teste e o de desenvolvimento e pode ter
+        // prefeituras reais alem da fixture. O e-mail entra em algum bloco,
+        // ja em minusculas.
+        $blocos = $resposta->viewData('page')['props']['blocos'];
+
+        $this->assertStringContainsString(
+            'prefeitura@exemplo.mg.gov.br',
+            implode(' ', array_column($blocos, 'texto')),
+        );
     }
 
     public function test_aba_de_telefones_devolve_os_blocos_de_telefone(): void
@@ -863,14 +998,26 @@ class ContatoRelatorioHttpTest extends TestCase
             'tel_prefeitura' => '(31) 3333-1111',
         ]);
 
-        $this->actingAs($this->usuario(self::PERMISSOES))
-            ->get(route('cedec.contatos.index', ['aba' => 'telefones']))
-            ->assertOk()
+        $resposta = $this->actingAs($this->usuario(self::PERMISSOES))
+            ->get(route('cedec.contatos.index', ['aba' => 'telefones']));
+
+        $resposta->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Cedec/Contatos/Index')
+                // false pelo mesmo motivo do teste anterior: a pagina Vue so
+                // existe a partir da Task 5.
+                ->component('Cedec/Contatos/Index', false)
                 ->where('aba', 'telefones')
-                ->has('blocos', 1)
-                ->where('blocos.0.texto', '(31) 3333-1111'));
+                ->has('blocos'));
+
+        $textoDosBlocos = implode(' ', array_column(
+            $resposta->viewData('page')['props']['blocos'],
+            'texto',
+        ));
+
+        $this->assertStringContainsString('(31) 3333-1111', $textoDosBlocos);
+
+        // O e-mail da mesma fixture NAO pode vazar para a aba de telefones.
+        $this->assertStringNotContainsString('nao-entra@exemplo.mg.gov.br', $textoDosBlocos);
     }
 
     public function test_aba_desconhecida_cai_em_emails(): void
@@ -1740,7 +1887,19 @@ Registradas aqui, **nao corrigidas** por este plano. Cada uma precisa de decisao
    pesa, o lugar da correcao e o service, nao o controller.
 
 9. **`phpunit.xml` nao isola o banco de teste.** As linhas de sqlite estao comentadas: os
-   testes rodam contra o banco de desenvolvimento, com as 853 prefeituras reais. Todo teste
-   deste plano zera os oito campos de contato no `setUp` (dentro da transacao) e le
-   `DB::table('municipios')->count()` como base. E contorno, nao conserto: a decisao de
-   isolar a conexao de teste e maior que esta fase.
+   testes rodam contra o banco de desenvolvimento, com as 853 prefeituras reais. E contorno,
+   nao conserto: isolar a conexao de teste e decisao maior que esta fase.
+
+   **Correcao de code review (2026-09-05).** A versao anterior deste plano zerava os oito
+   campos de contato de TODAS as prefeituras num `DB::table('compdec_prefeituras')->update()`
+   dentro do `setUp`, protegido so pelo rollback do `DatabaseTransactions`. Isso fazia com
+   que o modo de falha do teste fosse a destruicao do banco: qualquer Ctrl+C, fatal error,
+   timeout de container ou OOM antes do rollback apagava em definitivo o que o ETL carregou,
+   sem backup. Um teste nao pode ter isso como modo de falha.
+
+   A regra agora e absoluta nas duas classes de teste desta fase: **nenhum `update()` ou
+   `delete()` sem `where` restrito as linhas que o proprio teste criou.** Cada teste monta a
+   fixture em `prefeituraCom()`, que ja aplica `CAMPOS_DE_CONTATO` na PROPRIA linha, e as
+   asserçoes passam a ser por pertencimento (`assertStringContainsString` sobre o texto dos
+   blocos) ou por contagem RELATIVA ao "antes" — nunca indice fixo como `blocos.0.texto` nem
+   total exato como `has('blocos', 1)`, que so passavam porque o banco tinha sido esvaziado.
