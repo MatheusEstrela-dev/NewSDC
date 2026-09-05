@@ -29,14 +29,32 @@ comando divergente no corpo dele.
    uma vez por terminal, a partir de `SDC/`:
 
    ```bash
-   export APP_CONFIG_CACHE=/nao/existe/config.php
+   mkdir -p /c/tmp/newsdc-cache
+   export MSYS_NO_PATHCONV=1
+   export APP_CONFIG_CACHE=/tmp/newsdc-cache/nao-existe-config.php
+   export APP_PACKAGES_CACHE=/tmp/newsdc-cache/packages.php
+   export APP_SERVICES_CACHE=/tmp/newsdc-cache/services.php
+   export APP_ROUTES_CACHE=/tmp/newsdc-cache/routes.php
+   export APP_EVENTS_CACHE=/tmp/newsdc-cache/events.php
    export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
    export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
    ```
 
-   `APP_CONFIG_CACHE` para caminho inexistente e obrigatorio: sem ele o PHPUnit do host
-   escreve no `bootstrap/cache` compartilhado com o container e derruba o Octane, que so
-   volta com restart de ~3min. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   As CINCO variaveis de cache sao obrigatorias, e essa lista foi paga com dor nesta
+   sessao. `APP_CONFIG_CACHE` sozinho NAO basta: ele cobre so o cache de config, e o
+   PHPUnit do host continua reescrevendo `bootstrap/cache/packages.php` e `services.php`,
+   que sao bind-mount compartilhado com o container. Como a imagem foi buildada sem dev
+   dependencies, o manifest escrito pelo host descreve outro conjunto de providers e TODO
+   `artisan` dentro do container passa a morrer em `ProviderRepository` — no meu caso com
+   `Class "App\Modules\Cemaden\CemadenServiceProvider" not found`, apesar de a classe
+   existir e `class_exists()` devolver true la dentro. Recuperacao: apagar os dois
+   arquivos e rodar `artisan` DUAS vezes (a primeira falha recompilando, a segunda passa).
+
+   Os caminhos precisam comecar com `/`, e por isso o `MSYS_NO_PATHCONV=1`. O
+   `Application::normalizeCachePath` so trata como absoluto o que comeca com `/` ou `\`;
+   se o Git Bash converter para `C:/tmp/...`, o Laravel concatena com o base path e o
+   teste morre com "The <projeto>\C:/tmp/newsdc-cache directory must be present and
+   writable". Com a barra preservada, o PHP no Windows resolve `/tmp/...` para `C:\tmp\...`. Os `DB_*` sao obrigatorios porque o `.env` aponta
    `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
    `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
    migration, cair no sqlite da `no such table` na suite inteira.

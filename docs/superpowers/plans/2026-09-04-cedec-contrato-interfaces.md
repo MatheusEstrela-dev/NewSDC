@@ -36,7 +36,13 @@ explicitamente na secao "Interfaces / Produces".
   Exporte UMA VEZ por terminal, a partir de `SDC/`:
 
   ```bash
-  export APP_CONFIG_CACHE=/nao/existe/config.php
+  mkdir -p /c/tmp/newsdc-cache
+  export MSYS_NO_PATHCONV=1
+  export APP_CONFIG_CACHE=/tmp/newsdc-cache/nao-existe-config.php
+  export APP_PACKAGES_CACHE=/tmp/newsdc-cache/packages.php
+  export APP_SERVICES_CACHE=/tmp/newsdc-cache/services.php
+  export APP_ROUTES_CACHE=/tmp/newsdc-cache/routes.php
+  export APP_EVENTS_CACHE=/tmp/newsdc-cache/events.php
   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
   ```
@@ -48,9 +54,18 @@ explicitamente na secao "Interfaces / Produces".
   ```
 
   Cada peca do prefixo existe por um motivo medido:
-  - `APP_CONFIG_CACHE` para caminho inexistente e OBRIGATORIO. Sem ele o PHPUnit do host
-    escreve no `bootstrap/cache`, que e compartilhado com o container, e derruba o Octane —
-    que so volta com restart de ~3min.
+  - As CINCO variaveis de cache sao obrigatorias. `APP_CONFIG_CACHE` sozinho NAO basta:
+    cobre so o cache de config, enquanto o PHPUnit do host segue reescrevendo
+    `bootstrap/cache/packages.php` e `services.php`, que sao bind-mount compartilhado com o
+    container. Como a imagem nao tem dev dependencies, o manifest escrito pelo host descreve
+    outro conjunto de providers e todo `artisan` dentro do container morre em
+    `ProviderRepository`. Recuperacao: apagar os dois arquivos e rodar `artisan` duas vezes
+    (a primeira falha recompilando, a segunda passa). Ver a memoria
+    `bootstrap-cache-compartilhado-host-container`.
+  - `MSYS_NO_PATHCONV=1` e os caminhos comecando com `/` sao obrigatorios porque
+    `Application::normalizeCachePath` so considera absoluto o que comeca com `/` ou `\`. Se
+    o Git Bash converter para `C:/tmp/...`, o Laravel concatena com o base path e o teste
+    morre com "The <projeto>\C:/tmp/newsdc-cache directory must be present and writable".
   - Os `DB_*` sao necessarios porque o `.env` aponta `DB_HOST=newsdc_db`, um nome de rede
     Docker que o host nao resolve, e porque existe um `.env.testing` que forca
     `DB_CONNECTION=sqlite` com `:memory:`. Como `tests/TestCase.php` e vazio, nao roda
