@@ -29,6 +29,40 @@ sobre esta fase nas secoes 0, 1, 2, 3, 9 e 10):
 
 ## Global Constraints
 
+### Ambiente de execucao — corrigido em 2026-09-05, medido
+
+Estas quatro correcoes valem para TODOS os steps deste plano e substituem qualquer
+comando divergente no corpo dele.
+
+1. **O container e `newsdc_dev_app`**, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP),
+   com a aplicacao em `/var/www`. O nome `newsdc_frankenphp_local` do `.claude/kernel.py`
+   NAO EXISTE. O Postgres de desenvolvimento e `newsdc_dev_db`, publicado no host em 5434.
+
+2. **Teste roda no HOST, nunca no container.** `docker exec newsdc_dev_app php artisan test`
+   falha com `Command "test" is not defined` — a imagem nao tem dev dependencies. Exporte
+   uma vez por terminal, a partir de `SDC/`:
+
+   ```bash
+   export APP_CONFIG_CACHE=/nao/existe/config.php
+   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+   ```
+
+   `APP_CONFIG_CACHE` para caminho inexistente e obrigatorio: sem ele o PHPUnit do host
+   escreve no `bootstrap/cache` compartilhado com o container e derruba o Octane, que so
+   volta com restart de ~3min. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
+   `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
+   migration, cair no sqlite da `no such table` na suite inteira.
+
+3. **Os testes rodam contra o banco de DESENVOLVIMENTO.** Nenhum teste pode fazer `update()`
+   ou `delete()` sem `where` restrito as linhas que ele mesmo criou, e assercao de contagem
+   tem de ser relativa a um "antes", nunca total absoluto.
+
+4. **`SDC/tests` esta no `.gitignore`.** Escrever o teste continua obrigatorio, mas ele NAO
+   e versionado: todo `git add` dos steps leva so os arquivos de producao. Incluir caminho
+   sob `SDC/tests` faz o `git add` ser recusado.
+
 - App executavel em `NewSDC/SDC`. Testes: **PHPUnit**, nao Pest. Classe com
   `declare(strict_types=1)`, namespace `Tests\Feature\Cedec`, trait
   `DatabaseTransactions`.
@@ -55,10 +89,10 @@ sobre esta fase nas secoes 0, 1, 2, 3, 9 e 10):
   passos de commit ficam marcados apenas no fim de Task 1, Task 5 e Task 7; Tasks 2, 3,
   4 e 6 nao commitam sozinhas.
 - **Nome do container medido nesta sessao diverge do resto do projeto.** O contrato e
-  os planos das fases 3-5 usam `docker exec newsdc_frankenphp_local`. Neste ambiente
+  os planos das fases 3-5 usam `docker exec newsdc_dev_app`. Neste ambiente
   (`docker ps`, medido ao escrever este plano) o container realmente em execucao e
   `newsdc_dev_app` (imagem `newsdc-swoole-dev:latest`, servico `app` de
-  `docker/compose.dev.yml`). Os comandos abaixo usam `newsdc_frankenphp_local` para
+  `docker/compose.dev.yml`). Os comandos abaixo usam `newsdc_dev_app` para
   seguir o contrato; se o container ativo no seu ambiente tiver outro nome, confirme
   com `docker ps` e substitua.
 - Depois de mudar PHP: `octane:reload` (~1s). Mudar `.env`, `config/` ou
@@ -182,7 +216,7 @@ fase, que so precisa da conexao nova `legado_gestaocedec`.
 - [ ] **Step 1: Confirmar o estado atual (diagnostico, sem alterar nada)**
 
 ```bash
-docker exec newsdc_frankenphp_local env | grep -E "DB_LEGACY|DB_LEGADO_GESTAOCEDEC|COMPDEC_LEGACY|CEDEC_LEGACY"
+docker exec newsdc_dev_app env | grep -E "DB_LEGACY|DB_LEGADO_GESTAOCEDEC|COMPDEC_LEGACY|CEDEC_LEGACY"
 ```
 
 Esperado (estado antes do fix): `DB_LEGACY_DATABASE=dbsdc` (mantido, correto para os
@@ -336,7 +370,7 @@ fora do escopo de codigo desta fase.
 
 ```bash
 docker compose -f SDC/docker/compose.dev.yml up -d --force-recreate app
-docker exec newsdc_frankenphp_local env | grep -E "DB_LEGACY|DB_LEGADO_GESTAOCEDEC|COMPDEC_LEGACY"
+docker exec newsdc_dev_app env | grep -E "DB_LEGACY|DB_LEGADO_GESTAOCEDEC|COMPDEC_LEGACY"
 ```
 
 Esperado: `DB_LEGACY_DATABASE=dbsdc` **inalterado**, mais as cinco linhas novas
@@ -346,13 +380,13 @@ Esperado: `DB_LEGACY_DATABASE=dbsdc` **inalterado**, mais as cinco linhas novas
 - [ ] **Step 9: Verificar conectividade real com o legado, pela conexao nova**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan config:clear
-docker exec newsdc_frankenphp_local php -r "
+docker exec newsdc_dev_app php artisan config:clear
+docker exec newsdc_dev_app php -r "
 \$pdo = new PDO('mysql:host='.getenv('DB_LEGADO_GESTAOCEDEC_HOST').';port='.getenv('DB_LEGADO_GESTAOCEDEC_PORT').';dbname='.getenv('DB_LEGADO_GESTAOCEDEC_DATABASE').';charset=utf8mb4', getenv('DB_LEGADO_GESTAOCEDEC_USERNAME'), getenv('DB_LEGADO_GESTAOCEDEC_PASSWORD'), [PDO::ATTR_TIMEOUT=>3]);
 echo 'OK: '.\$pdo->query('SELECT COUNT(*) c FROM cedec_municipio')->fetch()['c'].' linhas em cedec_municipio'.PHP_EOL;
 echo 'OK: '.\$pdo->query('SELECT COUNT(*) c FROM cedec_prefeitura')->fetch()['c'].' linhas em cedec_prefeitura'.PHP_EOL;
 "
-docker exec newsdc_frankenphp_local php artisan tinker --execute="echo config('cedec.legacy_connection');"
+docker exec newsdc_dev_app php artisan tinker --execute="echo config('cedec.legacy_connection');"
 ```
 
 Expected: `OK: 854 linhas em cedec_municipio` e `OK: 854 linhas em cedec_prefeitura`
@@ -363,7 +397,7 @@ Confirmar tambem que a conexao antiga continua servindo os outros consumidores (
 regressao):
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan tinker --execute="echo config('compdec.legacy_connection');"
+docker exec newsdc_dev_app php artisan tinker --execute="echo config('compdec.legacy_connection');"
 ```
 
 Expected: `legacy` (inalterado).
@@ -454,7 +488,7 @@ class CompdecPrefeiturasMigrationTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=CompdecPrefeiturasMigrationTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CompdecPrefeiturasMigrationTest
 ```
 
 Expected: FAIL — `Coluna prefeito_partido ausente em compdec_prefeituras.`
@@ -564,7 +598,7 @@ substituir o metodo `up()` inteiro por:
 - [ ] **Step 4: Rodar a migration**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan migrate
+docker exec newsdc_dev_app php artisan migrate
 ```
 
 Expected: se a migration ja constava como executada (`migrations` table), Laravel nao
@@ -572,7 +606,7 @@ a roda de novo automaticamente — nesse caso force uma re-execucao pontual so d
 migration:
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan migrate:refresh --path=database/migrations/2026_05_05_100004_create_compdec_prefeituras_table.php
+docker exec newsdc_dev_app php artisan migrate:refresh --path=database/migrations/2026_05_05_100004_create_compdec_prefeituras_table.php
 ```
 
 Se esse comando nao existir na versao do Laravel (o `--path` do `refresh` roda TODAS
@@ -580,13 +614,13 @@ as migrations, nao so uma), a alternativa segura e chamar a classe diretamente v
 tinker:
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan tinker --execute="(new (require database_path('migrations/2026_05_05_100004_create_compdec_prefeituras_table.php')))->up();"
+docker exec newsdc_dev_app php artisan tinker --execute="(new (require database_path('migrations/2026_05_05_100004_create_compdec_prefeituras_table.php')))->up();"
 ```
 
 - [ ] **Step 5: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=CompdecPrefeiturasMigrationTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CompdecPrefeiturasMigrationTest
 ```
 
 Expected: PASS.
@@ -661,7 +695,7 @@ class PrefeituraFillableTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFillableTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFillableTest
 ```
 
 Expected: FAIL — os campos ficam `null` (mass assignment silenciosamente ignorado
@@ -723,7 +757,7 @@ por:
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFillableTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFillableTest
 ```
 
 Expected: PASS.
@@ -815,7 +849,7 @@ class PrefeituraDTOTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraDTOTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraDTOTest
 ```
 
 Expected: FAIL — `Undefined property: PrefeituraDTO::$prefeitoPartido` (erro fatal) ou
@@ -926,7 +960,7 @@ class PrefeituraDTO
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraDTOTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraDTOTest
 ```
 
 Expected: PASS (2 testes).
@@ -990,7 +1024,7 @@ class PrefeituraFactoryTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFactoryTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFactoryTest
 ```
 
 Expected: FAIL — `assertNotNull` falha porque `definition()` ainda nao preenche
@@ -1061,7 +1095,7 @@ por:
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFactoryTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFactoryTest
 ```
 
 Expected: PASS.
@@ -1069,7 +1103,7 @@ Expected: PASS.
 - [ ] **Step 5: Rodar as Tasks 2-5 juntas para confirmar que nada quebrou**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter="CompdecPrefeiturasMigrationTest|PrefeituraFillableTest|PrefeituraDTOTest|PrefeituraFactoryTest"
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter="CompdecPrefeiturasMigrationTest|PrefeituraFillableTest|PrefeituraDTOTest|PrefeituraFactoryTest"
 ```
 
 Expected: PASS em todos.
@@ -1508,7 +1542,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 - [ ] **Step 2: Rodar os testes e confirmar que falham**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraEtlMigracaoTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraEtlMigracaoTest
 ```
 
 Expected: FAIL em quase todos — o `migrarLegado()` atual consulta `com_comdec` (tabela
@@ -1847,7 +1881,7 @@ continuam servindo a aba do Compdec, intactos.
 - [ ] **Step 4: Rodar os testes e confirmar que passam**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraEtlMigracaoTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraEtlMigracaoTest
 ```
 
 Expected: PASS em todos os 13 testes. Se `test_foto_do_prefeito_e_copiada...` falhar
@@ -2023,7 +2057,7 @@ class ImportarPrefeiturasCommandTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ImportarPrefeiturasCommandTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ImportarPrefeiturasCommandTest
 ```
 
 Expected: FAIL — `Command "cedec:importar-prefeituras" is not defined.`
@@ -2133,8 +2167,8 @@ por:
 - [ ] **Step 6: Limpar cache de config e rodar o teste**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan config:clear
-docker exec newsdc_frankenphp_local php artisan test --filter=ImportarPrefeiturasCommandTest
+docker exec newsdc_dev_app php artisan config:clear
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ImportarPrefeiturasCommandTest
 ```
 
 Expected: PASS nos 2 testes.
@@ -2142,7 +2176,7 @@ Expected: PASS nos 2 testes.
 - [ ] **Step 7: Rodar a suite inteira do modulo Cedec**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=Cedec
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec
 ```
 
 Expected: PASS em todos os testes de `Tests\Feature\Cedec` (as 7 classes criadas
@@ -2151,10 +2185,10 @@ nesta fase).
 - [ ] **Step 8: Lint dos arquivos tocados**
 
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Compdec/Services/PrefeituraService.php
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Console/ImportarPrefeiturasCommand.php
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/CedecServiceProvider.php
-docker exec newsdc_frankenphp_local php -l /app/config/app.php
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Compdec/Services/PrefeituraService.php
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Console/ImportarPrefeiturasCommand.php
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/CedecServiceProvider.php
+docker exec newsdc_dev_app php -l /var/www/config/app.php
 ```
 
 Expected: `No syntax errors detected` nos quatro.
@@ -2185,15 +2219,15 @@ EOF
 
 ## Verificacao final da fase
 
-- [ ] `docker exec newsdc_frankenphp_local php artisan test --filter=Cedec` — todas as
+- [ ] `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec` — todas as
   7 classes de teste passam.
-- [ ] `docker exec newsdc_frankenphp_local php artisan route:list --name=cedec` — sem
+- [ ] `docker exec newsdc_dev_app php artisan route:list --name=cedec` — sem
   saida (fase 1 nao cria rotas; isso so confirma que o autoload do modulo novo nao
   quebrou o boot da aplicacao).
 - [ ] `git log --oneline -3` mostra os 3 commits desta fase (ambiente; schema+model+DTO
   +factory; ETL+command), nenhum arquivo de teste de depuracao avulso no `git status`.
 - [ ] Conferir que `SDC/.env` (nao commitado) tem as 6 chaves da Task 1 antes de rodar
   o command de verdade fora dos testes automatizados:
-  `docker exec newsdc_frankenphp_local php artisan cedec:importar-prefeituras --dry-run`
+  `docker exec newsdc_dev_app php artisan cedec:importar-prefeituras --dry-run`
   deve reportar `Inseridos`/`Atualizados` proximo de 853 (numero de municipios reais
   medido no legado) sem erro de conexao.

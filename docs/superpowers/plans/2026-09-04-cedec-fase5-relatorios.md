@@ -15,6 +15,40 @@
 
 ## Global Constraints
 
+### Ambiente de execucao — corrigido em 2026-09-05, medido
+
+Estas quatro correcoes valem para TODOS os steps deste plano e substituem qualquer
+comando divergente no corpo dele.
+
+1. **O container e `newsdc_dev_app`**, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP),
+   com a aplicacao em `/var/www`. O nome `newsdc_frankenphp_local` do `.claude/kernel.py`
+   NAO EXISTE. O Postgres de desenvolvimento e `newsdc_dev_db`, publicado no host em 5434.
+
+2. **Teste roda no HOST, nunca no container.** `docker exec newsdc_dev_app php artisan test`
+   falha com `Command "test" is not defined` — a imagem nao tem dev dependencies. Exporte
+   uma vez por terminal, a partir de `SDC/`:
+
+   ```bash
+   export APP_CONFIG_CACHE=/nao/existe/config.php
+   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+   ```
+
+   `APP_CONFIG_CACHE` para caminho inexistente e obrigatorio: sem ele o PHPUnit do host
+   escreve no `bootstrap/cache` compartilhado com o container e derruba o Octane, que so
+   volta com restart de ~3min. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
+   `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
+   migration, cair no sqlite da `no such table` na suite inteira.
+
+3. **Os testes rodam contra o banco de DESENVOLVIMENTO.** Nenhum teste pode fazer `update()`
+   ou `delete()` sem `where` restrito as linhas que ele mesmo criou, e assercao de contagem
+   tem de ser relativa a um "antes", nunca total absoluto.
+
+4. **`SDC/tests` esta no `.gitignore`.** Escrever o teste continua obrigatorio, mas ele NAO
+   e versionado: todo `git add` dos steps leva so os arquivos de producao. Incluir caminho
+   sob `SDC/tests` faz o `git add` ser recusado.
+
 Valem para TODA task deste plano. Sao copia literal do contrato (secao 0) e das skills
 `.claude/skills/frontend/03 - Layout` e `04 - Responsividade`.
 
@@ -24,10 +58,10 @@ Valem para TODA task deste plano. Sao copia literal do contrato (secao 0) e das 
 - Commits: `<emoji> tipo(cedec): descricao` em pt-BR. **Sem trailer de co-autor.**
 - Commit atomico: agrupar os arquivos que entregam UMA mudanca. Arquivo de teste criado so para depuracao nao entra no commit.
 - Testes: `declare(strict_types=1)`, namespace `Tests\Feature\Cedec`, trait `DatabaseTransactions`, `AssertableInertia` para props, `Spatie\Permission\Models\Permission` para conceder slug.
-- Verificacao backend: `docker exec newsdc_frankenphp_local php artisan test --filter=<Nome>`.
-- Verificacao de sintaxe: `docker exec newsdc_frankenphp_local php -l /app/<caminho>`.
+- Verificacao backend: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=<Nome>`.
+- Verificacao de sintaxe: `docker exec newsdc_dev_app php -l /var/www/<caminho>`.
 - Verificacao frontend: `npm run build` na pasta `SDC`.
-- Depois de mudar PHP: `docker exec newsdc_frankenphp_local php artisan octane:reload` (~1s). Restart do container so para `.env`, `config/` ou extensao — custa ~3min.
+- Depois de mudar PHP: `docker exec newsdc_dev_app php artisan octane:reload` (~1s). Restart do container so para `.env`, `config/` ou extensao — custa ~3min.
 - A calha horizontal e do `<main>`; a raiz da pagina **nao** leva `p-*` nem `px-*`. Leva `w-full pb-8`.
 - Ritmo vertical de 24px vem de UMA fonte so: `mb-6` nos filhos (Forma A) **ou** `space-y-6` no pai, nunca os dois.
 - `document.documentElement.scrollWidth - clientWidth === 0` em 375px **e** em 840px. Quem transborda rola/quebra dentro de si.
@@ -59,13 +93,13 @@ Esta fase **nao cria nada disso**; se faltar, pare e conclua a fase corresponden
 **Verificacao de que o Consumes esta satisfeito** (roda antes da Task 1):
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan tinker --execute="echo implode(',', array_intersect(['email_prefeitura','tel_prefeitura','fax_prefeitura','tel_prefeitura_2','email_prefeitura_2','email_prefeitura_3'], \Illuminate\Support\Facades\Schema::getColumnListing('compdec_prefeituras')));"
+docker exec newsdc_dev_app php artisan tinker --execute="echo implode(',', array_intersect(['email_prefeitura','tel_prefeitura','fax_prefeitura','tel_prefeitura_2','email_prefeitura_2','email_prefeitura_3'], \Illuminate\Support\Facades\Schema::getColumnListing('compdec_prefeituras')));"
 ```
 
 Esperado: as seis colunas listadas. Se sair vazio ou incompleto, a fase 1 nao foi aplicada.
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec
+docker exec newsdc_dev_app php artisan route:list --name=cedec
 ```
 
 Esperado: pelo menos as rotas `cedec.prefeituras.*`. Se o comando reclamar que nao ha rotas, a fase 2 nao foi aplicada.
@@ -560,7 +594,7 @@ class ContatoRelatorioServiceTest extends TestCase
 - [ ] **Step 3: Rodar o teste para ver falhar**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorioServiceTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorioServiceTest
 ```
 
 Esperado: FAIL — `Class "App\Modules\Cedec\Services\ContatoRelatorioService" does not exist`.
@@ -821,9 +855,9 @@ final class ContatoRelatorioService
 - [ ] **Step 5: Rodar o teste para ver passar**
 
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Services/ContatoRelatorioService.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorioServiceTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Services/ContatoRelatorioService.php
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorioServiceTest
 ```
 
 Esperado: PASS, 12 testes (os 4 casos do data provider contam separado).
@@ -831,7 +865,7 @@ Esperado: PASS, 12 testes (os 4 casos do data provider contam separado).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/Modules/Cedec/Services/ContatoRelatorioService.php tests/Feature/Cedec/ContatoRelatorioServiceTest.php
+git add app/Modules/Cedec/Services/ContatoRelatorioService.php
 git commit -m "✨ feat(cedec): service de relatorio de contatos com blocos de 50"
 ```
 
@@ -1063,7 +1097,7 @@ class ContatoRelatorioHttpTest extends TestCase
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorioHttpTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorioHttpTest
 ```
 
 Esperado: FAIL — `Route [cedec.contatos.index] not defined.`
@@ -1175,7 +1209,7 @@ final class ContatoRelatorioController extends Controller
 - [ ] **Step 4: Conferir se as rotas de contatos ja existem**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec.contatos
+docker exec newsdc_dev_app php artisan route:list --name=cedec.contatos
 ```
 
 Se as duas rotas aparecerem (a fase 2 as registrou), **pule o Step 5**. Se nao aparecer
@@ -1209,10 +1243,10 @@ Nao registrar `Route::model()` nenhum: `Route::model()` e GLOBAL neste projeto e
 - [ ] **Step 6: Rodar o teste para ver passar**
 
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Controllers/ContatoRelatorioController.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec.contatos
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorioHttpTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Controllers/ContatoRelatorioController.php
+docker exec newsdc_dev_app php artisan octane:reload
+docker exec newsdc_dev_app php artisan route:list --name=cedec.contatos
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorioHttpTest
 ```
 
 Esperado: as duas rotas listadas e 7 testes PASS. O teste do Inertia falha com
@@ -1222,7 +1256,7 @@ teste nao resolve o componente, so compara o nome.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add app/Modules/Cedec/Controllers/ContatoRelatorioController.php routes/modules/cedec.php tests/Feature/Cedec/ContatoRelatorioHttpTest.php
+git add app/Modules/Cedec/Controllers/ContatoRelatorioController.php routes/modules/cedec.php
 git commit -m "✨ feat(cedec): rotas e controller dos relatorios de contato"
 ```
 
@@ -1775,8 +1809,8 @@ Esperado: build sem erro e sem aviso de componente nao resolvido.
 - [ ] **Step 5: Rodar a suite inteira da fase**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorio
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorio
 ```
 
 Esperado: PASS nas duas classes (19 testes).
@@ -1822,8 +1856,8 @@ git commit -m "✨ feat(cedec): pagina de relatorios de contato com abas e expor
 
 ## Verificacao final da fase
 
-- [ ] `docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorio` — PASS
-- [ ] `docker exec newsdc_frankenphp_local php artisan route:list --name=cedec.contatos` — duas rotas
+- [ ] `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorio` — PASS
+- [ ] `docker exec newsdc_dev_app php artisan route:list --name=cedec.contatos` — duas rotas
 - [ ] `npm run build` na pasta `SDC` — sem erro
 - [ ] `excesso` horizontal 0 em 375px e 840px, nas duas abas
 - [ ] `grep -rn "style scoped" resources/js/Components/*/Cedec resources/js/Pages/Cedec` — nenhum resultado

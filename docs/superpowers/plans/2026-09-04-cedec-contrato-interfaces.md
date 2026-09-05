@@ -19,16 +19,49 @@ explicitamente na secao "Interfaces / Produces".
 - Testes: **PHPUnit**, nao Pest. Classe com `declare(strict_types=1)`, namespace
   `Tests\Feature\Cedec`, trait `DatabaseTransactions`, `Inertia\Testing\AssertableInertia`
   para props, `Spatie\Permission\Models\Permission` para conceder slug.
-- Comandos no container. **Correcao 2026-09-04, medida com `docker ps`:** o container que roda
-  e `newsdc_dev_app`, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP). O nome
-  `newsdc_frankenphp_local` que aparece no `.claude/kernel.py` e nos planos das fases 3, 4 e 5
-  esta DESATUALIZADO. Use:
-  - `docker exec newsdc_dev_app php artisan test --filter=<Nome>`
-  - `docker exec newsdc_dev_app php -l /app/<caminho>`
-  - `docker exec newsdc_dev_app php artisan route:list --name=cedec`
-  Confira com `docker ps` antes de rodar: os demais containers do stack sao
+- **Container (corrigido em 2026-09-05, medido com `docker ps`).** O nome
+  `newsdc_frankenphp_local`, que aparece no `.claude/kernel.py`, NAO EXISTE. O container que
+  roda e `newsdc_dev_app`, imagem `newsdc-swoole-dev` — Swoole, nao FrankenPHP — e a raiz da
+  aplicacao dentro dele e `/var/www`, nao `/app`. Os demais containers do stack sao
   `newsdc_dev_queue`, `newsdc_dev_scheduler`, `newsdc_dev_reverb`, `newsdc_dev_redis`,
-  `newsdc_dev_db` e `newsdc_dev_db_bkp`.
+  `newsdc_dev_db` (Postgres, publicado no host em **5434**) e `newsdc_dev_db_bkp` (5435).
+  - `docker exec newsdc_dev_app php -l /var/www/<caminho>`
+  - `docker exec newsdc_dev_app php artisan route:list --name=cedec`
+
+- **Testes rodam NO HOST, nunca no container (corrigido em 2026-09-05).**
+  `docker exec newsdc_dev_app php artisan test` FALHA com `Command "test" is not defined`: a
+  imagem e montada sem dev dependencies, e `vendor/bin` la dentro so tem `carbon`, `openapi`
+  e `patch-type-declarations`. Quem tem PHPUnit e o host.
+
+  Exporte UMA VEZ por terminal, a partir de `SDC/`:
+
+  ```bash
+  export APP_CONFIG_CACHE=/nao/existe/config.php
+  export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+  export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+  ```
+
+  Depois, cada teste e so:
+
+  ```bash
+  php -d extension=pdo_pgsql vendor/bin/phpunit --filter=<Nome>
+  ```
+
+  Cada peca do prefixo existe por um motivo medido:
+  - `APP_CONFIG_CACHE` para caminho inexistente e OBRIGATORIO. Sem ele o PHPUnit do host
+    escreve no `bootstrap/cache`, que e compartilhado com o container, e derruba o Octane —
+    que so volta com restart de ~3min.
+  - Os `DB_*` sao necessarios porque o `.env` aponta `DB_HOST=newsdc_db`, um nome de rede
+    Docker que o host nao resolve, e porque existe um `.env.testing` que forca
+    `DB_CONNECTION=sqlite` com `:memory:`. Como `tests/TestCase.php` e vazio, nao roda
+    migration nenhuma, e 86 dos 89 arquivos de teste usam `DatabaseTransactions`, cair no
+    sqlite significa `no such table` em toda a suite. As variaveis acima vencem o
+    `.env.testing` e apontam para o Postgres de desenvolvimento.
+  - `-d extension=pdo_pgsql` porque o PHP do Laragon nao carrega a extensao por padrao.
+
+  **Consequencia para os testes:** eles rodam contra o banco de DESENVOLVIMENTO. Nenhum
+  teste pode fazer `update()` ou `delete()` sem `where` restrito as linhas que ele mesmo
+  criou, e asserçao de contagem tem de ser relativa a um "antes", nunca total absoluto.
 - Frontend: `npm run build` na pasta `SDC`.
 - Depois de mudar PHP: `octane:reload` (~1s). Restart do container so para `.env`,
   `config/` ou extensao — custa ~3min.
@@ -36,7 +69,13 @@ explicitamente na secao "Interfaces / Produces".
 - Commits: `<emoji> tipo(escopo): descricao` em pt-BR, escopo `cedec`. Commit atomico:
   agrupar os arquivos que entregam UMA mudanca. **Nao incluir trailer de co-autor.**
 - Migration: **consolidar na migration principal existente**, nao criar `add_*`.
-- Arquivo de teste criado so para depuracao nao entra no commit.
+- **Teste nao entra no commit (corrigido em 2026-09-05).** `SDC/tests` esta no `.gitignore`
+  do repositorio, o que confirma a regra de ouro 10 do usuario. Todo `git add` dos steps
+  leva SO os arquivos de producao; o arquivo de teste fica local. Um `git add` que inclua
+  caminho sob `SDC/tests` e recusado com "paths are ignored by one of your .gitignore
+  files". Escrever o teste continua obrigatorio — TDD nao muda; o que muda e que ele nao e
+  versionado. Ha inconsistencia no proprio repo (`SDC/tests/Feature/Pae/PaeFormularioControllerTest.php`
+  aparece como rastreado, forcado para dentro em algum momento); nao siga esse exemplo.
 
 ### Regras de UI obrigatorias (medidas contra o modulo RAT)
 

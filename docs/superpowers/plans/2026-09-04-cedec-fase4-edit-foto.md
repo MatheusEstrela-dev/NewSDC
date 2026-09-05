@@ -15,16 +15,50 @@
 
 ## Global Constraints
 
+### Ambiente de execucao — corrigido em 2026-09-05, medido
+
+Estas quatro correcoes valem para TODOS os steps deste plano e substituem qualquer
+comando divergente no corpo dele.
+
+1. **O container e `newsdc_dev_app`**, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP),
+   com a aplicacao em `/var/www`. O nome `newsdc_frankenphp_local` do `.claude/kernel.py`
+   NAO EXISTE. O Postgres de desenvolvimento e `newsdc_dev_db`, publicado no host em 5434.
+
+2. **Teste roda no HOST, nunca no container.** `docker exec newsdc_dev_app php artisan test`
+   falha com `Command "test" is not defined` — a imagem nao tem dev dependencies. Exporte
+   uma vez por terminal, a partir de `SDC/`:
+
+   ```bash
+   export APP_CONFIG_CACHE=/nao/existe/config.php
+   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+   ```
+
+   `APP_CONFIG_CACHE` para caminho inexistente e obrigatorio: sem ele o PHPUnit do host
+   escreve no `bootstrap/cache` compartilhado com o container e derruba o Octane, que so
+   volta com restart de ~3min. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
+   `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
+   migration, cair no sqlite da `no such table` na suite inteira.
+
+3. **Os testes rodam contra o banco de DESENVOLVIMENTO.** Nenhum teste pode fazer `update()`
+   ou `delete()` sem `where` restrito as linhas que ele mesmo criou, e assercao de contagem
+   tem de ser relativa a um "antes", nunca total absoluto.
+
+4. **`SDC/tests` esta no `.gitignore`.** Escrever o teste continua obrigatorio, mas ele NAO
+   e versionado: todo `git add` dos steps leva so os arquivos de producao. Incluir caminho
+   sob `SDC/tests` faz o `git add` ser recusado.
+
 Valem para toda task deste plano. Valores copiados literalmente da spec e do contrato.
 
 **Repositorio e comandos**
 
 - App executavel em `NewSDC/SDC`. Todo caminho neste plano e relativo a essa pasta, salvo quando escrito por extenso.
 - Testes: **PHPUnit, nao Pest.** Classe com `declare(strict_types=1)`, namespace `Tests\Feature\Cedec`, trait `Illuminate\Foundation\Testing\DatabaseTransactions`, `Inertia\Testing\AssertableInertia` para props, `Spatie\Permission\Models\Permission` para conceder slug.
-- Verificacao backend: `docker exec newsdc_frankenphp_local php artisan test --filter=<Nome>`.
-- Lint PHP: `docker exec newsdc_frankenphp_local php -l /app/<caminho>`.
+- Verificacao backend: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=<Nome>`.
+- Lint PHP: `docker exec newsdc_dev_app php -l /var/www/<caminho>`.
 - Verificacao frontend: `npm run build` na pasta `SDC`.
-- Depois de mudar PHP: `docker exec newsdc_frankenphp_local php artisan octane:reload` (~1s). Restart do container so para `.env`, `config/` ou extensao — custa ~3min.
+- Depois de mudar PHP: `docker exec newsdc_dev_app php artisan octane:reload` (~1s). Restart do container so para `.env`, `config/` ou extensao — custa ~3min.
 - **Sem emoji dentro do codigo.** Emoji so na mensagem de commit (gitmoji).
 - Commits: `<emoji> tipo(cedec): descricao` em pt-BR. Commit atomico: agrupar os arquivos que entregam UMA mudanca. **Nao incluir trailer de co-autor.**
 - Arquivo de teste criado so para depuracao nao entra no commit. Os tres arquivos de teste nomeados neste plano sao entregaveis e entram.
@@ -241,7 +275,7 @@ class CedecAbaCompdecRefitTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste e confirmar que ele falha**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecAbaCompdecRefitTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecAbaCompdecRefitTest`
 
 Expected: os dois primeiros metodos passam (a aba ainda e a antiga) e `test_o_formulario_compartilhado_nao_tem_mais_divida_de_ui` FALHA com `Failed asserting that '...' does not contain "<style scoped>"`.
 
@@ -642,7 +676,7 @@ O bloco fica assim:
 
 - [ ] **Step 7: Rodar o teste e confirmar que passa**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecAbaCompdecRefitTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecAbaCompdecRefitTest`
 
 Expected: PASS, 3 testes, sem falha.
 
@@ -674,8 +708,7 @@ Expected: `0` nas duas larguras.
 git add resources/js/Components/Molecules/Form/FormField.vue \
         resources/js/Components/Organisms/Cedec/PrefeituraFormSections.vue \
         resources/js/Components/Organisms/Compdec/PrefeituraForm.vue \
-        resources/js/Components/Organisms/Compdec/Tabs/PrefeituraTab.vue \
-        tests/Feature/Cedec/CedecAbaCompdecRefitTest.php
+        resources/js/Components/Organisms/Compdec/Tabs/PrefeituraTab.vue
 git commit -m "♻️ refactor(cedec): formulario de prefeitura sobre Molecules/Form, sem style scoped"
 ```
 
@@ -926,7 +959,7 @@ class CedecPrefeituraEdicaoTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste e confirmar que ele falha**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraEdicaoTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraEdicaoTest`
 
 Expected: FAIL nos dois primeiros metodos com a mensagem do Inertia `Inertia page component file [Cedec/Prefeituras/Edit] does not exist` (`ensure_pages_exist` esta ligado em `config/inertia.php`). Os metodos de update podem ja passar, porque exercitam a fase 2 — se algum falhar, o defeito e no `UpdatePrefeituraRequest` ou no `upsertPorMunicipio` da fase 2, nao neste plano.
 
@@ -1167,7 +1200,7 @@ function voltar() {
 
 - [ ] **Step 6: Rodar o teste e confirmar que passa**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraEdicaoTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraEdicaoTest`
 
 Expected: PASS, 7 testes.
 
@@ -1204,8 +1237,7 @@ Conferir tambem, com o tema claro e com o tema escuro (alternando pela classe `d
 ```bash
 git add resources/js/Components/Organisms/Cedec/IndicadoresMunicipaisPanel.vue \
         resources/js/Pages/Cedec/Prefeituras/Edit.vue \
-        resources/js/Support/moduleIcons.js \
-        tests/Feature/Cedec/CedecPrefeituraEdicaoTest.php
+        resources/js/Support/moduleIcons.js
 git commit -m "✨ feat(cedec): tela de edicao de prefeitura com indicadores read-only"
 ```
 
@@ -1402,7 +1434,7 @@ class CedecPrefeituraFotoTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste e confirmar que ele falha**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraFotoTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraFotoTest`
 
 Expected: FAIL em `test_recusa_arquivo_com_mime_fora_da_colecao` e em `test_recusa_arquivo_acima_do_limite_de_tamanho` com `Session is missing expected key [errors]` — o controller da fase 2 ainda nao valida o arquivo antes de entregar ao service.
 
@@ -1435,13 +1467,13 @@ Conferir que o `use Illuminate\Http\Request;` e o `use Illuminate\Http\RedirectR
 
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraFotoTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraFotoTest`
 
 Expected: PASS, 6 testes.
 
 - [ ] **Step 5: Recarregar o worker**
 
-Run: `docker exec newsdc_frankenphp_local php artisan octane:reload`
+Run: `docker exec newsdc_dev_app php artisan octane:reload`
 
 Expected: `Octane workers reloaded.` (o restart de container nao e necessario: mudou PHP, nao `.env` nem `config/`).
 
@@ -1588,13 +1620,13 @@ Expected: `0` nas duas larguras.
 
 - [ ] **Step 10: Rodar a suite inteira da fase**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=Cedec`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec`
 
 Expected: PASS nos tres arquivos (`CedecAbaCompdecRefitTest`, `CedecPrefeituraEdicaoTest`, `CedecPrefeituraFotoTest`), mais o que as fases 1 a 3 ja tiverem deixado com o mesmo prefixo.
 
 - [ ] **Step 11: Lint dos arquivos PHP tocados**
 
-Run: `docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Controllers/PrefeituraController.php`
+Run: `docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Controllers/PrefeituraController.php`
 
 Expected: `No syntax errors detected`.
 
@@ -1602,8 +1634,7 @@ Expected: `No syntax errors detected`.
 
 ```bash
 git add app/Modules/Cedec/Controllers/PrefeituraController.php \
-        resources/js/Pages/Cedec/Prefeituras/Edit.vue \
-        tests/Feature/Cedec/CedecPrefeituraFotoTest.php
+        resources/js/Pages/Cedec/Prefeituras/Edit.vue
 git commit -m "✨ feat(cedec): foto do prefeito na edicao estadual de prefeitura"
 ```
 
@@ -1611,7 +1642,7 @@ git commit -m "✨ feat(cedec): foto do prefeito na edicao estadual de prefeitur
 
 ## Checklist de encerramento da fase 4
 
-- [ ] `docker exec newsdc_frankenphp_local php artisan test --filter=Cedec` — verde.
+- [ ] `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec` — verde.
 - [ ] `npm run build` na pasta `SDC` — verde.
 - [ ] `grep -rn "style scoped" resources/js/Components/Organisms/Compdec/PrefeituraForm.vue` — sem resultado.
 - [ ] `grep -rn "style scoped" resources/js/Components/Organisms/Cedec/ resources/js/Pages/Cedec/` — sem resultado.

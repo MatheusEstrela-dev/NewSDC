@@ -15,13 +15,47 @@
 
 ## Global Constraints
 
+### Ambiente de execucao — corrigido em 2026-09-05, medido
+
+Estas quatro correcoes valem para TODOS os steps deste plano e substituem qualquer
+comando divergente no corpo dele.
+
+1. **O container e `newsdc_dev_app`**, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP),
+   com a aplicacao em `/var/www`. O nome `newsdc_frankenphp_local` do `.claude/kernel.py`
+   NAO EXISTE. O Postgres de desenvolvimento e `newsdc_dev_db`, publicado no host em 5434.
+
+2. **Teste roda no HOST, nunca no container.** `docker exec newsdc_dev_app php artisan test`
+   falha com `Command "test" is not defined` — a imagem nao tem dev dependencies. Exporte
+   uma vez por terminal, a partir de `SDC/`:
+
+   ```bash
+   export APP_CONFIG_CACHE=/nao/existe/config.php
+   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+   ```
+
+   `APP_CONFIG_CACHE` para caminho inexistente e obrigatorio: sem ele o PHPUnit do host
+   escreve no `bootstrap/cache` compartilhado com o container e derruba o Octane, que so
+   volta com restart de ~3min. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
+   `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
+   migration, cair no sqlite da `no such table` na suite inteira.
+
+3. **Os testes rodam contra o banco de DESENVOLVIMENTO.** Nenhum teste pode fazer `update()`
+   ou `delete()` sem `where` restrito as linhas que ele mesmo criou, e assercao de contagem
+   tem de ser relativa a um "antes", nunca total absoluto.
+
+4. **`SDC/tests` esta no `.gitignore`.** Escrever o teste continua obrigatorio, mas ele NAO
+   e versionado: todo `git add` dos steps leva so os arquivos de producao. Incluir caminho
+   sob `SDC/tests` faz o `git add` ser recusado.
+
 Copiadas literalmente do contrato (secao 0) e da spec.
 
 - App executavel em `NewSDC/SDC`. Todo caminho deste plano e relativo a essa pasta, salvo quando escrito por extenso.
 - Testes: **PHPUnit, nao Pest.** `declare(strict_types=1)`, namespace `Tests\Feature\Cedec`, trait `Illuminate\Foundation\Testing\DatabaseTransactions`, `Inertia\Testing\AssertableInertia` para props, `Spatie\Permission\Models\Permission` para conceder slug em teste.
 - **`SDC/phpunit.xml` NAO isola o banco de teste** (as linhas de sqlite estao comentadas): os testes rodam contra o banco de desenvolvimento, com as 853 prefeituras reais. Toda asserçao de contagem e RELATIVA (captura o "antes", cria fixtures dentro da transacao, compara com o "depois") — nunca assume banco vazio. `DatabaseTransactions` desfaz tudo ao final.
-- Comandos no container: `docker exec newsdc_frankenphp_local php artisan test --filter=<Nome>`, `docker exec newsdc_frankenphp_local php -l /app/<caminho>`, `docker exec newsdc_frankenphp_local php artisan route:list --name=cedec`.
-- Depois de mudar PHP: `docker exec newsdc_frankenphp_local php artisan octane:reload` (~1s). **Mudar `config/permissions.php` exige RESTART do container**, nunca `octane:reload` — Octane mantem o config carregado na memoria do worker desde o boot; `octane:reload` nao rele o disco.
+- Comandos no container: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=<Nome>`, `docker exec newsdc_dev_app php -l /var/www/<caminho>`, `docker exec newsdc_dev_app php artisan route:list --name=cedec`.
+- Depois de mudar PHP: `docker exec newsdc_dev_app php artisan octane:reload` (~1s). **Mudar `config/permissions.php` exige RESTART do container**, nunca `octane:reload` — Octane mantem o config carregado na memoria do worker desde o boot; `octane:reload` nao rele o disco.
 - **Sem emoji dentro do codigo.** Emoji so na mensagem de commit (gitmoji).
 - Commits: `<emoji> tipo(cedec): descricao` em pt-BR. Commit atomico: agrupar os arquivos que entregam UMA mudanca. **Sem trailer de co-autor.**
 - Arquivo de teste criado so para depuracao nao entra no commit; os arquivos de teste nomeados neste plano sao entregaveis e entram.
@@ -41,7 +75,7 @@ Esta fase assume, exatamente como o contrato descreve (secoes 1, 2, 3):
 Verificacao antes de comecar (o mesmo comando que a fase 5 usa):
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan tinker --execute="echo implode(',', array_intersect(['email_prefeitura','tel_prefeitura','fax_prefeitura','tel_prefeitura_2','email_prefeitura_2','email_prefeitura_3','prefeito_partido'], \Illuminate\Support\Facades\Schema::getColumnListing('compdec_prefeituras')));"
+docker exec newsdc_dev_app php artisan tinker --execute="echo implode(',', array_intersect(['email_prefeitura','tel_prefeitura','fax_prefeitura','tel_prefeitura_2','email_prefeitura_2','email_prefeitura_3','prefeito_partido'], \Illuminate\Support\Facades\Schema::getColumnListing('compdec_prefeituras')));"
 ```
 
 Esperado: as sete colunas listadas. Se sair vazio ou incompleto, a fase 1 nao foi aplicada — pare e conclua a fase 1 antes de continuar.
@@ -163,7 +197,7 @@ class CedecEnumsTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecEnumsTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecEnumsTest`
 Expected: FAIL — `Class "App\Modules\Cedec\Enums\Macrorregiao" not found`.
 
 - [ ] **Step 3: Criar `Macrorregiao`**
@@ -270,9 +304,9 @@ enum TerritorioDesenvolvimento: string
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Enums/Macrorregiao.php
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Enums/TerritorioDesenvolvimento.php
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecEnumsTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Enums/Macrorregiao.php
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Enums/TerritorioDesenvolvimento.php
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecEnumsTest
 ```
 Expected: PASS, 5 testes.
 
@@ -280,8 +314,7 @@ Expected: PASS, 5 testes.
 
 ```bash
 git add app/Modules/Cedec/Enums/Macrorregiao.php \
-        app/Modules/Cedec/Enums/TerritorioDesenvolvimento.php \
-        tests/Feature/Cedec/CedecEnumsTest.php
+        app/Modules/Cedec/Enums/TerritorioDesenvolvimento.php
 git commit -m "✨ feat(cedec): enums de macrorregiao e territorio de desenvolvimento"
 ```
 
@@ -419,7 +452,7 @@ class PrefeituraFiltroDTOTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFiltroDTOTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFiltroDTOTest`
 Expected: FAIL — `Class "App\Modules\Cedec\DTOs\PrefeituraFiltroDTO" not found`.
 
 - [ ] **Step 3: Criar o DTO**
@@ -504,15 +537,15 @@ final class PrefeituraFiltroDTO
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/DTOs/PrefeituraFiltroDTO.php
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFiltroDTOTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/DTOs/PrefeituraFiltroDTO.php
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFiltroDTOTest
 ```
 Expected: PASS, 11 testes (contando os data providers).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/Modules/Cedec/DTOs/PrefeituraFiltroDTO.php tests/Feature/Cedec/PrefeituraFiltroDTOTest.php
+git add app/Modules/Cedec/DTOs/PrefeituraFiltroDTO.php
 git commit -m "✨ feat(cedec): DTO de filtro da listagem de prefeituras"
 ```
 
@@ -808,7 +841,7 @@ class CedecPrefeituraServiceListagemTest extends TestCase
 
 - [ ] **Step 3: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraServiceListagemTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraServiceListagemTest`
 Expected: FAIL — `Class "App\Modules\Cedec\Services\CedecPrefeituraService" not found`.
 
 - [ ] **Step 4: Escrever o service (metodos de leitura)**
@@ -995,16 +1028,16 @@ final class CedecPrefeituraService
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Services/CedecPrefeituraService.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraServiceListagemTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Services/CedecPrefeituraService.php
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraServiceListagemTest
 ```
 Expected: PASS, 13 testes.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/Modules/Cedec/Services/CedecPrefeituraService.php tests/Feature/Cedec/CedecPrefeituraServiceListagemTest.php
+git add app/Modules/Cedec/Services/CedecPrefeituraService.php
 git commit -m "✨ feat(cedec): listagem, estatisticas e indicadores municipais no service"
 ```
 
@@ -1136,7 +1169,7 @@ class CedecPrefeituraServiceUpsertFotoTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraServiceUpsertFotoTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraServiceUpsertFotoTest`
 Expected: FAIL — `Call to undefined method App\Modules\Cedec\Services\CedecPrefeituraService::upsertPorMunicipio()`.
 
 - [ ] **Step 3: Acrescentar os metodos de escrita**
@@ -1197,21 +1230,21 @@ E, logo apos o metodo `indicadoresMunicipais()` (antes de `aplicarPendencia()`),
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Services/CedecPrefeituraService.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraServiceUpsertFotoTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Services/CedecPrefeituraService.php
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraServiceUpsertFotoTest
 ```
 Expected: PASS, 6 testes.
 
 - [ ] **Step 5: Rodar tambem a suite de leitura para garantir que nada quebrou**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraService`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraService`
 Expected: PASS, as duas classes (leitura + escrita).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/Modules/Cedec/Services/CedecPrefeituraService.php tests/Feature/Cedec/CedecPrefeituraServiceUpsertFotoTest.php
+git add app/Modules/Cedec/Services/CedecPrefeituraService.php
 git commit -m "✨ feat(cedec): upsert por municipio e upload/remocao de foto do prefeito"
 ```
 
@@ -1296,7 +1329,7 @@ class PrefeituraListaResourceTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraListaResourceTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraListaResourceTest`
 Expected: FAIL — `Class "App\Modules\Cedec\Resources\PrefeituraListaResource" not found`.
 
 - [ ] **Step 3: Criar o Resource**
@@ -1343,15 +1376,15 @@ final class PrefeituraListaResource extends JsonResource
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Resources/PrefeituraListaResource.php
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraListaResourceTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Resources/PrefeituraListaResource.php
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraListaResourceTest
 ```
 Expected: PASS, 2 testes.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/Modules/Cedec/Resources/PrefeituraListaResource.php tests/Feature/Cedec/PrefeituraListaResourceTest.php
+git add app/Modules/Cedec/Resources/PrefeituraListaResource.php
 git commit -m "✨ feat(cedec): resource da listagem de prefeituras"
 ```
 
@@ -1426,7 +1459,7 @@ class UpdatePrefeituraRequestTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=UpdatePrefeituraRequestTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=UpdatePrefeituraRequestTest`
 Expected: FAIL — `Class "App\Modules\Cedec\Requests\UpdatePrefeituraRequest" not found`.
 
 - [ ] **Step 3: Criar o Request**
@@ -1490,15 +1523,15 @@ final class UpdatePrefeituraRequest extends FormRequest
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Requests/UpdatePrefeituraRequest.php
-docker exec newsdc_frankenphp_local php artisan test --filter=UpdatePrefeituraRequestTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Requests/UpdatePrefeituraRequest.php
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=UpdatePrefeituraRequestTest
 ```
 Expected: PASS, 4 testes.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/Modules/Cedec/Requests/UpdatePrefeituraRequest.php tests/Feature/Cedec/UpdatePrefeituraRequestTest.php
+git add app/Modules/Cedec/Requests/UpdatePrefeituraRequest.php
 git commit -m "✨ feat(cedec): validacao do update de prefeitura"
 ```
 
@@ -1789,7 +1822,7 @@ class CedecPrefeituraControllerTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraControllerTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraControllerTest`
 Expected: FAIL — `Route [cedec.prefeituras.index] not defined.`
 
 - [ ] **Step 3: Escrever o controller**
@@ -1987,11 +2020,11 @@ Em `routes/web.php`, logo apos a linha `require __DIR__ . '/modules/compdec.php'
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Controllers/PrefeituraController.php
-docker exec newsdc_frankenphp_local php -l /app/routes/modules/cedec.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraControllerTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Controllers/PrefeituraController.php
+docker exec newsdc_dev_app php -l /var/www/routes/modules/cedec.php
+docker exec newsdc_dev_app php artisan octane:reload
+docker exec newsdc_dev_app php artisan route:list --name=cedec
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraControllerTest
 ```
 Expected: `route:list` lista as 5 rotas `cedec.prefeituras.*`; os testes PASSAM (12 metodos). Como as permissoes `cedec.*` ainda nao existem em `config/permissions.php` (Task 8), os testes de 403 e os de sucesso funcionam igual: `Permission::firstOrCreate()` no `setUp()` cria a permissao direto no banco de teste, sem depender do config.
 
@@ -2027,7 +2060,7 @@ original sobrevive ao update.
 
 - [ ] **Step 8: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=test_update_pela_cedec_nao_apaga_o_legacy_id_da_prefeitura`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=test_update_pela_cedec_nao_apaga_o_legacy_id_da_prefeitura`
 Expected: FAIL — `Failed asserting that null matches expected 9001.` `upsertPorMunicipio()`
 (Task 4) monta `$payload = $dto->toArray()`, que sempre traz `'legacy_id' => null`
 (porque `$dto->legacyId` e null), e o `updateOrCreate()` grava esse `null` por cima do
@@ -2085,10 +2118,10 @@ por:
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Services/CedecPrefeituraService.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraControllerTest
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraService
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Services/CedecPrefeituraService.php
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraControllerTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraService
 ```
 Expected: PASS em toda a `CedecPrefeituraControllerTest` (inclui o teste novo do Step 7)
 e em toda a `CedecPrefeituraServiceUpsertFotoTest`/`CedecPrefeituraServiceListagemTest` —
@@ -2102,8 +2135,7 @@ upsert da Task 4 ja cobrem (nenhum deles cria prefeitura com `legacy_id` previo,
 git add app/Modules/Cedec/Controllers/PrefeituraController.php \
         app/Modules/Cedec/Services/CedecPrefeituraService.php \
         routes/modules/cedec.php \
-        routes/web.php \
-        tests/Feature/Cedec/CedecPrefeituraControllerTest.php
+        routes/web.php
 git commit -m "$(cat <<'EOF'
 ✨ feat(cedec): controller e rotas de prefeituras
 
@@ -2223,7 +2255,7 @@ class PermissoesCedecTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=PermissoesCedecTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PermissoesCedecTest`
 Expected: FAIL — `Failed asserting that an array has the key 'CEDEC'`.
 
 - [ ] **Step 3: Acrescentar o bloco `CEDEC` em `modules`**
@@ -2277,27 +2309,27 @@ Na lista `'analyst' => [ ... ]`, logo apos o bloco COMPDEC (apos `'compdec.plano
 
 - [ ] **Step 6: Rodar o teste para ver passar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=PermissoesCedecTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PermissoesCedecTest`
 Expected: PASS, 8 testes (contando os data providers).
 
 - [ ] **Step 7: RESTART do container (nao octane:reload) e sincronizar as permissoes no banco**
 
 ```bash
-docker restart newsdc_frankenphp_local
-docker exec newsdc_frankenphp_local php artisan db:seed --class=RolesAndPermissionsSeeder
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec
+docker restart newsdc_dev_app
+docker exec newsdc_dev_app php artisan db:seed --class=RolesAndPermissionsSeeder
+docker exec newsdc_dev_app php artisan route:list --name=cedec
 ```
 Expected: o seeder imprime a sincronizacao sem erro; as rotas `cedec.prefeituras.*` continuam listadas. So depois deste passo um usuario real (nao criado via `Permission::firstOrCreate()` em teste) passa a ter os slugs disponiveis para receber por role.
 
 - [ ] **Step 8: Rodar a suite inteira do Cedec para garantir que nada quebrou com o restart**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=Cedec`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec`
 Expected: PASS em todas as classes das Tasks 1 a 8.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add config/permissions.php tests/Feature/Cedec/PermissoesCedecTest.php
+git add config/permissions.php
 git commit -m "🔒 security(cedec): slugs de permissao do cadastro estadual de prefeituras"
 ```
 
@@ -2393,8 +2425,8 @@ git commit -m "✨ feat(cedec): item de sidebar e icone do modulo"
 ## Verificacao final da fase
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=Cedec
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec
+docker exec newsdc_dev_app php artisan route:list --name=cedec
 cd SDC && npm run build
 ```
 

@@ -15,6 +15,40 @@
 
 ## Global Constraints
 
+### Ambiente de execucao — corrigido em 2026-09-05, medido
+
+Estas quatro correcoes valem para TODOS os steps deste plano e substituem qualquer
+comando divergente no corpo dele.
+
+1. **O container e `newsdc_dev_app`**, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP),
+   com a aplicacao em `/var/www`. O nome `newsdc_frankenphp_local` do `.claude/kernel.py`
+   NAO EXISTE. O Postgres de desenvolvimento e `newsdc_dev_db`, publicado no host em 5434.
+
+2. **Teste roda no HOST, nunca no container.** `docker exec newsdc_dev_app php artisan test`
+   falha com `Command "test" is not defined` — a imagem nao tem dev dependencies. Exporte
+   uma vez por terminal, a partir de `SDC/`:
+
+   ```bash
+   export APP_CONFIG_CACHE=/nao/existe/config.php
+   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+   ```
+
+   `APP_CONFIG_CACHE` para caminho inexistente e obrigatorio: sem ele o PHPUnit do host
+   escreve no `bootstrap/cache` compartilhado com o container e derruba o Octane, que so
+   volta com restart de ~3min. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
+   `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
+   migration, cair no sqlite da `no such table` na suite inteira.
+
+3. **Os testes rodam contra o banco de DESENVOLVIMENTO.** Nenhum teste pode fazer `update()`
+   ou `delete()` sem `where` restrito as linhas que ele mesmo criou, e assercao de contagem
+   tem de ser relativa a um "antes", nunca total absoluto.
+
+4. **`SDC/tests` esta no `.gitignore`.** Escrever o teste continua obrigatorio, mas ele NAO
+   e versionado: todo `git add` dos steps leva so os arquivos de producao. Incluir caminho
+   sob `SDC/tests` faz o `git add` ser recusado.
+
 Valem para TODAS as tasks. Copiadas do contrato de interfaces (secao 0) e das skills
 `.claude/skills/frontend/03 - Layout` e `04 - Responsividade`.
 
@@ -40,7 +74,7 @@ Valem para TODAS as tasks. Copiadas do contrato de interfaces (secao 0) e das sk
 ## Dependencia: o que a fase 2 tem de estar entregue
 
 Esta fase NAO cria nada de backend. Antes do primeiro step, confirme que a fase 2 esta no
-branch: `docker exec newsdc_frankenphp_local php artisan route:list --name=cedec` tem de
+branch: `docker exec newsdc_dev_app php artisan route:list --name=cedec` tem de
 listar `cedec.prefeituras.index` e `cedec.prefeituras.edit`. Sem isso, `route()` estoura em
 runtime e o `npm run build` NAO acusa (Ziggy resolve em tempo de execucao).
 
