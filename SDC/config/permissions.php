@@ -621,6 +621,7 @@ return [
             'estoque.*',
             'pmda.*',
             'plancon.*',
+            'geoespacial.*',
         ],
         'manager' => [
             // PAE - CRUD completo exceto delete
@@ -789,6 +790,15 @@ return [
             'plancon.view',
             'plancon.upload',
             'plancon.download',
+            // GEOESPACIAL - papel da CEDEC. Alem de enviar, revisa e retira do
+            // mapa: mesma altura de pmda.analise.aprovar e .arquivar, que
+            // tambem param aqui. Aprovar area de risco e ato de supervisao.
+            'geoespacial.camadas.view',
+            'geoespacial.camadas.enviar',
+            'geoespacial.camadas.edit',
+            'geoespacial.camadas.export',
+            'geoespacial.camadas.revisar',
+            'geoespacial.camadas.arquivar',
             // COMPDEC - sem delete e sem aprovar
             'compdec.orgaos.view',
             'compdec.orgaos.create',
@@ -860,6 +870,18 @@ return [
             'pmda.analise.pedir_alteracao',
         ],
         'analyst' => [
+            // GEOESPACIAL - papel do municipio que envia E corrige. Sem
+            // revisar nem arquivar: quem envia nao aprova o proprio envio, e
+            // retirar area do mapa estadual e da CEDEC.
+            //
+            // 'edit' entra de proposito: sem ele o municipio recusado nao tem
+            // como corrigir, porque reenviar o mesmo arquivo esbarra no dedup
+            // por hash. O recorte de "so a propria, e so pendente ou recusada"
+            // e feito por Support/AcessoACamada, e nao pela permissao.
+            'geoespacial.camadas.view',
+            'geoespacial.camadas.enviar',
+            'geoespacial.camadas.edit',
+            'geoespacial.camadas.export',
             // PAE - view, create, edit
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
@@ -1010,6 +1032,13 @@ return [
             'estoque.inventarios.create',
         ],
         'operator' => [
+            // GEOESPACIAL - envia e baixa o proprio arquivo, mas nao edita:
+            // a descricao do papel e "visualizar e criar registros basicos", e
+            // corrigir metadado de camada ja publicada nao e basico. Quem
+            // corrige envio recusado e o analista.
+            'geoespacial.camadas.view',
+            'geoespacial.camadas.enviar',
+            'geoespacial.camadas.export',
             // PAE - view, create
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
@@ -1099,6 +1128,8 @@ return [
             'estoque.movimentacoes.history',
         ],
         'viewer' => [
+            // GEOESPACIAL - so leitura do mapa estadual.
+            'geoespacial.camadas.view',
             // Somente visualizacao em todos os modulos
             'pae.empreendimentos.view',
             'pae.protocolos.view',
