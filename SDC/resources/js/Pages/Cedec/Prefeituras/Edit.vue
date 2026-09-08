@@ -8,22 +8,7 @@
       :icon-image="moduleIcon('prefeituras') ?? ''"
       variant="gradient"
       :espaco-inferior="false"
-    >
-      <template #actions>
-        <!--
-          Sem `action`: o validator do ActionButton so aceita os verbos do
-          catalogo, e "voltar" nao e um deles. Com action nula, `allowed` explicito
-          e o que impede o botao de se esconder por falta de slug.
-        -->
-        <ActionButton
-          :icon="ArrowLeftIcon"
-          label="Voltar"
-          variant="outline"
-          :allowed="true"
-          @click="voltar"
-        />
-      </template>
-    </PageHeader>
+    />
 
     <p
       v-if="!podeEditar"
@@ -113,10 +98,9 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ArrowLeftIcon, UserCircleIcon } from '@heroicons/vue/24/outline';
+import { UserCircleIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import FormActions from '@/Components/Molecules/Form/FormActions.vue';
 import PrefeituraFormSections from '@/Components/Organisms/Cedec/PrefeituraFormSections.vue';

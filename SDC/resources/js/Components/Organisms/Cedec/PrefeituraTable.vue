@@ -61,8 +61,8 @@
 
             <!-- Coluna fixa no canto direito. Depende de .table-row-solid na tr
                  para o fundo opaco. -->
-            <td class="table-actions-cell w-20 whitespace-nowrap px-3 py-2 text-right">
-              <div class="flex items-center justify-end">
+            <td class="table-actions-cell w-28 whitespace-nowrap px-3 py-2 text-right">
+              <div class="flex items-center justify-end gap-1">
                 <ActionButton
                   action="view"
                   module="cedec"
@@ -72,6 +72,21 @@
                   size="sm"
                   tooltip-text="Ver dados da prefeitura"
                   @click="abrir(p.municipio_id)"
+                />
+                <!--
+                  O lapis fica na lista, ao lado do olho: o detalhe e a porta para
+                  quem consulta, mas quem edita todos os dias nao deve pagar um
+                  clique extra para chegar ao formulario.
+                -->
+                <ActionButton
+                  action="edit"
+                  module="cedec"
+                  resource="prefeituras"
+                  :allowed="podeEditar"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Editar dados da prefeitura"
+                  @click="editar(p.municipio_id)"
                 />
               </div>
             </td>
@@ -134,7 +149,9 @@
         </div>
       </dl>
 
-      <footer class="mt-3 flex justify-end border-t border-slate-200 pt-3 dark:border-slate-700/50">
+      <!-- flex-wrap e gap: em 375px os dois rotulos nao cabem na mesma linha, e
+           quebrar e melhor que comprimir o botao. -->
+      <footer class="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-700/50">
         <!--
           No bloco o rotulo FICA: aqui nao ha coluna disputando largura, e um icone
           solto no pe do card e adivinhacao.
@@ -148,6 +165,16 @@
           size="sm"
           tooltip-text="Ver dados da prefeitura"
           @click="abrir(p.municipio_id)"
+        />
+        <ActionButton
+          action="edit"
+          module="cedec"
+          resource="prefeituras"
+          label="Editar"
+          :allowed="podeEditar"
+          size="sm"
+          tooltip-text="Editar dados da prefeitura"
+          @click="editar(p.municipio_id)"
         />
       </footer>
     </article>
@@ -174,14 +201,16 @@ import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 
 /**
  * Organismo: concentra a interacao da listagem. Navegar acontece aqui, no mesmo padrao
- * dos outros organismos de tabela -- a pagina nao precisa repassar um evento que so
- * tem um destino possivel.
+ * dos outros organismos de tabela.
  *
- * Nao recebe mais `podeEditar`: a linha abre o DETALHE, que qualquer um com
- * cedec.prefeituras.view pode ver. Quem decide sobre editar e a tela de detalhe.
+ * Duas acoes por linha, de proposito: o olho leva ao DETALHE, que qualquer um com
+ * cedec.prefeituras.view abre, e o lapis leva direto ao formulario para quem tem
+ * .edit. O detalhe segue sendo a porta para quem so consulta, mas quem edita todos os
+ * dias nao paga um clique extra por isso.
  */
 defineProps({
   prefeituras: { type: Array, default: () => [] },
+  podeEditar: { type: Boolean, default: false },
 });
 
 const { isDesktop } = useMobile();
@@ -212,5 +241,9 @@ const PILULA_NAO = 'inline-flex items-center rounded-full bg-slate-100 px-2 py-0
  */
 function abrir(municipioId) {
   router.visit(route('cedec.prefeituras.show', municipioId));
+}
+
+function editar(municipioId) {
+  router.visit(route('cedec.prefeituras.edit', municipioId));
 }
 </script>

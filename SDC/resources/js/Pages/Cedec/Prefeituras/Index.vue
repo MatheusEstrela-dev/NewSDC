@@ -40,7 +40,10 @@
       dentro do space-y-6 os dois espacos somariam 40px onde o resto da pagina usa 24px.
     -->
     <div>
-      <PrefeituraTable :prefeituras="prefeituras.data ?? []" />
+      <PrefeituraTable
+        :prefeituras="prefeituras.data ?? []"
+        :pode-editar="podeEditar"
+      />
 
       <Pagination :pagination="paginacao" @page-change="irParaPagina" />
     </div>
@@ -52,6 +55,7 @@ import { computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { BuildingOffice2Icon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { usePermissions } from '@/Composables/usePermissions';
 import { moduleIcon } from '@/Support/moduleIcons';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
@@ -60,6 +64,12 @@ import PrefeituraFiltersSection from '@/Components/Organisms/Cedec/PrefeituraFil
 import PrefeituraTable from '@/Components/Organisms/Cedec/PrefeituraTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
+
+const { can } = usePermissions();
+
+// computed, nao valor solto: can() lido no setup congelaria a permissao entre visitas
+// Inertia, e o proprio usePermissions alerta contra isso.
+const podeEditar = computed(() => can('cedec.prefeituras.edit'));
 
 const props = defineProps({
   prefeituras: {

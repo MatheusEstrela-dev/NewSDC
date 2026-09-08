@@ -9,25 +9,20 @@
       variant="gradient"
       :espaco-inferior="false"
     >
+      <!--
+        Sem botao Voltar aqui: a barra de breadcrumb do layout ja traz o dela, e o
+        padrao do sistema e um so. Dois botoes iguais na mesma dobra sao ruido.
+      -->
       <template #actions>
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <ActionButton
-            :icon="ArrowLeftIcon"
-            label="Voltar"
-            variant="outline"
-            :allowed="true"
-            @click="voltar"
-          />
-          <ActionButton
-            v-if="podeEditar"
-            action="edit"
-            module="cedec"
-            resource="prefeituras"
-            label="Editar"
-            :allowed="true"
-            @click="editar"
-          />
-        </div>
+        <ActionButton
+          v-if="podeEditar"
+          action="edit"
+          module="cedec"
+          resource="prefeituras"
+          label="Editar"
+          :allowed="true"
+          @click="editar"
+        />
       </template>
     </PageHeader>
 
@@ -204,7 +199,6 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
 import {
-  ArrowLeftIcon,
   BanknotesIcon,
   BuildingOffice2Icon,
   EnvelopeIcon,
@@ -246,7 +240,4 @@ function editar() {
   router.visit(route('cedec.prefeituras.edit', props.municipio.id));
 }
 
-function voltar() {
-  router.visit(route('cedec.prefeituras.index'));
-}
 </script>
