@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Cedec\Controllers\ContatoRelatorioController;
 use App\Modules\Cedec\Controllers\PrefeituraController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,5 +32,15 @@ Route::prefix('cedec')->name('cedec.')->group(function () {
             ->name('foto.upload')->middleware('can:cedec.prefeituras.edit');
         Route::delete('/{municipio}/foto', [PrefeituraController::class, 'removerFoto'])
             ->name('foto.destroy')->middleware('can:cedec.prefeituras.edit');
+    });
+
+    // Relatorios de contato. /export nao disputa com rota de parametro porque este
+    // sub-grupo nao tem nenhuma; fica antes por convencao, para nao ser capturado se
+    // alguem acrescentar /{algo} depois.
+    Route::prefix('contatos')->name('contatos.')->group(function () {
+        Route::get('/', [ContatoRelatorioController::class, 'index'])
+            ->name('index')->middleware('can:cedec.contatos.view');
+        Route::get('/export', [ContatoRelatorioController::class, 'export'])
+            ->name('export')->middleware('can:cedec.prefeituras.export');
     });
 });
