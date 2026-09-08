@@ -19,6 +19,29 @@ use Throwable;
 
 class PrefeituraService
 {
+    /**
+     * Colunas que a aba de prefeitura do Compdec de fato gerencia -- as mesmas que o
+     * UpsertPrefeituraRequest valida.
+     *
+     * Fora desta lista, nada e tocado por aquela aba: contato institucional (as sete
+     * colunas do modulo Cedec) e legacy_id ficam de fora de proposito.
+     */
+    private const CAMPOS_DA_ABA_COMPDEC = [
+        'prefeito_nome',
+        'prefeito_telefone',
+        'prefeito_celular',
+        'prefeito_email',
+        'endereco',
+        'bairro',
+        'cep',
+        'latitude',
+        'longitude',
+        'inss_tem_cobranca',
+        'inss_aliquota',
+        'inss_lei_cobranca',
+        'inss_responsavel',
+    ];
+
     public function obterPorOrgao(int $orgaoId): ?Prefeitura
     {
         $orgao = Orgao::findOrFail($orgaoId);
@@ -41,19 +64,19 @@ class PrefeituraService
                 throw new InvalidArgumentException('Orgao nao possui municipio vinculado; nao e possivel criar prefeitura.');
             }
 
-            // garante que o DTO traz o municipio_id correto do orgao
-            $payload = $dto->toArray();
+            // Escreve SO o que a aba do Compdec gerencia.
+            //
+            // PrefeituraDTO::toArray() emite todas as colunas, inclusive as sete de
+            // contato institucional e o legacy_id. O UpsertPrefeituraRequest desta aba
+            // nao valida nenhuma delas, entao chegam nulas -- e gravar esse null
+            // apagaria o que o ETL carregou e a rastreabilidade da origem.
+            //
+            // A guarda e por LISTA do que a aba controla, nao por excecao campo a
+            // campo: a versao anterior protegia apenas legacy_id e deixou as sete
+            // colunas novas desprotegidas quando elas nasceram. Campo novo que a aba
+            // nao tenha passa a ser preservado por omissao, nao por lembranca.
+            $payload = array_intersect_key($dto->toArray(), array_flip(self::CAMPOS_DA_ABA_COMPDEC));
             $payload['municipio_id'] = $orgao->municipio_id;
-
-            // legacy_id e a ponte com o registro de origem no legado e tem
-            // indice proprio. O formulario nao envia esse campo, porque
-            // UpsertPrefeituraRequest nao o valida: o DTO chega com null e o
-            // toArray() emite a chave assim mesmo, entao o updateOrCreate
-            // apagaria a rastreabilidade de quem ja veio do ETL. Quem escreve
-            // nessa coluna e so quem passa o valor explicito.
-            if ($dto->legacyId === null) {
-                unset($payload['legacy_id']);
-            }
 
             return Prefeitura::updateOrCreate(
                 ['municipio_id' => $orgao->municipio_id],
@@ -213,7 +236,13 @@ class PrefeituraService
 
         // 1 de 3: quem ja existe. Serve para separar inseridos de atualizados no
         // relatorio -- o upsert sozinho nao conta isso.
-        $jaExistiam = Prefeitura::query()
+        //
+        // withTrashed() e obrigatorio: o unique de municipio_id e do BANCO e ignora
+        // deleted_at. Sem isso, uma prefeitura soft-deleted ficaria fora desta lista,
+        // o upsert casaria com ela pelo indice e o recarregamento abaixo -- que
+        // tambem precisa de withTrashed -- nao a encontraria, produzindo um erro
+        // falso de "linha nao encontrada".
+        $jaExistiam = Prefeitura::withTrashed()
             ->whereIn('municipio_id', $municipioIds)
             ->pluck('municipio_id')
             ->all();
@@ -230,14 +259,20 @@ class PrefeituraService
 
         try {
             // 2 de 3: um upsert para o lote. A chave e municipio_id, que ja e unique
-            // na tabela. As colunas atualizadas sao as do payload menos a chave.
+            // na tabela.
+            //
+            // Fora dos atualizaveis: a propria chave, e prefeito_email, que o ETL
+            // grava como null fixo por nao haver coluna de origem no legado. Deixa-lo
+            // na lista fazia cada reexecucao apagar o e-mail que alguem digitou pela
+            // tela -- ele entra no INSERT da primeira carga e nunca mais e tocado.
             $colunas = array_keys(reset($payloads));
-            $atualizaveis = array_values(array_diff($colunas, ['municipio_id']));
+            $atualizaveis = array_values(array_diff($colunas, ['municipio_id', 'prefeito_email']));
 
             Prefeitura::query()->upsert(array_values($payloads), ['municipio_id'], $atualizaveis);
 
             // 3 de 3: recarrega o lote para ter os ids e os models das fotos.
-            $prefeituras = Prefeitura::query()
+            // withTrashed pelo mesmo motivo da consulta 1 de 3.
+            $prefeituras = Prefeitura::withTrashed()
                 ->whereIn('municipio_id', $municipioIds)
                 ->get()
                 ->keyBy('municipio_id');
@@ -491,7 +526,18 @@ class PrefeituraService
     {
         $texto = $this->limparCampoSujo($valor === null ? null : (string) $valor);
 
-        return $texto === null ? null : LegacyParser::toDecimalBR($texto);
+        if ($texto === null) {
+            return null;
+        }
+
+        $numero = LegacyParser::toDecimalBR($texto);
+
+        // Zero tambem e ausencia, nao coordenada. O legado grava 0 em vez de null em
+        // parte das linhas, e 0,0 e um ponto real no Golfo da Guine: passaria por
+        // localizacao valida em qualquer mapa ou calculo de distancia. Nenhuma cidade
+        // de Minas fica no equador nem no meridiano de Greenwich, entao aqui zero
+        // nunca e dado bom.
+        return $numero === 0.0 ? null : $numero;
     }
 
     /**

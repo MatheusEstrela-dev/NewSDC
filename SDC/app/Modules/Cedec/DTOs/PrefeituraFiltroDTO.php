@@ -38,7 +38,13 @@ final class PrefeituraFiltroDTO
         );
     }
 
-    /** @return array{busca: ?string, redec_id: ?int, macrorregiao: ?string, pendencia: ?string} */
+    /**
+     * per_page entra aqui junto dos filtros. A pagina reenvia este array inteiro ao
+     * paginar; sem ele, quem escolheu 100 por pagina voltava ao default de 20 no
+     * primeiro clique de proxima pagina e pulava as linhas 21 a 100.
+     *
+     * @return array{busca: ?string, redec_id: ?int, macrorregiao: ?string, pendencia: ?string, per_page: int}
+     */
     public function toArray(): array
     {
         return [
@@ -46,6 +52,7 @@ final class PrefeituraFiltroDTO
             'redec_id' => $this->redecId,
             'macrorregiao' => $this->macrorregiao,
             'pendencia' => $this->pendencia,
+            'per_page' => $this->perPage,
         ];
     }
 

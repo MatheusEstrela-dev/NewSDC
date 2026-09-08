@@ -138,7 +138,11 @@ const props = defineProps({
  * prop -- o mesmo organismo de campos serve a aba do Compdec, cujo slug e outro.
  */
 const { can } = usePermissions();
-const podeEditar = can('cedec.prefeituras.edit');
+
+// computed, nao valor solto: can() lido uma vez no setup congela a permissao, e o
+// proprio usePermissions alerta contra isso. Numa navegacao Inertia sem recarregar a
+// pagina, o valor antigo sobreviveria.
+const podeEditar = computed(() => can('cedec.prefeituras.edit'));
 
 const form = useForm({
   prefeito_nome: props.prefeitura?.prefeito_nome ?? '',
@@ -211,7 +215,9 @@ function removerFoto() {
 }
 
 function salvar() {
-  if (! podeEditar) {
+  // .value obrigatorio: no template o computed e desempacotado, aqui nao. Sem ele a
+  // condicao testaria o objeto do ref, que e sempre truthy, e a guarda nunca dispararia.
+  if (! podeEditar.value) {
     return;
   }
 

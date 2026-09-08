@@ -74,7 +74,9 @@ const trocarAba = (id) => {
 
   router.get(
     route('cedec.contatos.index'),
-    { aba: id },
+    // tamanho vai junto: sem ele, trocar de aba devolvia silenciosamente os blocos
+    // ao default de 50 e desfazia o limite que a pessoa escolheu.
+    { aba: id, tamanho: props.tamanho_bloco },
     { preserveScroll: true, replace: true },
   );
 };

@@ -31,16 +31,26 @@ final class ContatoRelatorioController extends Controller
         $aba = $this->aba($request);
         $tamanho = $this->tamanhoDeBloco($request);
 
+        // Duas varreduras, nao quatro: cada uma le as 853 linhas com LEFT JOIN. A
+        // versao anterior chamava emails(), telefones() e mais blocosDeEmail() e
+        // blocosDeTelefone(), que reconsultavam por dentro. Aqui os dados sao lidos
+        // uma vez e os blocos saem deles.
         $emails = $this->service->emails();
         $telefones = $this->service->telefones();
-        $blocosDeEmail = $this->service->blocosDeEmail($tamanho);
-        $blocosDeTelefone = $this->service->blocosDeTelefone($tamanho);
+
+        $blocosDeEmail = $this->service->blocosDeEmailDe($emails, $tamanho);
+        $blocosDeTelefone = $this->service->blocosDeTelefoneDe($telefones, $tamanho);
+
+        $ehTelefones = $aba === 'telefones';
 
         return Inertia::render('Cedec/Contatos/Index', [
             'aba' => $aba,
-            'emails' => $emails->values()->all(),
-            'telefones' => $telefones->values()->all(),
-            'blocos' => $aba === 'telefones' ? $blocosDeTelefone : $blocosDeEmail,
+            // So a aba ativa vai completa. Mandar as duas dobrava o payload por um
+            // conjunto que a tela nem renderiza -- a outra chega vazia e e preenchida
+            // na visita da troca de aba.
+            'emails' => $ehTelefones ? [] : $emails->values()->all(),
+            'telefones' => $ehTelefones ? $telefones->values()->all() : [],
+            'blocos' => $ehTelefones ? $blocosDeTelefone : $blocosDeEmail,
             'tamanho_bloco' => $tamanho,
             'totais' => [
                 // Somar o total dos blocos, em vez de recontar, e o que garante que o

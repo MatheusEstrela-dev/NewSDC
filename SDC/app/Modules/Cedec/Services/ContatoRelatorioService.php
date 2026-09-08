@@ -77,17 +77,41 @@ final class ContatoRelatorioService
     /** @return array<int, array{indice: int, total: int, texto: string}> */
     public function blocosDeEmail(int $tamanho = self::TAMANHO_BLOCO_PADRAO): array
     {
-        self::garantirTamanho($tamanho);
-
-        return self::blocar($this->contatos($this->emails(), self::CAMPOS_EMAIL), $tamanho);
+        return $this->blocosDeEmailDe($this->emails(), $tamanho);
     }
 
     /** @return array<int, array{indice: int, total: int, texto: string}> */
     public function blocosDeTelefone(int $tamanho = self::TAMANHO_BLOCO_PADRAO): array
     {
+        return $this->blocosDeTelefoneDe($this->telefones(), $tamanho);
+    }
+
+    /**
+     * Bloca e-mails que o chamador JA leu, sem consultar de novo.
+     *
+     * Existe porque a pagina de contatos precisa das linhas e dos blocos ao mesmo
+     * tempo: sem esta variante ela pagava duas leituras das 853 linhas para obter as
+     * duas coisas.
+     *
+     * @param  Collection<int, array<string, mixed>>  $linhas
+     * @return array<int, array{indice: int, total: int, texto: string}>
+     */
+    public function blocosDeEmailDe(Collection $linhas, int $tamanho = self::TAMANHO_BLOCO_PADRAO): array
+    {
         self::garantirTamanho($tamanho);
 
-        return self::blocar($this->contatos($this->telefones(), self::ORDEM_BLOCO_TELEFONE), $tamanho);
+        return self::blocar($this->contatos($linhas, self::CAMPOS_EMAIL), $tamanho);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $linhas
+     * @return array<int, array{indice: int, total: int, texto: string}>
+     */
+    public function blocosDeTelefoneDe(Collection $linhas, int $tamanho = self::TAMANHO_BLOCO_PADRAO): array
+    {
+        self::garantirTamanho($tamanho);
+
+        return self::blocar($this->contatos($linhas, self::ORDEM_BLOCO_TELEFONE), $tamanho);
     }
 
     /**
