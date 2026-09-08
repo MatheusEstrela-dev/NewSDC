@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Geoespacial\Repositories;
 
 use App\Modules\Geoespacial\DTOs\CamadaGeoDTO;
+use App\Modules\Geoespacial\DTOs\FeicaoKmlDTO;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -65,7 +66,21 @@ final class GeoCamadaRepository
                 ->avisarRevisores((int) $id);
         }
 
-        foreach ($dto->feicoes as $indice => $feicao) {
+        return $this->inserirFeicoes((int) $id, $dto->feicoes);
+    }
+
+    /**
+     * Grava as feicoes de uma camada. Unico lugar do sistema que insere
+     * geometria: o upload e o reprocessamento passam os dois por aqui, para nao
+     * divergirem na regra de nome nem na normalizacao da geometria.
+     *
+     * @param iterable<FeicaoKmlDTO> $feicoes
+     */
+    private function inserirFeicoes(int $camadaId, iterable $feicoes): int
+    {
+        $total = 0;
+
+        foreach ($feicoes as $indice => $feicao) {
             // Nome de verdade no BANCO, e nao rotulo calculado em cada tela.
             //
             // O KML de alerta traz <name>0</name> em todo Placemark -- que e
@@ -79,14 +94,47 @@ final class GeoCamadaRepository
             // o KML trouxer nome de verdade, ele vence.
             $nome = $feicao->nome ?? sprintf('Area %d', $indice + 1);
 
+            // ST_Force2D e obrigatorio: ST_GeomFromKML devolve POLYGON Z --
+            // KML sempre carrega altitude, ainda que zerada -- e a coluna e 2D.
+            // Sem isto o INSERT morre com "Geometry has Z dimension but column
+            // does not".
             DB::statement(
                 'INSERT INTO silver.geo_feicoes (camada_id, nome, propriedades, geom, created_at, updated_at)
                  VALUES (?, ?, ?::jsonb, ST_MakeValid(ST_Force2D(ST_GeomFromKML(?))), now(), now())',
-                [(int) $id, $nome, '{}', $feicao->kmlGeometria]
+                [$camadaId, $nome, '{}', $feicao->kmlGeometria]
             );
+
+            $total++;
         }
 
-        return count($dto->feicoes);
+        return $total;
+    }
+
+    /**
+     * Troca a geometria de uma camada existente, preservando o cabecalho.
+     *
+     * E o que "reprocessar" precisa. Reenfileirar o NormalizarSilverJob NAO
+     * serviria: gravarCamada insere com ON CONFLICT (hash_arquivo) DO NOTHING,
+     * entao o job encontraria a camada ja existente e nao faria nada -- em
+     * silencio, respondendo "reprocessado" sem ter reprocessado.
+     *
+     * Numa transacao porque o DELETE e os INSERT precisam ser um ato: falha no
+     * meio deixaria a camada com parte da geometria, e uma area de risco
+     * parcial no mapa de plantao e pior que nenhuma.
+     *
+     * @param iterable<FeicaoKmlDTO> $feicoes
+     */
+    public function substituirFeicoes(int $camadaId, iterable $feicoes): int
+    {
+        return DB::transaction(function () use ($camadaId, $feicoes): int {
+            DB::table('silver.geo_feicoes')->where('camada_id', $camadaId)->delete();
+
+            $total = $this->inserirFeicoes($camadaId, $feicoes);
+
+            DB::table('silver.geo_camadas')->where('id', $camadaId)->update(['updated_at' => now()]);
+
+            return $total;
+        });
     }
 
     /**
@@ -98,7 +146,7 @@ final class GeoCamadaRepository
     public function camadaDoHash(string $hashArquivo): ?object
     {
         return DB::table('silver.geo_camadas')
-            ->select(['id', 'nome', 'emitido_em'])
+            ->select(['id', 'nome', 'emitido_em', 'status'])
             ->where('hash_arquivo', $hashArquivo)
             ->first();
     }
@@ -118,8 +166,8 @@ final class GeoCamadaRepository
         return DB::table('silver.geo_camadas')
             ->select([
                 'id', 'nome', 'dominio', 'nivel', 'emitido_em', 'valido_ate',
-                'arquivo_nome', 'origem', 'status', 'motivo_recusa',
-                'revisado_em', 'created_at',
+                'arquivo_nome', 'arquivo_caminho', 'origem', 'status', 'motivo_recusa',
+                'motivo_arquivamento', 'enviado_por', 'revisado_em', 'arquivado_em', 'created_at',
             ])
             ->where(function ($q) use ($municipioId, $enviadoPor): void {
                 $q->where('enviado_por', $enviadoPor);
@@ -160,7 +208,11 @@ final class GeoCamadaRepository
         }
 
         return $query
-            ->select(['id', 'dominio', 'nome', 'arquivo_nome', 'emitido_em', 'valido_ate', 'nivel', 'created_at', 'origem', 'status', 'municipio_id', 'motivo_recusa'])
+            ->select([
+                'id', 'dominio', 'nome', 'arquivo_nome', 'arquivo_caminho', 'emitido_em',
+                'valido_ate', 'nivel', 'created_at', 'origem', 'status', 'municipio_id',
+                'enviado_por', 'motivo_recusa', 'motivo_arquivamento',
+            ])
             ->orderByDesc('emitido_em')
             ->orderByDesc('id')
             ->get();
@@ -281,5 +333,94 @@ final class GeoCamadaRepository
                 'fonte' => 'estacao',
             ],
         ];
+    }
+
+    /**
+     * Cabecalho de UMA camada, em qualquer status, com a procedencia resolvida.
+     *
+     * Le do Silver e nao do Gold porque a tela de detalhe precisa abrir camada
+     * pendente, recusada e arquivada -- e o Gold so tem aprovada. Foi este o
+     * mesmo motivo que fez a fila de revisao ler do Silver.
+     */
+    public function camada(int $camadaId): ?object
+    {
+        return DB::table('silver.geo_camadas as c')
+            ->leftJoin('municipios as m', 'm.id', '=', 'c.municipio_id')
+            ->leftJoin('users as remetente', 'remetente.id', '=', 'c.enviado_por')
+            ->leftJoin('users as revisor', 'revisor.id', '=', 'c.revisado_por')
+            ->leftJoin('users as arquivista', 'arquivista.id', '=', 'c.arquivado_por')
+            ->selectRaw("
+                c.id, c.dominio, c.nome, c.nivel, c.arquivo_nome, c.arquivo_caminho,
+                c.emitido_em, c.valido_ate, c.origem, c.status, c.motivo_recusa,
+                c.motivo_arquivamento, c.municipio_id, c.enviado_por, c.ingestao_id,
+                c.revisado_em, c.arquivado_em, c.created_at, c.updated_at,
+                m.nome AS municipio_nome, m.codigo_ibge,
+                remetente.name AS enviado_por_nome,
+                revisor.name    AS revisado_por_nome,
+                arquivista.name AS arquivado_por_nome,
+                (SELECT count(*) FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS feicoes,
+                (SELECT round(sum(ST_Area(f.geom::geography) / 1000000)::numeric, 2)
+                   FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS area_km2,
+                -- Validade vencida e derivada, e nao coluna: guardar um
+                -- booleano exigiria mante-lo em dia, e a data ja diz a verdade.
+                --
+                -- A data de HOJE vem do PHP, e nao do current_date do Postgres.
+                -- O banco roda em UTC e a aplicacao em America/Sao_Paulo: das
+                -- 21:00 a meia-noite o current_date ja e o dia seguinte, e uma
+                -- camada valida ate hoje apareceria VENCIDA no mapa de plantao
+                -- tres horas antes de vencer. Medido: php=2026-09-04,
+                -- current_date=2026-09-05 as 21:42 locais.
+                (c.valido_ate IS NOT NULL AND c.valido_ate < ?::date) AS vencida
+            ", [now()->toDateString()])
+            ->where('c.id', $camadaId)
+            ->first();
+    }
+
+    /**
+     * Feicoes de uma camada, com geometria, direto do Silver.
+     *
+     * @return Collection<int, object>
+     */
+    public function feicoesDaCamada(int $camadaId): Collection
+    {
+        return DB::table('silver.geo_feicoes')
+            ->selectRaw("
+                id, camada_id, nome AS feicao_nome, propriedades,
+                ST_GeometryType(geom)                                  AS tipo_geometria,
+                round((ST_Area(geom::geography) / 1000000)::numeric, 2) AS area_km2,
+                ST_NPoints(geom)                                        AS vertices,
+                ST_AsGeoJSON(geom)::jsonb                               AS geojson
+            ")
+            ->where('camada_id', $camadaId)
+            ->orderByDesc('area_km2')
+            ->get();
+    }
+
+    /**
+     * Municipios cujo centroide cai dentro da camada, nomeados.
+     *
+     * Le do Silver pelo mesmo motivo de feicoesDaCamada: gold.geo_camada_municipios
+     * so contem camada aprovada, e a tela de detalhe precisa mostrar o alcance
+     * de uma camada AINDA pendente -- que e exatamente o que o revisor quer
+     * saber antes de aprovar.
+     *
+     * ATENCAO: e centroide, nao intersecao de area. A tabela municipios guarda
+     * latitude/longitude, nao geometria de territorio. E piso, nao total.
+     *
+     * @return Collection<int, object>
+     */
+    public function municipiosDaCamada(int $camadaId): Collection
+    {
+        return DB::table('municipios as m')
+            ->selectRaw('DISTINCT m.id, m.nome, m.uf, m.codigo_ibge')
+            ->whereNotNull('m.latitude')
+            ->whereNotNull('m.longitude')
+            ->whereExists(fn ($q) => $q
+                ->selectRaw('1')
+                ->from('silver.geo_feicoes as f')
+                ->where('f.camada_id', $camadaId)
+                ->whereRaw('ST_Contains(f.geom, ST_SetSRID(ST_MakePoint(m.longitude::float8, m.latitude::float8), 4326))'))
+            ->orderBy('m.nome')
+            ->get();
     }
 }

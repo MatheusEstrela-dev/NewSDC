@@ -52,6 +52,21 @@ return new class extends Migration
                 revisado_em   timestamptz NULL,
                 motivo_recusa text        NULL,
 
+                -- ARQUIVAMENTO, e nao DELETE. A camada aprovada esteve no mapa
+                -- de plantao e pode ter embasado decisao operacional: apagar a
+                -- linha apagaria a prova de que a area foi publicada, e por
+                -- quanto tempo. 'arquivada' sai do mapa -- o Gold filtra por
+                -- status -- e continua no historico.
+                --
+                -- arquivado_por NULL com arquivado_em preenchido significa
+                -- arquivamento AUTOMATICO por validade vencida
+                -- (geoespacial:arquivar-vencidas). E a unica forma de
+                -- distinguir "a CEDEC retirou" de "venceu sozinha", e as duas
+                -- coisas precisam ser distinguiveis na auditoria.
+                arquivado_por bigint      NULL REFERENCES users (id) ON DELETE SET NULL,
+                arquivado_em  timestamptz NULL,
+                motivo_arquivamento text  NULL,
+
                 -- Caminho no disco geo_municipal, do arquivo COMO O MUNICIPIO
                 -- ENVIOU. O Bronze guarda o KML extraido; este guarda o
                 -- documento original, inclusive KMZ compactado, que e o
@@ -62,7 +77,7 @@ return new class extends Migration
                 updated_at   timestamptz  NOT NULL DEFAULT now(),
                 CONSTRAINT uq_silver_geo_camadas_hash UNIQUE (hash_arquivo),
                 CONSTRAINT ck_silver_geo_camadas_origem CHECK (origem IN ('estadual', 'municipal')),
-                CONSTRAINT ck_silver_geo_camadas_status CHECK (status IN ('pendente', 'aprovada', 'recusada')),
+                CONSTRAINT ck_silver_geo_camadas_status CHECK (status IN ('pendente', 'aprovada', 'recusada', 'arquivada')),
                 -- Camada municipal sem municipio nao tem como ser revisada nem
                 -- atribuida a ninguem.
                 CONSTRAINT ck_silver_geo_camadas_municipal CHECK (
@@ -77,6 +92,10 @@ return new class extends Migration
         // lista do municipio filtra pelo proprio municipio.
         DB::statement('CREATE INDEX IF NOT EXISTS idx_silver_geo_camadas_status ON silver.geo_camadas (origem, status)');
         DB::statement('CREATE INDEX IF NOT EXISTS idx_silver_geo_camadas_municipio ON silver.geo_camadas (municipio_id, status)');
+
+        // A varredura de validade vencida (geoespacial:arquivar-vencidas) filtra
+        // por status e valido_ate; sem este indice ela le a tabela toda.
+        DB::statement('CREATE INDEX IF NOT EXISTS idx_silver_geo_camadas_validade ON silver.geo_camadas (status, valido_ate)');
 
         // Uma linha por Placemark. geometry(Geometry,4326) e nao MultiPolygon:
         // verificado que um campo unico com um GIST serve poligono, linha e

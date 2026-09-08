@@ -1,15 +1,27 @@
 <template>
   <div class="geoespacial-container">
-    <div class="header-section">
-      <h1 class="page-title">Camadas de Risco</h1>
-      <p class="page-subtitle">
-        Areas de alerta importadas de KML/KMZ, cruzadas com os municipios e as
-        estacoes que o sistema ja monitora
-        <span v-if="camadaAtual" class="update-note">
-          &middot; exibindo {{ camadaAtual.nome }}
-        </span>
-      </p>
-    </div>
+    <!--
+      PageHeader do projeto, e nao header proprio. O modulo inteiro reimplementava
+      cabecalho em CSS local, que e a divergencia que ja custou caro no RAT
+      (RatPageHeader e RatCollapsibleSection sao copias, e a segunda renderiza sem
+      estilo fora do modulo).
+
+      icon-image devolve null hoje: nao existe chave 'geoespacial' em
+      MODULE_ICONS, e aquele mapa e mantido pelo dono do projeto ("confirmado
+      pelo usuario", diz o arquivo). O PageHeader entao cai no :icon, e no dia
+      em que a arte for cadastrada ela aparece sozinha, sem tocar nesta tela.
+    -->
+    <PageHeader
+      title="Camadas de Risco"
+      :description="descricaoDoCabecalho"
+      :icon="MapIcon"
+      :icon-image="moduleIcon('geoespacial')"
+      variant="gradient"
+    >
+      <template #actions>
+        <Link :href="route('geoespacial.enviar')" class="atalho-link">Enviar camada de risco</Link>
+      </template>
+    </PageHeader>
 
     <!--
       Upload primeiro, e nao no fim da pagina: quem abre esta tela quase sempre
@@ -23,8 +35,17 @@
       ver Geoespacial/Enviar.vue.
     -->
     <div class="atalho-envio">
-      <Link :href="route('geoespacial.enviar')" class="atalho-link">Enviar camada de risco</Link>
       <span class="atalho-nota">Envio de KML ou KMZ, com o processo explicado passo a passo.</span>
+
+      <!--
+        Arquivada fica fora por padrao: ela nao tem geometria no Gold, entao
+        seleciona-la mostraria um mapa vazio sem explicar por que. Quem precisa
+        achar uma para reativar liga o filtro.
+      -->
+      <label class="atalho-filtro">
+        <input type="checkbox" :checked="comArquivadas" @change="alternarArquivadas($event)">
+        Mostrar arquivadas
+      </label>
     </div>
 
     <div class="conteudo-grid">
@@ -41,14 +62,18 @@
           <span class="camada-meta">sem cruzamento</span>
         </button>
 
-        <button
+        <!--
+          <div> com botao interno, e nao <button> na linha inteira: o
+          ActionButton abre um dropdown, e botao dentro de botao e HTML invalido
+          -- o clique na acao borbulharia e trocaria a camada selecionada junto.
+        -->
+        <div
           v-for="camada in camadas"
           :key="camada.id"
-          type="button"
           class="camada-item"
           :class="{ 'is-ativo': camadaSelecionada === camada.id }"
-          @click="selecionarCamada(camada.id)"
         >
+          <button type="button" class="camada-alvo" @click="selecionarCamada(camada.id)">
           <span class="camada-nome">
             <span class="camada-cor" :style="{ backgroundColor: corDoDominio(camada.dominio) }"></span>
             {{ camada.nome }}
@@ -64,7 +89,7 @@
             aprovadas com "aprovada" seria ruido em toda a lista.
           -->
           <span v-if="camada.status !== 'aprovada'" class="camada-status" :class="`is-${camada.status}`">
-            {{ camada.status === 'pendente' ? 'aguardando aprovacao' : 'recusada' }}
+            {{ ROTULO_STATUS[camada.status] ?? camada.status }}
           </span>
           <!--
             O motivo da recusa fica na tela do municipio, e nao so na
@@ -72,7 +97,18 @@
             recusa por hash igual, e ninguem entende o que aconteceu.
           -->
           <span v-if="camada.motivo_recusa" class="camada-motivo">{{ camada.motivo_recusa }}</span>
-        </button>
+          <span v-if="camada.motivo_arquivamento" class="camada-motivo">{{ camada.motivo_arquivamento }}</span>
+          </button>
+
+          <div class="camada-acoes">
+            <ActionButton
+              module="geoespacial"
+              resource="camadas"
+              size="sm"
+              :actions="acoesDe(camada)"
+            />
+          </div>
+        </div>
 
         <p v-if="camadas.length === 0" class="lista-vazia">
           Nenhuma camada importada ate agora.
@@ -197,6 +233,20 @@
 
       <Pagination :pagination="paginacao" @page-change="irParaPagina" />
     </div>
+
+    <EditarCamadaModal
+      :show="emEdicao !== null"
+      :camada="emEdicao"
+      :dominios="dominios"
+      @close="fecharEdicao"
+    />
+
+    <ConfirmDialog
+      :is-open="confirmacao.aberto"
+      v-bind="confirmacao.opcoes"
+      @confirm="confirmar"
+      @cancel="cancelar"
+    />
   </div>
 </template>
 
@@ -205,8 +255,15 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import MapIcon from '@/Components/Icons/MapIcon.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import MapaLeaflet from '@/Components/Mapa/MapaLeaflet.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import EditarCamadaModal from './Partials/EditarCamadaModal.vue';
+import { useAcoesDeCamada } from '@/Composables/useAcoesDeCamada';
 import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
@@ -220,7 +277,30 @@ const props = defineProps({
   camadaSelecionada: { type: Number, default: null },
   dominios: { type: Object, default: () => ({}) },
   bbox: { type: Object, required: true },
+  comArquivadas: { type: Boolean, default: false },
 });
+
+const { acoesDe, emEdicao, fecharEdicao, confirmacao, confirmar, cancelar } = useAcoesDeCamada();
+
+const ROTULO_STATUS = {
+  pendente: 'aguardando aprovacao',
+  recusada: 'recusada',
+  arquivada: 'arquivada',
+};
+
+/*
+ * O filtro vai na URL, e nao em estado local.
+ *
+ * Arquivar recarrega a pagina pelo Inertia; com o filtro so na memoria, a
+ * camada que a pessoa acabou de arquivar sumiria da lista no mesmo instante e
+ * ela nao teria como conferir o resultado nem desfazer.
+ */
+function alternarArquivadas(evento) {
+  router.get(route('geoespacial.index'), {
+    ...(props.camadaSelecionada !== null ? { camada: props.camadaSelecionada } : {}),
+    ...(evento.target.checked ? { arquivadas: 1 } : {}),
+  }, { preserveScroll: true, preserveState: true });
+}
 
 // O aviso do Gold chega vazio, so dizendo que mudou; quem rebusca e o Inertia
 // pelo controller. `dominios` e `bbox` ficam de fora do only: sao config e nao
@@ -234,6 +314,15 @@ useAtualizacaoAoVivo({
 const camadaAtual = computed(
   () => props.camadas.find((camada) => camada.id === props.camadaSelecionada) ?? null,
 );
+
+// A descricao do PageHeader e uma string so: o subtitulo antigo tinha um <span>
+// condicional dentro, que a prop `description` nao renderiza como markup.
+const descricaoDoCabecalho = computed(() => {
+  const base = 'Areas de alerta importadas de KML/KMZ, cruzadas com os municipios'
+    + ' e as estacoes que o sistema ja monitora';
+
+  return camadaAtual.value ? `${base} - exibindo ${camadaAtual.value.nome}` : base;
+});
 
 /*
  * O geojson vem do gold como TEXTO, e nao como objeto: o PDO do Postgres
@@ -371,24 +460,6 @@ function formatarData(valor) {
   max-width: 100%;
 }
 
-.header-section {
-  margin-bottom: 1rem;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.page-subtitle {
-  font-size: 0.875rem;
-  opacity: 0.7;
-}
-
-.update-note {
-  opacity: 0.6;
-}
-
 .card-title {
   font-size: 0.9375rem;
   font-weight: 600;
@@ -502,19 +573,68 @@ function formatarData(valor) {
   box-sizing: border-box;
 }
 
+/*
+ * A linha e um <div> em faixa: o alvo de selecao ocupa a largura toda e as
+ * acoes ficam no canto. O empilhamento vertical do conteudo desceu para
+ * .camada-alvo, que e o botao de verdade.
+ */
 .camada-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
+  align-items: flex-start;
+  gap: 6px;
   width: 100%;
-  text-align: left;
-  background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 8px 10px;
-  cursor: pointer;
   color: var(--texto);
   font-size: 0.8125rem;
+}
+
+.camada-alvo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font-size: inherit;
+}
+
+/*
+ * As acoes so aparecem no hover e no foco-dentro em telas com ponteiro. Seis
+ * camadas com o botao sempre visivel viravam uma coluna de tres pontinhos que
+ * competia com o nome. Em telas de toque nao ha hover, entao la elas ficam
+ * sempre visiveis -- caso contrario seriam inalcancaveis.
+ */
+.camada-acoes {
+  flex: 0 0 auto;
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .camada-acoes {
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .camada-item:hover .camada-acoes,
+  .camada-item:focus-within .camada-acoes {
+    opacity: 1;
+  }
+}
+
+.atalho-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--texto-fraco);
+  cursor: pointer;
 }
 
 .camada-item:hover {
@@ -781,6 +901,11 @@ function formatarData(valor) {
   color: #dc2626;
 }
 
+/* Cinza, e nao vermelho: arquivada nao e erro, e camada que cumpriu o prazo. */
+.camada-status.is-arquivada {
+  color: #6b7280;
+}
+
 .camada-motivo {
   display: block;
   margin-top: 3px;
@@ -844,6 +969,10 @@ function formatarData(valor) {
 
 .dark .geoespacial-container .camada-status.is-recusada {
   color: #f87171;
+}
+
+.dark .geoespacial-container .camada-status.is-arquivada {
+  color: #9ca3af;
 }
 
 .dark .geoespacial-container .campo-erro {

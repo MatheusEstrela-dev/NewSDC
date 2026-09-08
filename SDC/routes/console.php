@@ -83,6 +83,22 @@ Schedule::command('medalhao:ingerir cemaden')
     ->onOneServer()
     ->runInBackground();
 
+/*
+ * Validade das camadas de risco.
+ *
+ * As 05:00, depois do medalhao:rollup das 04:00 e antes do expediente: a
+ * camada que venceu a meia-noite tem de estar fora do mapa quando o plantao
+ * abrir a tela, e nao no meio da manha.
+ *
+ * Diario, e nao de hora em hora, porque a granularidade de valido_ate e DATE --
+ * varrer de hora em hora reavaliaria a mesma comparacao 24 vezes para mudar de
+ * resultado uma vez por dia.
+ */
+Schedule::command('geoespacial:arquivar-vencidas')
+    ->dailyAt('05:00')
+    ->onOneServer()
+    ->runInBackground();
+
 // Arquiva o Bronze vencido em Parquet e poda o Postgres. A poda so ocorre apos a
 // escrita ser verificada — ver RolloverParquetJob.
 Schedule::command('medalhao:rollup')

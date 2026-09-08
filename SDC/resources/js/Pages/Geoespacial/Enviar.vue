@@ -1,13 +1,12 @@
 <template>
   <div class="enviar-container">
-    <div class="header-section">
-      <h1 class="page-title">Enviar camada de risco</h1>
-      <p class="page-subtitle">
-        Envie o mapeamento de risco do seu municipio em KML ou KMZ. A CEDEC
-        analisa e, aprovada, a area passa a aparecer no mapa estadual cruzada
-        com as estacoes de chuva.
-      </p>
-    </div>
+    <PageHeader
+      title="Enviar camada de risco"
+      description="Envie o mapeamento de risco do seu municipio em KML ou KMZ. A CEDEC analisa e, aprovada, a area passa a aparecer no mapa estadual cruzada com as estacoes de chuva."
+      :icon="UploadIcon"
+      :icon-image="moduleIcon('geoespacial')"
+      variant="gradient"
+    />
 
     <!--
       Procedencia ANTES do formulario, e nao depois do erro. O municipio nao e
@@ -171,6 +170,7 @@
             <th class="hidden sm:table-cell">Dominio</th>
             <th>Situacao</th>
             <th class="hidden sm:table-cell">Enviada em</th>
+            <th class="coluna-acoes">Opcoes</th>
           </tr>
         </thead>
         <tbody>
@@ -191,12 +191,35 @@
                 ninguem entende o que aconteceu.
               -->
               <span v-if="camada.motivo_recusa" class="motivo">{{ camada.motivo_recusa }}</span>
+              <span v-if="camada.motivo_arquivamento" class="motivo">{{ camada.motivo_arquivamento }}</span>
             </td>
             <td class="hidden sm:table-cell">{{ formatarData(camada.created_at) }}</td>
+            <td class="coluna-acoes">
+              <ActionButton
+                module="geoespacial"
+                resource="camadas"
+                size="sm"
+                :actions="acoesDe(camada)"
+              />
+            </td>
           </tr>
         </tbody>
       </table>
     </section>
+
+    <EditarCamadaModal
+      :show="emEdicao !== null"
+      :camada="emEdicao"
+      :dominios="dominios"
+      @close="fecharEdicao"
+    />
+
+    <ConfirmDialog
+      :is-open="confirmacao.aberto"
+      v-bind="confirmacao.opcoes"
+      @confirm="confirmar"
+      @cancel="cancelar"
+    />
   </div>
 </template>
 
@@ -207,6 +230,15 @@ defineOptions({ layout: AuthenticatedLayout });
 
 import { useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import UploadIcon from '@/Components/Icons/UploadIcon.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
+import EditarCamadaModal from './Partials/EditarCamadaModal.vue';
+import { useAcoesDeCamada } from '@/Composables/useAcoesDeCamada';
+
+const { acoesDe, emEdicao, fecharEdicao, confirmacao, confirmar, cancelar } = useAcoesDeCamada();
 
 const props = defineProps({
   procedencia: { type: Object, required: true },
@@ -251,6 +283,7 @@ function rotularStatus(status) {
     pendente: 'Aguardando aprovacao',
     aprovada: 'Aprovada, no mapa',
     recusada: 'Recusada',
+    arquivada: 'Arquivada, fora do mapa',
   }[status] ?? status;
 }
 
@@ -281,19 +314,6 @@ function formatarData(valor) {
   background-color: #f9fafb;
   color: var(--texto);
   min-height: 100%;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-.page-subtitle {
-  margin: 4px 0 16px;
-  font-size: 0.85rem;
-  color: var(--texto-fraco);
-  max-width: 80ch;
 }
 
 .procedencia {
@@ -525,6 +545,22 @@ function formatarData(valor) {
   color: #dc2626;
 }
 
+/* Cinza, e nao vermelho: arquivada nao e erro, e camada que cumpriu o prazo. */
+.situacao.is-arquivada {
+  color: #6b7280;
+}
+
+/*
+ * A coluna de acoes fica encostada a direita e nao encolhe: com a tabela
+ * rolando na horizontal em tela estreita, as acoes precisam continuar
+ * alcancaveis sem esticar as colunas de texto.
+ */
+.coluna-acoes {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
 .motivo {
   display: block;
   margin-top: 4px;
@@ -562,6 +598,10 @@ function formatarData(valor) {
 
 .dark .enviar-container .situacao.is-pendente {
   color: #fb923c;
+}
+
+.dark .enviar-container .situacao.is-arquivada {
+  color: #9ca3af;
 }
 
 .dark .enviar-container .campo select option {
