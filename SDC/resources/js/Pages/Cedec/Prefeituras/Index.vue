@@ -40,10 +40,7 @@
       dentro do space-y-6 os dois espacos somariam 40px onde o resto da pagina usa 24px.
     -->
     <div>
-      <PrefeituraTable
-        :prefeituras="prefeituras.data ?? []"
-        :pode-editar="can('cedec.prefeituras.edit')"
-      />
+      <PrefeituraTable :prefeituras="prefeituras.data ?? []" />
 
       <Pagination :pagination="paginacao" @page-change="irParaPagina" />
     </div>
@@ -55,7 +52,6 @@ import { computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { BuildingOffice2Icon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { usePermissions } from '@/Composables/usePermissions';
 import { moduleIcon } from '@/Support/moduleIcons';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
@@ -64,8 +60,6 @@ import PrefeituraFiltersSection from '@/Components/Organisms/Cedec/PrefeituraFil
 import PrefeituraTable from '@/Components/Organisms/Cedec/PrefeituraTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
-
-const { can } = usePermissions();
 
 const props = defineProps({
   prefeituras: {

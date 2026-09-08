@@ -24,8 +24,13 @@ Route::prefix('cedec')->name('cedec.')->group(function () {
     Route::prefix('prefeituras')->name('prefeituras.')->group(function () {
         Route::get('/', [PrefeituraController::class, 'index'])
             ->name('index')->middleware('can:cedec.prefeituras.view');
+        // /{municipio}/edit vem ANTES de /{municipio}: com o parametro solto primeiro,
+        // "edit" seria capturado como se fosse um id de municipio.
         Route::get('/{municipio}/edit', [PrefeituraController::class, 'edit'])
             ->name('edit')->middleware('can:cedec.prefeituras.view');
+        Route::get('/{municipio}', [PrefeituraController::class, 'show'])
+            ->name('show')->middleware('can:cedec.prefeituras.view')
+            ->whereNumber('municipio');
         Route::put('/{municipio}', [PrefeituraController::class, 'update'])
             ->name('update')->middleware('can:cedec.prefeituras.edit');
         Route::post('/{municipio}/foto', [PrefeituraController::class, 'uploadFoto'])

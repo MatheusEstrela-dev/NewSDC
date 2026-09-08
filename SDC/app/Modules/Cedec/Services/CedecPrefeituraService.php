@@ -7,6 +7,7 @@ namespace App\Modules\Cedec\Services;
 use App\Models\Municipio;
 use App\Modules\Cedec\DTOs\PrefeituraFiltroDTO;
 use App\Modules\Compdec\DTOs\PrefeituraDTO;
+use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Models\Prefeitura;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
@@ -132,6 +133,71 @@ final class CedecPrefeituraService
             'latitude' => $linha?->latitude,
             'longitude' => $linha?->longitude,
             'origem' => 'cedec_municipio (espelho do legado)',
+        ];
+    }
+
+    /**
+     * De onde veio o dado desta prefeitura. Quem le o cadastro precisa saber se o
+     * numero e da carga do legado ou se ja passou por alguem -- sem isso, corrigir o
+     * dado errado no lugar errado e questao de tempo.
+     *
+     * @return array{legacy_id: ?int, veio_do_legado: bool, ultima_acao_etl: ?string,
+     *   ultima_carga_em: ?string, criado_em: ?string, atualizado_em: ?string}
+     */
+    public function rastreabilidade(int $municipioId): array
+    {
+        $prefeitura = $this->obterPorMunicipio($municipioId);
+
+        if ($prefeitura === null) {
+            return [
+                'legacy_id' => null,
+                'veio_do_legado' => false,
+                'ultima_acao_etl' => null,
+                'ultima_carga_em' => null,
+                'criado_em' => null,
+                'atualizado_em' => null,
+            ];
+        }
+
+        // compdec_etl_log e compartilhada por todos os ETLs do Compdec: filtrar por
+        // recurso e obrigatorio, senao pega a linha de outro modulo com o mesmo
+        // legacy_id -- ja aconteceu com o recurso 'equipes'.
+        $ultimo = $prefeitura->legacy_id === null ? null : DB::table('compdec_etl_log')
+            ->where('recurso', 'prefeituras')
+            ->where('legacy_id', $prefeitura->legacy_id)
+            ->orderByDesc('id')
+            ->first(['acao', 'created_at']);
+
+        return [
+            'legacy_id' => $prefeitura->legacy_id,
+            'veio_do_legado' => $prefeitura->legacy_id !== null,
+            'ultima_acao_etl' => $ultimo?->acao,
+            'ultima_carga_em' => $ultimo?->created_at,
+            'criado_em' => $prefeitura->created_at?->toIso8601String(),
+            'atualizado_em' => $prefeitura->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Orgao COMPDEC do municipio, quando existe.
+     *
+     * A aba de prefeitura do Compdec e esta tela editam a MESMA linha de
+     * compdec_prefeituras. Mostrar o vinculo e o que evita duas pessoas alterarem o
+     * mesmo dado por portas diferentes sem saber uma da outra.
+     *
+     * @return array{id: int, nome: string, codigo: ?string}|null
+     */
+    public function orgaoCompdec(int $municipioId): ?array
+    {
+        $orgao = Orgao::query()
+            ->where('municipio_id', $municipioId)
+            ->orderBy('id')
+            ->first(['id', 'nome', 'codigo']);
+
+        return $orgao === null ? null : [
+            'id' => (int) $orgao->id,
+            'nome' => (string) $orgao->nome,
+            'codigo' => $orgao->codigo,
         ];
     }
 

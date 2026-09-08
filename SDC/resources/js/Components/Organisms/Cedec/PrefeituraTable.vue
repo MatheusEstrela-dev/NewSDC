@@ -64,14 +64,14 @@
             <td class="table-actions-cell w-20 whitespace-nowrap px-3 py-2 text-right">
               <div class="flex items-center justify-end">
                 <ActionButton
-                  action="edit"
+                  action="view"
                   module="cedec"
                   resource="prefeituras"
-                  :allowed="podeEditar"
+                  :allowed="true"
                   :show-label="false"
                   size="sm"
-                  tooltip-text="Editar dados da prefeitura"
-                  @click="editar(p.municipio_id)"
+                  tooltip-text="Ver dados da prefeitura"
+                  @click="abrir(p.municipio_id)"
                 />
               </div>
             </td>
@@ -140,14 +140,14 @@
           solto no pe do card e adivinhacao.
         -->
         <ActionButton
-          action="edit"
+          action="view"
           module="cedec"
           resource="prefeituras"
-          label="Editar"
-          :allowed="podeEditar"
+          label="Ver dados"
+          :allowed="true"
           size="sm"
-          tooltip-text="Editar dados da prefeitura"
-          @click="editar(p.municipio_id)"
+          tooltip-text="Ver dados da prefeitura"
+          @click="abrir(p.municipio_id)"
         />
       </footer>
     </article>
@@ -173,13 +173,15 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 
 /**
- * Organismo: concentra a interacao da listagem. Navegar para o Edit acontece aqui,
- * no mesmo padrao dos outros organismos de tabela -- a pagina nao precisa repassar
- * um evento que so tem um destino possivel.
+ * Organismo: concentra a interacao da listagem. Navegar acontece aqui, no mesmo padrao
+ * dos outros organismos de tabela -- a pagina nao precisa repassar um evento que so
+ * tem um destino possivel.
+ *
+ * Nao recebe mais `podeEditar`: a linha abre o DETALHE, que qualquer um com
+ * cedec.prefeituras.view pode ver. Quem decide sobre editar e a tela de detalhe.
  */
 defineProps({
   prefeituras: { type: Array, default: () => [] },
-  podeEditar: { type: Boolean, default: false },
 });
 
 const { isDesktop } = useMobile();
@@ -201,10 +203,14 @@ const PILULA_SIM = 'inline-flex items-center rounded-full bg-emerald-100 px-2 py
 const PILULA_NAO = 'inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-700/50 dark:text-slate-400';
 
 /**
+ * A linha abre o DETALHE, nao o formulario. O detalhe e a porta: quem so tem
+ * cedec.prefeituras.view para la, e quem pode editar segue pelo botao de dentro. Antes
+ * disso, quem so consultava caia num formulario com aviso de leitura.
+ *
  * O binding da rota e por Municipio, nao por Prefeitura: a CEDEC navega pelos 853
  * municipios, inclusive os que ainda nao tem linha em compdec_prefeituras.
  */
-function editar(municipioId) {
-  router.visit(route('cedec.prefeituras.edit', municipioId));
+function abrir(municipioId) {
+  router.visit(route('cedec.prefeituras.show', municipioId));
 }
 </script>

@@ -45,6 +45,33 @@ final class PrefeituraController extends Controller
         ]);
     }
 
+    /**
+     * Detalhe em leitura. E a porta do cadastro: quem so tem cedec.prefeituras.view
+     * para aqui, em vez de cair no formulario de edicao com um aviso.
+     */
+    public function show(Request $request, Municipio $municipio): Response
+    {
+        $prefeitura = $this->service->obterPorMunicipio($municipio->id);
+
+        return Inertia::render('Cedec/Prefeituras/Show', [
+            'municipio' => [
+                'id' => $municipio->id,
+                'nome' => $municipio->nome,
+                'codigo_ibge' => $municipio->codigo_ibge,
+                'uf' => $municipio->uf,
+            ],
+            'prefeitura' => $prefeitura === null ? null : array_merge(
+                $prefeitura->toArray(),
+                ['foto_prefeito_url' => $prefeitura->fotoPrefeitoUrl],
+            ),
+            'indicadores' => $this->service->indicadoresMunicipais($municipio->id),
+            'rastreabilidade' => $this->service->rastreabilidade($municipio->id),
+            'orgao' => $this->service->orgaoCompdec($municipio->id),
+            // A pagina decide o que mostrar; a rota so exige `view`.
+            'podeEditar' => $request->user()?->can('cedec.prefeituras.edit') ?? false,
+        ]);
+    }
+
     public function edit(Municipio $municipio): Response
     {
         $prefeitura = $this->service->obterPorMunicipio($municipio->id);
