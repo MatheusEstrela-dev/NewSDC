@@ -220,6 +220,7 @@ return [
         App\Modules\Dashboard\DashboardServiceProvider::class,
         App\Modules\Compdec\CompdecServiceProvider::class,
         App\Modules\Cisterna\CisternaServiceProvider::class,
+        App\Modules\Cedec\CedecServiceProvider::class,
     ])->toArray(),
 
     /*
