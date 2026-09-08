@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Geoespacial;
 
+use App\Modules\Geoespacial\Console\ArquivarVencidasCommand;
 use App\Modules\Geoespacial\Normalizadores\GeoKmlNormalizador;
 use App\Modules\Geoespacial\Repositories\GeoCamadaRepository;
 use App\Modules\Geoespacial\Services\KmlExtrator;
@@ -20,6 +21,10 @@ class GeoespacialServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands([ArquivarVencidasCommand::class]);
+        }
+
         // Fonte so-push: o conteudo chega por upload, entao nao ha ingestor a
         // registrar. Ver IngestorRegistry::registrarPush().
         $this->app->make(IngestorRegistry::class)->registrarPush(

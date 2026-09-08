@@ -10,6 +10,7 @@ use App\Modules\Geoespacial\Requests\SubirCamadaRequest;
 use App\Modules\Geoespacial\Services\KmlExtrator;
 use App\Modules\Geoespacial\Services\ProcedenciaDoEnvio;
 use App\Modules\Geoespacial\Services\RevisaoDeCamadas;
+use App\Modules\Geoespacial\Support\AcessoACamada;
 use App\Modules\Medalhao\Jobs\NormalizarSilverJob;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Shared\Geo\CaixaEnvolvente;
@@ -27,6 +28,7 @@ class GeoUploadController extends Controller
         private readonly KmlExtrator $extrator,
         private readonly ProcedenciaDoEnvio $procedencia,
         private readonly RevisaoDeCamadas $revisao,
+        private readonly AcessoACamada $acesso,
     ) {
     }
 
@@ -40,11 +42,31 @@ class GeoUploadController extends Controller
         $veTudo = $request->user()?->can('geoespacial.camadas.revisar') ?? false;
         $procedencia = $veTudo ? null : $this->procedencia->para($request->user());
 
+        /*
+         * Arquivada fica FORA por padrao.
+         *
+         * A lista serve para escolher o que ver no mapa, e camada arquivada nao
+         * tem geometria no Gold -- selecionar uma delas mostraria mapa vazio
+         * sem explicar por que. Quem precisa achar uma para reativar liga o
+         * filtro.
+         */
+        $comArquivadas = $request->boolean('arquivadas');
+
+        $camadas = $this->repository
+            ->camadas(municipioId: $procedencia?->municipioId, veTudo: $veTudo)
+            ->reject(fn (object $c): bool => ! $comArquivadas && $c->status === 'arquivada')
+            ->values();
+
         return Inertia::render('Geoespacial/Camadas', [
-            'camadas' => $this->repository->camadas(
-                municipioId: $procedencia?->municipioId,
-                veTudo: $veTudo,
-            )->all(),
+            // As acoes descem POR LINHA e nao como um booleano da tela: o que
+            // vale depende do estado de cada camada e de ela ser do usuario.
+            // E o `allowed` que o ActionButton espera.
+            'camadas' => $camadas
+                ->map(fn (object $c): array => (array) $c + [
+                    'acoes' => $this->acesso->acoes($request->user(), $c, $procedencia?->municipioId),
+                ])
+                ->all(),
+            'comArquivadas' => $comArquivadas,
             'feicoes' => $this->repository->mapa($camadaId)->all(),
             'cruzamento' => $camadaId !== null ? $this->repository->cruzamento($camadaId) : null,
             'camadaSelecionada' => $camadaId,
@@ -77,11 +99,21 @@ class GeoUploadController extends Controller
         $jaExiste = $this->repository->camadaDoHash(hash('sha256', $kml));
 
         if ($jaExiste !== null) {
+            // A camada existente pode estar ARQUIVADA, e ai a saida nao e
+            // enviar de novo -- o hash unico vai recusar sempre -- e sim
+            // reativar a que existe. Sem esta frase a pessoa reenvia o mesmo
+            // arquivo achando que falhou.
+            $arquivada = $jaExiste->status === 'arquivada';
+
             return back()->withErrors([
                 'arquivo' => "Esta geometria ja foi importada como \"{$jaExiste->nome}\""
                     . ($jaExiste->emitido_em !== null ? " (emitida em {$jaExiste->emitido_em})" : '')
-                    . '. O sistema compara o conteudo do arquivo, nao o nome: para trazer areas'
-                    . ' diferentes, envie um KML diferente.',
+                    . ($arquivada
+                        ? '. Essa camada esta ARQUIVADA: reative a existente em vez de enviar de'
+                          . ' novo, porque o sistema compara o conteudo do arquivo e vai recusar'
+                          . ' o mesmo KML sempre.'
+                        : '. O sistema compara o conteudo do arquivo, nao o nome: para trazer areas'
+                          . ' diferentes, envie um KML diferente.'),
             ]);
         }
 
@@ -180,7 +212,9 @@ class GeoUploadController extends Controller
             'minhasCamadas' => $this->repository->minhasCamadas(
                 municipioId: $procedencia->municipioId,
                 enviadoPor: (int) $request->user()->id,
-            )->all(),
+            )->map(fn (object $c): array => (array) $c + [
+                'acoes' => $this->acesso->acoes($request->user(), $c, $procedencia->municipioId),
+            ])->all(),
             'dominios' => config('geoespacial.dominios'),
             'limiteMb' => (int) round(((int) config('geoespacial.upload_max_kb')) / 1024),
         ]);

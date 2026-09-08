@@ -1,12 +1,12 @@
 <template>
   <div class="revisao-container">
-    <div class="header-section">
-      <h1 class="page-title">Revisao de camadas municipais</h1>
-      <p class="page-subtitle">
-        Camadas enviadas por COMPDECs, aguardando aprovacao. Enquanto pendentes,
-        nao aparecem no mapa estadual.
-      </p>
-    </div>
+    <PageHeader
+      title="Revisao de camadas municipais"
+      description="Camadas enviadas por COMPDECs, aguardando aprovacao. Enquanto pendentes, nao aparecem no mapa estadual."
+      :icon="CheckIcon"
+      :icon-image="moduleIcon('geoespacial')"
+      variant="gradient"
+    />
 
     <div v-if="$page.props.flash?.sucesso" class="aviso-sucesso">
       {{ $page.props.flash.sucesso }}
@@ -94,6 +94,9 @@ defineOptions({ layout: AuthenticatedLayout });
 
 import { router } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
+import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 const props = defineProps({
   pendentes: { type: Array, default: () => [] },
@@ -178,19 +181,6 @@ function recusar(camada) {
   background-color: #f9fafb;
   color: var(--texto);
   min-height: 100%;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-.page-subtitle {
-  margin: 4px 0 16px;
-  font-size: 0.85rem;
-  color: var(--texto-fraco);
-  max-width: 70ch;
 }
 
 .aviso-sucesso,

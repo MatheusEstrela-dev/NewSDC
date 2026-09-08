@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Geoespacial\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class SubirCamadaRequest extends FormRequest
 {
@@ -22,14 +21,10 @@ class SubirCamadaRequest extends FormRequest
                 'max:' . (int) config('geoespacial.upload_max_kb'),
                 'extensions:kml,kmz',
             ],
-            'dominio' => ['required', Rule::in(array_keys((array) config('geoespacial.dominios')))],
-            'nome' => ['required', 'string', 'max:255'],
-            // Emissao, validade e nivel NAO existem dentro do KML -- so no nome
-            // do arquivo. Extrair de nome de arquivo externo e contrato que
-            // ninguem garante, entao o operador informa.
-            'emitido_em' => ['required', 'date'],
-            'valido_ate' => ['nullable', 'date', 'after_or_equal:emitido_em'],
-            'nivel' => ['required', 'string', 'max:40'],
+            // Os metadados sao os mesmos da edicao, e vivem em RegrasDeMetadado:
+            // enviar e editar validando cada um o seu jeito e como a tela de
+            // edicao passa a aceitar o que o envio recusa.
+            ...RegrasDeMetadado::regras($this->string('dominio')->toString() ?: null),
         ];
     }
 
@@ -40,7 +35,7 @@ class SubirCamadaRequest extends FormRequest
     {
         return [
             'arquivo.extensions' => 'O arquivo precisa ser .kml ou .kmz.',
-            'dominio.in' => 'Dominio desconhecido.',
+            ...RegrasDeMetadado::mensagens(),
         ];
     }
 }

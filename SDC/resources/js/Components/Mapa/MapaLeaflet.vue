@@ -31,6 +31,15 @@ const props = defineProps({
    * [{ id, latitude, longitude, cor, raio, popup: { titulo, linhas: [{rotulo, valor}] } }]
    */
   pontos: { type: Array, default: () => [] },
+  /**
+   * [{ id, geojson, cor, rotulo }] — geojson tem de ser OBJETO ja decodificado.
+   *
+   * O PDO do Postgres entrega coluna jsonb como STRING, entao quem consome a
+   * matview precisa dar JSON.parse antes de montar esta prop. Passar a string
+   * crua nao desenha nada E NAO LEVANTA ERRO: o L.geoJSON simplesmente ignora,
+   * e o poligono some sem deixar rastro no console.
+   */
+  poligonos: { type: Array, default: () => [] },
   /** { min_lat, max_lat, min_lon, max_lon } — enquadra o mapa. */
   bbox: { type: Object, default: null },
   centro: { type: Array, default: () => [-18.5, -44.5] },
@@ -43,7 +52,18 @@ const idMapa = `mapa-leaflet-${Math.random().toString(36).slice(2, 9)}`;
 
 let mapa = null;
 let camada = null;
+
+// Camada propria, criada ANTES da de pontos: no Leaflet a ordem de adicao
+// define o empilhamento, e area de alerta desenhada por cima esconderia os
+// pontos de chuva -- que sao justamente o dado que o operador precisa ver
+// DENTRO dela.
+let camadaPoligonos = null;
 let observador = null;
+
+// Indice id -> marcador, refeito a cada desenho. Existe para focarPonto()
+// conseguir achar UM ponto entre centenas sem varrer a camada: a camada e um
+// layerGroup e nao guarda o id de dominio de cada marcador.
+const marcadoresPorId = new Map();
 
 // O popup monta HTML e recebe dado de fonte externa: escapar evita que conteudo
 // do catalogo seja interpretado como marcacao.
@@ -77,11 +97,46 @@ function desenhar() {
     return;
   }
 
+  if (camadaPoligonos) {
+    camadaPoligonos.clearLayers();
+  } else {
+    camadaPoligonos = L.layerGroup().addTo(mapa);
+  }
+
+  props.poligonos.forEach((poligono) => {
+    if (!poligono.geojson) {
+      return;
+    }
+
+    const cor = poligono.cor ?? '#b45309';
+
+    const camadaGeo = L.geoJSON(poligono.geojson, {
+      style: {
+        color: cor,
+        weight: 2,
+        // Preenchimento fraco de proposito: a area e recorte, nao dado. Opaca
+        // demais, ela compete com os pontos que estao dentro dela.
+        fillColor: cor,
+        fillOpacity: 0.12,
+      },
+    });
+
+    if (poligono.rotulo) {
+      camadaGeo.bindPopup(escapar(poligono.rotulo));
+    }
+
+    camadaGeo.addTo(camadaPoligonos);
+  });
+
   if (camada) {
     camada.clearLayers();
   } else {
     camada = L.layerGroup().addTo(mapa);
   }
+
+  // clearLayers() destruiu os marcadores: o indice tem de morrer com eles,
+  // senao focarPonto() guardaria referencia para marcador fora do mapa.
+  marcadoresPorId.clear();
 
   props.pontos.forEach((ponto) => {
     const lat = Number(ponto.latitude);
@@ -107,8 +162,42 @@ function desenhar() {
     }
 
     marcador.addTo(camada);
+
+    if (ponto.id !== undefined && ponto.id !== null) {
+      marcadoresPorId.set(String(ponto.id), marcador);
+    }
   });
 }
+
+/**
+ * Centraliza o mapa num ponto e abre o popup dele.
+ *
+ * Imperativo, e nao por prop, porque focar e EVENTO e nao estado: com
+ * `pontoFocado` como prop, pesquisar a mesma cidade duas vezes seguidas nao
+ * faria nada -- a prop nao mudaria e o watch nao dispararia.
+ *
+ * Devolve false quando o ponto nao esta no mapa, para quem chamou poder dizer
+ * ao usuario que nao achou em vez de fingir que centralizou.
+ */
+function focarPonto(id, { zoom = 11 } = {}) {
+  const marcador = marcadoresPorId.get(String(id));
+
+  if (!mapa || !marcador) {
+    return false;
+  }
+
+  // flyTo e nao setView: a animacao mostra PARA ONDE o mapa foi, e num mapa de
+  // 890 pontos um salto seco deixa o operador sem saber o que mudou.
+  mapa.flyTo(marcador.getLatLng(), zoom, { duration: 0.8 });
+
+  // Depois da animacao: abrir o popup antes faz o Leaflet reposicionar o mapa
+  // no meio do voo para caber o balao, e o destino final sai torto.
+  mapa.once('moveend', () => marcador.openPopup());
+
+  return true;
+}
+
+defineExpose({ focarPonto });
 
 function enquadrar() {
   if (!mapa) {
@@ -181,7 +270,7 @@ onBeforeUnmount(() => {
   }
 });
 
-watch(() => props.pontos, desenhar, { deep: true });
+watch(() => [props.pontos, props.poligonos], desenhar, { deep: true });
 </script>
 
 <style scoped>
