@@ -415,6 +415,18 @@ return [
                 // Aprovar e recusar. Separada de 'enviar' de proposito: quem
                 // envia nao revisa o proprio envio.
                 'revisar' => 'geoespacial.camadas.revisar',
+                // Metadados apenas: nome, dominio, nivel e datas. A GEOMETRIA
+                // nao e editavel por permissao nenhuma -- ela e a identidade da
+                // camada (hash_arquivo UNIQUE) e vem do arquivo. Corrigir area
+                // e enviar outro KML.
+                'edit' => 'geoespacial.camadas.edit',
+                // Retirar do mapa sem apagar o historico. Nao ha 'delete' neste
+                // modulo de proposito: camada aprovada esteve no mapa de
+                // plantao e pode ter embasado decisao, entao a linha fica.
+                'arquivar' => 'geoespacial.camadas.arquivar',
+                // Baixar o KML/KMZ como o municipio enviou. So existe para
+                // camada de origem municipal -- a estadual nao guarda original.
+                'export' => 'geoespacial.camadas.export',
             ],
         ],
         'COMPDEC' => [
@@ -453,6 +465,19 @@ return [
             'Usuarios' => [
                 'manage' => 'compdec.usuarios.manage',
                 'desvincular' => 'compdec.usuarios.desvincular',
+            ],
+        ],
+        // Cadastro estadual de prefeituras, visto pela CEDEC: os 853 municipios,
+        // inclusive os que ainda nao tem linha em compdec_prefeituras. Distinto de
+        // COMPDEC > Prefeitura, que e a aba onde o proprio municipio preenche a sua.
+        'CEDEC' => [
+            'Prefeituras' => [
+                'view' => 'cedec.prefeituras.view',
+                'edit' => 'cedec.prefeituras.edit',
+                'export' => 'cedec.prefeituras.export',
+            ],
+            'Contatos' => [
+                'view' => 'cedec.contatos.view',
             ],
         ],
         // Painel estadual de cobertura + envio do plano pelo proprio municipio.
@@ -591,6 +616,7 @@ return [
             'system.*',
             'cisternas.*',
             'compdec.*',
+            'cedec.*',
             'inventario.*',
             'estoque.*',
             'pmda.*',
@@ -770,6 +796,14 @@ return [
             'compdec.orgaos.export',
             'compdec.prefeitura.view',
             'compdec.prefeitura.edit',
+
+            // CEDEC - cadastro estadual de prefeituras (os 853 municipios).
+            // Mesmo critério de compdec.prefeitura.*: perfis municipais nao recebem.
+            'cedec.prefeituras.view',
+            'cedec.prefeituras.edit',
+            'cedec.prefeituras.export',
+            'cedec.contatos.view',
+
             'compdec.equipe.view',
             'compdec.equipe.create',
             'compdec.equipe.edit',
@@ -936,6 +970,13 @@ return [
             'compdec.orgaos.edit',
             'compdec.prefeitura.view',
             'compdec.prefeitura.edit',
+
+            // CEDEC - cadastro estadual de prefeituras (os 853 municipios).
+            'cedec.prefeituras.view',
+            'cedec.prefeituras.edit',
+            'cedec.prefeituras.export',
+            'cedec.contatos.view',
+
             'compdec.equipe.view',
             'compdec.equipe.create',
             'compdec.equipe.edit',

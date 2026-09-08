@@ -211,6 +211,17 @@
           Orgaos
         </NavItem>
 
+        <!-- CEDEC / Prefeituras -->
+        <NavItem
+          v-if="canSeeCedecPrefeituras && _routes.hasCedec"
+          :href="route('cedec.prefeituras.index')"
+          :active="isRouteActive('cedec.*')"
+          icon="building"
+          :collapsed="isCollapsed"
+        >
+          Prefeituras
+        </NavItem>
+
         <!-- TDAP - drill-down (abre submenu como nova seccao) -->
         <button
           v-if="canSeeTdap"
@@ -811,6 +822,7 @@ const _routes = {
   hasHumanitariaLiberacoes: route().has('ajuda-humanitaria.liberacoes.index'),
   hasHumanitariaTransferencias: route().has('ajuda-humanitaria.transferencias.index'),
   hasCompdec: route().has('compdec.index'),
+  hasCedec: route().has('cedec.prefeituras.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
   hasTdapCaminhoes: route().has('tdap.caminhoes.index'),
@@ -981,6 +993,10 @@ const canManageParametrosAh = computed(() => {
 const canSeeOrgaos = computed(() => {
   // TODO: Adicionar permissao compdec.orgaos.view no config
   return hasPermission(['users.view']); // Temporario - usar permissao de admin
+});
+
+const canSeeCedecPrefeituras = computed(() => {
+  return hasPermission(['cedec.prefeituras.view']);
 });
 
 const canSeeTdap = computed(() => {
