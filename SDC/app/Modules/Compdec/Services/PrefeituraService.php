@@ -159,18 +159,130 @@ class PrefeituraService
                     ->whereIn('codigo_ibge', $codigos)
                     ->pluck('id', 'codigo_ibge');
 
+                $payloads = [];
+                $fotos = [];
+                $origens = [];
+
                 foreach ($linhas as $row) {
-                    $this->migrarPrefeituraLegada($row, $mapaMunicipios, $report, $dryRun);
+                    $preparado = $this->prepararPrefeituraLegada($row, $mapaMunicipios, $report, $dryRun);
+
+                    if ($preparado === null) {
+                        continue;
+                    }
+
+                    [$municipioId, $payload, $foto] = $preparado;
+
+                    // Indexado por municipio_id: se o legado trouxer duas linhas para o
+                    // mesmo municipio, a ultima vence -- e o upsert nao pode receber
+                    // duas linhas com a mesma chave unica no mesmo lote.
+                    $payloads[$municipioId] = $payload;
+                    $origens[$municipioId] = $row;
+
+                    if ($foto !== null) {
+                        $fotos[$municipioId] = $foto;
+                    }
                 }
+
+                $this->gravarLote($payloads, $fotos, $origens, $report, $dryRun);
+                $this->descarregarLogs();
             });
+
+        $this->descarregarLogs();
 
         return $report;
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, int>  $mapaMunicipios  codigo_ibge => municipio_id
+     * Grava o chunk inteiro em tres consultas, em vez de tres POR MUNICIPIO.
+     *
+     * A carga real de 853 municipios disparava o guarda de query budget do projeto
+     * ("possivel N+1"): cada linha fazia um SELECT para saber se ja existia, um
+     * updateOrCreate e um INSERT no log de ETL.
+     *
+     * @param  array<int, array<string, mixed>>  $payloads  municipio_id => payload
+     * @param  array<int, string>  $fotos  municipio_id => nome do arquivo no legado
+     * @param  array<int, object>  $origens  municipio_id => linha crua, para o log
      */
-    private function migrarPrefeituraLegada(object $row, $mapaMunicipios, MigracaoReport $report, bool $dryRun): void
+    private function gravarLote(array $payloads, array $fotos, array $origens, MigracaoReport $report, bool $dryRun): void
+    {
+        if ($payloads === []) {
+            return;
+        }
+
+        $municipioIds = array_keys($payloads);
+
+        // 1 de 3: quem ja existe. Serve para separar inseridos de atualizados no
+        // relatorio -- o upsert sozinho nao conta isso.
+        $jaExistiam = Prefeitura::query()
+            ->whereIn('municipio_id', $municipioIds)
+            ->pluck('municipio_id')
+            ->all();
+
+        if ($dryRun) {
+            foreach ($municipioIds as $municipioId) {
+                in_array($municipioId, $jaExistiam, true)
+                    ? $report->registrarAtualizacao()
+                    : $report->registrarInsercao();
+            }
+
+            return;
+        }
+
+        try {
+            // 2 de 3: um upsert para o lote. A chave e municipio_id, que ja e unique
+            // na tabela. As colunas atualizadas sao as do payload menos a chave.
+            $colunas = array_keys(reset($payloads));
+            $atualizaveis = array_values(array_diff($colunas, ['municipio_id']));
+
+            Prefeitura::query()->upsert(array_values($payloads), ['municipio_id'], $atualizaveis);
+
+            // 3 de 3: recarrega o lote para ter os ids e os models das fotos.
+            $prefeituras = Prefeitura::query()
+                ->whereIn('municipio_id', $municipioIds)
+                ->get()
+                ->keyBy('municipio_id');
+        } catch (Throwable $e) {
+            // Falha de lote nao tem uma linha culpada: registra uma vez, com os
+            // municipios envolvidos, em vez de fingir que foi de um municipio so.
+            $report->registrarErro(null, $e->getMessage());
+            $this->logEtl(null, null, 'error', 'falha ao gravar lote: ' . $e->getMessage(), ['municipio_ids' => $municipioIds], $dryRun);
+
+            return;
+        }
+
+        foreach ($municipioIds as $municipioId) {
+            $prefeitura = $prefeituras->get($municipioId);
+            $legacyId = $payloads[$municipioId]['legacy_id'] ?? null;
+
+            if ($prefeitura === null) {
+                $report->registrarErro($legacyId, 'linha nao encontrada apos o upsert do lote');
+                $this->logEtl($legacyId, null, 'error', 'linha nao encontrada apos o upsert do lote', $origens[$municipioId] ?? null, false);
+
+                continue;
+            }
+
+            if (isset($fotos[$municipioId])) {
+                $this->migrarFotoPrefeito($prefeitura, $fotos[$municipioId], $legacyId, false);
+            }
+
+            if (in_array($municipioId, $jaExistiam, true)) {
+                $report->registrarAtualizacao();
+                $this->logEtl($legacyId, $prefeitura->id, 'updated', null, $origens[$municipioId] ?? null, false);
+            } else {
+                $report->registrarInsercao();
+                $this->logEtl($legacyId, $prefeitura->id, 'inserted', null, $origens[$municipioId] ?? null, false);
+            }
+        }
+    }
+
+    /**
+     * Traduz UMA linha do legado no payload de compdec_prefeituras. Nao grava nada:
+     * quem grava e gravarLote(), em lote.
+     *
+     * @param  \Illuminate\Support\Collection<string, int>  $mapaMunicipios  codigo_ibge => municipio_id
+     * @return array{0: int, 1: array<string, mixed>, 2: ?string}|null  [municipio_id, payload, nome da foto] ou null quando a linha e descartada
+     */
+    private function prepararPrefeituraLegada(object $row, $mapaMunicipios, MigracaoReport $report, bool $dryRun): ?array
     {
         $legacyId = LegacyParser::toIntOrNull($row->legacy_id ?? null);
         $codmundv = LegacyParser::toStringOrNull($row->codmundv ?? null);
@@ -179,7 +291,7 @@ class PrefeituraService
             $report->registrarSkip();
             $this->logEtl($legacyId, null, 'skipped', 'Codmundv sem municipio correspondente em municipios.codigo_ibge', $row, $dryRun);
 
-            return;
+            return null;
         }
 
         $municipioId = (int) $mapaMunicipios->get($codmundv);
@@ -243,28 +355,18 @@ class PrefeituraService
                 'legacy_id' => $legacyId,
             ];
 
-            if ($dryRun) {
-                $existente = Prefeitura::query()->where('municipio_id', $municipioId)->exists();
-                $existente ? $report->registrarAtualizacao() : $report->registrarInsercao();
-
-                return;
-            }
-
-            $existente = Prefeitura::query()->where('municipio_id', $municipioId)->first();
-            $prefeitura = Prefeitura::query()->updateOrCreate(['municipio_id' => $municipioId], $payload);
-
-            $this->migrarFotoPrefeito($prefeitura, LegacyParser::toStringOrNull($row->foto_prefeito ?? null), $legacyId, $dryRun);
-
-            if ($existente) {
-                $report->registrarAtualizacao();
-                $this->logEtl($legacyId, $prefeitura->id, 'updated', null, $row, false);
-            } else {
-                $report->registrarInsercao();
-                $this->logEtl($legacyId, $prefeitura->id, 'inserted', null, $row, false);
-            }
+            return [
+                $municipioId,
+                $payload,
+                LegacyParser::toStringOrNull($row->foto_prefeito ?? null),
+            ];
         } catch (Throwable $e) {
+            // Erro de TRADUCAO da linha (parse, sanitizacao). Erro de GRAVACAO e do
+            // lote e fica em gravarLote().
             $report->registrarErro($legacyId, $e->getMessage());
             $this->logEtl($legacyId, null, 'error', $e->getMessage(), $row, $dryRun);
+
+            return null;
         }
     }
 
@@ -392,6 +494,14 @@ class PrefeituraService
         return $texto === null ? null : LegacyParser::toDecimalBR($texto);
     }
 
+    /**
+     * Linhas de log aguardando gravacao. Acumular e descarregar por lote e o que tira
+     * o terceiro INSERT por municipio -- eram 853 inserts numa carga completa.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    private array $logsPendentes = [];
+
     private function logEtl(
         ?int $legacyId,
         ?int $newId,
@@ -404,7 +514,7 @@ class PrefeituraService
             return;
         }
 
-        DB::table('compdec_etl_log')->insert([
+        $this->logsPendentes[] = [
             'recurso' => 'prefeituras',
             'legacy_table' => 'cedec_municipio+cedec_prefeitura',
             'legacy_id' => $legacyId ?? 0,
@@ -413,6 +523,21 @@ class PrefeituraService
             'motivo' => $motivo,
             'payload_legado' => $payload !== null ? json_encode((array) $payload) : null,
             'created_at' => now(),
-        ]);
+        ];
+    }
+
+    /**
+     * Grava o log acumulado numa consulta so. Chamado ao fim de cada chunk e ao fim da
+     * migracao -- nunca deixa linha pendente, mesmo quando o ultimo chunk e parcial.
+     */
+    private function descarregarLogs(): void
+    {
+        if ($this->logsPendentes === []) {
+            return;
+        }
+
+        DB::table('compdec_etl_log')->insert($this->logsPendentes);
+
+        $this->logsPendentes = [];
     }
 }
