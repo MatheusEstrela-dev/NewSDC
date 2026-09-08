@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Cedec;
 
 use App\Modules\Cedec\Console\ImportarPrefeiturasCommand;
+use App\Modules\Cedec\Console\SincronizarRedecsCommand;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -23,6 +24,7 @@ class CedecServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 ImportarPrefeiturasCommand::class,
+                SincronizarRedecsCommand::class,
             ]);
         }
     }

@@ -15,8 +15,12 @@ use Throwable;
  * `municipio_id` legado (usado por legado_rat e outros dados antigos) e a
  * tabela `municipios` do NewSDC: cedec_municipio.Codmundv = municipios.codigo_ibge.
  *
- * Importa um subconjunto seguro de colunas (id, redec_id, nome, rpm e codigos
- * IBGE). Idempotente por `id` legado.
+ * Importa um subconjunto seguro de colunas (id, nome, rpm e codigos IBGE).
+ * Idempotente por `id` legado.
+ *
+ * NAO escreve `redec_id`: no dump essa coluna vem NULL nas 854 linhas, entao
+ * grava-la aqui so apagaria o vinculo. Quem preenche a REDEC e
+ * `cedec:sincronizar-redecs`, a partir de `cedec_rpm_mun` no legado gestaocedec.
  */
 class ImportCedecMunicipioCommand extends Command
 {
@@ -100,7 +104,10 @@ class ImportCedecMunicipioCommand extends Command
             return count($lote);
         }
 
-        DB::table('cedec_municipio')->upsert($lote, ['id'], ['redec_id', 'nome', 'rpm', 'Codmundv']);
+        // redec_id fica FORA da lista de atualizaveis: o dump nao traz esse vinculo
+        // e incluir a coluna faria cada reimportacao zerar o que
+        // cedec:sincronizar-redecs preencheu.
+        DB::table('cedec_municipio')->upsert($lote, ['id'], ['nome', 'rpm', 'Codmundv']);
 
         return count($lote);
     }
@@ -116,9 +123,7 @@ class ImportCedecMunicipioCommand extends Command
             return null;
         }
 
-        $redec = isset($row['redec_id']) && trim((string) $row['redec_id']) !== '' ? (int) $row['redec_id'] : null;
-
-        $registro = ['id' => $id, 'redec_id' => $redec];
+        $registro = ['id' => $id];
 
         foreach (self::COLUNAS_STRING as $coluna => $limite) {
             $valor = $row[$coluna] ?? null;
