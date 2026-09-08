@@ -27,6 +27,7 @@
       :error="!!error"
       :maxlength="maxlength"
       :inputmode="inputmode"
+      :step="step"
       :mask="mask"
       :size="size"
       @update:model-value="$emit('update:modelValue', $event)"
@@ -99,6 +100,13 @@ const props = defineProps({
   maxlength: {
     type: [String, Number],
     default: null,
+  },
+  // Repassada ao input pelo mesmo motivo de `inputmode`: a raiz do FormField e uma
+  // div, entao `step` solto nunca chegava ao campo. Latitude, longitude e aliquota
+  // dependem dele para incrementar em casa decimal.
+  step: {
+    type: [String, Number],
+    default: undefined,
   },
   hint: {
     type: String,

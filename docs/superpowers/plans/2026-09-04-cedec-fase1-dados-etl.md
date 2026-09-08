@@ -29,6 +29,58 @@ sobre esta fase nas secoes 0, 1, 2, 3, 9 e 10):
 
 ## Global Constraints
 
+### Ambiente de execucao — corrigido em 2026-09-05, medido
+
+Estas quatro correcoes valem para TODOS os steps deste plano e substituem qualquer
+comando divergente no corpo dele.
+
+1. **O container e `newsdc_dev_app`**, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP),
+   com a aplicacao em `/var/www`. O nome `newsdc_frankenphp_local` do `.claude/kernel.py`
+   NAO EXISTE. O Postgres de desenvolvimento e `newsdc_dev_db`, publicado no host em 5434.
+
+2. **Teste roda no HOST, nunca no container.** `docker exec newsdc_dev_app php artisan test`
+   falha com `Command "test" is not defined` — a imagem nao tem dev dependencies. Exporte
+   uma vez por terminal, a partir de `SDC/`:
+
+   ```bash
+   mkdir -p /c/tmp/newsdc-cache
+   export MSYS_NO_PATHCONV=1
+   export APP_CONFIG_CACHE=/tmp/newsdc-cache/nao-existe-config.php
+   export APP_PACKAGES_CACHE=/tmp/newsdc-cache/packages.php
+   export APP_SERVICES_CACHE=/tmp/newsdc-cache/services.php
+   export APP_ROUTES_CACHE=/tmp/newsdc-cache/routes.php
+   export APP_EVENTS_CACHE=/tmp/newsdc-cache/events.php
+   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+   ```
+
+   As CINCO variaveis de cache sao obrigatorias, e essa lista foi paga com dor nesta
+   sessao. `APP_CONFIG_CACHE` sozinho NAO basta: ele cobre so o cache de config, e o
+   PHPUnit do host continua reescrevendo `bootstrap/cache/packages.php` e `services.php`,
+   que sao bind-mount compartilhado com o container. Como a imagem foi buildada sem dev
+   dependencies, o manifest escrito pelo host descreve outro conjunto de providers e TODO
+   `artisan` dentro do container passa a morrer em `ProviderRepository` — no meu caso com
+   `Class "App\Modules\Cemaden\CemadenServiceProvider" not found`, apesar de a classe
+   existir e `class_exists()` devolver true la dentro. Recuperacao: apagar os dois
+   arquivos e rodar `artisan` DUAS vezes (a primeira falha recompilando, a segunda passa).
+
+   Os caminhos precisam comecar com `/`, e por isso o `MSYS_NO_PATHCONV=1`. O
+   `Application::normalizeCachePath` so trata como absoluto o que comeca com `/` ou `\`;
+   se o Git Bash converter para `C:/tmp/...`, o Laravel concatena com o base path e o
+   teste morre com "The <projeto>\C:/tmp/newsdc-cache directory must be present and
+   writable". Com a barra preservada, o PHP no Windows resolve `/tmp/...` para `C:\tmp\...`. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
+   `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
+   migration, cair no sqlite da `no such table` na suite inteira.
+
+3. **Os testes rodam contra o banco de DESENVOLVIMENTO.** Nenhum teste pode fazer `update()`
+   ou `delete()` sem `where` restrito as linhas que ele mesmo criou, e assercao de contagem
+   tem de ser relativa a um "antes", nunca total absoluto.
+
+4. **`SDC/tests` esta no `.gitignore`.** Escrever o teste continua obrigatorio, mas ele NAO
+   e versionado: todo `git add` dos steps leva so os arquivos de producao. Incluir caminho
+   sob `SDC/tests` faz o `git add` ser recusado.
+
 - App executavel em `NewSDC/SDC`. Testes: **PHPUnit**, nao Pest. Classe com
   `declare(strict_types=1)`, namespace `Tests\Feature\Cedec`, trait
   `DatabaseTransactions`.
@@ -55,10 +107,10 @@ sobre esta fase nas secoes 0, 1, 2, 3, 9 e 10):
   passos de commit ficam marcados apenas no fim de Task 1, Task 5 e Task 7; Tasks 2, 3,
   4 e 6 nao commitam sozinhas.
 - **Nome do container medido nesta sessao diverge do resto do projeto.** O contrato e
-  os planos das fases 3-5 usam `docker exec newsdc_frankenphp_local`. Neste ambiente
+  os planos das fases 3-5 usam `docker exec newsdc_dev_app`. Neste ambiente
   (`docker ps`, medido ao escrever este plano) o container realmente em execucao e
   `newsdc_dev_app` (imagem `newsdc-swoole-dev:latest`, servico `app` de
-  `docker/compose.dev.yml`). Os comandos abaixo usam `newsdc_frankenphp_local` para
+  `docker/compose.dev.yml`). Os comandos abaixo usam `newsdc_dev_app` para
   seguir o contrato; se o container ativo no seu ambiente tiver outro nome, confirme
   com `docker ps` e substitua.
 - Depois de mudar PHP: `octane:reload` (~1s). Mudar `.env`, `config/` ou
@@ -182,7 +234,7 @@ fase, que so precisa da conexao nova `legado_gestaocedec`.
 - [ ] **Step 1: Confirmar o estado atual (diagnostico, sem alterar nada)**
 
 ```bash
-docker exec newsdc_frankenphp_local env | grep -E "DB_LEGACY|DB_LEGADO_GESTAOCEDEC|COMPDEC_LEGACY|CEDEC_LEGACY"
+docker exec newsdc_dev_app env | grep -E "DB_LEGACY|DB_LEGADO_GESTAOCEDEC|COMPDEC_LEGACY|CEDEC_LEGACY"
 ```
 
 Esperado (estado antes do fix): `DB_LEGACY_DATABASE=dbsdc` (mantido, correto para os
@@ -336,7 +388,7 @@ fora do escopo de codigo desta fase.
 
 ```bash
 docker compose -f SDC/docker/compose.dev.yml up -d --force-recreate app
-docker exec newsdc_frankenphp_local env | grep -E "DB_LEGACY|DB_LEGADO_GESTAOCEDEC|COMPDEC_LEGACY"
+docker exec newsdc_dev_app env | grep -E "DB_LEGACY|DB_LEGADO_GESTAOCEDEC|COMPDEC_LEGACY"
 ```
 
 Esperado: `DB_LEGACY_DATABASE=dbsdc` **inalterado**, mais as cinco linhas novas
@@ -346,13 +398,13 @@ Esperado: `DB_LEGACY_DATABASE=dbsdc` **inalterado**, mais as cinco linhas novas
 - [ ] **Step 9: Verificar conectividade real com o legado, pela conexao nova**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan config:clear
-docker exec newsdc_frankenphp_local php -r "
+docker exec newsdc_dev_app php artisan config:clear
+docker exec newsdc_dev_app php -r "
 \$pdo = new PDO('mysql:host='.getenv('DB_LEGADO_GESTAOCEDEC_HOST').';port='.getenv('DB_LEGADO_GESTAOCEDEC_PORT').';dbname='.getenv('DB_LEGADO_GESTAOCEDEC_DATABASE').';charset=utf8mb4', getenv('DB_LEGADO_GESTAOCEDEC_USERNAME'), getenv('DB_LEGADO_GESTAOCEDEC_PASSWORD'), [PDO::ATTR_TIMEOUT=>3]);
 echo 'OK: '.\$pdo->query('SELECT COUNT(*) c FROM cedec_municipio')->fetch()['c'].' linhas em cedec_municipio'.PHP_EOL;
 echo 'OK: '.\$pdo->query('SELECT COUNT(*) c FROM cedec_prefeitura')->fetch()['c'].' linhas em cedec_prefeitura'.PHP_EOL;
 "
-docker exec newsdc_frankenphp_local php artisan tinker --execute="echo config('cedec.legacy_connection');"
+docker exec newsdc_dev_app php artisan tinker --execute="echo config('cedec.legacy_connection');"
 ```
 
 Expected: `OK: 854 linhas em cedec_municipio` e `OK: 854 linhas em cedec_prefeitura`
@@ -363,7 +415,7 @@ Confirmar tambem que a conexao antiga continua servindo os outros consumidores (
 regressao):
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan tinker --execute="echo config('compdec.legacy_connection');"
+docker exec newsdc_dev_app php artisan tinker --execute="echo config('compdec.legacy_connection');"
 ```
 
 Expected: `legacy` (inalterado).
@@ -454,7 +506,7 @@ class CompdecPrefeiturasMigrationTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=CompdecPrefeiturasMigrationTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CompdecPrefeiturasMigrationTest
 ```
 
 Expected: FAIL — `Coluna prefeito_partido ausente em compdec_prefeituras.`
@@ -564,7 +616,7 @@ substituir o metodo `up()` inteiro por:
 - [ ] **Step 4: Rodar a migration**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan migrate
+docker exec newsdc_dev_app php artisan migrate
 ```
 
 Expected: se a migration ja constava como executada (`migrations` table), Laravel nao
@@ -572,7 +624,7 @@ a roda de novo automaticamente — nesse caso force uma re-execucao pontual so d
 migration:
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan migrate:refresh --path=database/migrations/2026_05_05_100004_create_compdec_prefeituras_table.php
+docker exec newsdc_dev_app php artisan migrate:refresh --path=database/migrations/2026_05_05_100004_create_compdec_prefeituras_table.php
 ```
 
 Se esse comando nao existir na versao do Laravel (o `--path` do `refresh` roda TODAS
@@ -580,13 +632,13 @@ as migrations, nao so uma), a alternativa segura e chamar a classe diretamente v
 tinker:
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan tinker --execute="(new (require database_path('migrations/2026_05_05_100004_create_compdec_prefeituras_table.php')))->up();"
+docker exec newsdc_dev_app php artisan tinker --execute="(new (require database_path('migrations/2026_05_05_100004_create_compdec_prefeituras_table.php')))->up();"
 ```
 
 - [ ] **Step 5: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=CompdecPrefeiturasMigrationTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CompdecPrefeiturasMigrationTest
 ```
 
 Expected: PASS.
@@ -661,7 +713,7 @@ class PrefeituraFillableTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFillableTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFillableTest
 ```
 
 Expected: FAIL — os campos ficam `null` (mass assignment silenciosamente ignorado
@@ -723,7 +775,7 @@ por:
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFillableTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFillableTest
 ```
 
 Expected: PASS.
@@ -815,7 +867,7 @@ class PrefeituraDTOTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraDTOTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraDTOTest
 ```
 
 Expected: FAIL — `Undefined property: PrefeituraDTO::$prefeitoPartido` (erro fatal) ou
@@ -926,7 +978,7 @@ class PrefeituraDTO
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraDTOTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraDTOTest
 ```
 
 Expected: PASS (2 testes).
@@ -990,7 +1042,7 @@ class PrefeituraFactoryTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFactoryTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFactoryTest
 ```
 
 Expected: FAIL — `assertNotNull` falha porque `definition()` ainda nao preenche
@@ -1061,7 +1113,7 @@ por:
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFactoryTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFactoryTest
 ```
 
 Expected: PASS.
@@ -1069,7 +1121,7 @@ Expected: PASS.
 - [ ] **Step 5: Rodar as Tasks 2-5 juntas para confirmar que nada quebrou**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter="CompdecPrefeiturasMigrationTest|PrefeituraFillableTest|PrefeituraDTOTest|PrefeituraFactoryTest"
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter="CompdecPrefeiturasMigrationTest|PrefeituraFillableTest|PrefeituraDTOTest|PrefeituraFactoryTest"
 ```
 
 Expected: PASS em todos.
@@ -1123,14 +1175,23 @@ e-mail invalido -> null + log), e copia a foto do prefeito para a Media Library.
 - Produces: `PrefeituraService::migrarLegado(int $chunk = 100, bool $dryRun = false):
   MigracaoReport` — MESMA assinatura de hoje, comportamento corrigido. Consumido por
   Task 7 (Command).
-- **Adicao alem do contrato:** quatro metodos privados novos dentro de
+- **Adicao alem do contrato:** sete metodos privados novos dentro de
   `PrefeituraService` — `sanitizarEmail(?string): ?string`,
   `sanitizarTelefone(?string): ?string`, `limparCampoSujo(?string): ?string`,
   `validarOuDescartarEmail(?string, ?int, string, object, bool): ?string`,
+  `resolverEmailComPrecedencia(array, ?int, string, object, bool): ?string`,
+  `sanitizarCoordenada(mixed): ?float`,
   `migrarFotoPrefeito(Prefeitura, ?string, ?int, bool): void`. O contrato (secao 9) so
   descreve a higienizacao em prosa ("trim...e-mail para minusculas...'-' vira null");
   estes metodos sao a implementacao dessa prosa, privados e sem uso fora desta classe,
   entao nao colidem com nomes que outras fases consomem.
+  `resolverEmailComPrecedencia` valida CADA candidato (higienizado) antes de
+  escolher, na ordem de precedencia, em vez de escolher o primeiro preenchido e so
+  depois validar (isso perdia o fallback valido quando o candidato de maior
+  precedencia era um e-mail malformado). `sanitizarCoordenada` filtra null/vazio/"-"
+  antes de chamar `LegacyParser::toDecimalBR`, que nunca devolve null (vazio vira
+  0.0, coordenada real no Golfo da Guine) — sem alterar `LegacyParser`, compartilhado
+  por outros ETLs.
 
 - [ ] **Step 1: Escrever os testes que falham**
 
@@ -1268,9 +1329,26 @@ class PrefeituraEtlMigracaoTest extends TestCase
         ], $dados));
     }
 
+    /**
+     * SDC/phpunit.xml NAO isola banco de teste (linhas de sqlite comentadas): os
+     * testes rodam contra o Postgres de desenvolvimento, que ja tem 853 municipios
+     * reais, alguns com o mesmo codigo_ibge que este teste precisa. firstOrCreate
+     * evita a violacao da UNIQUE em municipios.codigo_ibge -- reaproveita a linha
+     * se ja existir, so cria quando faltar. O lado legado (sqlite, cedec_municipio/
+     * cedec_prefeitura) continua sob controle total do teste; so o Postgres tem
+     * dados pre-existentes.
+     */
+    private function municipioComCodigo(string $codigoIbge): Municipio
+    {
+        return Municipio::firstOrCreate(
+            ['codigo_ibge' => $codigoIbge],
+            ['nome' => 'Municipio Teste '.$codigoIbge, 'uf' => 'MG'],
+        );
+    }
+
     public function test_dry_run_nao_escreve_prefeitura_nem_log(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100104']);
+        $municipio = $this->municipioComCodigo('3100104');
         $this->inserirMunicipioLegado(['id_municipio' => 501, 'Codmundv' => '3100104', 'prefeito' => 'Ana Teste']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 501, 'id_municipio' => 501]);
 
@@ -1287,7 +1365,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_tel2_com_traco_vira_null(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100203']);
+        $municipio = $this->municipioComCodigo('3100203');
         $this->inserirMunicipioLegado(['id_municipio' => 502, 'Codmundv' => '3100203']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 502, 'id_municipio' => 502, 'tel2' => '-']);
 
@@ -1300,7 +1378,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_email_com_espaco_a_esquerda_e_normalizado_para_minusculas(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100302']);
+        $municipio = $this->municipioComCodigo('3100302');
         $this->inserirMunicipioLegado(['id_municipio' => 503, 'Codmundv' => '3100302', 'email' => '   Prefeitura@Cidade.MG.GOV.BR']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 503, 'id_municipio' => 503]);
 
@@ -1312,7 +1390,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_email_invalido_vira_null_e_gera_log_skipped(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100401']);
+        $municipio = $this->municipioComCodigo('3100401');
         $this->inserirMunicipioLegado(['id_municipio' => 504, 'Codmundv' => '3100401', 'email' => 'prefeitura@prefeitura@gmail.com1']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 504, 'id_municipio' => 504]);
 
@@ -1358,7 +1436,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_precedencia_email_prefeitura_e_municipio_sobre_prefeitura(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100609']);
+        $municipio = $this->municipioComCodigo('3100609');
         $this->inserirMunicipioLegado(['id_municipio' => 507, 'Codmundv' => '3100609', 'email' => 'municipio@cidade.gov.br']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 507, 'id_municipio' => 507, 'email' => 'antigo@yahoo.com']);
 
@@ -1370,7 +1448,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
 
     public function test_email_da_prefeitura_e_usado_como_fallback_quando_municipio_esta_vazio(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100708']);
+        $municipio = $this->municipioComCodigo('3100708');
         $this->inserirMunicipioLegado(['id_municipio' => 508, 'Codmundv' => '3100708', 'email' => null]);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 508, 'id_municipio' => 508, 'email' => 'fallback@hotmail.com']);
 
@@ -1380,9 +1458,28 @@ class PrefeituraEtlMigracaoTest extends TestCase
         $this->assertSame('fallback@hotmail.com', $prefeitura->email_prefeitura);
     }
 
+    /**
+     * Corrige o bug de precedencia: escolher o candidato de maior precedencia ANTES
+     * de validar o formato perde o fallback valido quando esse candidato e um
+     * e-mail malformado. cedec_municipio.email malformado nao pode anular
+     * cedec_prefeitura.email, que e valido -- o correto e validar cada candidato e
+     * so entao escolher o primeiro valido, na ordem de precedencia.
+     */
+    public function test_email_da_prefeitura_e_usado_quando_email_do_municipio_e_invalido(): void
+    {
+        $municipio = $this->municipioComCodigo('3100500');
+        $this->inserirMunicipioLegado(['id_municipio' => 506, 'Codmundv' => '3100500', 'email' => 'prefeitura@prefeitura@gmail.com1']);
+        $this->inserirPrefeituraLegada(['id_prefeitura' => 506, 'id_municipio' => 506, 'email' => 'fallback.valido@cidade.gov.br']);
+
+        app(PrefeituraService::class)->migrarLegado(100, false);
+
+        $prefeitura = Prefeitura::where('municipio_id', $municipio->id)->first();
+        $this->assertSame('fallback.valido@cidade.gov.br', $prefeitura->email_prefeitura);
+    }
+
     public function test_prefeito_nome_vem_de_cedec_municipio_nunca_de_cedec_prefeitura_prefeiro(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100807']);
+        $municipio = $this->municipioComCodigo('3100807');
         $this->inserirMunicipioLegado(['id_municipio' => 509, 'Codmundv' => '3100807', 'prefeito' => 'Prefeito Atual']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 509, 'id_municipio' => 509, 'prefeiro' => 'Prefeito Mandato Anterior']);
 
@@ -1406,7 +1503,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
         imagejpeg($imagem, $diretorioLegado.'/'.$nomeArquivo);
         imagedestroy($imagem);
 
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3100906']);
+        $municipio = $this->municipioComCodigo('3100906');
         $this->inserirMunicipioLegado(['id_municipio' => 510, 'Codmundv' => '3100906']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 510, 'id_municipio' => 510, 'fotoPref' => $nomeArquivo]);
 
@@ -1426,7 +1523,7 @@ class PrefeituraEtlMigracaoTest extends TestCase
     {
         config(['compdec.legacy_paths.foto_prefeito' => sys_get_temp_dir().'/cedec_diretorio_inexistente_'.uniqid()]);
 
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3101003']);
+        $municipio = $this->municipioComCodigo('3101003');
         $this->inserirMunicipioLegado(['id_municipio' => 511, 'Codmundv' => '3101003']);
         $this->inserirPrefeituraLegada(['id_prefeitura' => 511, 'id_municipio' => 511, 'fotoPref' => 'arquivo_que_nao_existe.jpg']);
 
@@ -1437,13 +1534,33 @@ class PrefeituraEtlMigracaoTest extends TestCase
         $this->assertNull($prefeitura->getFirstMedia(Prefeitura::MEDIA_FOTO_PREFEITO));
         $this->assertDatabaseHas('compdec_etl_log', ['legacy_id' => 511, 'acao' => 'skipped']);
     }
+
+    /**
+     * LegacyParser::toDecimalBR nunca devolve null (vazio/null viram 0.0), e 0.0
+     * lat/long e um ponto real no Golfo da Guine -- nao pode representar "sem
+     * coordenada". O ETL precisa filtrar null/vazio/"-" ANTES de chamar
+     * toDecimalBR, sem alterar o LegacyParser (compartilhado por outros ETLs).
+     */
+    public function test_latitude_vazia_e_longitude_com_traco_viram_null_em_vez_de_zero(): void
+    {
+        $municipio = $this->municipioComCodigo('3101302');
+        $this->inserirMunicipioLegado(['id_municipio' => 512, 'Codmundv' => '3101302', 'latitude_dec' => '', 'longitude_dec' => '-']);
+        $this->inserirPrefeituraLegada(['id_prefeitura' => 512, 'id_municipio' => 512]);
+
+        app(PrefeituraService::class)->migrarLegado(100, false);
+
+        $prefeitura = Prefeitura::where('municipio_id', $municipio->id)->first();
+        $this->assertNotNull($prefeitura);
+        $this->assertNull($prefeitura->latitude);
+        $this->assertNull($prefeitura->longitude);
+    }
 }
 ```
 
 - [ ] **Step 2: Rodar os testes e confirmar que falham**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraEtlMigracaoTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraEtlMigracaoTest
 ```
 
 Expected: FAIL em quase todos — o `migrarLegado()` atual consulta `com_comdec` (tabela
@@ -1553,8 +1670,11 @@ classe (linhas 84-198 do arquivo original) por:
         $municipioId = (int) $mapaMunicipios->get($codmundv);
 
         try {
-            $emailPrefeitura = $this->validarOuDescartarEmail(
-                $this->sanitizarEmail($row->email_municipio ?? null) ?? $this->sanitizarEmail($row->email_prefeitura_legado ?? null),
+            $emailPrefeitura = $this->resolverEmailComPrecedencia(
+                [
+                    'cedec_municipio.email' => $row->email_municipio ?? null,
+                    'cedec_prefeitura.email' => $row->email_prefeitura_legado ?? null,
+                ],
                 $legacyId, 'email_prefeitura', $row, $dryRun,
             );
 
@@ -1590,8 +1710,8 @@ classe (linhas 84-198 do arquivo original) por:
                 'endereco' => LegacyParser::toStringOrNull($row->endereco ?? null),
                 'bairro' => LegacyParser::toStringOrNull($row->bairro ?? null),
                 'cep' => LegacyParser::toStringOrNull($row->cep ?? null),
-                'latitude' => isset($row->latitude) && $row->latitude !== null ? LegacyParser::toDecimalBR($row->latitude) : null,
-                'longitude' => isset($row->longitude) && $row->longitude !== null ? LegacyParser::toDecimalBR($row->longitude) : null,
+                'latitude' => $this->sanitizarCoordenada($row->latitude ?? null),
+                'longitude' => $this->sanitizarCoordenada($row->longitude ?? null),
                 'inss_tem_cobranca' => LegacyParser::toBool($row->cobra_iss ?? null),
                 'inss_aliquota' => isset($row->aliquota_iss) && $row->aliquota_iss !== null ? LegacyParser::toDecimalBR($row->aliquota_iss) : null,
                 'inss_lei_cobranca' => LegacyParser::toStringOrNull($row->num_lei_iss ?? null),
@@ -1692,6 +1812,60 @@ classe (linhas 84-198 do arquivo original) por:
         return null;
     }
 
+    /**
+     * Resolve um campo com fallback (ex.: email_prefeitura = cedec_municipio.email,
+     * senao cedec_prefeitura.email) validando CADA candidato antes de escolher --
+     * nao escolher o primeiro preenchido e so depois validar. Isso corrige o bug em
+     * que um e-mail malformado na fonte de maior precedencia anulava o resultado e
+     * impedia o fallback valido de ser usado. Se nenhum candidato for valido, grava
+     * null e registra em compdec_etl_log quais candidatos foram descartados e por
+     * que (formato invalido); candidatos vazios/ausentes nao contam como descarte.
+     *
+     * @param  array<string, mixed>  $candidatos  fonte (para o log) => valor bruto, na ordem de precedencia
+     */
+    private function resolverEmailComPrecedencia(array $candidatos, ?int $legacyId, string $campo, object $row, bool $dryRun): ?string
+    {
+        $descartados = [];
+
+        foreach ($candidatos as $fonte => $valorBruto) {
+            $email = $this->sanitizarEmail($valorBruto);
+
+            if ($email === null) {
+                continue;
+            }
+
+            if (filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
+                return $email;
+            }
+
+            $descartados[] = "{$fonte}={$email}";
+        }
+
+        if ($descartados !== []) {
+            $this->logEtl(
+                $legacyId, null, 'skipped',
+                "{$campo} invalido no legado, nenhum candidato valido: ".implode('; ', $descartados),
+                $row, $dryRun,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * LegacyParser::toDecimalBR nunca devolve null: vazio ou null viram 0.0, que e
+     * um ponto real no Golfo da Guine e passaria a ser tratado como coordenada
+     * valida. Filtra null/vazio/"-" ANTES de chamar toDecimalBR, na borda deste ETL
+     * -- reusa limparCampoSujo (mesma higienizacao de telefone) em vez de alterar o
+     * LegacyParser, que e compartilhado por outros ETLs.
+     */
+    private function sanitizarCoordenada(mixed $valor): ?float
+    {
+        $texto = $this->limparCampoSujo($valor === null ? null : (string) $valor);
+
+        return $texto === null ? null : LegacyParser::toDecimalBR($texto);
+    }
+
     private function logEtl(
         ?int $legacyId,
         ?int $newId,
@@ -1725,10 +1899,10 @@ continuam servindo a aba do Compdec, intactos.
 - [ ] **Step 4: Rodar os testes e confirmar que passam**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraEtlMigracaoTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraEtlMigracaoTest
 ```
 
-Expected: PASS em todos os 11 testes. Se `test_foto_do_prefeito_e_copiada...` falhar
+Expected: PASS em todos os 13 testes. Se `test_foto_do_prefeito_e_copiada...` falhar
 por falta da extensao GD (`imagecreatetruecolor`/`imagejpeg` indefinidas), confirme
 `php -m | grep -i gd` no container — a extensao ja e usada pelas conversoes de thumb
 do Spatie Image (`Prefeitura::registerMediaConversions()`), entao deve estar presente.
@@ -1837,9 +2011,23 @@ class ImportarPrefeiturasCommandTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * Mesma justificativa de PrefeituraEtlMigracaoTest::municipioComCodigo(): o
+     * banco de teste nao e isolado (SDC/phpunit.xml) e o Postgres de desenvolvimento
+     * ja tem 853 municipios reais. firstOrCreate evita colidir com a UNIQUE em
+     * municipios.codigo_ibge.
+     */
+    private function municipioComCodigo(string $codigoIbge): Municipio
+    {
+        return Municipio::firstOrCreate(
+            ['codigo_ibge' => $codigoIbge],
+            ['nome' => 'Municipio Teste '.$codigoIbge, 'uf' => 'MG'],
+        );
+    }
+
     public function test_dry_run_nao_grava_prefeitura_nenhuma(): void
     {
-        Municipio::factory()->create(['codigo_ibge' => '3101104']);
+        $this->municipioComCodigo('3101104');
 
         DB::connection('legado_gestaocedec')->table('cedec_municipio')->insert([
             'id_municipio' => 601,
@@ -1861,7 +2049,7 @@ class ImportarPrefeiturasCommandTest extends TestCase
 
     public function test_comando_importa_de_fato_sem_dry_run(): void
     {
-        $municipio = Municipio::factory()->create(['codigo_ibge' => '3101203']);
+        $municipio = $this->municipioComCodigo('3101203');
 
         DB::connection('legado_gestaocedec')->table('cedec_municipio')->insert([
             'id_municipio' => 602,
@@ -1887,7 +2075,7 @@ class ImportarPrefeiturasCommandTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ImportarPrefeiturasCommandTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ImportarPrefeiturasCommandTest
 ```
 
 Expected: FAIL — `Command "cedec:importar-prefeituras" is not defined.`
@@ -1997,8 +2185,8 @@ por:
 - [ ] **Step 6: Limpar cache de config e rodar o teste**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan config:clear
-docker exec newsdc_frankenphp_local php artisan test --filter=ImportarPrefeiturasCommandTest
+docker exec newsdc_dev_app php artisan config:clear
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ImportarPrefeiturasCommandTest
 ```
 
 Expected: PASS nos 2 testes.
@@ -2006,7 +2194,7 @@ Expected: PASS nos 2 testes.
 - [ ] **Step 7: Rodar a suite inteira do modulo Cedec**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=Cedec
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec
 ```
 
 Expected: PASS em todos os testes de `Tests\Feature\Cedec` (as 7 classes criadas
@@ -2015,10 +2203,10 @@ nesta fase).
 - [ ] **Step 8: Lint dos arquivos tocados**
 
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Compdec/Services/PrefeituraService.php
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Console/ImportarPrefeiturasCommand.php
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/CedecServiceProvider.php
-docker exec newsdc_frankenphp_local php -l /app/config/app.php
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Compdec/Services/PrefeituraService.php
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Console/ImportarPrefeiturasCommand.php
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/CedecServiceProvider.php
+docker exec newsdc_dev_app php -l /var/www/config/app.php
 ```
 
 Expected: `No syntax errors detected` nos quatro.
@@ -2049,15 +2237,15 @@ EOF
 
 ## Verificacao final da fase
 
-- [ ] `docker exec newsdc_frankenphp_local php artisan test --filter=Cedec` — todas as
+- [ ] `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec` — todas as
   7 classes de teste passam.
-- [ ] `docker exec newsdc_frankenphp_local php artisan route:list --name=cedec` — sem
+- [ ] `docker exec newsdc_dev_app php artisan route:list --name=cedec` — sem
   saida (fase 1 nao cria rotas; isso so confirma que o autoload do modulo novo nao
   quebrou o boot da aplicacao).
 - [ ] `git log --oneline -3` mostra os 3 commits desta fase (ambiente; schema+model+DTO
   +factory; ETL+command), nenhum arquivo de teste de depuracao avulso no `git status`.
 - [ ] Conferir que `SDC/.env` (nao commitado) tem as 6 chaves da Task 1 antes de rodar
   o command de verdade fora dos testes automatizados:
-  `docker exec newsdc_frankenphp_local php artisan cedec:importar-prefeituras --dry-run`
+  `docker exec newsdc_dev_app php artisan cedec:importar-prefeituras --dry-run`
   deve reportar `Inseridos`/`Atualizados` proximo de 853 (numero de municipios reais
   medido no legado) sem erro de conexao.

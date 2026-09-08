@@ -22,6 +22,15 @@ class PrefeituraDTO
         public ?string $inssLeiCobranca = null,
         public ?string $inssResponsavel = null,
         public ?int $legacyId = null,
+
+        // Contato institucional da prefeitura, distinto do contato do prefeito.
+        public ?string $prefeitoPartido = null,
+        public ?string $emailPrefeitura = null,
+        public ?string $emailPrefeitura2 = null,
+        public ?string $emailPrefeitura3 = null,
+        public ?string $telPrefeitura = null,
+        public ?string $telPrefeitura2 = null,
+        public ?string $faxPrefeitura = null,
     ) {}
 
     /**
@@ -45,6 +54,14 @@ class PrefeituraDTO
             inssLeiCobranca: $data['inss_lei_cobranca'] ?? null,
             inssResponsavel: $data['inss_responsavel'] ?? null,
             legacyId: isset($data['legacy_id']) ? (int) $data['legacy_id'] : null,
+
+            prefeitoPartido: $data['prefeito_partido'] ?? null,
+            emailPrefeitura: $data['email_prefeitura'] ?? null,
+            emailPrefeitura2: $data['email_prefeitura_2'] ?? null,
+            emailPrefeitura3: $data['email_prefeitura_3'] ?? null,
+            telPrefeitura: $data['tel_prefeitura'] ?? null,
+            telPrefeitura2: $data['tel_prefeitura_2'] ?? null,
+            faxPrefeitura: $data['fax_prefeitura'] ?? null,
         );
     }
 
@@ -69,6 +86,14 @@ class PrefeituraDTO
             'inss_lei_cobranca' => $this->inssLeiCobranca,
             'inss_responsavel' => $this->inssResponsavel,
             'legacy_id' => $this->legacyId,
+
+            'prefeito_partido' => $this->prefeitoPartido,
+            'email_prefeitura' => $this->emailPrefeitura,
+            'email_prefeitura_2' => $this->emailPrefeitura2,
+            'email_prefeitura_3' => $this->emailPrefeitura3,
+            'tel_prefeitura' => $this->telPrefeitura,
+            'tel_prefeitura_2' => $this->telPrefeitura2,
+            'fax_prefeitura' => $this->faxPrefeitura,
         ];
     }
 }

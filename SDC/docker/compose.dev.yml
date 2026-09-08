@@ -200,6 +200,23 @@ services:
       DB_LEGACY_USERNAME: root
       DB_LEGACY_PASSWORD: ""
 
+      # Conexao DEDICADA e somente-leitura para o legado gestaocedec (PHP puro),
+      # fonte de cedec_municipio/cedec_prefeitura, usada so por
+      # cedec:importar-prefeituras. NAO reutiliza DB_LEGACY_* acima: aquela aponta
+      # para dbsdc (legado sdc/Laravel) e os dois bancos tem tabelas de mesmo nome
+      # com schema incompativel -- dbsdc.cedec_municipio nao tem as colunas email
+      # nem prefeito. Ver config/database.php (legado_gestaocedec) e config/cedec.php.
+      DB_LEGADO_GESTAOCEDEC_HOST: host.docker.internal
+      DB_LEGADO_GESTAOCEDEC_PORT: 3306
+      DB_LEGADO_GESTAOCEDEC_DATABASE: gestaocedec_local
+      DB_LEGADO_GESTAOCEDEC_USERNAME: root
+      DB_LEGADO_GESTAOCEDEC_PASSWORD: ""
+      CEDEC_LEGACY_CONNECTION: legado_gestaocedec
+
+      # Caminho, dentro do container, dos 423 arquivos de foto do prefeito
+      # (cedec_prefeitura.fotoPref). Ver o bind mount no bloco volumes: abaixo.
+      COMPDEC_LEGACY_FOTO_PREFEITO: /legacy/gestaocedec/anexo/prefeito
+
       # Redis (cache / session / queue)
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -290,6 +307,13 @@ services:
       # (Classe.Anexo::uploadSimple). O caminho e o 1o candidato de
       # config(compdec.legacy_paths.planos) e o download le direto dele.
       - "${LEGADO_PLANOS_HOST_PATH:-../storage/app/public/legado_planos}:/legacy/gestaocedec/anexo/planoCont:ro"
+      # TEMPORARIO -- fotos de prefeito do legado gestaocedec.
+      # cedec_prefeitura.fotoPref guarda so o nome do arquivo (padrao
+      # <id_municipio>_<slug>.<ext>, alguns com extensao dupla); o arquivo mora em
+      # DOCUMENT_ROOT/anexo/prefeito no servidor legado, 423 arquivos. A pasta de
+      # origem so existe depois que alguem copiar esses arquivos do servidor real;
+      # o ETL trata arquivo ausente como caso normal.
+      - "${LEGADO_PREFEITURA_FOTOS_HOST_PATH:-../storage/app/public/legado_prefeitura_fotos}:/legacy/gestaocedec/anexo/prefeito:ro"
       # TEMPORARIO -- anexos do RAT arquivo morto.
       # O disco `legado_rat` NAO usa o default de filesystems.php: o proprio
       # compose define LEGADO_RAT_ANEXOS_ROOT=/data/anexos/RAT/Legado, entao e

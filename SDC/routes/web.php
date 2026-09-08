@@ -160,6 +160,9 @@ Route::middleware('auth')->group(function () {
     // Módulo: Compdec (Órgãos e Competências)
     require __DIR__ . '/modules/compdec.php';
 
+    // Módulo: CEDEC (cadastro estadual de prefeituras)
+    require __DIR__ . '/modules/cedec.php';
+
     // Módulo: Demandas
     require __DIR__ . '/modules/demandas.php';
 

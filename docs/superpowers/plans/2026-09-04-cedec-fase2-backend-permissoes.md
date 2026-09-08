@@ -15,13 +15,65 @@
 
 ## Global Constraints
 
+### Ambiente de execucao — corrigido em 2026-09-05, medido
+
+Estas quatro correcoes valem para TODOS os steps deste plano e substituem qualquer
+comando divergente no corpo dele.
+
+1. **O container e `newsdc_dev_app`**, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP),
+   com a aplicacao em `/var/www`. O nome `newsdc_frankenphp_local` do `.claude/kernel.py`
+   NAO EXISTE. O Postgres de desenvolvimento e `newsdc_dev_db`, publicado no host em 5434.
+
+2. **Teste roda no HOST, nunca no container.** `docker exec newsdc_dev_app php artisan test`
+   falha com `Command "test" is not defined` — a imagem nao tem dev dependencies. Exporte
+   uma vez por terminal, a partir de `SDC/`:
+
+   ```bash
+   mkdir -p /c/tmp/newsdc-cache
+   export MSYS_NO_PATHCONV=1
+   export APP_CONFIG_CACHE=/tmp/newsdc-cache/nao-existe-config.php
+   export APP_PACKAGES_CACHE=/tmp/newsdc-cache/packages.php
+   export APP_SERVICES_CACHE=/tmp/newsdc-cache/services.php
+   export APP_ROUTES_CACHE=/tmp/newsdc-cache/routes.php
+   export APP_EVENTS_CACHE=/tmp/newsdc-cache/events.php
+   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+   ```
+
+   As CINCO variaveis de cache sao obrigatorias, e essa lista foi paga com dor nesta
+   sessao. `APP_CONFIG_CACHE` sozinho NAO basta: ele cobre so o cache de config, e o
+   PHPUnit do host continua reescrevendo `bootstrap/cache/packages.php` e `services.php`,
+   que sao bind-mount compartilhado com o container. Como a imagem foi buildada sem dev
+   dependencies, o manifest escrito pelo host descreve outro conjunto de providers e TODO
+   `artisan` dentro do container passa a morrer em `ProviderRepository` — no meu caso com
+   `Class "App\Modules\Cemaden\CemadenServiceProvider" not found`, apesar de a classe
+   existir e `class_exists()` devolver true la dentro. Recuperacao: apagar os dois
+   arquivos e rodar `artisan` DUAS vezes (a primeira falha recompilando, a segunda passa).
+
+   Os caminhos precisam comecar com `/`, e por isso o `MSYS_NO_PATHCONV=1`. O
+   `Application::normalizeCachePath` so trata como absoluto o que comeca com `/` ou `\`;
+   se o Git Bash converter para `C:/tmp/...`, o Laravel concatena com o base path e o
+   teste morre com "The <projeto>\C:/tmp/newsdc-cache directory must be present and
+   writable". Com a barra preservada, o PHP no Windows resolve `/tmp/...` para `C:\tmp\...`. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
+   `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
+   migration, cair no sqlite da `no such table` na suite inteira.
+
+3. **Os testes rodam contra o banco de DESENVOLVIMENTO.** Nenhum teste pode fazer `update()`
+   ou `delete()` sem `where` restrito as linhas que ele mesmo criou, e assercao de contagem
+   tem de ser relativa a um "antes", nunca total absoluto.
+
+4. **`SDC/tests` esta no `.gitignore`.** Escrever o teste continua obrigatorio, mas ele NAO
+   e versionado: todo `git add` dos steps leva so os arquivos de producao. Incluir caminho
+   sob `SDC/tests` faz o `git add` ser recusado.
+
 Copiadas literalmente do contrato (secao 0) e da spec.
 
 - App executavel em `NewSDC/SDC`. Todo caminho deste plano e relativo a essa pasta, salvo quando escrito por extenso.
 - Testes: **PHPUnit, nao Pest.** `declare(strict_types=1)`, namespace `Tests\Feature\Cedec`, trait `Illuminate\Foundation\Testing\DatabaseTransactions`, `Inertia\Testing\AssertableInertia` para props, `Spatie\Permission\Models\Permission` para conceder slug em teste.
 - **`SDC/phpunit.xml` NAO isola o banco de teste** (as linhas de sqlite estao comentadas): os testes rodam contra o banco de desenvolvimento, com as 853 prefeituras reais. Toda asserçao de contagem e RELATIVA (captura o "antes", cria fixtures dentro da transacao, compara com o "depois") — nunca assume banco vazio. `DatabaseTransactions` desfaz tudo ao final.
-- Comandos no container: `docker exec newsdc_frankenphp_local php artisan test --filter=<Nome>`, `docker exec newsdc_frankenphp_local php -l /app/<caminho>`, `docker exec newsdc_frankenphp_local php artisan route:list --name=cedec`.
-- Depois de mudar PHP: `docker exec newsdc_frankenphp_local php artisan octane:reload` (~1s). **Mudar `config/permissions.php` exige RESTART do container**, nunca `octane:reload` — Octane mantem o config carregado na memoria do worker desde o boot; `octane:reload` nao rele o disco.
+- Comandos no container: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=<Nome>`, `docker exec newsdc_dev_app php -l /var/www/<caminho>`, `docker exec newsdc_dev_app php artisan route:list --name=cedec`.
+- Depois de mudar PHP: `docker exec newsdc_dev_app php artisan octane:reload` (~1s). **Mudar `config/permissions.php` exige RESTART do container**, nunca `octane:reload` — Octane mantem o config carregado na memoria do worker desde o boot; `octane:reload` nao rele o disco.
 - **Sem emoji dentro do codigo.** Emoji so na mensagem de commit (gitmoji).
 - Commits: `<emoji> tipo(cedec): descricao` em pt-BR. Commit atomico: agrupar os arquivos que entregam UMA mudanca. **Sem trailer de co-autor.**
 - Arquivo de teste criado so para depuracao nao entra no commit; os arquivos de teste nomeados neste plano sao entregaveis e entram.
@@ -41,7 +93,7 @@ Esta fase assume, exatamente como o contrato descreve (secoes 1, 2, 3):
 Verificacao antes de comecar (o mesmo comando que a fase 5 usa):
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan tinker --execute="echo implode(',', array_intersect(['email_prefeitura','tel_prefeitura','fax_prefeitura','tel_prefeitura_2','email_prefeitura_2','email_prefeitura_3','prefeito_partido'], \Illuminate\Support\Facades\Schema::getColumnListing('compdec_prefeituras')));"
+docker exec newsdc_dev_app php artisan tinker --execute="echo implode(',', array_intersect(['email_prefeitura','tel_prefeitura','fax_prefeitura','tel_prefeitura_2','email_prefeitura_2','email_prefeitura_3','prefeito_partido'], \Illuminate\Support\Facades\Schema::getColumnListing('compdec_prefeituras')));"
 ```
 
 Esperado: as sete colunas listadas. Se sair vazio ou incompleto, a fase 1 nao foi aplicada — pare e conclua a fase 1 antes de continuar.
@@ -163,7 +215,7 @@ class CedecEnumsTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecEnumsTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecEnumsTest`
 Expected: FAIL — `Class "App\Modules\Cedec\Enums\Macrorregiao" not found`.
 
 - [ ] **Step 3: Criar `Macrorregiao`**
@@ -270,9 +322,9 @@ enum TerritorioDesenvolvimento: string
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Enums/Macrorregiao.php
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Enums/TerritorioDesenvolvimento.php
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecEnumsTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Enums/Macrorregiao.php
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Enums/TerritorioDesenvolvimento.php
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecEnumsTest
 ```
 Expected: PASS, 5 testes.
 
@@ -280,8 +332,7 @@ Expected: PASS, 5 testes.
 
 ```bash
 git add app/Modules/Cedec/Enums/Macrorregiao.php \
-        app/Modules/Cedec/Enums/TerritorioDesenvolvimento.php \
-        tests/Feature/Cedec/CedecEnumsTest.php
+        app/Modules/Cedec/Enums/TerritorioDesenvolvimento.php
 git commit -m "✨ feat(cedec): enums de macrorregiao e territorio de desenvolvimento"
 ```
 
@@ -419,7 +470,7 @@ class PrefeituraFiltroDTOTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFiltroDTOTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFiltroDTOTest`
 Expected: FAIL — `Class "App\Modules\Cedec\DTOs\PrefeituraFiltroDTO" not found`.
 
 - [ ] **Step 3: Criar o DTO**
@@ -504,15 +555,15 @@ final class PrefeituraFiltroDTO
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/DTOs/PrefeituraFiltroDTO.php
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraFiltroDTOTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/DTOs/PrefeituraFiltroDTO.php
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraFiltroDTOTest
 ```
 Expected: PASS, 11 testes (contando os data providers).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/Modules/Cedec/DTOs/PrefeituraFiltroDTO.php tests/Feature/Cedec/PrefeituraFiltroDTOTest.php
+git add app/Modules/Cedec/DTOs/PrefeituraFiltroDTO.php
 git commit -m "✨ feat(cedec): DTO de filtro da listagem de prefeituras"
 ```
 
@@ -808,7 +859,7 @@ class CedecPrefeituraServiceListagemTest extends TestCase
 
 - [ ] **Step 3: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraServiceListagemTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraServiceListagemTest`
 Expected: FAIL — `Class "App\Modules\Cedec\Services\CedecPrefeituraService" not found`.
 
 - [ ] **Step 4: Escrever o service (metodos de leitura)**
@@ -995,16 +1046,16 @@ final class CedecPrefeituraService
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Services/CedecPrefeituraService.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraServiceListagemTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Services/CedecPrefeituraService.php
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraServiceListagemTest
 ```
 Expected: PASS, 13 testes.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/Modules/Cedec/Services/CedecPrefeituraService.php tests/Feature/Cedec/CedecPrefeituraServiceListagemTest.php
+git add app/Modules/Cedec/Services/CedecPrefeituraService.php
 git commit -m "✨ feat(cedec): listagem, estatisticas e indicadores municipais no service"
 ```
 
@@ -1021,6 +1072,15 @@ git commit -m "✨ feat(cedec): listagem, estatisticas e indicadores municipais 
 - Produces: `upsertPorMunicipio(int $municipioId, PrefeituraDTO $dto): Prefeitura`, `uploadFoto(int $municipioId, UploadedFile $arquivo): Media`, `removerFoto(int $municipioId): bool`. Consumidos por `PrefeituraController` (Task 7).
 
 **Contrato que este metodo fixa:** `uploadFoto()` cria a linha de `compdec_prefeituras` se ainda nao existir (`firstOrCreate`) — a CEDEC pode enviar a foto de um municipio que nunca teve outro dado preenchido, porque a navegacao e por `Municipio`, nao por `Prefeitura`.
+
+**Nota — correcao de code review aplicada mais tarde (Task 7, Steps 7-10):** a versao
+de `upsertPorMunicipio()` escrita nesta task ainda NAO trata `legacy_id`; o payload de
+`$dto->toArray()` grava `legacy_id` mesmo quando ele e `null`. Isso so vira um problema
+observavel quando existe a rota `cedec.prefeituras.update` para reproduzir o caso via
+HTTP (um municipio ja migrado pelo ETL da fase 1, editado pela tela da CEDEC), entao o
+teste de regressao e a correcao ficam na Task 7, depois que o controller e as rotas
+existirem — nao aqui. Os testes desta task continuam validos sem alteracao: nenhum
+deles cria uma prefeitura com `legacy_id` previo antes de chamar `upsertPorMunicipio()`.
 
 - [ ] **Step 1: Escrever o teste que falha**
 
@@ -1127,7 +1187,7 @@ class CedecPrefeituraServiceUpsertFotoTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraServiceUpsertFotoTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraServiceUpsertFotoTest`
 Expected: FAIL — `Call to undefined method App\Modules\Cedec\Services\CedecPrefeituraService::upsertPorMunicipio()`.
 
 - [ ] **Step 3: Acrescentar os metodos de escrita**
@@ -1188,21 +1248,21 @@ E, logo apos o metodo `indicadoresMunicipais()` (antes de `aplicarPendencia()`),
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Services/CedecPrefeituraService.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraServiceUpsertFotoTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Services/CedecPrefeituraService.php
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraServiceUpsertFotoTest
 ```
 Expected: PASS, 6 testes.
 
 - [ ] **Step 5: Rodar tambem a suite de leitura para garantir que nada quebrou**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraService`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraService`
 Expected: PASS, as duas classes (leitura + escrita).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/Modules/Cedec/Services/CedecPrefeituraService.php tests/Feature/Cedec/CedecPrefeituraServiceUpsertFotoTest.php
+git add app/Modules/Cedec/Services/CedecPrefeituraService.php
 git commit -m "✨ feat(cedec): upsert por municipio e upload/remocao de foto do prefeito"
 ```
 
@@ -1287,7 +1347,7 @@ class PrefeituraListaResourceTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraListaResourceTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraListaResourceTest`
 Expected: FAIL — `Class "App\Modules\Cedec\Resources\PrefeituraListaResource" not found`.
 
 - [ ] **Step 3: Criar o Resource**
@@ -1334,15 +1394,15 @@ final class PrefeituraListaResource extends JsonResource
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Resources/PrefeituraListaResource.php
-docker exec newsdc_frankenphp_local php artisan test --filter=PrefeituraListaResourceTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Resources/PrefeituraListaResource.php
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PrefeituraListaResourceTest
 ```
 Expected: PASS, 2 testes.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/Modules/Cedec/Resources/PrefeituraListaResource.php tests/Feature/Cedec/PrefeituraListaResourceTest.php
+git add app/Modules/Cedec/Resources/PrefeituraListaResource.php
 git commit -m "✨ feat(cedec): resource da listagem de prefeituras"
 ```
 
@@ -1417,7 +1477,7 @@ class UpdatePrefeituraRequestTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=UpdatePrefeituraRequestTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=UpdatePrefeituraRequestTest`
 Expected: FAIL — `Class "App\Modules\Cedec\Requests\UpdatePrefeituraRequest" not found`.
 
 - [ ] **Step 3: Criar o Request**
@@ -1481,15 +1541,15 @@ final class UpdatePrefeituraRequest extends FormRequest
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Requests/UpdatePrefeituraRequest.php
-docker exec newsdc_frankenphp_local php artisan test --filter=UpdatePrefeituraRequestTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Requests/UpdatePrefeituraRequest.php
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=UpdatePrefeituraRequestTest
 ```
 Expected: PASS, 4 testes.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/Modules/Cedec/Requests/UpdatePrefeituraRequest.php tests/Feature/Cedec/UpdatePrefeituraRequestTest.php
+git add app/Modules/Cedec/Requests/UpdatePrefeituraRequest.php
 git commit -m "✨ feat(cedec): validacao do update de prefeitura"
 ```
 
@@ -1497,10 +1557,47 @@ git commit -m "✨ feat(cedec): validacao do update de prefeitura"
 
 ## Task 7: `PrefeituraController`, rotas e testes de autorizacao/HTTP
 
+**Correcao de code review (2026-09-05) — `update()` nao pode apagar `legacy_id`.**
+`PrefeituraController::update()` monta o `PrefeituraDTO` so com `$request->validated()`.
+`UpdatePrefeituraRequest::rules()` (Task 6) nao inclui `legacy_id` — corretamente, nao e
+campo de formulario da CEDEC — entao `PrefeituraDTO::fromRequest()` devolve `legacyId:
+null`, e `PrefeituraDTO::toArray()` (fase 1) SEMPRE emite a chave `legacy_id` no array.
+Sem cuidado extra, o `updateOrCreate()` de `upsertPorMunicipio()` (Task 4) grava esse
+`null` por cima do valor existente — a coluna e a rastreabilidade do registro de origem
+do ETL da fase 1, com indice proprio na migration (secao 1 do contrato). No primeiro
+save que um usuario da CEDEC fizer num municipio ja migrado, `legacy_id` vai a NULL em
+silencio, sem nada falhar ou avisar.
+
+**Correcao:** em `CedecPrefeituraService::upsertPorMunicipio()` (Task 4), remover a
+chave `legacy_id` do payload quando `$dto->legacyId` for `null`, antes do
+`updateOrCreate()`. Isso preserva o valor ja gravado (a coluna simplesmente nao entra no
+`UPDATE`/`INSERT`) e nao interfere em nenhum consumidor que venha a passar um
+`legacyId` de verdade — o ETL da fase 1, alias, nem usa este metodo:
+`PrefeituraService::migrarLegado()` (Compdec) monta o proprio array e chama
+`Prefeitura::query()->updateOrCreate()` diretamente (ver
+`docs/superpowers/plans/2026-09-04-cedec-fase1-dados-etl.md`, Task 6), sem passar por
+`CedecPrefeituraService`. A correcao entra nos Steps 7-10 abaixo, depois que a rota
+`cedec.prefeituras.update` existir (o teste de regressao precisa dela), e fecha no MESMO
+commit desta task (Step 11).
+
+**Achado adjacente no Compdec — mesmo defeito, FORA de escopo, nao corrigido aqui.** A
+aba do Compdec tem o defeito identico: `App\Modules\Compdec\Controllers\
+PrefeituraController::upsert()` (`SDC/app/Modules/Compdec/Controllers/
+PrefeituraController.php:42`) monta o DTO com `PrefeituraDTO::fromRequest($orgao->
+municipio_id, $request->validated())` — `UpsertPrefeituraRequest` tambem nao valida
+`legacy_id` — e repassa para `PrefeituraService::upsertPorOrgao()`
+(`SDC/app/Modules/Compdec/Services/PrefeituraService.php:44-50`), que monta
+`$payload = $dto->toArray(); ...; return Prefeitura::updateOrCreate(['municipio_id' =>
+$orgao->municipio_id], $payload);` sem nenhum tratamento de `legacy_id` nulo. Salvar
+pela tela do Compdec tambem apaga `legacy_id` em silencio. Registrado aqui como
+pendencia — corrigir e escopo de quem tocar `PrefeituraService::upsertPorOrgao()` ou de
+uma fase de manutencao do Compdec, nao desta fase do Cedec.
+
 **Files:**
 - Create: `app/Modules/Cedec/Controllers/PrefeituraController.php`
 - Create: `routes/modules/cedec.php`
 - Modify: `routes/web.php`
+- Modify: `app/Modules/Cedec/Services/CedecPrefeituraService.php` (Steps 7-10: correcao do `legacy_id`)
 - Test: `tests/Feature/Cedec/CedecPrefeituraControllerTest.php`
 
 **Interfaces:**
@@ -1513,6 +1610,7 @@ git commit -m "✨ feat(cedec): validacao do update de prefeitura"
 - `prefeituras` e o `LengthAwarePaginator` inteiro (nao `Resource::collection(...)->response()`): `toArray()` do paginador ja produz o formato achatado `{data, current_page, last_page, per_page, total, from, to, ...}` que o contrato exige, bastando transformar a `Collection` interna para a forma do Resource antes.
 - `edit()` funciona para municipio SEM prefeitura (`prefeitura: null` na prop).
 - `uploadFoto()` valida mime (`jpeg,png,webp`) e tamanho (`config('compdec.upload_limits.foto_prefeito')`), do mesmo jeito que `Compdec\Controllers\PrefeituraController::uploadFoto()` ja faz.
+- `update()` **nunca** altera `legacy_id`, nem para `null` nem para outro valor: a coluna e escrita SOMENTE pelo ETL da fase 1, nunca pela tela da CEDEC (ver correcao de code review acima).
 
 **Armadilha de teste apurada no vendor:** `Inertia\Testing\AssertableInertia::component()` verifica no DISCO se o arquivo Vue existe (`config('inertia.testing.ensure_pages_exist')` = `true` neste projeto — `config/inertia.php:39`) e falha o teste com "Inertia page component file [...] does not exist" mesmo quando a rota e o controller estao corretos. Como as paginas `Cedec/Prefeituras/Index.vue` e `Edit.vue` so nascem nas fases 3 e 4, todo teste desta fase que chama `->component(...)` PRECISA passar `false` como segundo argumento (`->component('Cedec/Prefeituras/Index', false)`) para pular essa checagem — e o parametro `$shouldExist` que o proprio pacote `inertiajs/inertia-laravel` expoe para este caso exato (`vendor/inertiajs/inertia-laravel/src/Testing/AssertableInertia.php:45-54`).
 
@@ -1742,7 +1840,7 @@ class CedecPrefeituraControllerTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraControllerTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraControllerTest`
 Expected: FAIL — `Route [cedec.prefeituras.index] not defined.`
 
 - [ ] **Step 3: Escrever o controller**
@@ -1940,22 +2038,131 @@ Em `routes/web.php`, logo apos a linha `require __DIR__ . '/modules/compdec.php'
 
 Run:
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Controllers/PrefeituraController.php
-docker exec newsdc_frankenphp_local php -l /app/routes/modules/cedec.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec
-docker exec newsdc_frankenphp_local php artisan test --filter=CedecPrefeituraControllerTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Controllers/PrefeituraController.php
+docker exec newsdc_dev_app php -l /var/www/routes/modules/cedec.php
+docker exec newsdc_dev_app php artisan octane:reload
+docker exec newsdc_dev_app php artisan route:list --name=cedec
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraControllerTest
 ```
 Expected: `route:list` lista as 5 rotas `cedec.prefeituras.*`; os testes PASSAM (12 metodos). Como as permissoes `cedec.*` ainda nao existem em `config/permissions.php` (Task 8), os testes de 403 e os de sucesso funcionam igual: `Permission::firstOrCreate()` no `setUp()` cria a permissao direto no banco de teste, sem depender do config.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Escrever o teste que prova a correcao de code review (legacy_id)**
+
+So agora a rota `cedec.prefeituras.update` existe, entao da para reproduzir o achado de
+ponta a ponta. Em `tests/Feature/Cedec/CedecPrefeituraControllerTest.php`, acrescentar o
+metodo abaixo ao final da classe (antes do `}` de fechamento):
+
+```php
+    public function test_update_pela_cedec_nao_apaga_o_legacy_id_da_prefeitura(): void
+    {
+        $municipio = Municipio::factory()->create();
+        $prefeitura = Prefeitura::factory()->create([
+            'municipio_id' => $municipio->id,
+            'legacy_id' => 9001,
+        ]);
+
+        $this->actingAs($this->usuario(self::PERMISSOES))
+            ->put(route('cedec.prefeituras.update', $municipio->id), [
+                'prefeito_nome' => 'Gestora Pos Etl',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(9001, $prefeitura->fresh()->legacy_id);
+    }
+```
+
+`legacy_id` e preenchido direto na fixture (simulando um municipio ja migrado pelo ETL
+da fase 1); o payload do `PUT` NAO inclui `legacy_id` (a tela da CEDEC nunca manda esse
+campo — `UpdatePrefeituraRequest::rules()` nem o valida). A asserção confere que o valor
+original sobrevive ao update.
+
+- [ ] **Step 8: Rodar o teste para ver falhar**
+
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=test_update_pela_cedec_nao_apaga_o_legacy_id_da_prefeitura`
+Expected: FAIL — `Failed asserting that null matches expected 9001.` `upsertPorMunicipio()`
+(Task 4) monta `$payload = $dto->toArray()`, que sempre traz `'legacy_id' => null`
+(porque `$dto->legacyId` e null), e o `updateOrCreate()` grava esse `null` por cima do
+`9001` da fixture.
+
+- [ ] **Step 9: Implementar a correcao em `CedecPrefeituraService::upsertPorMunicipio()`**
+
+Em `app/Modules/Cedec/Services/CedecPrefeituraService.php` (criado na Task 3, com o
+metodo `upsertPorMunicipio()` acrescentado na Task 4), trocar:
+
+```php
+    public function upsertPorMunicipio(int $municipioId, PrefeituraDTO $dto): Prefeitura
+    {
+        return DB::transaction(function () use ($municipioId, $dto): Prefeitura {
+            $payload = $dto->toArray();
+            $payload['municipio_id'] = $municipioId;
+
+            return Prefeitura::query()->updateOrCreate(['municipio_id' => $municipioId], $payload);
+        });
+    }
+```
+
+por:
+
+```php
+    /**
+     * updateOrCreate por municipio_id, em transacao.
+     *
+     * legacy_id NUNCA e sobrescrito por este caminho quando o DTO nao traz um
+     * valor: UpdatePrefeituraRequest (tela da CEDEC) nao valida legacy_id --
+     * corretamente, nao e campo de formulario -- entao PrefeituraDTO::toArray()
+     * sempre emite a chave com null. Sem este cuidado, o primeiro save da
+     * CEDEC apagaria em silencio a rastreabilidade de origem do ETL (fase 1).
+     * Quando o DTO TRAZ um legacy_id de verdade, a chave permanece no payload
+     * normalmente -- este metodo nao e usado pelo ETL (que grava direto via
+     * Compdec\Services\PrefeituraService::migrarLegado()), mas fica correto
+     * para qualquer chamador futuro que precise gravar o campo.
+     */
+    public function upsertPorMunicipio(int $municipioId, PrefeituraDTO $dto): Prefeitura
+    {
+        return DB::transaction(function () use ($municipioId, $dto): Prefeitura {
+            $payload = $dto->toArray();
+            $payload['municipio_id'] = $municipioId;
+
+            if ($dto->legacyId === null) {
+                unset($payload['legacy_id']);
+            }
+
+            return Prefeitura::query()->updateOrCreate(['municipio_id' => $municipioId], $payload);
+        });
+    }
+```
+
+- [ ] **Step 10: Rodar os testes para ver passar**
+
+Run:
+```bash
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Services/CedecPrefeituraService.php
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraControllerTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=CedecPrefeituraService
+```
+Expected: PASS em toda a `CedecPrefeituraControllerTest` (inclui o teste novo do Step 7)
+e em toda a `CedecPrefeituraServiceUpsertFotoTest`/`CedecPrefeituraServiceListagemTest` —
+a mudanca so afeta o caso `legacyId === null`, que e exatamente o caso que os testes de
+upsert da Task 4 ja cobrem (nenhum deles cria prefeitura com `legacy_id` previo, entao
+`unset()` e um no-op transparente para eles).
+
+- [ ] **Step 11: Commit**
 
 ```bash
 git add app/Modules/Cedec/Controllers/PrefeituraController.php \
+        app/Modules/Cedec/Services/CedecPrefeituraService.php \
         routes/modules/cedec.php \
-        routes/web.php \
-        tests/Feature/Cedec/CedecPrefeituraControllerTest.php
-git commit -m "✨ feat(cedec): controller e rotas de prefeituras"
+        routes/web.php
+git commit -m "$(cat <<'EOF'
+✨ feat(cedec): controller e rotas de prefeituras
+
+Inclui a correcao de code review: upsertPorMunicipio() nao apaga legacy_id quando
+o DTO da tela da CEDEC chega sem esse campo (UpdatePrefeituraRequest nao o valida
+de proposito). Sem isso, o primeiro save de um municipio ja migrado pelo ETL da
+fase 1 zerava a rastreabilidade de origem em silencio.
+EOF
+)"
 ```
 
 ---
@@ -2066,7 +2273,7 @@ class PermissoesCedecTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=PermissoesCedecTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PermissoesCedecTest`
 Expected: FAIL — `Failed asserting that an array has the key 'CEDEC'`.
 
 - [ ] **Step 3: Acrescentar o bloco `CEDEC` em `modules`**
@@ -2120,27 +2327,27 @@ Na lista `'analyst' => [ ... ]`, logo apos o bloco COMPDEC (apos `'compdec.plano
 
 - [ ] **Step 6: Rodar o teste para ver passar**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=PermissoesCedecTest`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=PermissoesCedecTest`
 Expected: PASS, 8 testes (contando os data providers).
 
 - [ ] **Step 7: RESTART do container (nao octane:reload) e sincronizar as permissoes no banco**
 
 ```bash
-docker restart newsdc_frankenphp_local
-docker exec newsdc_frankenphp_local php artisan db:seed --class=RolesAndPermissionsSeeder
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec
+docker restart newsdc_dev_app
+docker exec newsdc_dev_app php artisan db:seed --class=RolesAndPermissionsSeeder
+docker exec newsdc_dev_app php artisan route:list --name=cedec
 ```
 Expected: o seeder imprime a sincronizacao sem erro; as rotas `cedec.prefeituras.*` continuam listadas. So depois deste passo um usuario real (nao criado via `Permission::firstOrCreate()` em teste) passa a ter os slugs disponiveis para receber por role.
 
 - [ ] **Step 8: Rodar a suite inteira do Cedec para garantir que nada quebrou com o restart**
 
-Run: `docker exec newsdc_frankenphp_local php artisan test --filter=Cedec`
+Run: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec`
 Expected: PASS em todas as classes das Tasks 1 a 8.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add config/permissions.php tests/Feature/Cedec/PermissoesCedecTest.php
+git add config/permissions.php
 git commit -m "🔒 security(cedec): slugs de permissao do cadastro estadual de prefeituras"
 ```
 
@@ -2236,8 +2443,8 @@ git commit -m "✨ feat(cedec): item de sidebar e icone do modulo"
 ## Verificacao final da fase
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=Cedec
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=Cedec
+docker exec newsdc_dev_app php artisan route:list --name=cedec
 cd SDC && npm run build
 ```
 
@@ -2260,3 +2467,4 @@ Expected: todas as classes de `Tests\Feature\Cedec` passam; `route:list` lista a
 2. **Fonte do filtro/coluna REDEC nao esta no contrato.** Resolvida reusando `App\Modules\Decretacoes\Services\RedecService` (import cross-modulo, mesmo padrao ja usado para `Compdec\Models\Orgao`/`Prefeitura`). Nenhuma fase posterior (3/4/5) referencia `RedecService` diretamente — elas so consomem a prop `redecs: [{value,label}]`, que e exatamente o que este controller produz, entao a decisao e transparente para elas.
 3. **Coluna real e `cedec_municipio.macroregiao`** (uma letra r), enquanto o dominio (enum, DTO, chave de `indicadoresMunicipais()`) usa `macrorregiao`. Documentado no service; nenhuma fase posterior le essa coluna diretamente.
 4. **"Perfis CEDEC estaduais" nao tem correspondencia 1:1 nos cargos do sistema** (`admin`/`manager`/`analyst`/`operator`/`viewer`/`user`/`citizen` sao niveis de hierarquia, nao um eixo municipal/estadual). Resolvido replicando o padrao ja usado por `compdec.prefeitura.edit` e `pmda.analise.*`: `admin` + `manager` + `analyst`. Se a intencao real for outra, e decisao de produto a revisitar — nao um defeito de implementacao.
+5. **(Code review 2026-09-05) O Compdec tem o mesmo defeito de `legacy_id`, NAO corrigido nesta fase.** `App\Modules\Compdec\Controllers\PrefeituraController::upsert()` (`SDC/app/Modules/Compdec/Controllers/PrefeituraController.php:42`) monta `PrefeituraDTO::fromRequest($orgao->municipio_id, $request->validated())` — `UpsertPrefeituraRequest` tambem nao valida `legacy_id` — e `PrefeituraService::upsertPorOrgao()` (`SDC/app/Modules/Compdec/Services/PrefeituraService.php:44-50`) grava o payload inteiro via `updateOrCreate()` sem nenhum tratamento para `legacy_id` nulo. Salvar pela aba do Compdec tambem apaga `legacy_id` em silencio no primeiro save de um municipio ja migrado. A correcao desta fase (Task 7, Steps 7-10) so cobre `CedecPrefeituraService::upsertPorMunicipio()` — o caminho do Compdec fica como pendencia registrada, fora do escopo desta fase do Cedec.

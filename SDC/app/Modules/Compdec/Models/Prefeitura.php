@@ -42,6 +42,16 @@ class Prefeitura extends Model implements HasMedia
         'inss_lei_cobranca',
         'inss_responsavel',
         'legacy_id',
+
+        // Contato institucional da prefeitura, distinto do contato do prefeito.
+        // Sem estes nomes aqui o mass assignment os descarta em silencio.
+        'prefeito_partido',
+        'email_prefeitura',
+        'email_prefeitura_2',
+        'email_prefeitura_3',
+        'tel_prefeitura',
+        'tel_prefeitura_2',
+        'fax_prefeitura',
     ];
 
     protected $casts = [

@@ -32,6 +32,18 @@ class PrefeituraFactory extends Factory
             'inss_lei_cobranca' => null,
             'inss_responsavel' => null,
             'legacy_id' => null,
+
+            // Contato institucional da prefeitura, distinto do contato do prefeito.
+            // Os secundarios ficam null de proposito: no legado a maioria dos
+            // municipios so tem o primeiro preenchido, e teste de relatorio precisa
+            // exercitar esse caso.
+            'prefeito_partido' => $this->faker->randomElement(['PSD', 'MDB', 'PT', 'PL', 'PSDB']),
+            'email_prefeitura' => $this->faker->safeEmail(),
+            'email_prefeitura_2' => null,
+            'email_prefeitura_3' => null,
+            'tel_prefeitura' => $this->faker->numerify('(##) ####-####'),
+            'tel_prefeitura_2' => null,
+            'fax_prefeitura' => $this->faker->numerify('(##) ####-####'),
         ];
     }
 

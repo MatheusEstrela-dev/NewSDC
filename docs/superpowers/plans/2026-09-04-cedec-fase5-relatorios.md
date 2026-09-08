@@ -15,6 +15,58 @@
 
 ## Global Constraints
 
+### Ambiente de execucao — corrigido em 2026-09-05, medido
+
+Estas quatro correcoes valem para TODOS os steps deste plano e substituem qualquer
+comando divergente no corpo dele.
+
+1. **O container e `newsdc_dev_app`**, imagem `newsdc-swoole-dev` (Swoole, nao FrankenPHP),
+   com a aplicacao em `/var/www`. O nome `newsdc_frankenphp_local` do `.claude/kernel.py`
+   NAO EXISTE. O Postgres de desenvolvimento e `newsdc_dev_db`, publicado no host em 5434.
+
+2. **Teste roda no HOST, nunca no container.** `docker exec newsdc_dev_app php artisan test`
+   falha com `Command "test" is not defined` — a imagem nao tem dev dependencies. Exporte
+   uma vez por terminal, a partir de `SDC/`:
+
+   ```bash
+   mkdir -p /c/tmp/newsdc-cache
+   export MSYS_NO_PATHCONV=1
+   export APP_CONFIG_CACHE=/tmp/newsdc-cache/nao-existe-config.php
+   export APP_PACKAGES_CACHE=/tmp/newsdc-cache/packages.php
+   export APP_SERVICES_CACHE=/tmp/newsdc-cache/services.php
+   export APP_ROUTES_CACHE=/tmp/newsdc-cache/routes.php
+   export APP_EVENTS_CACHE=/tmp/newsdc-cache/events.php
+   export DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc
+   export DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2-)"
+   ```
+
+   As CINCO variaveis de cache sao obrigatorias, e essa lista foi paga com dor nesta
+   sessao. `APP_CONFIG_CACHE` sozinho NAO basta: ele cobre so o cache de config, e o
+   PHPUnit do host continua reescrevendo `bootstrap/cache/packages.php` e `services.php`,
+   que sao bind-mount compartilhado com o container. Como a imagem foi buildada sem dev
+   dependencies, o manifest escrito pelo host descreve outro conjunto de providers e TODO
+   `artisan` dentro do container passa a morrer em `ProviderRepository` — no meu caso com
+   `Class "App\Modules\Cemaden\CemadenServiceProvider" not found`, apesar de a classe
+   existir e `class_exists()` devolver true la dentro. Recuperacao: apagar os dois
+   arquivos e rodar `artisan` DUAS vezes (a primeira falha recompilando, a segunda passa).
+
+   Os caminhos precisam comecar com `/`, e por isso o `MSYS_NO_PATHCONV=1`. O
+   `Application::normalizeCachePath` so trata como absoluto o que comeca com `/` ou `\`;
+   se o Git Bash converter para `C:/tmp/...`, o Laravel concatena com o base path e o
+   teste morre com "The <projeto>\C:/tmp/newsdc-cache directory must be present and
+   writable". Com a barra preservada, o PHP no Windows resolve `/tmp/...` para `C:\tmp\...`. Os `DB_*` sao obrigatorios porque o `.env` aponta
+   `DB_HOST=newsdc_db` (nome de rede Docker que o host nao resolve) e porque o
+   `.env.testing` forca sqlite `:memory:` — e como `tests/TestCase.php` e vazio e nao roda
+   migration, cair no sqlite da `no such table` na suite inteira.
+
+3. **Os testes rodam contra o banco de DESENVOLVIMENTO.** Nenhum teste pode fazer `update()`
+   ou `delete()` sem `where` restrito as linhas que ele mesmo criou, e assercao de contagem
+   tem de ser relativa a um "antes", nunca total absoluto.
+
+4. **`SDC/tests` esta no `.gitignore`.** Escrever o teste continua obrigatorio, mas ele NAO
+   e versionado: todo `git add` dos steps leva so os arquivos de producao. Incluir caminho
+   sob `SDC/tests` faz o `git add` ser recusado.
+
 Valem para TODA task deste plano. Sao copia literal do contrato (secao 0) e das skills
 `.claude/skills/frontend/03 - Layout` e `04 - Responsividade`.
 
@@ -24,10 +76,10 @@ Valem para TODA task deste plano. Sao copia literal do contrato (secao 0) e das 
 - Commits: `<emoji> tipo(cedec): descricao` em pt-BR. **Sem trailer de co-autor.**
 - Commit atomico: agrupar os arquivos que entregam UMA mudanca. Arquivo de teste criado so para depuracao nao entra no commit.
 - Testes: `declare(strict_types=1)`, namespace `Tests\Feature\Cedec`, trait `DatabaseTransactions`, `AssertableInertia` para props, `Spatie\Permission\Models\Permission` para conceder slug.
-- Verificacao backend: `docker exec newsdc_frankenphp_local php artisan test --filter=<Nome>`.
-- Verificacao de sintaxe: `docker exec newsdc_frankenphp_local php -l /app/<caminho>`.
+- Verificacao backend: `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=<Nome>`.
+- Verificacao de sintaxe: `docker exec newsdc_dev_app php -l /var/www/<caminho>`.
 - Verificacao frontend: `npm run build` na pasta `SDC`.
-- Depois de mudar PHP: `docker exec newsdc_frankenphp_local php artisan octane:reload` (~1s). Restart do container so para `.env`, `config/` ou extensao — custa ~3min.
+- Depois de mudar PHP: `docker exec newsdc_dev_app php artisan octane:reload` (~1s). Restart do container so para `.env`, `config/` ou extensao — custa ~3min.
 - A calha horizontal e do `<main>`; a raiz da pagina **nao** leva `p-*` nem `px-*`. Leva `w-full pb-8`.
 - Ritmo vertical de 24px vem de UMA fonte so: `mb-6` nos filhos (Forma A) **ou** `space-y-6` no pai, nunca os dois.
 - `document.documentElement.scrollWidth - clientWidth === 0` em 375px **e** em 840px. Quem transborda rola/quebra dentro de si.
@@ -59,13 +111,13 @@ Esta fase **nao cria nada disso**; se faltar, pare e conclua a fase corresponden
 **Verificacao de que o Consumes esta satisfeito** (roda antes da Task 1):
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan tinker --execute="echo implode(',', array_intersect(['email_prefeitura','tel_prefeitura','fax_prefeitura','tel_prefeitura_2','email_prefeitura_2','email_prefeitura_3'], \Illuminate\Support\Facades\Schema::getColumnListing('compdec_prefeituras')));"
+docker exec newsdc_dev_app php artisan tinker --execute="echo implode(',', array_intersect(['email_prefeitura','tel_prefeitura','fax_prefeitura','tel_prefeitura_2','email_prefeitura_2','email_prefeitura_3'], \Illuminate\Support\Facades\Schema::getColumnListing('compdec_prefeituras')));"
 ```
 
 Esperado: as seis colunas listadas. Se sair vazio ou incompleto, a fase 1 nao foi aplicada.
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec
+docker exec newsdc_dev_app php artisan route:list --name=cedec
 ```
 
 Esperado: pelo menos as rotas `cedec.prefeituras.*`. Se o comando reclamar que nao ha rotas, a fase 2 nao foi aplicada.
@@ -168,19 +220,41 @@ Criterio: `excesso` **0** nas duas larguras.
 
 `phpunit.xml` **nao troca a conexao de banco** (as linhas de sqlite estao comentadas). Os
 testes rodam contra o banco de desenvolvimento, que ja tem as 853 prefeituras reais
-carregadas. Um teste que conte blocos sem neutralizar esse acervo vai falhar de forma
-aleatoria.
+carregadas.
 
-Solucao usada em todas as classes de teste deste plano, dentro do `setUp()` e portanto
-**dentro da transacao** (o `DatabaseTransactions` desfaz tudo ao final):
+**Correcao de code review, 2026-09-05: nenhum teste deste plano pode fazer UPDATE ou DELETE
+em massa sobre linha que ele nao criou.** Uma versao anterior desta nota mandava zerar os 8
+campos de contato de TODAS as prefeituras dentro do `setUp()`
+(`DB::table('compdec_prefeituras')->update(self::CAMPOS_DE_CONTATO)`), protegido so pelo
+rollback do `DatabaseTransactions`. Como `phpunit.xml` **nao isola o banco de teste**,
+qualquer interrupcao antes do rollback — Ctrl+C, fatal error, timeout do container, OOM —
+apagava em definitivo os contatos das 853 prefeituras carregados pelo ETL, sem backup. Um
+teste nao pode ter como modo de falha a destruicao do banco de desenvolvimento.
 
-```php
-DB::table('compdec_prefeituras')->update(self::CAMPOS_DE_CONTATO); // zera os 8 campos de contato
-```
+A regra deste plano, em toda classe de teste: **cada teste opera so sobre as linhas que ele
+proprio cria.** Duas tecnicas cobrem os casos que esta fase precisa:
 
-Nenhuma linha e apagada — so os campos de contato viram `null`, e o rollback devolve os
-valores originais. Contagens que dependem do numero total de municipios (o CSV tem uma linha
-por municipio) leem a base primeiro: `DB::table('municipios')->count()`.
+1. **A fronteira de bloco (50/51/100/101) e a sanitizacao (`higienizar`/`higienizarEmail`)
+   sao testadas via `ReflectionMethod` sobre os metodos privados do service**
+   (`blocar()`, `contatos()`, `higienizar()`, `higienizarEmail()`), alimentados com um array
+   ou uma `Collection` montados a mao pelo proprio teste. Nenhuma dessas chamadas toca o
+   banco — e o mesmo caminho de codigo que `blocosDeEmail()` e `blocosDeTelefone()` executam
+   por baixo, so que sem depender de quantos contatos ja existem no banco de desenvolvimento.
+   Ver `ContatoRelatorioServiceTest` (Task 1).
+2. **Onde o teste precisa mesmo ler do banco real** (higienizacao ponta a ponta, o
+   `municipio_id` que aparece na listagem, quantidade de linhas do CSV, props do Inertia), a
+   asserçao e de PERTENCIMENTO ou RELATIVA ao "antes" medido no proprio teste — nunca de
+   indice fixo nem de total exato sobre uma consulta que enxerga as 853 prefeituras inteiras.
+   Exemplos: `->firstWhere('municipio_id', $municipio->id)` numa `Collection`, um closure de
+   `Collection::contains(...)` dentro do `where()` do `AssertableInertia`,
+   `assertStringContainsString(...)` no `texto` de um bloco pedido com `$tamanho` bem alto (o
+   que forca um unico bloco e evita depender de quebra de fronteira), ou
+   `$antes = DB::table('municipios')->count()` seguido de `assertCount($antes + N + 1, ...)`.
+
+Nenhuma classe de teste desta fase faz `update()` ou `delete()` sem `where` restrito as linhas
+que o proprio teste inseriu. As fixtures continuam dentro da transacao do
+`DatabaseTransactions`, que desfaz tudo ao final — agora como uma segunda camada de protecao,
+nao a unica.
 
 ---
 
@@ -242,9 +316,11 @@ use App\Models\Municipio;
 use App\Modules\Cedec\Services\ContatoRelatorioService;
 use App\Modules\Compdec\Models\Prefeitura;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -253,16 +329,29 @@ use Tests\TestCase;
  * O legado blocava contando ($key + 1) % 50 sobre TODAS as linhas, inclusive as
  * de e-mail vazio: a "Parte 1" prometia 50 destinatarios e entregava menos.
  * Aqui o vazio e descartado antes de blocar, e os testes de fronteira provam.
+ *
+ * Correcao de code review, 2026-09-05: esta classe NAO faz UPDATE ou DELETE em
+ * massa em `compdec_prefeituras`. O banco de teste e o de desenvolvimento
+ * (phpunit.xml nao troca a conexao), com as 853 prefeituras reais carregadas
+ * pelo ETL, sem backup. A fronteira de bloco e a sanitizacao sao testadas via
+ * `ReflectionMethod` sobre os metodos privados do service, com um array ou
+ * uma Collection montados pelo proprio teste — o mesmo caminho de codigo que
+ * `blocosDeEmail()`/`blocosDeTelefone()` executam por baixo, sem depender de
+ * quantos contatos ja existem no banco. Os testes que precisam mesmo ler do
+ * banco real criam a propria fixture e verificam PERTENCIMENTO
+ * (`firstWhere`/`str_contains`) ou uma contagem RELATIVA ao "antes" — nunca
+ * indice fixo nem total exato sobre uma consulta que enxerga as 853
+ * prefeituras inteiras. Ver "Nota obrigatoria sobre o banco de teste", acima.
  */
 class ContatoRelatorioServiceTest extends TestCase
 {
     use DatabaseTransactions;
 
     /**
-     * Os oito campos de contato zerados no setUp. O banco de teste e o de
-     * desenvolvimento (phpunit.xml nao troca a conexao) e ja tem as 853
-     * prefeituras reais: sem zerar, a contagem de blocos nao e deterministica.
-     * Nada e apagado — o rollback da transacao devolve os valores.
+     * Usado so para zerar os 8 campos de contato da PROPRIA fixture que o
+     * teste cria, dentro de prefeituraCom() — nunca em UPDATE de massa. Sem
+     * isso, os valores que PrefeituraFactory sorteia para os campos que o
+     * teste nao mencionou poderiam contaminar as asserçoes.
      */
     private const CAMPOS_DE_CONTATO = [
         'email_prefeitura' => null,
@@ -274,13 +363,6 @@ class ContatoRelatorioServiceTest extends TestCase
         'prefeito_telefone' => null,
         'prefeito_celular' => null,
     ];
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        DB::table('compdec_prefeituras')->update(self::CAMPOS_DE_CONTATO);
-    }
 
     private function servico(): ContatoRelatorioService
     {
@@ -308,6 +390,58 @@ class ContatoRelatorioServiceTest extends TestCase
         }
     }
 
+    /**
+     * Chama o `blocar()` privado e estatico do service diretamente, sem
+     * passar pelo banco. E o mesmo agrupamento que blocosDeEmail() e
+     * blocosDeTelefone() aplicam depois de consultar e higienizar — testa-lo
+     * isolado prova a fronteira sem depender de quantos contatos reais ja
+     * existem no banco de desenvolvimento.
+     *
+     * @param  array<int, string>  $contatos
+     * @return array<int, array{indice: int, total: int, texto: string}>
+     */
+    private function blocar(array $contatos, int $tamanho = ContatoRelatorioService::TAMANHO_BLOCO_PADRAO): array
+    {
+        $metodo = new ReflectionMethod(ContatoRelatorioService::class, 'blocar');
+        $metodo->setAccessible(true);
+
+        return $metodo->invoke(null, $contatos, $tamanho);
+    }
+
+    /**
+     * Chama o `contatos()` privado do service diretamente, sobre uma
+     * Collection montada a mao — sem passar pelo banco.
+     *
+     * @param  Collection<int, array<string, mixed>>  $linhas
+     * @param  array<int, string>  $campos
+     * @return array<int, string>
+     */
+    private function contatos(Collection $linhas, array $campos): array
+    {
+        $metodo = new ReflectionMethod(ContatoRelatorioService::class, 'contatos');
+        $metodo->setAccessible(true);
+
+        return $metodo->invoke($this->servico(), $linhas, $campos);
+    }
+
+    /** Chama o `higienizarEmail()` privado e estatico do service diretamente. */
+    private function higienizarEmail(?string $valor): ?string
+    {
+        $metodo = new ReflectionMethod(ContatoRelatorioService::class, 'higienizarEmail');
+        $metodo->setAccessible(true);
+
+        return $metodo->invoke(null, $valor);
+    }
+
+    /** Chama o `higienizar()` privado e estatico do service diretamente. */
+    private function higienizar(?string $valor): ?string
+    {
+        $metodo = new ReflectionMethod(ContatoRelatorioService::class, 'higienizar');
+        $metodo->setAccessible(true);
+
+        return $metodo->invoke(null, $valor);
+    }
+
     /** @return array<string, array{int, array<int, int>}> */
     public static function fronteirasDeBloco(): array
     {
@@ -319,43 +453,72 @@ class ContatoRelatorioServiceTest extends TestCase
         ];
     }
 
-    /** @param array<int, int> $totaisEsperados */
+    /**
+     * O coracao desta fase: a fronteira de bloco, testada direto sobre
+     * `blocar()`, sem tocar o banco. A prova e a mesma de antes — so que
+     * deterministica por construcao, em vez de depender de zerar as 853
+     * prefeituras reais para ter uma contagem global previsivel.
+     *
+     * @param  array<int, int>  $totaisEsperados
+     */
     #[DataProvider('fronteirasDeBloco')]
-    public function test_blocos_de_email_respeitam_a_fronteira_de_cinquenta(int $quantidade, array $totaisEsperados): void
+    public function test_blocar_respeita_a_fronteira_de_cinquenta(int $quantidade, array $totaisEsperados): void
     {
-        $this->criarComEmail($quantidade);
+        $contatos = array_map(
+            static fn (int $i): string => sprintf('prefeitura%03d@exemplo.mg.gov.br', $i),
+            range(1, $quantidade),
+        );
 
-        $blocos = $this->servico()->blocosDeEmail();
+        $blocos = $this->blocar($contatos);
 
         $this->assertCount(count($totaisEsperados), $blocos);
         $this->assertSame($totaisEsperados, array_column($blocos, 'total'));
         $this->assertSame(range(1, count($totaisEsperados)), array_column($blocos, 'indice'));
     }
 
+    public function test_higienizar_email_descarta_os_sentinelas_do_legado(): void
+    {
+        foreach ([null, '', '   ', '-'] as $sujo) {
+            $this->assertNull($this->higienizarEmail($sujo), var_export($sujo, true).' deveria virar null.');
+        }
+    }
+
+    /**
+     * Reproduz "os quatro contatos sujos nao podem virar um segundo bloco"
+     * sem tocar o banco: os quatro `null` abaixo sao exatamente o que
+     * `higienizarEmail()` ja produz para null/''/'   '/'-' dentro de
+     * linhas() — provado a parte no teste anterior.
+     */
     public function test_contato_vazio_e_descartado_antes_de_blocar(): void
     {
-        $this->criarComEmail(50);
+        $linhas = new Collection(array_merge(
+            array_map(
+                static fn (int $i): array => ['email_prefeitura' => sprintf('prefeitura%03d@exemplo.mg.gov.br', $i)],
+                range(1, 50),
+            ),
+            [
+                ['email_prefeitura' => null],
+                ['email_prefeitura' => null],
+                ['email_prefeitura' => null],
+                ['email_prefeitura' => null],
+            ],
+        ));
 
-        foreach ([null, '', '   ', '-'] as $sujo) {
-            $this->prefeituraCom(['email_prefeitura' => $sujo]);
-        }
-
-        $blocos = $this->servico()->blocosDeEmail();
+        $blocos = $this->blocar($this->contatos($linhas, ['email_prefeitura']));
 
         $this->assertCount(1, $blocos, 'Os quatro contatos sujos nao podem virar um segundo bloco.');
         $this->assertSame(50, $blocos[0]['total']);
         $this->assertSame(49, substr_count($blocos[0]['texto'], '; '), 'Cinquenta e-mails tem 49 separadores.');
     }
 
-    public function test_telefone_com_hifen_do_legado_e_descartado(): void
+    public function test_higienizar_descarta_o_sentinela_hifen_do_legado(): void
     {
-        $this->prefeituraCom(['tel_prefeitura' => '-', 'tel_prefeitura_2' => '(31) 3333-2222']);
-
-        $blocos = $this->servico()->blocosDeTelefone();
-
-        $this->assertCount(1, $blocos);
-        $this->assertSame(1, $blocos[0]['total']);
-        $this->assertSame('(31) 3333-2222', $blocos[0]['texto']);
+        $this->assertNull($this->higienizar('-'), 'O sentinela "-" do legado tem de virar null.');
+        $this->assertSame(
+            '(31) 3333-2222',
+            $this->higienizar('(31) 3333-2222'),
+            'Hifen DENTRO de um telefone formatado nao e o sentinela.',
+        );
     }
 
     public function test_tamanho_de_bloco_menor_que_um_lanca_excecao_para_email(): void
@@ -377,9 +540,13 @@ class ContatoRelatorioServiceTest extends TestCase
         $municipio = $this->prefeituraCom(['email_prefeitura' => '  PREFEITURA@Exemplo.MG.GOV.BR ']);
 
         $linha = $this->servico()->emails()->firstWhere('municipio_id', $municipio->id);
-
         $this->assertSame('prefeitura@exemplo.mg.gov.br', $linha['email_prefeitura']);
-        $this->assertSame('prefeitura@exemplo.mg.gov.br', $this->servico()->blocosDeEmail()[0]['texto']);
+
+        // Tamanho bem alto forca um unico bloco: isola o teste de quantos
+        // e-mails reais ja existem na base. O objetivo aqui e provar que a
+        // sanitizacao chega ao texto do bloco, nao contar quantos blocos existem.
+        $blocos = $this->servico()->blocosDeEmail(1_000_000);
+        $this->assertStringContainsString('prefeitura@exemplo.mg.gov.br', $blocos[0]['texto']);
     }
 
     public function test_bloco_de_telefone_reune_os_cinco_campos_na_ordem_do_contrato(): void
@@ -392,11 +559,14 @@ class ContatoRelatorioServiceTest extends TestCase
             'fax_prefeitura' => '(31) 3333-5555',
         ]);
 
-        $blocos = $this->servico()->blocosDeTelefone();
+        // Tamanho bem alto forca um unico bloco: os cinco campos desta mesma
+        // prefeitura ficam sempre consecutivos no array achatado (contatos()
+        // percorre as linhas em ordem, e dentro de cada linha percorre os
+        // campos na ordem do contrato) — a substring abaixo aparece intacta
+        // independente de quantos outros telefones ja existem na base.
+        $blocos = $this->servico()->blocosDeTelefone(1_000_000);
 
-        $this->assertCount(1, $blocos);
-        $this->assertSame(5, $blocos[0]['total']);
-        $this->assertSame(
+        $this->assertStringContainsString(
             '(31) 3333-1111; (31) 3333-2222; (31) 3333-3333; (31) 98888-4444; (31) 3333-5555',
             $blocos[0]['texto'],
         );
@@ -442,7 +612,7 @@ class ContatoRelatorioServiceTest extends TestCase
 - [ ] **Step 3: Rodar o teste para ver falhar**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorioServiceTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorioServiceTest
 ```
 
 Esperado: FAIL — `Class "App\Modules\Cedec\Services\ContatoRelatorioService" does not exist`.
@@ -703,9 +873,9 @@ final class ContatoRelatorioService
 - [ ] **Step 5: Rodar o teste para ver passar**
 
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Services/ContatoRelatorioService.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorioServiceTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Services/ContatoRelatorioService.php
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorioServiceTest
 ```
 
 Esperado: PASS, 12 testes (os 4 casos do data provider contam separado).
@@ -713,7 +883,7 @@ Esperado: PASS, 12 testes (os 4 casos do data provider contam separado).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/Modules/Cedec/Services/ContatoRelatorioService.php tests/Feature/Cedec/ContatoRelatorioServiceTest.php
+git add app/Modules/Cedec/Services/ContatoRelatorioService.php
 git commit -m "✨ feat(cedec): service de relatorio de contatos com blocos de 50"
 ```
 
@@ -791,7 +961,11 @@ class ContatoRelatorioHttpTest extends TestCase
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        DB::table('compdec_prefeituras')->update(self::CAMPOS_DE_CONTATO);
+        // NAO zerar contato em massa aqui. O banco de teste e o de
+        // desenvolvimento (phpunit.xml tem as linhas de sqlite comentadas), e
+        // um UPDATE sem where sobre compdec_prefeituras apaga em definitivo o
+        // que o ETL carregou se o processo morrer antes do rollback. Cada
+        // teste cria a propria fixture em prefeituraCom() e assere sobre ELA.
     }
 
     /** @param array<int, string> $permissoes */
@@ -838,22 +1012,35 @@ class ContatoRelatorioHttpTest extends TestCase
     {
         $this->prefeituraCom(['email_prefeitura' => 'PREFEITURA@Exemplo.MG.GOV.BR']);
 
-        $this->actingAs($this->usuario(self::PERMISSOES))
-            ->get(route('cedec.contatos.index'))
-            ->assertOk()
+        $resposta = $this->actingAs($this->usuario(self::PERMISSOES))
+            ->get(route('cedec.contatos.index'));
+
+        $resposta->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Cedec/Contatos/Index')
+                // O segundo argumento false desliga o ensure_pages_exist de
+                // config/inertia.php, que confere o arquivo .vue NO DISCO. A
+                // pagina Cedec/Contatos/Index so nasce na Task 5; sem o false
+                // este teste falha por pagina inexistente em vez de validar props.
+                ->component('Cedec/Contatos/Index', false)
                 ->where('aba', 'emails')
                 ->where('tamanho_bloco', 50)
                 ->has('emails')
                 ->has('telefones')
-                ->has('blocos', 1)
-                ->where('blocos.0.indice', 1)
-                ->where('blocos.0.total', 1)
-                ->where('blocos.0.texto', 'prefeitura@exemplo.mg.gov.br')
+                ->has('blocos')
                 ->has('totais.emails_preenchidos')
                 ->has('totais.telefones_preenchidos')
                 ->has('totais.municipios'));
+
+        // Conteudo se assere por PERTENCIMENTO, nunca por indice fixo nem
+        // total exato: o banco de teste e o de desenvolvimento e pode ter
+        // prefeituras reais alem da fixture. O e-mail entra em algum bloco,
+        // ja em minusculas.
+        $blocos = $resposta->viewData('page')['props']['blocos'];
+
+        $this->assertStringContainsString(
+            'prefeitura@exemplo.mg.gov.br',
+            implode(' ', array_column($blocos, 'texto')),
+        );
     }
 
     public function test_aba_de_telefones_devolve_os_blocos_de_telefone(): void
@@ -863,14 +1050,26 @@ class ContatoRelatorioHttpTest extends TestCase
             'tel_prefeitura' => '(31) 3333-1111',
         ]);
 
-        $this->actingAs($this->usuario(self::PERMISSOES))
-            ->get(route('cedec.contatos.index', ['aba' => 'telefones']))
-            ->assertOk()
+        $resposta = $this->actingAs($this->usuario(self::PERMISSOES))
+            ->get(route('cedec.contatos.index', ['aba' => 'telefones']));
+
+        $resposta->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Cedec/Contatos/Index')
+                // false pelo mesmo motivo do teste anterior: a pagina Vue so
+                // existe a partir da Task 5.
+                ->component('Cedec/Contatos/Index', false)
                 ->where('aba', 'telefones')
-                ->has('blocos', 1)
-                ->where('blocos.0.texto', '(31) 3333-1111'));
+                ->has('blocos'));
+
+        $textoDosBlocos = implode(' ', array_column(
+            $resposta->viewData('page')['props']['blocos'],
+            'texto',
+        ));
+
+        $this->assertStringContainsString('(31) 3333-1111', $textoDosBlocos);
+
+        // O e-mail da mesma fixture NAO pode vazar para a aba de telefones.
+        $this->assertStringNotContainsString('nao-entra@exemplo.mg.gov.br', $textoDosBlocos);
     }
 
     public function test_aba_desconhecida_cai_em_emails(): void
@@ -916,7 +1115,7 @@ class ContatoRelatorioHttpTest extends TestCase
 - [ ] **Step 2: Rodar o teste para ver falhar**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorioHttpTest
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorioHttpTest
 ```
 
 Esperado: FAIL — `Route [cedec.contatos.index] not defined.`
@@ -1028,7 +1227,7 @@ final class ContatoRelatorioController extends Controller
 - [ ] **Step 4: Conferir se as rotas de contatos ja existem**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec.contatos
+docker exec newsdc_dev_app php artisan route:list --name=cedec.contatos
 ```
 
 Se as duas rotas aparecerem (a fase 2 as registrou), **pule o Step 5**. Se nao aparecer
@@ -1062,10 +1261,10 @@ Nao registrar `Route::model()` nenhum: `Route::model()` e GLOBAL neste projeto e
 - [ ] **Step 6: Rodar o teste para ver passar**
 
 ```bash
-docker exec newsdc_frankenphp_local php -l /app/app/Modules/Cedec/Controllers/ContatoRelatorioController.php
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan route:list --name=cedec.contatos
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorioHttpTest
+docker exec newsdc_dev_app php -l /var/www/app/Modules/Cedec/Controllers/ContatoRelatorioController.php
+docker exec newsdc_dev_app php artisan octane:reload
+docker exec newsdc_dev_app php artisan route:list --name=cedec.contatos
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorioHttpTest
 ```
 
 Esperado: as duas rotas listadas e 7 testes PASS. O teste do Inertia falha com
@@ -1075,7 +1274,7 @@ teste nao resolve o componente, so compara o nome.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add app/Modules/Cedec/Controllers/ContatoRelatorioController.php routes/modules/cedec.php tests/Feature/Cedec/ContatoRelatorioHttpTest.php
+git add app/Modules/Cedec/Controllers/ContatoRelatorioController.php routes/modules/cedec.php
 git commit -m "✨ feat(cedec): rotas e controller dos relatorios de contato"
 ```
 
@@ -1628,8 +1827,8 @@ Esperado: build sem erro e sem aviso de componente nao resolvido.
 - [ ] **Step 5: Rodar a suite inteira da fase**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorio
+docker exec newsdc_dev_app php artisan octane:reload
+php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorio
 ```
 
 Esperado: PASS nas duas classes (19 testes).
@@ -1675,8 +1874,8 @@ git commit -m "✨ feat(cedec): pagina de relatorios de contato com abas e expor
 
 ## Verificacao final da fase
 
-- [ ] `docker exec newsdc_frankenphp_local php artisan test --filter=ContatoRelatorio` — PASS
-- [ ] `docker exec newsdc_frankenphp_local php artisan route:list --name=cedec.contatos` — duas rotas
+- [ ] `php -d extension=pdo_pgsql vendor/bin/phpunit --filter=ContatoRelatorio` — PASS
+- [ ] `docker exec newsdc_dev_app php artisan route:list --name=cedec.contatos` — duas rotas
 - [ ] `npm run build` na pasta `SDC` — sem erro
 - [ ] `excesso` horizontal 0 em 375px e 840px, nas duas abas
 - [ ] `grep -rn "style scoped" resources/js/Components/*/Cedec resources/js/Pages/Cedec` — nenhum resultado
@@ -1740,7 +1939,19 @@ Registradas aqui, **nao corrigidas** por este plano. Cada uma precisa de decisao
    pesa, o lugar da correcao e o service, nao o controller.
 
 9. **`phpunit.xml` nao isola o banco de teste.** As linhas de sqlite estao comentadas: os
-   testes rodam contra o banco de desenvolvimento, com as 853 prefeituras reais. Todo teste
-   deste plano zera os oito campos de contato no `setUp` (dentro da transacao) e le
-   `DB::table('municipios')->count()` como base. E contorno, nao conserto: a decisao de
-   isolar a conexao de teste e maior que esta fase.
+   testes rodam contra o banco de desenvolvimento, com as 853 prefeituras reais. E contorno,
+   nao conserto: isolar a conexao de teste e decisao maior que esta fase.
+
+   **Correcao de code review (2026-09-05).** A versao anterior deste plano zerava os oito
+   campos de contato de TODAS as prefeituras num `DB::table('compdec_prefeituras')->update()`
+   dentro do `setUp`, protegido so pelo rollback do `DatabaseTransactions`. Isso fazia com
+   que o modo de falha do teste fosse a destruicao do banco: qualquer Ctrl+C, fatal error,
+   timeout de container ou OOM antes do rollback apagava em definitivo o que o ETL carregou,
+   sem backup. Um teste nao pode ter isso como modo de falha.
+
+   A regra agora e absoluta nas duas classes de teste desta fase: **nenhum `update()` ou
+   `delete()` sem `where` restrito as linhas que o proprio teste criou.** Cada teste monta a
+   fixture em `prefeituraCom()`, que ja aplica `CAMPOS_DE_CONTATO` na PROPRIA linha, e as
+   asserçoes passam a ser por pertencimento (`assertStringContainsString` sobre o texto dos
+   blocos) ou por contagem RELATIVA ao "antes" — nunca indice fixo como `blocos.0.texto` nem
+   total exato como `has('blocos', 1)`, que so passavam porque o banco tinha sido esvaziado.
