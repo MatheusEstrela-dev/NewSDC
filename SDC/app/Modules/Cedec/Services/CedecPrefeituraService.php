@@ -142,6 +142,18 @@ final class CedecPrefeituraService
             $payload = $dto->toArray();
             $payload['municipio_id'] = $municipioId;
 
+            // legacy_id e a ponte com o registro de origem do ETL e tem indice
+            // proprio. O formulario da CEDEC nao envia esse campo -- o
+            // UpdatePrefeituraRequest nao o valida -- entao o DTO chega com null e o
+            // toArray() emite a chave assim mesmo. Deixar passar faria o
+            // updateOrCreate gravar null por cima da rastreabilidade, em silencio, no
+            // primeiro save de um municipio ja migrado. Tirando a chave do payload, a
+            // coluna nao entra no UPDATE e o valor existente sobrevive; quem passa um
+            // legacyId de verdade continua escrevendo normalmente.
+            if ($dto->legacyId === null) {
+                unset($payload['legacy_id']);
+            }
+
             return Prefeitura::query()->updateOrCreate(['municipio_id' => $municipioId], $payload);
         });
     }
