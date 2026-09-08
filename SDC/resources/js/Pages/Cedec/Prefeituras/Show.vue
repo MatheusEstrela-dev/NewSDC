@@ -14,13 +14,18 @@
         padrao do sistema e um so. Dois botoes iguais na mesma dobra sao ruido.
       -->
       <template #actions>
+        <!--
+          So o lapis, sem rotulo: o mesmo desenho da coluna de acoes da listagem e do
+          Decretacoes. O significado fica no tooltip.
+        -->
         <ActionButton
           v-if="podeEditar"
           action="edit"
           module="cedec"
           resource="prefeituras"
-          label="Editar"
           :allowed="true"
+          :show-label="false"
+          tooltip-text="Editar dados da prefeitura"
           @click="editar"
         />
       </template>
