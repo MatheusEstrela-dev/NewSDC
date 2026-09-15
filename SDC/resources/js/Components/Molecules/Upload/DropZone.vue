@@ -17,6 +17,7 @@
       class="hidden" 
       :multiple="multiple"
       :accept="accept"
+      :capture="capture ?? undefined"
       @change="handleFileSelect"
     />
     
@@ -56,6 +57,19 @@ const props = defineProps({
   accept: {
     type: String,
     default: 'image/*,.pdf,.zip,.fig',
+  },
+  /**
+   * Liga a camera do aparelho em vez do gerenciador de arquivos:
+   * 'environment' abre a traseira, 'user' a frontal. `null` (padrao) mantem o
+   * comportamento de sempre -- e o que os consumidores existentes esperam.
+   *
+   * Em desktop o atributo e ignorado pelo navegador, entao nao ha ramo por
+   * plataforma aqui.
+   */
+  capture: {
+    type: String,
+    default: null,
+    validator: (v) => v === null || ['environment', 'user'].includes(v),
   },
 });
 
