@@ -72,7 +72,7 @@ const showInstrucoes = ref(!criado.value && Boolean(props.municipio));
 const tabsComBadge = computed(() =>
   tabs.value.map((t) => {
     if (!criado.value) return t;
-    if (t.id === 3) return { ...t, badge: compdec_equipe.value?.length || null };
+    if (t.id === 3) return { ...t, badge: props.compdec_equipe?.length || null };
     if (t.id === 4) return { ...t, badge: dados.value?.pontos?.length || null };
     if (t.id === 5) return { ...t, badge: dados.value?.comunidades?.length || null };
     return t;

@@ -14,6 +14,7 @@ use App\Modules\AjudaHumanitaria\Enums\StatusPedidoAh;
 use App\Modules\AjudaHumanitaria\Enums\TipoItemPedido;
 use App\Modules\AjudaHumanitaria\Models\ParametroAh;
 use App\Modules\AjudaHumanitaria\Models\PedidoAh;
+use App\Modules\Shared\Events\RecursoAtualizado;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -126,6 +127,17 @@ final class TramitacaoService
                 $atualizado->prestacaoConta?->data_limite?->format('d/m/Y'),
             );
         }
+
+        // Avisa quem esta com a FILA aberta, e nao o pedido. A notificacao acima
+        // vai para os envolvidos (autor, analista, diretor); o coordenador que
+        // acompanha a listagem nao esta entre eles, e e justamente quem recarrega
+        // a pagina para descobrir se mudou alguma coisa.
+        //
+        // O evento e ShouldDispatchAfterCommit, entao nao e a posicao aqui fora
+        // que garante a ordem: e a interface. Importa porque executar() pode ser
+        // chamado de dentro de outra transacao, e ai "depois do bloco" ainda
+        // seria antes do commit de verdade.
+        RecursoAtualizado::dispatch('pedidos-ah');
 
         return [$atualizado, null];
     }

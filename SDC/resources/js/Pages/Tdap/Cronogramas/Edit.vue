@@ -1,6 +1,6 @@
 <template>
   <Head :title="`TDAP — Cronograma ${c.numero}`" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       :title="`Editar Cronograma ${c.numero}`"
       :description="`${fmtDate(c.dt_inicio)} — ${fmtDate(c.dt_final)}`"

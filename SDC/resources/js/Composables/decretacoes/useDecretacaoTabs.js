@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue';
+import { DocumentTextIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 import { router } from '@inertiajs/vue3';
 
 const VALID_TABS = ['identificacao', 'desastres'];
@@ -30,8 +31,10 @@ export function useDecretacaoTabs({ initialTab = 'identificacao', processo = nul
   });
 
   const tabs = computed(() => [
-    { id: 'identificacao', label: 'Identificacao do Processo' },
-    { id: 'desastres',     label: 'Dados de Desastre', disabled: desastresDisabled.value },
+    // Icone e obrigatorio: no mobile so a aba ATIVA mostra o nome, e aba sem
+    // icone viraria um botao vazio (regra 22).
+    { id: 'identificacao', label: 'Identificacao do Processo', icon: DocumentTextIcon },
+    { id: 'desastres',     label: 'Dados de Desastre', icon: ExclamationTriangleIcon, disabled: desastresDisabled.value },
   ]);
 
   function setActiveTab(id) {

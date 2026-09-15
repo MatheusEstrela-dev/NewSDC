@@ -26,6 +26,7 @@
 
 <script setup>
 import { usePermissions } from '@/Composables/usePermissions';
+import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import RatIndexTemplate from '@/Templates/Rat/RatIndexTemplate.vue';
 import { Head } from '@inertiajs/vue3';
@@ -46,6 +47,26 @@ const props = defineProps({
     // Ordenacao efetiva devolvida pelo controller (ja normalizada pela whitelist).
     sort:          { type: String, default: 'data_hora' },
     direction:     { type: String, default: 'desc' },
+});
+
+/*
+ * A listagem de protocolos reflete alteracao de outro usuario sem F5.
+ *
+ * `statistics` FICA DE FORA do only:, e a omissao e a decisao. A prop e
+ * `Cache::remember('rat:statistics', 300, ...)`: rebuscar devolveria o valor
+ * cacheado por ate 5 minutos, e a tela mostraria tabela nova com contador velho
+ * -- pior que os dois velhos juntos, porque parece atualizado. Invalidar a chave
+ * foi considerado e recusado: transformaria cada alteracao de RAT em recomputo
+ * dos quatro counts para o estado inteiro, que e o que o cache existe para
+ * evitar. Ver 3.4 do spec.
+ *
+ * O canal e global porque a listagem tambem e: o index do RAT nao aplica recorte
+ * de municipio, so ordenacao e paginacao.
+ */
+useAtualizacaoAoVivo({
+    canal: 'listagem.rat',
+    evento: '.RecursoAtualizado',
+    props: ['rats'],
 });
 
 // Normalize paginated resource collection or plain array

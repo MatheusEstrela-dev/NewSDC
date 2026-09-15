@@ -102,6 +102,32 @@ return [
             ]) : [],
         ],
 
+        // Somente leitura, consumida pelo ETL de prefeituras do Cedec
+        // (cedec:importar-prefeituras / PrefeituraService::migrarLegado). Dedicada
+        // e SEPARADA da conexao 'legacy' acima: aquela aponta para dbsdc (legado
+        // sdc/Laravel), esta aponta para gestaocedec_local (legado gestaocedec, PHP
+        // puro). Os dois bancos tem tabelas de MESMO NOME (cedec_municipio,
+        // cedec_prefeitura) com colunas incompativeis -- dbsdc.cedec_municipio nao
+        // tem sequer as colunas email e prefeito. NAO reutilizar 'legacy' aqui: ela
+        // e compartilhada por sete consumidores em Compdec, Pmda e AjudaHumanitaria.
+        // Nao ha migration nem model apontando para ela.
+        'legado_gestaocedec' => [
+            'driver' => 'mysql',
+            'host' => env('DB_LEGADO_GESTAOCEDEC_HOST', '127.0.0.1'),
+            'port' => env('DB_LEGADO_GESTAOCEDEC_PORT', '3306'),
+            'database' => env('DB_LEGADO_GESTAOCEDEC_DATABASE', 'gestaocedec_local'),
+            'username' => env('DB_LEGADO_GESTAOCEDEC_USERNAME', 'root'),
+            'password' => env('DB_LEGADO_GESTAOCEDEC_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('DB_LEGADO_GESTAOCEDEC_SSL_CA'),
+            ]) : [],
+        ],
+
         // Conexão para carga/queries otimizadas (leitura intensiva, ETL, BI)
         // Aponta para réplica de leitura ou banco dedicado a carga de dados
         'carga' => [

@@ -25,10 +25,16 @@
 
         <CapacidadesTab v-if="current === 'capacidades'" :orgao="orgao" />
 
+        <!--
+          orgao vem de OrgaoResource::make(), que EMBRULHA em `data` -- o resto
+          desta pagina ja trata isso com `orgao?.id || orgao?.data?.id`, mas esta
+          linha nao tratava, e a aba recebia prefeitura undefined mesmo quando a
+          prefeitura existia. Mesmo fallback dos outros pontos.
+        -->
         <PrefeituraTab
           v-if="current === 'prefeitura'"
           :orgao="orgao"
-          :prefeitura="orgao.prefeitura"
+          :prefeitura="orgao?.data?.prefeitura ?? orgao?.prefeitura"
           :can-edit="canManage"
           :errors="errors"
         />

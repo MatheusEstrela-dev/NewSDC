@@ -27,8 +27,7 @@
             icon-position="left"
             @click="$emit('create')"
           >
-            <span class="hidden sm:inline">Novo Beneficiário</span>
-            <span class="sm:hidden">Novo</span>
+            <span>Novo Beneficiário</span>
           </Button>
         </div>
       </template>

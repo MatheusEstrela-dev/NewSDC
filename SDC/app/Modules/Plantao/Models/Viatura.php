@@ -7,6 +7,7 @@ namespace App\Modules\Plantao\Models;
 use App\Modules\Plantao\Enums\LocalizacaoViatura;
 use App\Modules\Plantao\Enums\NivelCombustivel;
 use App\Modules\Plantao\Enums\StatusMovimentacao;
+use App\Modules\Plantao\Enums\StatusReserva;
 use App\Modules\Plantao\Enums\StatusViatura;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,6 +32,7 @@ class Viatura extends Model
         'localizacao',
         'exclusiva_sobreaviso',
         'status',
+        'qr_token',
         'hodometro_atual',
         'nivel_combustivel',
         'ultimo_condutor_id',
@@ -70,6 +72,38 @@ class Viatura extends Model
     public function snapshots(): HasMany
     {
         return $this->hasMany(ViaturaSnapshot::class, 'viatura_id');
+    }
+
+    public function reservas(): HasMany
+    {
+        return $this->hasMany(ViaturaReserva::class, 'viatura_id');
+    }
+
+    /**
+     * A reserva cuja chave ja foi retirada. Espelha movimentacaoAberta(): a
+     * regra de negocio garante no maximo uma, porque o check-in so ocorre com a
+     * viatura sem movimentacao aberta.
+     */
+    public function reservaEmUso(): HasOne
+    {
+        return $this->hasOne(ViaturaReserva::class, 'viatura_id')
+            ->where('status', StatusReserva::EM_USO->value);
+    }
+
+    /**
+     * A proxima reserva agendada, se houver. E o que tira a viatura de
+     * "disponivel" na tela da frota: uma vez reservada, ela nao pode ser
+     * oferecida como livre -- nem que a janela seja na semana que vem, porque
+     * quem sair com ela hoje pode atrasar e furar a reserva marcada.
+     *
+     * A ordenacao importa: com varias reservas futuras, a que interessa mostrar
+     * e a mais proxima.
+     */
+    public function reservaAgendada(): HasOne
+    {
+        return $this->hasOne(ViaturaReserva::class, 'viatura_id')
+            ->where('status', StatusReserva::AGENDADA->value)
+            ->orderBy('inicio_previsto');
     }
 
     public function ultimoCondutor(): BelongsTo

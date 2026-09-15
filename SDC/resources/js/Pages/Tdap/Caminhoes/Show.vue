@@ -1,15 +1,12 @@
 <template>
   <Head :title="`TDAP — ${c.placa}`" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       :title="c.placa"
       :description="`${c.marca || ''} ${c.modelo || ''}`.trim() || 'Caminhão-tanque'"
       :icon="TruckIcon"
     >
       <template #actions>
-        <Link :href="route('tdap.caminhoes.index')">
-          <SecondaryButton>Voltar</SecondaryButton>
-        </Link>
         <Link v-if="canEdit" :href="route('tdap.caminhoes.edit', c.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
@@ -68,7 +65,6 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 

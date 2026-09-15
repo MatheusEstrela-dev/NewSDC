@@ -85,6 +85,15 @@
         ></div>
       </div>
 
+      <ResponsiveTable
+        v-if="item.entregas.length"
+        :items="item.entregas"
+        :mobile-fields="CAMPOS_MOBILE_ENTREGA"
+        :get-item-title="(e) => e.nome_beneficiario"
+        empty-message="Nenhuma entrega lançada para este material."
+        class="mt-4"
+      >
+        <template #table>
       <table v-if="item.entregas.length" class="mt-4 min-w-full text-sm">
         <thead>
           <tr class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
@@ -119,6 +128,33 @@
           </tr>
         </tbody>
       </table>
+        </template>
+
+        <template #mobile-c-rg="{ item: e }">
+          {{ e.rg || '—' }}
+        </template>
+
+        <template #mobile-c-comunidade="{ item: e }">
+          {{ e.comunidade || '—' }}
+        </template>
+
+        <template #mobile-c-entrega="{ item: e }">
+          {{ formatarData(e.data_entrega) }}
+        </template>
+
+        <template
+          v-if="canLancar && !prestacao.homologada"
+          #mobile-actions="{ item: e }"
+        >
+          <button
+            type="button"
+            class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
+            @click="$emit('remover-entrega', e.id)"
+          >
+            Remover
+          </button>
+        </template>
+      </ResponsiveTable>
 
       <p v-else class="mt-3 text-xs text-slate-500 dark:text-slate-400">
         Nenhuma entrega lançada para este material.
@@ -182,6 +218,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import Modal from '@/Components/Modal.vue';
 import FormDateField from '@/Components/Molecules/Form/FormDateField.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 const props = defineProps({
   prestacao: { type: Object, default: null },
@@ -256,4 +293,17 @@ function formatarData(valor) {
 
   return dia ? `${dia}/${mes}/${ano}` : valor;
 }
+
+/**
+ * Campos do card de entrega no mobile (regra 9).
+ *
+ * A quantidade fica de fora: ela e curta e ja aparece no titulo do card seria
+ * ruido. Os quatro escolhidos sao os que identificam a entrega.
+ */
+const CAMPOS_MOBILE_ENTREGA = [
+  { key: 'c-rg', label: 'RG' },
+  { key: 'c-comunidade', label: 'Comunidade' },
+  { key: 'qtd', label: 'Qtd' },
+  { key: 'c-entrega', label: 'Entrega' },
+];
 </script>

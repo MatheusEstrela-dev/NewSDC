@@ -1,13 +1,10 @@
 <template>
   <div class="table-mobile-card">
-    <!-- Header: Título principal e ações -->
+    <!-- Header: titulo e subtitulo. As acoes ficam no pe do card. -->
     <div class="card-header">
       <div class="card-title-section">
         <h3 v-if="title" class="card-title">{{ title }}</h3>
         <p v-if="subtitle" class="card-subtitle">{{ subtitle }}</p>
-      </div>
-      <div v-if="$slots.actions" class="card-actions">
-        <slot name="actions"></slot>
       </div>
     </div>
 
@@ -28,7 +25,21 @@
       </div>
     </div>
 
-    <!-- Footer: Ações secundárias -->
+    <!--
+      Acoes no PE do card, nao no cabecalho.
+
+      Padrao do sistema: o RatCard e os cards de Decretacoes e PAE fecham com a
+      fileira de acoes separada por divisor. No cabecalho, os icones disputavam
+      espaco com o titulo -- que e o dado que identifica o registro -- e em
+      nome longo o titulo quebrava em tres linhas para caber ao lado deles.
+
+      No pe, tambem, o dedo alcanca sem cobrir o conteudo que acabou de ler.
+    -->
+    <div v-if="$slots.actions" class="card-actions">
+      <slot name="actions"></slot>
+    </div>
+
+    <!-- Footer: acoes secundarias, abaixo das principais. -->
     <div v-if="$slots.footer" class="card-footer">
       <slot name="footer"></slot>
     </div>
@@ -103,12 +114,10 @@ const getFieldValue = (key) => {
 }
 
 /* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .table-mobile-card {
+  :global(html.dark .table-mobile-card) {
     background: #1e293b;
     border-color: #334155;
   }
-}
 
 /* Header */
 .card-header {
@@ -121,12 +130,10 @@ const getFieldValue = (key) => {
   background: #f8fafc;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-header {
+  :global(html.dark .card-header) {
     background: #0f172a;
     border-bottom-color: #334155;
   }
-}
 
 .card-title-section {
   flex: 1;
@@ -143,11 +150,9 @@ const getFieldValue = (key) => {
   white-space: nowrap;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-title {
+  :global(html.dark .card-title) {
     color: #f1f5f9;
   }
-}
 
 .card-subtitle {
   font-size: 0.875rem;
@@ -155,17 +160,18 @@ const getFieldValue = (key) => {
   margin: 0.25rem 0 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-subtitle {
+  :global(html.dark .card-subtitle) {
     color: #94a3b8;
   }
-}
 
+/* Fileira de acoes no pe, com o mesmo tratamento do .card-footer. */
 .card-actions {
-  flex-shrink: 0;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e2e8f0;
 }
 
 /* Body */
@@ -200,11 +206,9 @@ const getFieldValue = (key) => {
   letter-spacing: 0.05em;
 }
 
-@media (prefers-color-scheme: dark) {
-  .field-label {
+  :global(html.dark .field-label) {
     color: #94a3b8;
   }
-}
 
 .field-value {
   font-size: 0.875rem;
@@ -214,11 +218,9 @@ const getFieldValue = (key) => {
   text-overflow: ellipsis;
 }
 
-@media (prefers-color-scheme: dark) {
-  .field-value {
+  :global(html.dark .field-value) {
     color: #f1f5f9;
   }
-}
 
 /* Footer */
 .card-footer {
@@ -231,12 +233,15 @@ const getFieldValue = (key) => {
   gap: 0.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-footer {
+  /* A borda da fileira de acoes acompanha o tema, como a do footer. */
+  :global(html.dark .card-actions) {
+    border-top-color: #334155;
+  }
+
+  :global(html.dark .card-footer) {
     background: #0f172a;
     border-top-color: #334155;
   }
-}
 
 /* Variantes */
 .table-mobile-card[data-variant='primary'] {

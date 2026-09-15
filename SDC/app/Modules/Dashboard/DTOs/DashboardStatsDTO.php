@@ -20,6 +20,10 @@ class DashboardStatsDTO
         public readonly array $barData12M,
         public readonly array $sparklines,
         public readonly array $planConStats,
+        // Situacao da frota do plantao. Fica na Visao Geral porque "quantas
+        // viaturas estao disponiveis agora" e pergunta de quem nem entra no
+        // modulo de Plantao -- e a informacao mais consultada da frota.
+        public readonly array $frotaStats,
     ) {}
 
     public function toArray(): array
@@ -38,6 +42,7 @@ class DashboardStatsDTO
             'barData12M'         => $this->barData12M,
             'sparklines'         => $this->sparklines,
             'planConStats'       => $this->planConStats,
+            'frotaStats'         => $this->frotaStats,
         ];
     }
 }

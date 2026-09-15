@@ -82,6 +82,8 @@ RUN composer install \
 # Copiar configuracao do Supervisor
 COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
 COPY docker/supervisor/laravel-worker.conf /etc/supervisor/conf.d/laravel-worker.conf
+# Worker dedicado do pipeline medalhao (fila propria, timeout maior).
+COPY docker/supervisor/medalhao-worker.conf /etc/supervisor/conf.d/medalhao-worker.conf
 
 # Entrypoint com a guarda de mount de anexos (mesma do app)
 COPY docker/queue/entrypoint.sh /entrypoint.sh

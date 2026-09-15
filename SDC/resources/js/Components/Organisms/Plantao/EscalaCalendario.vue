@@ -6,25 +6,43 @@
  * biblioteca de calendario um dia significa reescrever este arquivo e nenhum
  * outro.
  *
- * RESPONSIVIDADE. A grade mensal so e legivel a partir de ~1000px: sao sete
- * colunas, e cada uma precisa caber "Sgt Fulano" mais o horario. Abaixo disso a
- * visao vira `listWeek`, uma lista vertical da semana -- que e a forma como o
- * plantonista realmente consulta a escala.
+ * RESPONSIVIDADE, sempre CLICAVEL para lancar vaga:
  *
- * O corte e em `lg` (1024px), o MESMO da sidebar, e nao em `md`: entre 768 e
- * 1023px a grade ainda cabe na tela mas fica espremida a ponto de o nome nao
- * caber na celula, que era o sintoma. Um corte so para o layout inteiro tambem
- * evita a faixa em que sidebar e calendario discordam sobre o que e "tela
- * pequena".
+ *   >= 1024px  dayGridMonth   mes inteiro, sete colunas com folga
+ *   768-1023   timeGridWeek   semana com as 24h na vertical, rolando
+ *   <  768px   timeGridDay    UM dia, porque no telefone sete colunas de
+ *                             ~53px sao ruido, nao informacao
  *
- * A decisao segue o `useMobile`, que le matchMedia e nao innerWidth: e a MESMA
- * medida das media queries do Tailwind, entao o componente nunca discorda do
- * CSS ao redor.
+ * Nas duas faixas estreitas a barra traz o par de botoes Dia/Semana, para quem
+ * quiser a visao geral escolher -- em vez de ficarmos decidindo por ele. Sao os
+ * botoes NATIVOS do FullCalendar (`timeGridDay,timeGridWeek` no headerToolbar):
+ * ja vem com estado ativo e rotulo em pt-BR do locale carregado, e ocupam
+ * exatamente o canto que antes ficava vazio por causa do `today` removido.
+ *
+ * A referencia da faixa estreita e a semana do Google Agenda: sete colunas
+ * estreitas, o dia inteiro disponivel e ROLAGEM vertical em vez de recorte. As
+ * duas tentativas anteriores erraram por motivos diferentes e vale registrar:
+ *
+ *  - `listWeek` nao dispara `dateClick`. Era tela de leitura se passando por
+ *    tela de trabalho: no celular o montador nao conseguia lancar vaga.
+ *  - `timeGridDay` com as horas recortadas em 05h-23h resolvia o clique mas
+ *    desperdicava a largura toda numa coluna so, e o recorte escondia turno
+ *    que atravessa a meia-noite -- 16h-02h e 20h-08h, que sao METADE dos
+ *    horarios praticados.
+ *
+ * Agora sao as 24 horas de fato (`slotMinTime` 00:00, `slotMaxTime` 24:00), com
+ * altura fixa e rolagem interna. `scrollTime` abre em 05h para o primeiro turno
+ * do dia (06h) aparecer sem rolar, e o resto fica a um gesto de distancia.
+ *
+ * O corte e `lg`, o MESMO da sidebar, para nao existir faixa em que sidebar e
+ * calendario discordem sobre o que e "tela pequena". A decisao segue o
+ * `useMobile`, que le matchMedia e nao innerWidth: e a MESMA medida das media
+ * queries do Tailwind, entao o componente nunca discorda do CSS ao redor.
  */
 import { useMobile } from '@/Composables/useMobile';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import listPlugin from '@fullcalendar/list';
+import timeGridPlugin from '@fullcalendar/timegrid';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 import FullCalendar from '@fullcalendar/vue3';
 import { computed, ref, watch } from 'vue';
@@ -49,23 +67,26 @@ const props = defineProps({
 const emit = defineEmits(['selecionar-dia', 'selecionar-vaga', 'mudar-mes']);
 
 const calendarRef = ref(null);
-const { isDesktop } = useMobile();
+const { isMobile, isDesktop } = useMobile();
 
-// Lista semanal em tudo que nao for desktop: mobile E tablet.
-const usaLista = computed(() => !isDesktop.value);
+// Telefone e tablet: grade de horas. Desktop: mes.
+const telaEstreita = computed(() => !isDesktop.value);
 
-const viewInicial = computed(() => (usaLista.value ? 'listWeek' : 'dayGridMonth'));
+const viewAlvo = computed(() => {
+  if (isMobile.value) return 'timeGridDay';
+  if (telaEstreita.value) return 'timeGridWeek';
+  return 'dayGridMonth';
+});
 
 /**
  * Troca a visao quando o dispositivo cruza o breakpoint -- girar o telefone,
  * redimensionar a janela. `initialView` so vale na montagem, entao sem este
  * watch a grade mensal ficaria presa numa tela estreita.
  */
-watch(usaLista, (lista) => {
+watch(viewAlvo, (alvo) => {
   const api = calendarRef.value?.getApi();
   if (!api) return;
 
-  const alvo = lista ? 'listWeek' : 'dayGridMonth';
   if (api.view.type !== alvo) api.changeView(alvo);
 });
 
@@ -91,30 +112,60 @@ const aoClicarEvento = (info) => {
 
 const aoClicarDia = (info) => {
   if (!props.podeMontar) return;
-  emit('selecionar-dia', info.dateStr);
+
+  // `dateStr` vem como data pura no dayGrid ("2026-08-28") mas com hora e fuso
+  // no timeGrid ("2026-08-28T06:00:00-03:00"). O modal alimenta um input
+  // type=date, que rejeita a segunda forma em silencio -- o campo abriria
+  // vazio. O recorte serve as duas.
+  emit('selecionar-dia', info.dateStr.slice(0, 10));
 };
 
 const opcoes = computed(() => ({
-  plugins: [dayGridPlugin, listPlugin, interactionPlugin],
+  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   locale: ptBrLocale,
-  initialView: viewInicial.value,
+  initialView: viewAlvo.value,
   initialDate: props.dataInicial,
   events: props.eventos,
   headerToolbar: {
     left: 'prev,next',
     center: 'title',
-    right: usaLista.value ? '' : 'today',
+    // O par Dia/Semana substitui o `today`, que nao cabia junto do titulo em
+    // tela estreita. No desktop o mes ja mostra tudo e `today` volta a ser o
+    // que faz falta.
+    right: telaEstreita.value ? 'timeGridDay,timeGridWeek' : 'today',
   },
-  // Altura fixa quebra em telefone: o conteudo da lista semanal varia muito.
-  height: 'auto',
+  // Altura FIXA na faixa estreita: e o que cria a rolagem interna das 24h.
+  // Com 'auto' o calendario cresceria para a altura do dia inteiro e a pagina
+  // toda passaria a rolar, empurrando cards e filtros para longe. No desktop o
+  // mes tem altura previsivel e 'auto' continua melhor.
+  height: telaEstreita.value ? 560 : 'auto',
   // Sem isto, um dia com tres turnos estica a celula e desalinha a grade.
-  dayMaxEvents: usaLista.value ? false : 3,
+  dayMaxEvents: telaEstreita.value ? false : 3,
   moreLinkContent: (args) => `+${args.num}`,
   firstDay: 0,
   // Some o cabecalho de horario duplicado: a hora ja vai no titulo do evento.
-  displayEventTime: !usaLista.value,
+  displayEventTime: true,
+  // 24 horas de verdade. Recortar escondia turno que atravessa a meia-noite --
+  // 16h-02h e 20h-08h sao metade dos horarios praticados no CEDEC.
+  slotMinTime: '00:00:00',
+  slotMaxTime: '24:00:00',
+  slotDuration: '01:00:00',
+  slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+  // Abre em 05h: o primeiro turno comeca as 06h e aparece sem rolar.
+  scrollTime: '05:00:00',
+  // expandRows FALSE de proposito: com true as linhas se esticam para preencher
+  // a altura e a rolagem desaparece, que e o oposto do pedido.
+  expandRows: false,
+  allDaySlot: false,
+  nowIndicator: true,
+  // "dom 31" em vez de "domingo, 31 de agosto": sao sete colunas estreitas.
+  dayHeaderFormat: telaEstreita.value
+    ? { weekday: 'short', day: 'numeric', omitCommas: true }
+    : { weekday: 'short' },
+  // Rotulos curtos: "Semana" e "Dia" inteiros estouram a barra em 375px.
+  buttonText: { day: 'Dia', week: 'Semana' },
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-  noEventsContent: 'Nenhum plantao escalado nesta semana.',
+  noEventsContent: 'Nenhum plantao escalado neste periodo.',
   datesSet: aoMudarIntervalo,
   eventClick: aoClicarEvento,
   dateClick: aoClicarDia,
@@ -152,15 +203,28 @@ const opcoes = computed(() => ({
   font-weight: 600;
 }
 
-/* Barra de ferramentas empilha no telefone em vez de espremer os botoes. */
+/*
+ * Barra de ferramentas no telefone: continua em linha, mas com wrap.
+ *
+ * Empilhar em coluna era aceitavel com dois grupos (setas + titulo); com o par
+ * Dia/Semana viraram tres, e a coluna comia tres linhas de altura antes do
+ * calendario aparecer. Em linha com wrap, as setas e o par de visao dividem a
+ * primeira linha e o titulo desce so quando nao cabe.
+ */
 @media (max-width: 767px) {
   .escala-calendario :deep(.fc .fc-toolbar) {
-    flex-direction: column;
-    gap: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.375rem;
   }
 
   .escala-calendario :deep(.fc .fc-toolbar-title) {
-    font-size: 1rem;
+    font-size: 0.9375rem;
+  }
+
+  /* Rotulos curtos ("Dia"/"Semana") nao precisam do padding de botao largo. */
+  .escala-calendario :deep(.fc .fc-button) {
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.8125rem;
   }
 }
 

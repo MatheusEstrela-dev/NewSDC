@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Novo Processo" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Novo Processo TDAP"
       description="Abre o processo em estado RASCUNHO (swimlane Fomentação)"

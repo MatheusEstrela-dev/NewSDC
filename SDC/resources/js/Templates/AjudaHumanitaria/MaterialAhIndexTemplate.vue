@@ -16,7 +16,7 @@
             icon-position="left"
             @click="$emit('novo')"
           >
-            <span class="hidden sm:inline">Novo material</span>
+            <span>Novo material</span>
           </Button>
 
           <Button

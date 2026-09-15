@@ -160,6 +160,9 @@ Route::middleware('auth')->group(function () {
     // Módulo: Compdec (Órgãos e Competências)
     require __DIR__ . '/modules/compdec.php';
 
+    // Módulo: CEDEC (cadastro estadual de prefeituras)
+    require __DIR__ . '/modules/cedec.php';
+
     // Módulo: Demandas
     require __DIR__ . '/modules/demandas.php';
 
@@ -185,6 +188,8 @@ Route::middleware('auth')->group(function () {
     require __DIR__ . '/modules/rat.php';
     require __DIR__ . '/modules/plancon.php';
     require __DIR__ . '/modules/inmet.php';
+    require __DIR__ . '/modules/geoespacial.php';
+    require __DIR__ . '/modules/sismos.php';
 });
 
 require __DIR__ . '/auth.php';

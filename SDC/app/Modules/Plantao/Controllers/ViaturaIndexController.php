@@ -26,7 +26,7 @@ class ViaturaIndexController extends Controller
 
     public function __invoke(Request $request): Response
     {
-        $filters = $request->only(['status', 'localizacao', 'ativo', 'search']);
+        $filters = $request->only(['status', 'localizacao', 'ativo', 'search', 'reservada']);
 
         $viaturas = $this->viaturaService->list($filters, 15);
         $user = $request->user();
@@ -61,26 +61,56 @@ class ViaturaIndexController extends Controller
             // plantao_viatura_movimentacoes.plantao_id nascia sempre NULL e se
             // perdia a resposta a "quem estava de servico quando a viatura
             // avariou" (spec 1.1). Dado irrecuperavel depois.
-            'plantaoAtivoId' => $this->plantaoAtivoId(),
+            'plantaoAtivoId' => $this->plantaoAtivo()?->id,
+            // O MESMO turno, com rotulo, so para a tela poder MOSTRAR a que
+            // plantao a saida esta sendo amarrada. Automatismo invisivel vira
+            // desconfianca: o usuario precisa ver o que o sistema preencheu.
+            'plantaoAtivoRotulo' => $this->plantaoAtivo()?->rotuloProtocolo(),
+            // Condutor padrao: quem esta logado. A lista de condutores continua
+            // existindo porque o supervisor as vezes registra a saida de outra
+            // pessoa no balcao, e travar o campo gravaria o condutor errado --
+            // e condutor e a resposta a "quem estava com a viatura".
+            'usuarioAtual' => $user === null ? null : [
+                'value' => $user->id,
+                'label' => $user->name,
+            ],
             'canCreate' => (bool) $user?->can('plantao.viaturas.create'),
             'canEdit' => (bool) $user?->can('plantao.viaturas.edit'),
             'canDelete' => (bool) $user?->can('plantao.viaturas.delete'),
             'canMovimentar' => (bool) $user?->can('plantao.viaturas.movimentar'),
+            'canReservar' => (bool) $user?->can('plantao.reservas.view'),
+            // Emitir a etiqueta do chaveiro decide qual token abre aquela
+            // chave, e ?rotacionar=1 invalida as ja coladas: `manage`, nao
+            // `viaturas.edit`.
+            'canQrCode' => (bool) $user?->can('plantao.reservas.manage'),
         ]);
     }
 
     /**
      * Turno ATIVO mais recente, ou null. Nulo e caso legitimo: registrar saida
      * nao exige turno aberto - a amarracao e melhor-esforco, nao guarda.
+     *
+     * Memorizado porque e consultado duas vezes na montagem da pagina (id e
+     * rotulo) e a resposta e a mesma dentro da request.
      */
-    private function plantaoAtivoId(): ?int
+    private ?Plantao $plantaoAtivoCache = null;
+
+    private bool $plantaoAtivoResolvido = false;
+
+    private function plantaoAtivo(): ?Plantao
     {
-        $id = Plantao::query()
+        if ($this->plantaoAtivoResolvido) {
+            return $this->plantaoAtivoCache;
+        }
+
+        $this->plantaoAtivoResolvido = true;
+        $this->plantaoAtivoCache = Plantao::query()
+            ->with('tipoTurno')
             ->where('status', StatusPlantao::ATIVO->value)
             ->orderByDesc('data')
             ->orderByDesc('id')
-            ->value('id');
+            ->first();
 
-        return $id === null ? null : (int) $id;
+        return $this->plantaoAtivoCache;
     }
 }

@@ -158,6 +158,21 @@ return [
         // servidos por rota autenticada plancon.planos.download.
         'plancon' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_PLANCON', 'sdc-plancon'), 'PLANCON', 'app/plancon'),
 
+        // Camada Bronze do medalhao arquivada em Parquet, particionada por
+        // fonte e dia. Nao e anexo de usuario: e historico bruto imutavel,
+        // lido por ferramental de dados (pandas/Power BI), nunca servido via web.
+        'medalhao' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_MEDALHAO', 'sdc-medalhao'), 'MEDALHAO', 'app/medalhao'),
+
+        // Arquivo COMO O MUNICIPIO ENVIOU -- inclusive o KMZ compactado. E o
+        // artefato auditavel: sem ele nao ha como provar depois o que o
+        // municipio mandou, porque o Bronze guarda o KML ja extraido do ZIP.
+        //
+        // Nao ganha mount proprio: segue o desenho desta config, um mount
+        // fisico em ANEXOS_ROOT com subpasta por modulo. Nunca servido via web
+        // (sem $localUrl): geometria de area de risco enviada por terceiro nao
+        // deve ser publica por URL adivinhavel.
+        'geo_municipal' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_GEO_MUNICIPAL', 'sdc-geo-municipal'), 'GEO_MUNICIPAL', 'app/geo-municipal'),
+
     ],
 
     /*

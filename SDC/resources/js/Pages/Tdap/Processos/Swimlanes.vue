@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Swimlanes" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Swimlanes — Processos abertos"
       description="Kanban por raia/responsável (Fomentação → Encerrado)"

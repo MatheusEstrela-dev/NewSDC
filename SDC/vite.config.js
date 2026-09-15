@@ -160,11 +160,21 @@ export default defineConfig({
                         // esta linha o vendor-other subiu para 551 KB e o
                         // calendario passou a ser baixado ate por quem nunca
                         // abre a escala.
+                        //
+                        // pusher-js e laravel-echo entram aqui porque o
+                        // manualChunks GANHA do code-splitting: o initEcho os
+                        // importa por import() dinamico, mas nomear o chunk
+                        // 'vendor-other' -- que o entry referencia -- puxava os
+                        // dois para o carregamento eager de toda pagina. Medido:
+                        // com eles no vendor-other o chunk eager era 421 KB,
+                        // mesmo depois de remover o import estatico do
+                        // resources/js/echo.js.
                         if (
                             id.includes('apexcharts') ||
                             id.includes('leaflet') ||
                             id.includes('fullcalendar') ||
-                            id.includes('vuedraggable') || id.includes('sortablejs')
+                            id.includes('vuedraggable') || id.includes('sortablejs') ||
+                            id.includes('pusher-js') || id.includes('laravel-echo')
                         ) {
                             return undefined;
                         }

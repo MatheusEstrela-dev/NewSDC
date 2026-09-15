@@ -32,6 +32,7 @@ export const ICONS = {
 // Mapa modulo -> icone (confirmado pelo usuario).
 export const MODULE_ICONS = {
   orgaos: officeBuilding,
+  prefeituras: apartment,
   estoque: box,
   decretacoes: chart,
   cisternas: cistern,

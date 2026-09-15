@@ -197,7 +197,7 @@ function remover(anexo) {
 
 <template>
   <Modal :show="show" max-width="5xl" @close="fechar">
-    <div class="flex max-h-[88vh] flex-col overflow-hidden bg-white dark:bg-slate-900">
+    <div class="flex max-h-full flex-col overflow-hidden bg-white dark:bg-slate-900">
       <div v-if="ausenciaForm.processing" class="h-1 w-full overflow-hidden bg-slate-200 dark:bg-slate-700"><div class="h-full w-1/2 animate-pulse rounded-r-full bg-blue-600" /></div>
       <header class="flex items-start justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 px-6 py-5 dark:border-slate-700/50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900">
         <div class="flex min-w-0 items-start gap-3">

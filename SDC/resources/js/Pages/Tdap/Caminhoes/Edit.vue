@@ -1,6 +1,6 @@
 <template>
   <Head :title="`TDAP — ${caminhao.data.placa}`" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       :title="`Editar: ${caminhao.data.placa}`"
       :description="`${caminhao.data.marca || ''} ${caminhao.data.modelo || ''}`.trim() || 'Caminhão-tanque'"

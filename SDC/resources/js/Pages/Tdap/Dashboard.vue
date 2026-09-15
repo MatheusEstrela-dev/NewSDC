@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Dashboard" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="TDAP — Transporte e Distribuição de Água Potável"
       description="Gestão de cronogramas, prestadores, caminhões-tanque, vistorias e viagens"

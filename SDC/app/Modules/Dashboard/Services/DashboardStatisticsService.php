@@ -14,6 +14,8 @@ use App\Modules\Demandas\Models\Task;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\PlanCon\Services\PlanoContingenciaService;
+use App\Modules\Plantao\Models\Viatura;
+use App\Modules\Plantao\Services\ViaturaService;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -98,6 +100,7 @@ class DashboardStatisticsService
             barData12M:         $partes['bar12'],
             sparklines:         $partes['sparklines'],
             planConStats:       $this->planConStats->getStatistics(),
+            frotaStats:         $this->frotaStats(),
         );
     }
 
@@ -317,6 +320,35 @@ class DashboardStatisticsService
             : 0;
     }
 
+    /**
+     * Situacao da frota para a Visao Geral.
+     *
+     * Delega ao ViaturaService em vez de recontar aqui: ele e quem sabe que
+     * viatura DISPONIVEL com reserva agendada NAO conta como disponivel, e
+     * duplicar essa regra no dashboard faria as duas telas discordarem sobre
+     * quantos carros estao livres.
+     *
+     * tableExists porque a Visao Geral carrega em ambiente que pode nao ter o
+     * modulo migrado -- mesmo cuidado dos demais blocos deste servico.
+     *
+     * @return array<string, int>
+     */
+    private function frotaStats(): array
+    {
+        $vazio = ['total' => 0, 'disponiveis' => 0, 'reservadas' => 0, 'em_transito' => 0, 'indisponiveis' => 0];
+
+        if (!$this->tableExists(Viatura::class)) {
+            return $vazio;
+        }
+
+        try {
+            return app(ViaturaService::class)->getStatistics();
+        } catch (\Throwable) {
+            // A Visao Geral nao pode cair por causa de um bloco de modulo.
+            return $vazio;
+        }
+    }
+
     private function tableExists(string $modelClass): bool
     {
         $table = (new $modelClass())->getTable();
@@ -346,6 +378,7 @@ class DashboardStatisticsService
             barData12M:         $this->emptyMonthlyData(12),
             sparklines:         [],
             planConStats:       $this->planConStats->getStatistics(),
+            frotaStats:         $this->frotaStats(),
         );
     }
 

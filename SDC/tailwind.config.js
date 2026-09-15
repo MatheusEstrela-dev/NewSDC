@@ -18,6 +18,9 @@ export default {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
             screens: {
+                // Telefone estreito (Galaxy S8/SE e afins). Abaixo daqui nao
+                // cabe rotulo em campo da TopBar: a busca vira so a lupa.
+                'xxs': '350px',
                 'xs': '475px',
                 // sm: 640px (padrão Tailwind)
                 // md: 768px (padrão Tailwind)

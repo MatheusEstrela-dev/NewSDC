@@ -74,6 +74,15 @@ class PlantaoIndexController extends Controller
             // interface -- o mesmo furo (F-6) da release anterior, em que a
             // maquina de estados nao tinha porta de entrada.
             'canEscala' => (bool) $user?->can('plantao.escala.view'),
+            // Os tres abaixo fecham pontos de entrada que estavam sem slug: os
+            // botoes Noticias e Frota eram renderizados para todo mundo e
+            // levavam a rotas com `can:`, entao quem nao tinha a permissao
+            // recebia 403 depois do clique em vez de nao ver o botao.
+            'canNoticias' => (bool) $user?->can('plantao.turnos.view'),
+            'canFrota' => (bool) $user?->can('plantao.viaturas.view'),
+            // Leitor da etiqueta do chaveiro. Mesmo slug da rota /chave/scan:
+            // retirar e devolver chave e movimentar viatura.
+            'canLerChave' => (bool) $user?->can('plantao.viaturas.movimentar'),
         ]);
     }
 

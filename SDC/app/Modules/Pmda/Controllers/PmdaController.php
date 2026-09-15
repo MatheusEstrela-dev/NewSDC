@@ -153,7 +153,16 @@ class PmdaAnaliseController extends Controller
             'solicitacoes' => ComunidadeSolicitacaoResource::collection($partes['solicitacoes']->withPath($path)),
             'filtros'      => $filtros,
             'municipios'   => $partes['municipios'],
-            'perfil'       => ['e_compdec' => $perfil->eCompdec(), 'e_cedec' => $perfil->eCedec()],
+            // `municipio_escopo` alimenta o canal de tempo real, e vem do
+            // SERVIDOR de proposito: o cliente nao sabe resolver o recorte de
+            // perfil, e adivinhar erra justamente para o super-admin lotado num
+            // COMPDEC, que grava num municipio e le o estado inteiro. Null aqui
+            // significa "le tudo", e a pagina assina o canal `todos`.
+            'perfil'       => [
+                'e_compdec'       => $perfil->eCompdec(),
+                'e_cedec'         => $perfil->eCedec(),
+                'municipio_escopo' => $perfil->municipioDoEscopo(),
+            ],
         ]);
     }
 

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Notificacoes\Console;
 
 use App\Modules\Notificacoes\Models\Notificacao;
+use App\Modules\Notificacoes\Services\ArquivadorDeNotificacoes;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Move notificacoes com mais de N dias para notifications_archive.
@@ -50,35 +50,9 @@ class ArquivarNotificacoesCommand extends Command
 
         $this->info("Arquivando notificacoes criadas antes de {$corte->toDateTimeString()}");
 
-        $movidas = 0;
-
-        // chunkById em vez de chunk: as linhas somem da consulta a cada lote, e a
-        // paginacao por offset pularia registros.
-        $alvos->orderBy('id')->chunkById($lote, function ($batch) use (&$movidas): void {
-            $linhas = $batch->map(fn (Notificacao $n): array => [
-                'id' => $n->id,
-                'type' => $n->type,
-                'notifiable_type' => $n->notifiable_type,
-                'notifiable_id' => $n->notifiable_id,
-                'data' => is_array($n->data) ? json_encode($n->data, JSON_UNESCAPED_UNICODE) : $n->data,
-                'group_key' => $n->group_key,
-                'group_bucket' => $n->group_bucket,
-                'group_count' => $n->group_count,
-                'last_event_at' => $n->last_event_at,
-                'read_at' => $n->read_at,
-                'created_at' => $n->created_at,
-                'updated_at' => $n->updated_at,
-                'archived_at' => now(),
-            ])->all();
-
-            // Inserir e remover na mesma transacao: ou a linha esta no arquivo, ou
-            // segue no inbox. Nunca nos dois, nunca em nenhum.
-            DB::transaction(function () use ($batch, $linhas, &$movidas): void {
-                DB::table('notifications_archive')->insertOrIgnore($linhas);
-                Notificacao::query()->whereIn('id', $batch->pluck('id'))->delete();
-                $movidas += count($linhas);
-            });
-        });
+        // A rotina de insert-e-delete vive no servico: o botao "Limpar" do sino
+        // usa exatamente a mesma, recortando por destinatario em vez de idade.
+        $movidas = app(ArquivadorDeNotificacoes::class)->arquivar($alvos, $lote);
 
         $this->info("Arquivadas: {$movidas}");
 

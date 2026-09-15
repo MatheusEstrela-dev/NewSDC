@@ -177,6 +177,41 @@ export function useNotifications() {
         }
     };
 
+    /**
+     * Esvazia o sino.
+     *
+     * ARQUIVA no servidor, nao apaga: as linhas vao para
+     * notifications_archive e seguem no historico completo. O que desaparece e
+     * a caixa quente, que e o que o usuario pediu.
+     *
+     * Optimista com rollback: a lista some na hora e volta inteira se o
+     * servidor recusar. `etag = null` obriga a proxima consulta a trazer corpo
+     * em vez de 304 -- sem isso o painel reexibiria o que acabou de limpar.
+     */
+    const clearAll = async () => {
+        if (notifications.value.length === 0) return;
+
+        const anteriores = notifications.value.slice();
+        const contagemAnterior = unreadCount.value;
+
+        notifications.value = [];
+        unreadCount.value = 0;
+        etag = null;
+
+        try {
+            await window.axios.post('/notificacoes/limpar');
+        } catch (e) {
+            notifications.value = anteriores;
+            unreadCount.value = contagemAnterior;
+
+            // Sem este log a falha era MUDA: a lista voltava inteira e o
+            // usuario via "nao limpou", sem nada no console apontando o 500 do
+            // servidor. Foi exatamente o que aconteceu quando o endpoint subiu
+            // com o classmap velho nos workers do Octane.
+            console.error('[notificacoes] falha ao limpar; lista restaurada', e);
+        }
+    };
+
     const iniciarPolling = (intervalo = INTERVALO_POLLING_MS) => {
         if (pollingHandle) return;
 
@@ -332,6 +367,7 @@ export function useNotifications() {
         markAsRead,
         markGroupAsRead,
         markAllAsRead,
+        clearAll,
         start,
         stop,
         // Aliases: o painel atual chama startPolling/stopPolling.

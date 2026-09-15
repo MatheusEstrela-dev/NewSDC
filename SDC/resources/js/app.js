@@ -193,7 +193,18 @@ const registerServiceWorker = async () => {
             const { registerSW } = await import('virtual:pwa-register');
             registerSW({
                 immediate: true,
-                scope: '/',
+                // SEM `scope: '/'`. O worker e servido de /build/sw.js, e um
+                // worker so pode reivindicar escopo igual ou abaixo do proprio
+                // diretorio -- pedir '/' exige o header Service-Worker-Allowed,
+                // que o Swoole nao envia ao servir o arquivo estatico. O
+                // register() lancava SecurityError, o catch abaixo engolia em
+                // silencio, e o app ficava com ZERO workers registrados: era o
+                // que deixava o push preso em "o servico ainda nao esta pronto",
+                // sem nada no console para denunciar.
+                //
+                // Com o escopo padrao (/build/) o registro passa e o push
+                // funciona -- a inscricao pertence ao registro, nao a pagina,
+                // como o useWebPush ja documentava.
                 onRegistered(registration) {
                     if (!registration) return;
 
@@ -220,7 +231,11 @@ const registerServiceWorker = async () => {
                 },
             });
         } catch (e) {
-            // Service Worker registration failed silently
+            // NAO silencioso. Falha de registro derruba push e cache offline de
+            // uma vez, e sem este aviso o sintoma aparece longe da causa -- o
+            // botao de push dizendo "o servico ainda nao esta pronto", sem nada
+            // no console explicando por que nao ha worker nenhum.
+            console.warn('[SW] registro falhou; push e cache offline ficam indisponiveis.', e);
         }
     }
 };

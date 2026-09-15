@@ -349,6 +349,16 @@ return [
                 // o plantao nao precisa de `edit` so para movimentar.
                 'movimentar' => 'plantao.viaturas.movimentar',
             ],
+            'Reservas' => [
+                'view' => 'plantao.reservas.view',
+                // Reservar para SI. O agente comum tem este slug: a agenda so
+                // funciona se quem usa a viatura conseguir agenda-la sozinho.
+                'create' => 'plantao.reservas.create',
+                // Mexer em reserva ALHEIA: cancelar a de outra pessoa para
+                // liberar a viatura, e emitir/rotacionar a etiqueta do chaveiro.
+                // Supervisao -- o agente comum cancela apenas a propria.
+                'manage' => 'plantao.reservas.manage',
+            ],
             'Escala' => [
                 'view' => 'plantao.escala.view',
                 'create' => 'plantao.escala.create',
@@ -394,6 +404,31 @@ return [
                 'logs' => 'webhooks.logs.view',
             ],
         ],
+        'Geoespacial' => [
+            'Camadas' => [
+                'view' => 'geoespacial.camadas.view',
+                // Envio municipal. Alem desta permissao, o usuario precisa de
+                // vinculo com um COMPDEC que tenha municipio_id: sem municipio
+                // nao ha a quem atribuir a camada, e o envio e recusado com
+                // essa razao explicita em vez de gravar orfao.
+                'enviar' => 'geoespacial.camadas.enviar',
+                // Aprovar e recusar. Separada de 'enviar' de proposito: quem
+                // envia nao revisa o proprio envio.
+                'revisar' => 'geoespacial.camadas.revisar',
+                // Metadados apenas: nome, dominio, nivel e datas. A GEOMETRIA
+                // nao e editavel por permissao nenhuma -- ela e a identidade da
+                // camada (hash_arquivo UNIQUE) e vem do arquivo. Corrigir area
+                // e enviar outro KML.
+                'edit' => 'geoespacial.camadas.edit',
+                // Retirar do mapa sem apagar o historico. Nao ha 'delete' neste
+                // modulo de proposito: camada aprovada esteve no mapa de
+                // plantao e pode ter embasado decisao, entao a linha fica.
+                'arquivar' => 'geoespacial.camadas.arquivar',
+                // Baixar o KML/KMZ como o municipio enviou. So existe para
+                // camada de origem municipal -- a estadual nao guarda original.
+                'export' => 'geoespacial.camadas.export',
+            ],
+        ],
         'COMPDEC' => [
             'Orgaos' => [
                 'view'   => 'compdec.orgaos.view',
@@ -430,6 +465,19 @@ return [
             'Usuarios' => [
                 'manage' => 'compdec.usuarios.manage',
                 'desvincular' => 'compdec.usuarios.desvincular',
+            ],
+        ],
+        // Cadastro estadual de prefeituras, visto pela CEDEC: os 853 municipios,
+        // inclusive os que ainda nao tem linha em compdec_prefeituras. Distinto de
+        // COMPDEC > Prefeitura, que e a aba onde o proprio municipio preenche a sua.
+        'CEDEC' => [
+            'Prefeituras' => [
+                'view' => 'cedec.prefeituras.view',
+                'edit' => 'cedec.prefeituras.edit',
+                'export' => 'cedec.prefeituras.export',
+            ],
+            'Contatos' => [
+                'view' => 'cedec.contatos.view',
             ],
         ],
         // Painel estadual de cobertura + envio do plano pelo proprio municipio.
@@ -568,10 +616,12 @@ return [
             'system.*',
             'cisternas.*',
             'compdec.*',
+            'cedec.*',
             'inventario.*',
             'estoque.*',
             'pmda.*',
             'plancon.*',
+            'geoespacial.*',
         ],
         'manager' => [
             // PAE - CRUD completo exceto delete
@@ -688,6 +738,11 @@ return [
             'plantao.viaturas.create',
             'plantao.viaturas.edit',
             'plantao.viaturas.movimentar',
+            'plantao.reservas.view',
+            'plantao.reservas.create',
+            // Cancelar reserva alheia e emitir a etiqueta do chaveiro: mesmo
+            // perfil de supervisao que encerra turno alheio logo abaixo.
+            'plantao.reservas.manage',
             'plantao.passagem.encerrar',
             // Manager e o perfil de supervisao do modulo (Gestor de area, "pode
             // aprovar e gerenciar modulos"): unico alem do admin que encerra
@@ -735,6 +790,15 @@ return [
             'plancon.view',
             'plancon.upload',
             'plancon.download',
+            // GEOESPACIAL - papel da CEDEC. Alem de enviar, revisa e retira do
+            // mapa: mesma altura de pmda.analise.aprovar e .arquivar, que
+            // tambem param aqui. Aprovar area de risco e ato de supervisao.
+            'geoespacial.camadas.view',
+            'geoespacial.camadas.enviar',
+            'geoespacial.camadas.edit',
+            'geoespacial.camadas.export',
+            'geoespacial.camadas.revisar',
+            'geoespacial.camadas.arquivar',
             // COMPDEC - sem delete e sem aprovar
             'compdec.orgaos.view',
             'compdec.orgaos.create',
@@ -742,6 +806,14 @@ return [
             'compdec.orgaos.export',
             'compdec.prefeitura.view',
             'compdec.prefeitura.edit',
+
+            // CEDEC - cadastro estadual de prefeituras (os 853 municipios).
+            // Mesmo critério de compdec.prefeitura.*: perfis municipais nao recebem.
+            'cedec.prefeituras.view',
+            'cedec.prefeituras.edit',
+            'cedec.prefeituras.export',
+            'cedec.contatos.view',
+
             'compdec.equipe.view',
             'compdec.equipe.create',
             'compdec.equipe.edit',
@@ -798,6 +870,18 @@ return [
             'pmda.analise.pedir_alteracao',
         ],
         'analyst' => [
+            // GEOESPACIAL - papel do municipio que envia E corrige. Sem
+            // revisar nem arquivar: quem envia nao aprova o proprio envio, e
+            // retirar area do mapa estadual e da CEDEC.
+            //
+            // 'edit' entra de proposito: sem ele o municipio recusado nao tem
+            // como corrigir, porque reenviar o mesmo arquivo esbarra no dedup
+            // por hash. O recorte de "so a propria, e so pendente ou recusada"
+            // e feito por Support/AcessoACamada, e nao pela permissao.
+            'geoespacial.camadas.view',
+            'geoespacial.camadas.enviar',
+            'geoespacial.camadas.edit',
+            'geoespacial.camadas.export',
             // PAE - view, create, edit
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
@@ -874,6 +958,9 @@ return [
             'plantao.viaturas.create',
             'plantao.viaturas.edit',
             'plantao.viaturas.movimentar',
+            'plantao.reservas.view',
+            'plantao.reservas.create',
+            'plantao.reservas.manage',
             'plantao.passagem.encerrar',
             'plantao.passagem.aceitar',
             'plantao.passagem.relatorio',
@@ -905,6 +992,13 @@ return [
             'compdec.orgaos.edit',
             'compdec.prefeitura.view',
             'compdec.prefeitura.edit',
+
+            // CEDEC - cadastro estadual de prefeituras (os 853 municipios).
+            'cedec.prefeituras.view',
+            'cedec.prefeituras.edit',
+            'cedec.prefeituras.export',
+            'cedec.contatos.view',
+
             'compdec.equipe.view',
             'compdec.equipe.create',
             'compdec.equipe.edit',
@@ -938,6 +1032,13 @@ return [
             'estoque.inventarios.create',
         ],
         'operator' => [
+            // GEOESPACIAL - envia e baixa o proprio arquivo, mas nao edita:
+            // a descricao do papel e "visualizar e criar registros basicos", e
+            // corrigir metadado de camada ja publicada nao e basico. Quem
+            // corrige envio recusado e o analista.
+            'geoespacial.camadas.view',
+            'geoespacial.camadas.enviar',
+            'geoespacial.camadas.export',
             // PAE - view, create
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
@@ -990,6 +1091,10 @@ return [
             'plantao.turnos.create',
             'plantao.viaturas.view',
             'plantao.viaturas.create',
+            // So leitura da agenda: sem `plantao.viaturas.movimentar` este
+            // perfil nao retira chave, entao criar reserva daria a ele uma
+            // agenda que nao consegue usar.
+            'plantao.reservas.view',
             'plantao.passagem.relatorio',
             'plantao.escala.view',
             // BI - view
@@ -1023,6 +1128,8 @@ return [
             'estoque.movimentacoes.history',
         ],
         'viewer' => [
+            // GEOESPACIAL - so leitura do mapa estadual.
+            'geoespacial.camadas.view',
             // Somente visualizacao em todos os modulos
             'pae.empreendimentos.view',
             'pae.protocolos.view',

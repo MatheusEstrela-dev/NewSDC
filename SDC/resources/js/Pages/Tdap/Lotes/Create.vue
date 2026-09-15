@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Novo Lote" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Novo Lote"
       description="Cadastrar lote de fornecimento (ata + municípios + prestador)"

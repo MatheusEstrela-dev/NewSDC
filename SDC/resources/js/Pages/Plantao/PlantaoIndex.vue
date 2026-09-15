@@ -53,6 +53,20 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Vindos do PlantaoIndexController via $user->can(), que enxerga permissao de
+  // cargo E permissao extra do usuario.
+  canNoticias: {
+    type: Boolean,
+    default: false,
+  },
+  canFrota: {
+    type: Boolean,
+    default: false,
+  },
+  canLerChave: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const handleView = (id) => {
@@ -136,6 +150,9 @@ const confirmarExclusao = () => {
     :can-aceitar="canAceitar"
     :can-relatorio="canRelatorio"
     :can-escala="canEscala"
+    :can-noticias="canNoticias"
+    :can-frota="canFrota"
+    :can-ler-chave="canLerChave"
     @view="handleView"
     @edit="handleEdit"
     @delete="pedirExclusao"

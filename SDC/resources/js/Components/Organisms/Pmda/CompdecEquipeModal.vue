@@ -100,7 +100,7 @@ function excluir(m) {
 
 <template>
   <Modal :show="show" max-width="5xl" @close="$emit('close')">
-    <div class="flex max-h-[90vh] flex-col overflow-hidden">
+    <div class="flex max-h-full flex-col overflow-hidden">
       <div v-if="form.processing || acaoBusy" class="h-1 w-full overflow-hidden bg-slate-200 dark:bg-slate-700"><div class="h-full w-1/2 animate-pulse rounded-r-full bg-blue-600" /></div>
       <!-- Header -->
       <div class="flex items-start justify-between border-b border-slate-200 bg-gradient-to-r from-slate-100 to-slate-200 px-6 py-4 dark:border-slate-700/50 dark:from-slate-800 dark:to-slate-900">

@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Listeners\PermissionEventSubscriber;
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\Rat\Models\RatOcorrencia;
+use App\Modules\Rat\Observers\RatOcorrenciaObserver;
 use App\Observers\RoleObserver;
 use App\Observers\UserObserver;
 use App\Services\Logging\ActivityLogger;
@@ -25,6 +27,11 @@ class EventServiceProvider extends ServiceProvider
     {
         User::observe(UserObserver::class);
         Role::observe(RoleObserver::class);
+
+        // Tempo real da listagem de protocolos. Observer, e nao dispatch no
+        // servico, porque o RAT nao tem ponto unico de escrita -- ver o
+        // cabecalho de RatOcorrenciaObserver.
+        RatOcorrencia::observe(RatOcorrenciaObserver::class);
 
         Event::listen(Registered::class, SendEmailVerificationNotification::class);
 

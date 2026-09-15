@@ -4,7 +4,8 @@ import CombustivelGauge from '@/Components/Atoms/Plantao/CombustivelGauge.vue';
 import HodometroBadge from '@/Components/Atoms/Plantao/HodometroBadge.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 
-defineProps({
+// Nomeado porque acoesDe() le as permissoes fora do template.
+const props = defineProps({
   viaturas: {
     type: Array,
     default: () => [],
@@ -21,9 +22,15 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  // Emitir a etiqueta do chaveiro define qual token abre a chave daquela
+  // viatura: fica sob `plantao.reservas.manage`, nao sob `viaturas.view`.
+  canQrCode: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['edit', 'delete', 'movimentacao']);
+const emit = defineEmits(['edit', 'delete', 'movimentacao', 'qrcode']);
 
 // Cor por status literal no .vue: Tailwind nao escaneia app/**/*.php, entao o
 // backend so manda o valor cru (status_valor) e o mapa fica aqui.
@@ -33,9 +40,41 @@ const CORES_STATUS = {
   MANUTENCAO: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
   CEDIDA: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300',
   INDISPONIVEL: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  // Nao existe no enum PHP: estado de EXIBICAO, derivado de "DISPONIVEL com
+  // reserva agendada". Ambar -- nem livre, nem avariada: comprometida.
+  RESERVADA: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
 };
 
 const getStatusClasses = (statusValor) => CORES_STATUS[statusValor] ?? CORES_STATUS.INDISPONIVEL;
+
+/**
+ * Acoes do card. Fora do template, igual ao ViaturasTable e ao
+ * BeneficiariosTable do Cisternas.
+ */
+const acoesDe = (item) => [
+  {
+    action: item.movimentacao_aberta_id ? 'finalize' : 'assign',
+    aliasOverride: 'movimentar',
+    label: item.movimentacao_aberta_id ? 'Registrar retorno' : 'Registrar saida',
+    handler: () => emit('movimentacao', item.id),
+    allowed: props.canMovimentar,
+  },
+  {
+    // Menu suspenso com rotulo, no padrao do Cisternas: um icone solto na barra
+    // nao diz que dali sai a etiqueta da chave.
+    action: 'qrcode',
+    placement: 'menu',
+    // Slug consultado: plantao.reservas.manage. A etiqueta pertence ao ciclo da
+    // chave, nao ao cadastro da viatura.
+    resource: 'reservas',
+    aliasOverride: 'manage',
+    label: 'Etiqueta da chave',
+    handler: () => emit('qrcode', item.id),
+    allowed: props.canQrCode,
+  },
+  { action: 'edit', handler: () => emit('edit', item.id), allowed: props.canEdit },
+  { action: 'delete', handler: () => emit('delete', item.id), allowed: props.canDelete },
+];
 </script>
 
 <template>
@@ -55,8 +94,20 @@ const getStatusClasses = (statusValor) => CORES_STATUS[statusValor] ?? CORES_STA
             {{ item.modelo }}<span v-if="item.marca"> ({{ item.marca }})</span>
           </p>
         </div>
-        <span :class="getStatusClasses(item.status_valor)" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
-          {{ item.status }}
+        <!--
+          status_exibicao: mostra RESERVADA quando a viatura esta DISPONIVEL com
+          reserva agendada. Reservada nao pode aparecer como livre.
+        -->
+        <span class="shrink-0 text-right">
+          <span :class="getStatusClasses(item.status_exibicao_valor)" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+            {{ item.status_exibicao }}
+          </span>
+          <span
+            v-if="item.reservada"
+            class="mt-1 block text-[10px] leading-tight text-slate-500 dark:text-slate-400"
+          >
+            {{ item.reserva_agente_nome }}
+          </span>
         </span>
       </div>
 
@@ -80,17 +131,7 @@ const getStatusClasses = (statusValor) => CORES_STATUS[statusValor] ?? CORES_STA
         <ActionButton
           module="plantao"
           resource="viaturas"
-          :actions="[
-            {
-              action: item.movimentacao_aberta_id ? 'finalize' : 'assign',
-              aliasOverride: 'movimentar',
-              label: item.movimentacao_aberta_id ? 'Registrar retorno' : 'Registrar saida',
-              handler: () => emit('movimentacao', item.id),
-              allowed: canMovimentar,
-            },
-            { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit },
-            { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },
-          ]"
+          :actions="acoesDe(item)"
         />
       </div>
     </div>

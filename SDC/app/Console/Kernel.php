@@ -98,6 +98,19 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground()
             ->name('plantao-lembrar-escala');
+
+        // Reserva de viatura: solta a agenda presa por quem reservou e nao
+        // apareceu. Mesmo passo de 15 minutos do lembrete acima, e pela mesma
+        // razao -- com passo horario, a viatura ficaria bloqueada por ate uma
+        // hora depois do prazo, e quem esta na porta querendo a chave nao tem
+        // como saber que a reserva ja morreu. So mexe em AGENDADA: reserva com
+        // chave retirada e problema de check-out, nao de relogio.
+        $schedule->command('plantao:expirar-reservas')
+            ->everyFifteenMinutes()
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->runInBackground()
+            ->name('plantao-expirar-reservas');
     }
 
     /**

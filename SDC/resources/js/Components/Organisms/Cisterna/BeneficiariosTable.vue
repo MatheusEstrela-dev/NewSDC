@@ -1,4 +1,47 @@
 <template>
+  <!--
+    Onze colunas com `whitespace-nowrap`: no telefone a tabela rolava de lado e
+    a coluna fixa de acoes flutuava sobre conteudo cortado -- o usuario nao
+    sabia de qual beneficiario eram os botoes que estava tocando.
+    Regra 9 de `.claude/skills/frontend/04 - Responsividade`.
+
+    O ResponsiveTable fica AQUI, dentro da tabela, e nao na pagina: assim toda
+    tela que use este componente ganha os cards sem alteracao propria.
+  -->
+  <ResponsiveTable
+    :items="beneficiarios"
+    :mobile-fields="CAMPOS_MOBILE"
+    :get-item-title="(b) => b.nome"
+    :get-item-subtitle="(b) => formatarCpf(b.cpf)"
+    :get-item-key="(b) => b.id"
+    empty-message="Nenhum beneficiario encontrado"
+  >
+    <!-- Badges nao sobrevivem a interpolacao de texto: cada um vem por slot. -->
+    <template #mobile-situacao_analise="{ item }">
+      <SituacaoAnaliseBadge :valor="item.situacao_analise.valor" :rotulo="item.situacao_analise.rotulo" />
+    </template>
+
+    <template #mobile-situacao_obra="{ item }">
+      <SituacaoObraBadge :valor="item.situacao_obra.valor" :rotulo="item.situacao_obra.rotulo" />
+    </template>
+
+    <template #mobile-etapas="{ item }">
+      <div class="flex items-center gap-1">
+        <EtapaVistoriaBadge
+          v-for="etapa in ETAPAS"
+          :key="etapa"
+          :etapa="etapa"
+          :concluida="(item.etapas_concluidas ?? []).includes(etapa)"
+        />
+      </div>
+    </template>
+
+    <!-- Mesmas acoes da linha, pela mesma funcao. -->
+    <template #mobile-actions="{ item }">
+      <ActionButton module="cisternas" resource="beneficiarios" size="sm" :actions="acoesDe(item)" />
+    </template>
+
+    <template #table>
   <!-- rounded-xl para esquadrar com os stat cards e o painel de filtros, que
      tambem sao 12px. Com rounded-lg (8px) a pagina empilhava tres raios
      diferentes: 16px no PageHeader, 12px nos cards/filtros e 8px aqui. -->
@@ -90,51 +133,7 @@
                 <ActionButton
                   module="cisternas"
                   resource="beneficiarios"
-                  :actions="[
-                    { action: 'view',    handler: () => ir('cisternas.beneficiarios.show', b.id) },
-                    { action: 'edit',    handler: () => ir('cisternas.beneficiarios.edit', b.id), allowed: permissoes.editar },
-                    { action: 'history', handler: () => emit('historico', b), label: 'Serie Historica' },
-                    { action: 'delete',  handler: () => emit('excluir', b), allowed: permissoes.excluir },
-
-                    /*
-                      No menu de tres pontos, como no PAE: sao acoes de saida em
-                      documento, nao do dia a dia, e inline disputariam espaco
-                      com ver/editar/excluir numa coluna ja apertada.
-
-                      IMPRIMIR e PDF sao acoes SEPARADAS de proposito, e nao
-                      duas portas para a mesma coisa: imprimir manda a ficha
-                      para o papel pelo dialogo do navegador; PDF gera o
-                      arquivo. A regra de negocio de cada uma sera definida --
-                      ate la o PDF usa a mesma ficha, e gerar arquivo de
-                      verdade ainda depende de escolher biblioteca de PDF, que
-                      o NewSDC nao tem.
-
-                      `aliasOverride` reaproveita permissao existente em vez de
-                      inventar slug: o ActionButton monta {module}.{resource}.
-                      {action} e consulta can(), entao 'pdf' procuraria
-                      cisternas.beneficiarios.pdf -- que nao existe -- e o item
-                      sumiria para todo mundo menos super-admin. Mesmo defeito
-                      que `validar` teve nas notificacoes.
-
-                      QR aponta para a ficha PUBLICA, que abre sem login: exigir
-                      mais que `view` para mostrar o adesivo nao protegeria nada.
-                    */
-                    {
-                      action: 'print', placement: 'menu',
-                      aliasOverride: 'print', allowed: cadeiaCompleta(b),
-                      handler: () => emit('imprimir', b),
-                    },
-                    {
-                      action: 'pdf', placement: 'menu',
-                      aliasOverride: 'print', allowed: cadeiaCompleta(b),
-                      handler: () => emit('pdf', b),
-                    },
-                    {
-                      action: 'qrcode', placement: 'menu',
-                      aliasOverride: 'view', allowed: Boolean(b.numero_instalacao),
-                      handler: () => emit('qrcode', b),
-                    },
-                  ]"
+                  :actions="acoesDe(b)"
                 />
               </div>
             </td>
@@ -152,6 +151,8 @@
       </table>
     </div>
   </div>
+    </template>
+  </ResponsiveTable>
 </template>
 
 <script setup>
@@ -163,6 +164,7 @@ import SituacaoAnaliseBadge from '@/Components/Atoms/Cisterna/SituacaoAnaliseBad
 import SituacaoObraBadge from '@/Components/Atoms/Cisterna/SituacaoObraBadge.vue';
 import EtapaVistoriaBadge from '@/Components/Atoms/Cisterna/EtapaVistoriaBadge.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 const props = defineProps({
   beneficiarios: { type: Array, default: () => [] },
@@ -207,6 +209,81 @@ const ETAPAS = ['fornecedor', 'compdec', 'cedec'];
 // lados juntos e proposital: cabecalho clicavel sem coluna na whitelist do
 // backend cai silenciosamente na ordenacao padrao, e o usuario clica sem
 // entender por que a lista nao muda.
+/**
+ * Acoes da linha, definidas UMA vez.
+ *
+ * Extraidas do template porque agora servem a dois lugares: a celula da tabela
+ * no desktop e o rodape do card no mobile. Duplicar quarenta linhas de
+ * permissao e `aliasOverride` entre os dois sairia de sincronia na primeira
+ * acao nova -- e divergencia aqui significa acao existindo num modo e nao no
+ * outro, sem erro nenhum.
+ */
+function acoesDe(b) {
+  // `props.permissoes`, nao `permissoes`: no TEMPLATE o Vue resolve a prop pelo
+  // nome, mas dentro de <script setup> nao existe esse acucar. Ao mover estas
+  // acoes do template para ca, `permissoes.editar` virou ReferenceError em
+  // runtime -- e o build passa, porque nada disso e checado em tempo de
+  // compilacao.
+  return [
+    { action: 'view',    handler: () => ir('cisternas.beneficiarios.show', b.id) },
+    { action: 'edit',    handler: () => ir('cisternas.beneficiarios.edit', b.id), allowed: props.permissoes.editar },
+    { action: 'history', handler: () => emit('historico', b), label: 'Serie Historica' },
+    { action: 'delete',  handler: () => emit('excluir', b), allowed: props.permissoes.excluir },
+    /*
+      No menu de tres pontos, como no PAE: sao acoes de saida em
+      documento, nao do dia a dia, e inline disputariam espaco
+      com ver/editar/excluir numa coluna ja apertada.
+      IMPRIMIR e PDF sao acoes SEPARADAS de proposito, e nao
+      duas portas para a mesma coisa: imprimir manda a ficha
+      para o papel pelo dialogo do navegador; PDF gera o
+      arquivo. A regra de negocio de cada uma sera definida --
+      ate la o PDF usa a mesma ficha, e gerar arquivo de
+      verdade ainda depende de escolher biblioteca de PDF, que
+      o NewSDC nao tem.
+      `aliasOverride` reaproveita permissao existente em vez de
+      inventar slug: o ActionButton monta {module}.{resource}.
+      {action} e consulta can(), entao 'pdf' procuraria
+      cisternas.beneficiarios.pdf -- que nao existe -- e o item
+      sumiria para todo mundo menos super-admin. Mesmo defeito
+      que `validar` teve nas notificacoes.
+      QR aponta para a ficha PUBLICA, que abre sem login: exigir
+      mais que `view` para mostrar o adesivo nao protegeria nada.
+    */
+    {
+      action: 'print', placement: 'menu',
+      aliasOverride: 'print', allowed: cadeiaCompleta(b),
+      handler: () => emit('imprimir', b),
+    },
+    {
+      action: 'pdf', placement: 'menu',
+      aliasOverride: 'print', allowed: cadeiaCompleta(b),
+      handler: () => emit('pdf', b),
+    },
+    {
+      action: 'qrcode', placement: 'menu',
+      aliasOverride: 'view', allowed: Boolean(b.numero_instalacao),
+      handler: () => emit('qrcode', b),
+    },
+  ];
+}
+
+
+/**
+ * O card do telefone mostra SEIS campos, nao os onze da tabela.
+ *
+ * Nome e CPF viram titulo e subtitulo. Do resto sobra o que identifica e o que
+ * o usuario vem conferir: onde mora, em que lote esta e como andam analise,
+ * obra e vistoria. Lote/ordem, numero de instalacao e ranqueamento ficam para
+ * a ficha -- card com onze linhas nao e melhor que tabela rolando.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'municipio', label: 'Municipio' },
+  { key: 'comunidade', label: 'Comunidade' },
+  { key: 'situacao_analise', label: 'Analise' },
+  { key: 'situacao_obra', label: 'Obra' },
+  { key: 'etapas', label: 'Etapas', fullWidth: true },
+];
+
 const COLUNAS = [
   { chave: 'nome', titulo: 'Nome', ordenavel: true },
   { chave: 'cpf', titulo: 'CPF', ordenavel: true },

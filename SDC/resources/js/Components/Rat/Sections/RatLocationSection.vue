@@ -1,19 +1,24 @@
 <template>
-  <div class="rat-section-card">
-    <div class="rat-section-header">
-      <div class="rat-section-icon rat-section-icon-default">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      </div>
-      <div>
-        <h3 class="rat-section-title">Local do Fato</h3>
-        <p class="text-xs text-slate-500 mt-0.5">Identificação geográfica da ocorrência</p>
-      </div>
-    </div>
+  <!--
+    Colapsavel como as outras secoes do formulario.
 
-    <div class="rat-section-content">
+    Estas duas eram `div.rat-section-card` cru, sem chevron e SEMPRE abertas: no
+    telefone a sanfona fechava as demais e estas seguiam expandidas, o que fazia
+    o modo parecer quebrado.
+  -->
+  <RatCollapsibleSection
+    section-id="local-do-fato"
+    title="Local do Fato"
+    subtitle="Identificação geográfica da ocorrência"
+    icon-class="rat-section-icon-default"
+  >
+    <template #icon>
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </template>
+
       <div class="rat-grid-3">
         <FormSelect
           label="País"
@@ -42,11 +47,11 @@
           placeholder="Selecione o estado primeiro"
         />
       </div>
-    </div>
-  </div>
+  </RatCollapsibleSection>
 </template>
 
 <script setup>
+import RatCollapsibleSection from './RatCollapsibleSection.vue';
 import { computed, ref, watch } from 'vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import { useLocationData } from '@/Composables/location';

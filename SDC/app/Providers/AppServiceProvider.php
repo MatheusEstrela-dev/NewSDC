@@ -23,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->registrarProvidersDeDesenvolvimento();
+
         $this->app->singleton(
             \App\Contracts\HierarchyServiceInterface::class,
             \App\Services\Auth\HierarchyService::class
@@ -437,4 +439,40 @@ class AppServiceProvider extends ServiceProvider
 
         return [];
     }
+
+    /**
+     * Providers de require-dev: registrados so onde o pacote existe.
+     *
+     * `bootstrap/cache` e bind-mounted entre o host e o container, mas os dois
+     * tem conjuntos de dependencias DIFERENTES -- o host instala com dev (81
+     * pacotes) e a imagem do container sem dev (66).
+     *
+     * Com auto-discovery, quem rodasse artisan por ultimo escrevia um manifest
+     * que o outro nao conseguia satisfazer. Depois de um phpunit no host o
+     * manifest passava a citar debugbar, sail, collision e ignition, e TODO
+     * artisan dentro do container morria em ProviderRepository -- inclusive o
+     * `octane:reload` no fim de um build, e em silencio.
+     *
+     * Com `dont-discover` no composer.json o manifest fica igual nos dois
+     * ambientes, e o laco abaixo carrega cada pacote so onde ele esta presente:
+     * o host mantem debugbar, ignition e collision; o container nao os ve.
+     *
+     * Mesma tratativa que o projeto ja dava ao telescope e ao nativephp/mobile.
+     * Ao acrescentar require-dev com provider, some aqui e no dont-discover.
+     */
+    private function registrarProvidersDeDesenvolvimento(): void
+    {
+        $providers = [
+            \Fruitcake\LaravelDebugbar\ServiceProvider::class,
+            \Spatie\LaravelIgnition\IgnitionServiceProvider::class,
+            \NunoMaduro\Collision\Adapters\Laravel\CollisionServiceProvider::class,
+        ];
+
+        foreach ($providers as $provider) {
+            if (class_exists($provider)) {
+                $this->app->register($provider);
+            }
+        }
+    }
+
 }

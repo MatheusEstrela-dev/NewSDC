@@ -176,7 +176,9 @@ class RatWriteService
 
             $userId = Auth::id();
 
-            RatOcorrencia::where('id', $id)->update([
+            // Via modelo, e nao `where(...)->update()`: observer do Eloquent nao
+            // dispara para escrita em massa, e a listagem depende dele.
+            RatOcorrencia::find($id)?->update([
                 'status'     => 0,
                 'updated_by' => $userId,
             ]);

@@ -9,6 +9,23 @@
         </span>
       </div>
       <div class="flex items-center gap-3">
+<!--
+          "Limpar" e independente de haver nao lidas: o "Ler todas" ao lado
+          desaparece quando tudo esta lido (v-if="hasUnread"), e era justamente
+          nesse estado que a caixa cheia ficava sem nenhuma saida.
+
+          Texto azul e nao lixeira: a acao ARQUIVA, nao destroi, e o icone de
+          lixeira prometia uma consequencia mais grave do que a real. Mesmo
+          tratamento visual do "Ler todas" ao lado, que e a acao irma.
+        -->
+        <button
+            v-if="notifications.length && !showPreferences"
+            @click="limparTudo"
+            class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+            title="Arquiva as notificacoes do sino; elas seguem no historico completo"
+        >
+            Limpar
+        </button>
         <button
             @click="showPreferences = !showPreferences"
             class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
@@ -146,9 +163,19 @@ const {
   markAsRead,
   markGroupAsRead,
   markAllAsRead,
+  clearAll,
   startPolling,
   stopPolling
 } = useNotifications();
+
+/**
+ * Limpar ARQUIVA, nao apaga -- as notificacoes seguem no historico completo.
+ *
+ * SEM confirmacao, de proposito: confirmar faz sentido diante de perda, e aqui
+ * nao ha perda nenhuma. O `clearAll` ainda e otimista com rollback, entao falha
+ * de rede devolve a lista inteira.
+ */
+const limparTudo = () => clearAll();
 
 // O agrupamento e uma unica linha no banco, entao marcar como lida e sempre uma
 // operacao sobre um id. markGroupAsRead segue disponivel para acoes em lote.

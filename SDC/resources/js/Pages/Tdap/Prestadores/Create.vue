@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Novo Prestador" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Novo Prestador"
       description="Cadastrar empresa contratada para transporte de água"

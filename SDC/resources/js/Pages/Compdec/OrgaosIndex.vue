@@ -42,59 +42,98 @@
         <div class="spinner"></div>
       </div>
 
-      <table class="orgaos-table">
-        <thead>
-          <tr>
-            <th>Codigo</th>
-            <th>Nome</th>
-            <th>Tipo</th>
-            <th>Municipio</th>
-            <th>Status</th>
-            <th>Usuarios</th>
-            <th class="actions-column">Acoes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="orgaos.data.length === 0">
-            <td colspan="7" class="p-0">
-              <ListEmptyState title="Nenhum órgão encontrado" />
-            </td>
-          </tr>
-          <tr v-for="orgao in orgaos.data" :key="orgao.id" class="table-row">
-            <td>
-              <Text variant="mono">{{ orgao.codigo }}</Text>
-            </td>
-            <td>
-              <Text variant="bold">{{ orgao.nome }}</Text>
-            </td>
-            <td>
-              <TipoOrgaoBadge :tipo="orgao.tipo" />
-            </td>
-            <td>
-              <Text variant="muted">{{ orgao.municipio?.nome || '-' }}</Text>
-            </td>
-            <td>
-              <StatusOrgaoBadge :status="orgao.status" />
-            </td>
-            <td>
-              <Text variant="muted">{{ orgao.usuarios_count || 0 }}</Text>
-            </td>
-            <td class="actions-column">
-              <div class="flex items-center justify-end">
-                <ActionButton
-                  module="compdec"
-                  resource="orgaos"
-                  :actions="[
-                    { action: 'view',   handler: () => handleView(orgao.id) },
-                    { action: 'edit',   handler: () => handleEdit(orgao.id),   allowed: canManage },
-                    { action: 'delete', handler: () => handleDelete(orgao),    allowed: canDeleteOrgao(orgao) },
-                  ]"
-                />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <ResponsiveTable
+        :items="orgaos.data"
+        :mobile-fields="CAMPOS_MOBILE"
+        :get-item-title="(orgao) => orgao.nome"
+        :get-item-subtitle="(orgao) => orgao.codigo"
+        empty-message="Nenhum órgão encontrado"
+      >
+        <template #table>
+        <table class="orgaos-table">
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Nome</th>
+              <th>Tipo</th>
+              <th>Municipio</th>
+              <th>Status</th>
+              <th>Usuarios</th>
+              <th class="actions-column">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="orgaos.data.length === 0">
+              <td colspan="7" class="p-0">
+                <ListEmptyState title="Nenhum órgão encontrado" />
+              </td>
+            </tr>
+            <tr v-for="orgao in orgaos.data" :key="orgao.id" class="table-row">
+              <td>
+                <Text variant="mono">{{ orgao.codigo }}</Text>
+              </td>
+              <td>
+                <Text variant="bold">{{ orgao.nome }}</Text>
+              </td>
+              <td>
+                <TipoOrgaoBadge :tipo="orgao.tipo" />
+              </td>
+              <td>
+                <Text variant="muted">{{ orgao.municipio?.nome || '-' }}</Text>
+              </td>
+              <td>
+                <StatusOrgaoBadge :status="orgao.status" />
+              </td>
+              <td>
+                <Text variant="muted">{{ orgao.usuarios_count || 0 }}</Text>
+              </td>
+              <td class="actions-column">
+                <div class="flex items-center justify-end">
+                  <ActionButton
+                    module="compdec"
+                    resource="orgaos"
+                    :actions="[
+                      { action: 'view',   handler: () => handleView(orgao.id) },
+                      { action: 'edit',   handler: () => handleEdit(orgao.id),   allowed: canManage },
+                      { action: 'delete', handler: () => handleDelete(orgao),    allowed: canDeleteOrgao(orgao) },
+                    ]"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+          </template>
+
+        <template #mobile-tipo="{ item: orgao }">
+          <TipoOrgaoBadge :tipo="orgao.tipo" />
+        </template>
+
+        <template #mobile-municipio="{ item: orgao }">
+          {{ orgao.municipio?.nome || '-' }}
+        </template>
+
+        <template #mobile-situacao="{ item: orgao }">
+          <StatusOrgaoBadge :status="orgao.status" />
+        </template>
+
+        <template #mobile-usuarios="{ item: orgao }">
+          {{ orgao.usuarios_count || 0 }}
+        </template>
+
+        <template #mobile-actions="{ item: orgao }">
+          <ActionButton
+            module="compdec"
+            resource="orgaos"
+            size="sm"
+            :actions="[
+              { action: 'view',   handler: () => handleView(orgao.id) },
+              { action: 'edit',   handler: () => handleEdit(orgao.id),   allowed: canManage },
+              { action: 'delete', handler: () => handleDelete(orgao),    allowed: canDeleteOrgao(orgao) },
+            ]"
+          />
+        </template>
+      </ResponsiveTable>
     </ListContainer>
 
     <!-- Paginacao -->
@@ -142,6 +181,7 @@ import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import { useToast } from '@/Composables/useToast';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -291,6 +331,20 @@ function confirmDelete() {
     },
   });
 }
+
+/**
+ * Campos do card no mobile (regra 9).
+ *
+ * Nome vira titulo e codigo, subtitulo. A tabela media 744px num espaco de
+ * 326px: rolava 418px de lado, com as tres acoes (ver, editar, excluir)
+ * flutuando sobre conteudo cortado -- sem saber de qual orgao eram.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'tipo', label: 'Tipo' },
+  { key: 'municipio', label: 'Municipio' },
+  { key: 'situacao', label: 'Status' },
+  { key: 'usuarios', label: 'Usuarios' },
+];
 </script>
 
 <style scoped>

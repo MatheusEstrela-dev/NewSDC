@@ -213,6 +213,7 @@ const TrendChartWidget = defineAsyncComponent(() => import('@/Components/Dashboa
 const RadarChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/RadarChartWidget.vue'));
 const PlanConMunicipiosWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConMunicipiosWidget.vue'));
 const PlanConSituacaoWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConSituacaoWidget.vue'));
+const FrotaStatusWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/FrotaStatusWidget.vue'));
 
 // Ícones para Métricas (leves, podem ser eager)
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
@@ -233,6 +234,10 @@ const props = defineProps({
     barData12M:         { type: Array,  default: () => [] },
     sparklines:         { type: Array,  default: () => [] },
     planConStats:       { type: Object, default: () => ({ totalMunicipios: 0, municipiosComPlano: 0, municipiosSemPlano: 0, percentualComPlano: 0, totalPlanos: 0, planosRegulares: 0, planosIrregulares: 0, percentualRegulares: 0 }) },
+    frotaStats:         { type: Object, default: () => ({ total: 0, disponiveis: 0, reservadas: 0, em_transito: 0, indisponiveis: 0 }) },
+    // Slug plantao.viaturas.view: sem ele o widget mostra os numeros mas nao
+    // oferece o link, que responderia 403.
+    canVerFrota:        { type: Boolean, default: false },
 });
 
 const currentYear = ref(new Date().getFullYear());
@@ -375,6 +380,12 @@ const widgetItems = ref([
         component: markRaw(PlanConSituacaoWidget),
         colSpan: 'col-span-1 lg:col-span-6',
         props: { stats: props.planConStats }
+    },
+    {
+        id: 'frota-status',
+        component: markRaw(FrotaStatusWidget),
+        colSpan: 'col-span-1 lg:col-span-4',
+        props: { stats: props.frotaStats, canVerFrota: props.canVerFrota }
     },
 ]);
 

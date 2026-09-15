@@ -126,6 +126,7 @@
         :form-data="formData"
         :errors="errors"
         :loading="loading"
+        :pode-editar="canEdit"
         @submit="handleSubmit"
         @cancel="cancelEdit"
       />

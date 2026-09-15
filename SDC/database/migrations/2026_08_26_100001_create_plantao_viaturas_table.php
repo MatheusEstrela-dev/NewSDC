@@ -21,6 +21,13 @@ return new class extends Migration
             $table->boolean('exclusiva_sobreaviso')->default(false);
             $table->string('status', 30)->default('DISPONIVEL');
 
+            // Token da etiqueta colada no chaveiro. Opaco de proposito: se o QR
+            // codificasse o id, qualquer pessoa geraria a etiqueta de qualquer
+            // viatura a partir da listagem. Nullable porque a frota cadastrada
+            // antes do modulo de reservas nao tem etiqueta impressa - quem nao
+            // tem token nao aceita scan, e a etiqueta e emitida sob demanda.
+            $table->string('qr_token', 64)->nullable()->unique();
+
             // Estado corrente. Derivado da ultima movimentacao e materializado
             // aqui porque a tela de indice lista a frota inteira com esses
             // valores. Escrito exclusivamente por MovimentacaoViaturaService.

@@ -63,7 +63,7 @@ const editar = () => router.visit(route('plantao.edit', props.plantao.id));
           </span>
 
           <Button variant="secondary" size="md" :icon="ArrowLeftIcon" icon-position="left" @click="voltar">
-            Voltar
+            <span class="hidden sm:inline">Voltar</span>
           </Button>
 
           <Button
@@ -74,7 +74,7 @@ const editar = () => router.visit(route('plantao.edit', props.plantao.id));
             icon-position="left"
             @click="editar"
           >
-            Editar
+            <span class="hidden sm:inline">Editar</span>
           </Button>
         </div>
       </template>

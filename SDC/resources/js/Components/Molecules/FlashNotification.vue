@@ -9,7 +9,9 @@
       >
         <div class="flex items-start gap-3">
           <component :is="iconComponent" class="w-5 h-5 mt-0.5 shrink-0" />
-          <p class="text-sm font-medium leading-snug flex-1">{{ message }}</p>
+          <!-- min-w-0 + break-words: sem eles uma placa ou URL longa nao quebra
+               e empurra o botao de fechar para fora do cartao. -->
+          <p class="min-w-0 flex-1 break-words text-sm font-medium leading-snug">{{ message }}</p>
           <button
             @click="dismiss"
             class="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
@@ -83,8 +85,25 @@ const typeConfig = {
 
 // Ancorada no topo-direita (top-20 = 5rem: mesma folga do header usada pelo
 // ToastContainer), nao mais no rodape.
+/**
+ * Posicao do toast.
+ *
+ * NAO usar `w-full` junto de `right-6`: num celular de 375px isso da um toast de
+ * 375px ancorado a 24px da direita, ou seja, com a borda esquerda em -24px --
+ * o texto aparecia cortado ("have retirada" em vez de "Chave retirada"). O
+ * `max-w-sm` mascarava o defeito no desktop, onde 384px cabem folgados.
+ *
+ * Celular: preso aos dois lados (left-3 right-3), largura resolvida pelos
+ * insets, e ancorado embaixo -- em cima ele cobria o cabecalho e a trilha de
+ * navegacao, e embaixo fica na area do polegar. O safe-area evita a barra de
+ * gestos do iOS.
+ *
+ * Desktop (sm+): volta a ser um cartao no topo direito.
+ */
 const containerClass = computed(() => [
-  'fixed top-20 right-6 z-[9999] max-w-sm w-full rounded-xl shadow-2xl px-4 py-3 overflow-hidden',
+  'fixed z-[9999] rounded-xl shadow-2xl px-4 py-3 overflow-hidden',
+  'left-3 right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))]',
+  'sm:left-auto sm:bottom-auto sm:top-20 sm:right-6 sm:w-full sm:max-w-sm',
   typeConfig[type.value]?.container ?? typeConfig.success.container,
 ]);
 
@@ -147,10 +166,19 @@ onUnmounted(clearAll);
 .flash-slide-leave-active {
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Entra/sai por cima, acompanhando a ancoragem no topo da tela. */
+/* Celular: o toast mora embaixo, entao entra e sai por baixo. */
 .flash-slide-enter-from,
 .flash-slide-leave-to {
   opacity: 0;
-  transform: translateY(-1rem) scale(0.96);
+  transform: translateY(1rem) scale(0.96);
+}
+
+/* Desktop (sm+): volta ao topo direito e a animacao acompanha, entrando por
+   cima. Mesmo ponto de corte do `sm:` das classes de posicao. */
+@media (min-width: 640px) {
+  .flash-slide-enter-from,
+  .flash-slide-leave-to {
+    transform: translateY(-1rem) scale(0.96);
+  }
 }
 </style>

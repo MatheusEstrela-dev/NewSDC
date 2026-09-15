@@ -211,6 +211,17 @@
           Orgaos
         </NavItem>
 
+        <!-- CEDEC / Prefeituras -->
+        <NavItem
+          v-if="canSeeCedecPrefeituras && _routes.hasCedec"
+          :href="route('cedec.prefeituras.index')"
+          :active="isRouteActive('cedec.*')"
+          icon="building"
+          :collapsed="isCollapsed"
+        >
+          Prefeituras
+        </NavItem>
+
         <!-- TDAP - drill-down (abre submenu como nova seccao) -->
         <button
           v-if="canSeeTdap"
@@ -309,6 +320,59 @@
           :collapsed="isCollapsed"
         >
           Meteorologia
+        </NavItem>
+
+        <!-- Camadas geoespaciais -->
+        <NavItem
+          v-if="canSeeMeteorologia && _routes.hasGeoespacial"
+          :href="route('geoespacial.index', undefined, false)"
+          :active="isRouteActive('geoespacial.index')"
+          icon="map"
+          :collapsed="isCollapsed"
+        >
+          Camadas de Risco
+        </NavItem>
+
+        <!--
+          Envio. Item proprio porque a COMPDEC entra no sistema para ENVIAR, e
+          nao para consultar o mapa do estado: obrigar a passar pela tela de
+          consulta para achar um formulario e desenho ruim para quem so quer
+          mandar o mapeamento do proprio municipio.
+        -->
+        <NavItem
+          v-if="canEnviarCamadas && _routes.hasGeoespacialEnviar"
+          :href="route('geoespacial.enviar', undefined, false)"
+          :active="isRouteActive('geoespacial.enviar')"
+          icon="cloud"
+          :collapsed="isCollapsed"
+        >
+          Enviar Camada
+        </NavItem>
+
+        <!--
+          Fila de revisao. Item separado e nao aba dentro da tela porque quem
+          revisa e a CEDEC e quem envia e o municipio: sao pessoas diferentes,
+          e o item so aparece para quem tem a permissao.
+        -->
+        <NavItem
+          v-if="canRevisarCamadas && _routes.hasGeoespacialRevisao"
+          :href="route('geoespacial.revisao', undefined, false)"
+          :active="isRouteActive('geoespacial.revisao')"
+          icon="checkbadge"
+          :collapsed="isCollapsed"
+        >
+          Revisar Camadas
+        </NavItem>
+
+        <!-- Sismos -->
+        <NavItem
+          v-if="canSeeSismos && _routes.hasSismos"
+          :href="route('sismos.index', undefined, false)"
+          :active="isRouteActive('sismos.*')"
+          icon="map"
+          :collapsed="isCollapsed"
+        >
+          Sismos
         </NavItem>
 
         <!-- Vistoria -->
@@ -696,7 +760,7 @@
 
 <script setup>
 import { usePage } from '@inertiajs/vue3';
-import { computed, inject, onMounted, onUnmounted, provide, ref, shallowRef, watch } from 'vue';
+import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
 import { route } from 'ziggy-js';
 import NavItem from './NavItem.vue';
 
@@ -758,6 +822,7 @@ const _routes = {
   hasHumanitariaLiberacoes: route().has('ajuda-humanitaria.liberacoes.index'),
   hasHumanitariaTransferencias: route().has('ajuda-humanitaria.transferencias.index'),
   hasCompdec: route().has('compdec.index'),
+  hasCedec: route().has('cedec.prefeituras.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
   hasTdapCaminhoes: route().has('tdap.caminhoes.index'),
@@ -777,6 +842,10 @@ const _routes = {
   hasTreinamentos: route().has('treinamentos.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
+  hasSismos: route().has('sismos.index'),
+  hasGeoespacial: route().has('geoespacial.index'),
+  hasGeoespacialRevisao: route().has('geoespacial.revisao'),
+  hasGeoespacialEnviar: route().has('geoespacial.enviar'),
 };
 
 // ============================================================================
@@ -829,6 +898,14 @@ const _activeRoutes = computed(() => {
     'treinamentos.*': route().current('treinamentos.*'),
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
+    'sismos.*': route().current('sismos.*'),
+    // isRouteActive so acende o item quando o padrao e chave DESTE mapa: sem a
+    // linha abaixo o item nasceria permanentemente apagado, mesmo na pagina.
+    // 'geoespacial.*' casava tambem geoespacial.revisao, e os dois itens do
+    // menu acendiam juntos na tela de revisao.
+    'geoespacial.index': route().current('geoespacial.index'),
+    'geoespacial.revisao': route().current('geoespacial.revisao'),
+    'geoespacial.enviar': route().current('geoespacial.enviar'),
     'admin.permissions.*': route().current('admin.permissions.*'),
     'log-viewer.*': route().current('log-viewer.*'),
     'portal.treinamento.catalogo': route().current('portal.treinamento.catalogo'),
@@ -841,22 +918,22 @@ const _activeRoutes = computed(() => {
 const isRouteActive = (pattern) => _activeRoutes.value[pattern] ?? false;
 
 // ============================================================================
-// Cache estável de permissões — não re-executa em cada navegação.
-// Atualiza apenas quando o ID do usuário muda (login/logout).
+// Conjunto de permissoes derivado das props da visita atual.
+//
+// Era um shallowRef fotografado na montagem, re-hidratado por um watch no
+// `auth.user.id`. Como o id nao muda enquanto a pessoa segue logada, o Set
+// ficava congelado pela sessao SPA inteira: o admin concedia a permissao, o
+// servidor ja devolvia o slug novo no prop (o `inertia_user_data_{id}` e
+// invalidado no update/syncPermissions do UserManagementController), e mesmo
+// assim o modulo so aparecia na sidebar depois de um F5.
+//
+// O computed reconstroi o Set quando o objeto `auth.user` troca de identidade,
+// o que na pratica e a cada visita Inertia. E o preco de estar sempre correto:
+// montar um Set de ~230 strings custa microssegundos, contra um menu que mente
+// sobre o acesso da pessoa ate ela recarregar a pagina.
 // ============================================================================
-const _permSet = shallowRef(new Set(page.props?.auth?.user?.permissions ?? []));
-const _isSuper = shallowRef(page.props?.auth?.user?.is_super_admin ?? false);
-
-watch(
-  () => page.props?.auth?.user?.id,
-  (newId, prevId) => {
-    if (newId !== prevId) {
-      const user = page.props?.auth?.user;
-      _permSet.value = new Set(user?.permissions ?? []);
-      _isSuper.value = user?.is_super_admin ?? false;
-    }
-  }
-);
+const _permSet = computed(() => new Set(page.props?.auth?.user?.permissions ?? []));
+const _isSuper = computed(() => page.props?.auth?.user?.is_super_admin ?? false);
 
 const hasPermission = (permissionList) => {
   if (_isSuper.value) return true;
@@ -918,6 +995,10 @@ const canSeeOrgaos = computed(() => {
   return hasPermission(['users.view']); // Temporario - usar permissao de admin
 });
 
+const canSeeCedecPrefeituras = computed(() => {
+  return hasPermission(['cedec.prefeituras.view']);
+});
+
 const canSeeTdap = computed(() => {
   return hasPermission([
     'tdap.dashboard.view',
@@ -966,9 +1047,25 @@ const canSeePlantao = computed(() => {
   return hasPermission(['plantao.turnos.view']);
 });
 
+const canEnviarCamadas = computed(() => {
+  return hasPermission(['geoespacial.camadas.enviar']);
+});
+
+const canRevisarCamadas = computed(() => {
+  // Diferente dos modulos de consulta liberados: revisar camada municipal
+  // publica geometria no mapa estadual, entao exige permissao de verdade.
+  return hasPermission(['geoespacial.camadas.revisar']);
+});
+
 const canSeeMeteorologia = computed(() => {
   // TODO: Adicionar permissao meteorologia.dados.view no config
   return true; // Liberado - modulo publico
+});
+
+const canSeeSismos = computed(() => {
+  // Mesmo tratamento de Meteorologia: modulo de consulta, sem permissao propria
+  // por enquanto. A rota ja exige autenticacao (grupo auth em routes/web.php).
+  return true;
 });
 
 const canSeeVistoria = computed(() => {
