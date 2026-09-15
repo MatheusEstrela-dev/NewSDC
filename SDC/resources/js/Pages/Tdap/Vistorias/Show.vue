@@ -8,9 +8,11 @@
     >
       <template #actions>
         <Link v-if="canEdit" :href="route('tdap.vistorias.edit', v.id)">
-          <PrimaryButton>Editar</PrimaryButton>
+          <Button variant="primary" size="md" :icon="PencilIcon" icon-position="left">Editar</Button>
         </Link>
-        <DangerButton v-if="canDelete" @click="excluir">Excluir</DangerButton>
+        <Button v-if="canDelete" variant="danger" size="md" :icon="TrashIcon" icon-position="left" @click="excluir">
+          Excluir
+        </Button>
       </template>
     </TdapPageHeader>
 
@@ -55,6 +57,7 @@
         </div>
 
         <VistoriaChecklistGroup
+          section-id="estruturais"
           titulo="Condições Estruturais"
           :descricao="`${countOk(itensEstruturais)}/${itensEstruturais.length} itens conformes`"
           :itens="itensEstruturais"
@@ -63,6 +66,7 @@
         />
 
         <VistoriaChecklistGroup
+          section-id="tanque"
           titulo="Condições do Tanque"
           :descricao="`${countOk(itensTanque)}/${itensTanque.length} itens conformes`"
           :itens="itensTanque"
@@ -101,6 +105,12 @@
         </div>
       </aside>
     </div>
+
+    <VistoriaFotos
+      :vistoria-id="v.id"
+      :fotos="fotos"
+      :pode-editar="canEdit"
+    />
   </div>
 </template>
 
@@ -110,14 +120,17 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import VistoriaChecklistGroup from '@/Components/Organisms/Tdap/VistoriaChecklistGroup.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import DangerButton from '@/Components/DangerButton.vue';
+import VistoriaFotos from '@/Components/Organisms/Tdap/VistoriaFotos.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import PencilIcon from '@/Components/Icons/PencilIcon.vue';
+import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   vistoria: { type: Object, required: true },
+  fotos: { type: Array, default: () => [] },
   itensEstruturais: { type: Array, default: () => [] },
   itensTanque: { type: Array, default: () => [] },
   canEdit: { type: Boolean, default: false },

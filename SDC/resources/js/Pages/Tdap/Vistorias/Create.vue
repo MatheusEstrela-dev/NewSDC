@@ -3,7 +3,7 @@
   <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Nova Vistoria"
-      description="Inspeção técnica do caminhão-tanque (27 + 7 itens)"
+      :description="`Inspeção técnica do caminhão-tanque (${itensEstruturais.length} + ${itensTanque.length} itens)`"
       :icon="TruckIcon"
     />
     <VistoriaFichaForm
@@ -15,7 +15,11 @@
       submit-label="Registrar Vistoria"
       @submit="submit"
       @cancel="cancelar"
-    />
+    >
+      <template #antes-das-acoes>
+        <VistoriaFotosNovas v-model="form.fotos" />
+      </template>
+    </VistoriaFichaForm>
   </div>
 </template>
 
@@ -24,6 +28,7 @@ import { Head, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import VistoriaFichaForm from '@/Components/Organisms/Tdap/VistoriaFichaForm.vue';
+import VistoriaFotosNovas from '@/Components/Organisms/Tdap/VistoriaFotosNovas.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -53,6 +58,9 @@ const base = {
   nome: '', edital: '', placa_id: null, modelo: '', cor: '',
   data_vistoria: hojeLocal, ano: '', capacidade: '',
   parecer: 'aprovada', ficha: '', lacre: '', observacoes: '',
+  // Os File ficam aqui ate o submit. O Inertia detecta arquivos no payload e
+  // troca sozinho para multipart/form-data.
+  fotos: [],
 };
 [...props.itensEstruturais, ...props.itensTanque].forEach(k => {
   base[k] = false;

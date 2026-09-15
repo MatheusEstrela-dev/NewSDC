@@ -16,6 +16,12 @@
       @submit="submit"
       @cancel="cancelar"
     />
+
+    <VistoriaFotos
+      :vistoria-id="v.id"
+      :fotos="fotos"
+      pode-editar
+    />
   </div>
 </template>
 
@@ -24,12 +30,14 @@ import { Head, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import VistoriaFichaForm from '@/Components/Organisms/Tdap/VistoriaFichaForm.vue';
+import VistoriaFotos from '@/Components/Organisms/Tdap/VistoriaFotos.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   vistoria: { type: Object, required: true },
+  fotos: { type: Array, default: () => [] },
   caminhoes: { type: Array, default: () => [] },
   pareceres: { type: Array, default: () => [] },
   itensEstruturais: { type: Array, default: () => [] },

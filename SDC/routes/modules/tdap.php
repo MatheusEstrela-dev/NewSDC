@@ -13,6 +13,7 @@ use App\Modules\Tdap\Controllers\HistoricoController;
 use App\Modules\Tdap\Controllers\PrestadorController;
 use App\Modules\Tdap\Controllers\ProcessoTdapController;
 use App\Modules\Tdap\Controllers\TdapDashboardController;
+use App\Modules\Tdap\Controllers\VistoriaFotoController;
 use App\Modules\Tdap\Controllers\VistoriaController;
 use App\Modules\Tdap\Models\Ata;
 use App\Modules\Tdap\Models\Caminhao;
@@ -266,6 +267,11 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::get('/export', [VistoriaController::class, 'export'])->name('export');
             Route::get('/{vistoria}', [VistoriaController::class, 'show'])
                 ->name('show')->whereNumber('vistoria');
+
+            // Serve a imagem da miniatura: o disco 'tdap' e privado e nao tem
+            // URL publica.
+            Route::get('/{vistoria}/fotos/{foto}', [VistoriaFotoController::class, 'show'])
+                ->name('fotos.show')->whereNumber('vistoria')->whereNumber('foto');
         });
 
         Route::middleware('can:tdap.vistorias.create')->group(function () {
@@ -278,6 +284,11 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
                 ->name('edit')->whereNumber('vistoria');
             Route::put('/{vistoria}', [VistoriaController::class, 'update'])
                 ->name('update')->whereNumber('vistoria');
+
+            Route::post('/{vistoria}/fotos', [VistoriaFotoController::class, 'store'])
+                ->name('fotos.store')->whereNumber('vistoria');
+            Route::delete('/{vistoria}/fotos/{foto}', [VistoriaFotoController::class, 'destroy'])
+                ->name('fotos.destroy')->whereNumber('vistoria')->whereNumber('foto');
         });
 
         Route::middleware('can:tdap.vistorias.delete')->group(function () {

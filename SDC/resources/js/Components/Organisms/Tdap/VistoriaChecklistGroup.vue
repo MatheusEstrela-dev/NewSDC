@@ -1,23 +1,26 @@
 <template>
-  <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ titulo }}</h3>
-        <p v-if="descricao" class="text-xs text-slate-500 mt-0.5">{{ descricao }}</p>
-      </div>
-      <div class="flex items-center gap-3 text-xs">
-        <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-          OK: {{ checadosCount }}/{{ itens.length }}
-        </span>
-        <button
-          v-if="!readonly"
-          type="button"
-          class="text-xs text-blue-600 hover:text-blue-800"
-          @click="marcarTodos"
-        >
-          Marcar todos
-        </button>
-      </div>
+  <CollapsibleSection
+    namespace="tdap-vistoria"
+    :section-id="sectionId"
+    :title="titulo"
+    :subtitle="descricao"
+    :status-text="`OK: ${checadosCount}/${itens.length}`"
+    :tom="checadosCount === itens.length ? 'success' : 'info'"
+    :expandido-por-padrao="expandidoPorPadrao"
+    :sanfona-no-mobile="true"
+  >
+    <div class="flex items-center justify-end gap-3 text-xs mb-3">
+      <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+        OK: {{ checadosCount }}/{{ itens.length }}
+      </span>
+      <button
+        v-if="!readonly"
+        type="button"
+        class="text-xs text-blue-600 hover:text-blue-800"
+        @click="marcarTodos"
+      >
+        Marcar todos
+      </button>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -51,15 +54,19 @@
         </p>
       </div>
     </div>
-  </div>
+  </CollapsibleSection>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 
 const props = defineProps({
+  /** Identificador da secao dentro do namespace 'tdap-vistoria'. */
+  sectionId: { type: String, required: true },
   titulo: { type: String, required: true },
   descricao: { type: String, default: '' },
+  expandidoPorPadrao: { type: Boolean, default: true },
   itens: { type: Array, required: true },     // ['documento','para_choque_d',...]
   form: { type: Object, required: true },     // tem chaves item + item_obs
   readonly: { type: Boolean, default: false },

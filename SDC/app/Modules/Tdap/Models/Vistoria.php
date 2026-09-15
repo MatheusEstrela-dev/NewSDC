@@ -9,6 +9,7 @@ use App\Modules\Tdap\Enums\ParecerVistoria;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -81,6 +82,11 @@ class Vistoria extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function fotos(): HasMany
+    {
+        return $this->hasMany(VistoriaFoto::class, 'vistoria_id')->latest('id');
     }
 
     /* Computed */

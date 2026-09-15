@@ -75,6 +75,13 @@ const props = defineProps({
   },
   statusText: { type: String, default: '' },
   expandidoPorPadrao: { type: Boolean, default: true },
+  /**
+   * No celular, apenas uma secao do namespace fica aberta -- abrir outra fecha
+   * a anterior. Para formulario longo, onde varias secoes abertas viram uma
+   * rolagem interminavel. Desligado por padrao: as telas que ja usam este
+   * componente contam com secoes independentes.
+   */
+  sanfonaNoMobile: { type: Boolean, default: false },
 });
 
 const TONS = {
@@ -88,6 +95,9 @@ const TONS = {
 const { estaExpandido, alternar } = useCollapsibleSection(
   props.namespace,
   props.sectionId,
-  { expandidoPorPadrao: props.expandidoPorPadrao },
+  {
+    expandidoPorPadrao: props.expandidoPorPadrao,
+    sanfonaNoMobile: props.sanfonaNoMobile,
+  },
 );
 </script>
