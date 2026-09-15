@@ -31,9 +31,14 @@ return new class extends Migration
             }
         });
 
-        Schema::table('compdec_planos_contingencia', function (Blueprint $table) {
-            $table->index(['orgao_id', 'enviado_em']);
-        });
+        $jaTemIndice = collect(Schema::getIndexes('compdec_planos_contingencia'))
+            ->contains('name', 'compdec_planos_contingencia_orgao_id_enviado_em_index');
+
+        if (! $jaTemIndice) {
+            Schema::table('compdec_planos_contingencia', function (Blueprint $table) {
+                $table->index(['orgao_id', 'enviado_em']);
+            });
+        }
     }
 
     /**
