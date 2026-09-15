@@ -258,26 +258,69 @@ class OrgaoService
     /**
      * @param  array<string, mixed>  $pivotAttrs
      */
+    /**
+     * O vinculo mora em DOIS lugares e os dois tem que andar juntos: o pivot
+     * `compdec_orgao_user` e `users.orgao_principal_id`. Quem le um nao le o
+     * outro -- a OrgaoPolicy decide "edita o proprio orgao" pelo
+     * orgao_principal_id, enquanto a aba de usuarios da tela le o pivot.
+     *
+     * Ate aqui este metodo gravava so o pivot. O coordenador vinculado pela
+     * tela ficava com is_principal no pivot e orgao_principal_id nulo, ou seja,
+     * sem a permissao que o vinculo deveria lhe dar. O painel de integridade
+     * acusa esse estado na regra B3.
+     *
+     * Um usuario tem no maximo um vinculo principal: marcar um novo desmarca o
+     * anterior, senao sobram duas linhas is_principal e nenhuma delas casa com
+     * o unico orgao_principal_id que o usuario pode ter.
+     */
     public function vincularUsuarioAOrgao(int $orgaoId, int $userId, array $pivotAttrs = []): bool
     {
         $orgao = Orgao::findOrFail($orgaoId);
-        User::query()->findOrFail($userId);
+        $usuario = User::query()->findOrFail($userId);
 
-        $orgao->usuarios()->syncWithoutDetaching([
-            $userId => array_merge([
-                'funcao' => 'agente',
-                'is_principal' => false,
-            ], $pivotAttrs),
-        ]);
+        $atributos = array_merge([
+            'funcao' => 'agente',
+            'is_principal' => false,
+        ], $pivotAttrs);
 
-        return true;
+        return DB::transaction(function () use ($orgao, $usuario, $orgaoId, $userId, $atributos): bool {
+            if ($atributos['is_principal']) {
+                DB::table('compdec_orgao_user')
+                    ->where('user_id', $userId)
+                    ->where('orgao_id', '!=', $orgaoId)
+                    ->where('is_principal', true)
+                    ->update(['is_principal' => false, 'updated_at' => now()]);
+            }
+
+            $orgao->usuarios()->syncWithoutDetaching([$userId => $atributos]);
+
+            if ($atributos['is_principal']) {
+                $usuario->forceFill(['orgao_principal_id' => $orgaoId])->save();
+            }
+
+            return true;
+        });
     }
 
+    /**
+     * Desvincular tem o mesmo dever de manter as duas pontas coerentes: deixar
+     * orgao_principal_id apontando para um orgao de onde a pessoa acabou de
+     * sair produz a divergencia inversa (regra B2 do painel de integridade).
+     */
     public function desvincularUsuario(int $orgaoId, int $userId): bool
     {
         $orgao = Orgao::findOrFail($orgaoId);
 
-        return (bool) $orgao->usuarios()->detach($userId);
+        return DB::transaction(function () use ($orgao, $orgaoId, $userId): bool {
+            $removidos = (bool) $orgao->usuarios()->detach($userId);
+
+            User::query()
+                ->whereKey($userId)
+                ->where('orgao_principal_id', $orgaoId)
+                ->update(['orgao_principal_id' => null]);
+
+            return $removidos;
+        });
     }
 
     public function uploadFotoCoordenador(int $orgaoId, UploadedFile $arquivo): Media

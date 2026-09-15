@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\IntegridadeUsuariosController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\Admin\PermissionManagementController;
@@ -7,6 +8,12 @@ use App\Http\Controllers\Admin\UserTokenController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin/permissions')->name('admin.permissions.')->middleware(['can:users.view'])->group(function () {
+
+    // Painel de integridade: diagnostico somente leitura do cadastro de
+    // usuarios. Duas rotas GET, nenhuma escrita -- a correcao continua sendo
+    // feita conta a conta na tela de edicao.
+    Route::get('integridade', [IntegridadeUsuariosController::class, 'index'])->name('integridade.index');
+    Route::get('integridade/exportar', [IntegridadeUsuariosController::class, 'exportar'])->name('integridade.exportar');
 
     // Leitura sempre liberada (index/show/create form/edit form): usuario
     // pode navegar mesmo com troca de e-mail pendente.
