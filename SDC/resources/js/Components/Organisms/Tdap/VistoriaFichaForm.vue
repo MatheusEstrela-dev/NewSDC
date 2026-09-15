@@ -107,8 +107,9 @@
     </div>
 
     <VistoriaChecklistGroup
+      section-id="estruturais"
       titulo="Condições Estruturais"
-      descricao="27 itens de inspeção mecânica, elétrica e de segurança"
+      :descricao="`${itensEstruturais.length} itens de inspeção mecânica, elétrica e de segurança`"
       :itens="itensEstruturais"
       :form="form"
       @update="(k, v) => form[k] = v"
@@ -116,8 +117,9 @@
     />
 
     <VistoriaChecklistGroup
+      section-id="tanque"
       titulo="Condições do Tanque"
-      descricao="7 itens específicos do tanque-pipa"
+      :descricao="`${itensTanque.length} itens específicos do tanque-pipa`"
       :itens="itensTanque"
       :form="form"
       @update="(k, v) => form[k] = v"
@@ -151,11 +153,25 @@
       </div>
     </div>
 
+    <!-- Espaco para blocos que pertencem ao formulario mas nao a ficha em si --
+         hoje, as fotos da tela de criacao, que sobem no mesmo POST. -->
+    <slot name="antes-das-acoes" />
+
     <div class="flex items-center justify-end gap-3">
-      <SecondaryButton type="button" @click="$emit('cancel')">Cancelar</SecondaryButton>
-      <PrimaryButton type="submit" :disabled="form.processing">
+      <Button variant="outline" size="md" type="button" @click="$emit('cancel')">
+        Cancelar
+      </Button>
+      <Button
+        variant="primary"
+        size="md"
+        type="submit"
+        :icon="CheckIcon"
+        icon-position="left"
+        :disabled="form.processing"
+        :loading="form.processing"
+      >
         {{ form.processing ? 'Salvando...' : submitLabel }}
-      </PrimaryButton>
+      </Button>
     </div>
   </form>
 </template>
@@ -164,8 +180,8 @@
 import { computed } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import TextInput from '@/Components/TextInput.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
 import VistoriaChecklistGroup from '@/Components/Organisms/Tdap/VistoriaChecklistGroup.vue';

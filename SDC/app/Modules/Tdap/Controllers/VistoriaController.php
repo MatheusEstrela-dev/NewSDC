@@ -13,6 +13,7 @@ use App\Modules\Tdap\Requests\StoreVistoriaRequest;
 use App\Modules\Tdap\Requests\UpdateVistoriaRequest;
 use App\Modules\Tdap\Resources\VistoriaIndexResource;
 use App\Modules\Tdap\Resources\VistoriaResource;
+use App\Modules\Tdap\Services\VistoriaFotoService;
 use App\Modules\Tdap\Services\VistoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class VistoriaController extends Controller
 {
     public function __construct(
         private readonly VistoriaService $service,
+        private readonly VistoriaFotoService $fotoService,
     ) {}
 
     public function index(Request $request): Response
@@ -86,7 +88,16 @@ class VistoriaController extends Controller
 
     public function store(StoreVistoriaRequest $request): RedirectResponse
     {
-        $vistoria = $this->service->criar(VistoriaDTO::fromRequest($request->validated()));
+        // `except('fotos')`: o DTO descreve a ficha, nao os anexos. Deixar os
+        // arquivos entrarem ali faria o payload da vistoria carregar
+        // UploadedFile ate o Eloquent.
+        $vistoria = $this->service->criar(
+            VistoriaDTO::fromRequest($request->safe()->except('fotos')),
+        );
+
+        foreach ($request->file('fotos') ?? [] as $arquivo) {
+            $this->fotoService->store($vistoria, $arquivo);
+        }
 
         return redirect()
             ->route('tdap.vistorias.show', $vistoria->id)
@@ -99,6 +110,10 @@ class VistoriaController extends Controller
 
         return Inertia::render('Tdap/Vistorias/Show', [
             'vistoria'         => VistoriaResource::make($vistoria),
+            // Prop propria, e nao dentro de `vistoria`: e ela que o
+            // router.reload({ only: ['fotos'] }) repoe depois de anexar ou
+            // remover, sem recarregar o resto da tela.
+            'fotos'            => $vistoria->fotos()->get(),
             'itensEstruturais' => Vistoria::ITENS_ESTRUTURAIS,
             'itensTanque'      => Vistoria::ITENS_TANQUE,
             'canEdit'          => $request->user()?->can('tdap.vistorias.edit') ?? false,
@@ -110,6 +125,11 @@ class VistoriaController extends Controller
     {
         return Inertia::render('Tdap/Vistorias/Edit', [
             'vistoria'         => VistoriaResource::make($vistoria->load(['caminhao.prestador'])),
+            // Mesma prop avulsa do show: e ela que o
+            // router.reload({ only: ['fotos'] }) repoe sem recarregar o
+            // formulario inteiro -- recarregar aqui perderia o que ja foi
+            // digitado no checklist.
+            'fotos'            => $vistoria->fotos()->get(),
             'caminhoes'        => Caminhao::ativo()->with('prestador:id,nome')->orderBy('placa')->get(['id', 'placa', 'marca', 'modelo', 'cor', 'ano', 'capacidade_m3', 'prestador_id']),
             'pareceres'        => ParecerVistoria::options(),
             'itensEstruturais' => Vistoria::ITENS_ESTRUTURAIS,
