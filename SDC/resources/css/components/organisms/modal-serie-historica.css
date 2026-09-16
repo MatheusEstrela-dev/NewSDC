@@ -15,40 +15,48 @@
 /* ---------------------------------------------------------------- cabecalho */
 
 /*
- * Azul escuro nos dois temas: o cabecalho e faixa de cor cheia, com texto
- * branco por cima -- clarea-lo no tema claro tiraria o contraste do titulo.
- * O que muda entre os temas e o CORPO, nao a faixa.
+ * O MESMO gradiente da sidebar (Sidebar.styles.css, `.sidebar`):
+ * `180deg, #1e293b -> #0f172a`, slate-800 descendo para slate-900.
  *
- * O tom sai da propria casca do sistema: termina em `#020617`, o mesmo fundo
- * que o AuthenticatedLayout usa no modo escuro, e passa pelo azul do
- * `blue-600` que e a cor de acao em todo o projeto. A janela deixa de parecer
- * peca de outro sistema colada por cima.
+ * Copiar o valor em vez de importar e deliberado: o estilo da sidebar e
+ * `scoped`, entao a classe dela nao alcanca conteudo teleportado para o body
+ * -- que e onde todo modal do projeto vive. Ficam os dois com o valor escrito,
+ * e este comentario dizendo de onde ele veio.
+ *
+ * Escuro nos DOIS temas, pela mesma razao que a sidebar tambem e: a faixa e
+ * cor cheia com texto branco por cima, e clarea-la no tema claro mataria o
+ * contraste do titulo. O que muda entre os temas e o CORPO, nao a faixa.
+ *
+ * Sobre o gradiente base vem um brilho azul no canto esquerdo, atras do icone:
+ * sem ele a faixa fica chapada demais para caber num cabecalho de 90px de
+ * altura, onde o degrade vertical da sidebar quase nao aparece.
  */
 .modal-serie-header {
-  background-image: linear-gradient(
-    to right,
-    rgb(30 58 138),         /* blue-900 */
-    rgb(30 64 175 / 0.85),  /* blue-800 */
-    rgb(2 6 23 / 0.85)      /* slate-950 -- a casca do app */
-  );
-  border-bottom: 1px solid rgb(30 64 175 / 0.45);
-}
-
-.dark .modal-serie-header {
-  border-bottom-color: rgb(51 65 85 / 0.5); /* slate-700/50 */
+  background-color: #0f172a; /* slate-900 -- fim do degrade da sidebar */
+  background-image:
+    radial-gradient(
+      120% 180% at 0% 0%,
+      rgb(37 99 235 / 0.45) 0%,   /* blue-600, a cor de acao do projeto */
+      rgb(30 58 138 / 0.18) 45%,
+      transparent 75%
+    ),
+    linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid rgb(51 65 85 / 0.5); /* slate-700/50 */
 }
 
 /*
  * Aba ativa dentro do cabecalho.
  *
  * Como a faixa e a mesma nos dois temas, estas regras tambem sao. O traco usa
- * `blue-300`, claro o bastante para aparecer sobre o azul escuro -- o
- * `blue-400` original sumia no proprio fundo.
+ * `#3b82f6`, exatamente o azul que a sidebar acende no item selecionado
+ * (NavItem.vue, `.nav-item.is-active`): a aba ativa e o item ativo do menu
+ * respondem a mesma pergunta -- "onde eu estou?" -- e nao ha razao para
+ * responderem em cores diferentes.
  */
 .modal-serie-aba {
   border-bottom-width: 2px;
   border-color: transparent;
-  color: rgb(219 234 254 / 0.75); /* blue-100, esmaecido */
+  color: rgb(203 213 225 / 0.8); /* slate-300, esmaecido */
   transition: color 150ms ease, border-color 150ms ease;
 }
 
@@ -57,8 +65,8 @@
 }
 
 .modal-serie-aba.is-ativa {
-  border-color: rgb(147 197 253); /* blue-300 */
-  color: rgb(255 255 255);
+  border-color: #3b82f6; /* o mesmo do item ativo da sidebar */
+  color: #ffffff;
 }
 
 /* -------------------------------------------------------------------- corpo */
