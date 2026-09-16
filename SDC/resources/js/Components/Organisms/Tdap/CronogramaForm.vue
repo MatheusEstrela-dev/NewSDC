@@ -1,8 +1,16 @@
 <template>
   <form @submit.prevent="$emit('submit', form)" class="space-y-6">
     <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Identificação</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Vínculos contratuais</h3>
+      <p class="text-xs text-slate-500 mb-4">Escolha a Ata e o Lote — Município, Prestador e Valor Unitário serão preenchidos automaticamente pelo Lote.</p>
+
+      <!--
+        Numero, Empenho e Nota de Empenho vinham num bloco "Identificacao"
+        separado, logo acima. Sao o mesmo assunto que Ata e Lote -- de qual
+        contrato esta operacao nasce -- e o bloco proprio so somava um titulo e
+        uma dobra de rolagem entre campos que se leem juntos.
+      -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <InputLabel for="numero" value="Número *" />
           <TextInput id="numero" v-model="form.numero" type="text" class="mt-1 block w-full uppercase" :class="fieldCls(form.numero, form.errors.numero)" maxlength="20" placeholder="Ex: 0001/2026" required />
@@ -19,11 +27,7 @@
           <InputError :message="form.errors.nota_empenho" class="mt-2" />
         </div>
       </div>
-    </div>
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Vínculos contratuais</h3>
-      <p class="text-xs text-slate-500 mb-4">Escolha a Ata e o Lote — Município, Prestador e Valor Unitário serão preenchidos automaticamente pelo Lote.</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <InputLabel for="ata_id" value="Ata *" />
