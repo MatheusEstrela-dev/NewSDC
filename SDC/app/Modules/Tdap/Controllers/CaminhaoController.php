@@ -25,27 +25,42 @@ class CaminhaoController extends Controller
         private readonly CaminhaoService $service,
     ) {}
 
+    /**
+     * A frota: caminhao e situacao de vistoria na mesma tela.
+     *
+     * Eram duas listagens separadas, e o analista tinha de cruzar na cabeca
+     * "este caminhao pode rodar?". Nenhuma das duas respondia: a de caminhoes
+     * mostra `ativo`, que e flag de cadastro, e a de vistorias nao sabe quais
+     * veiculos ficaram de fora.
+     */
     public function index(Request $request): Response
     {
         $perPage = (int) $request->integer('per_page', 15);
-        $filtros = $request->only(['ativo', 'prestador_id', 'search']);
+        $filtros = $request->only(['ativo', 'prestador_id', 'search', 'vistoria']);
 
-        $caminhoes = $this->service->listar($perPage, $filtros);
+        $caminhoes = $this->service->listarFrota($perPage, $filtros);
 
         return Inertia::render('Tdap/Caminhoes/Index', [
             'caminhoes'    => CaminhaoIndexResource::collection($caminhoes),
-            'estatisticas' => fn () => $this->service->obterEstatisticas(),
+            'estatisticas' => fn () => $this->service->obterEstatisticasDaFrota(),
             'prestadores'  => fn () => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
             'filtros'      => $filtros,
             'canCreate'    => $request->user()?->can('tdap.caminhoes.create') ?? false,
             'canEdit'      => $request->user()?->can('tdap.caminhoes.edit') ?? false,
             'canDelete'    => $request->user()?->can('tdap.caminhoes.delete') ?? false,
+
+            // Vistoria agora e coluna desta tela: o acesso a criar/ver vistoria
+            // sai daqui, nao de um item de menu proprio.
+            'canVerVistoria'   => $request->user()?->can('tdap.vistorias.view') ?? false,
+            'canCriarVistoria' => $request->user()?->can('tdap.vistorias.create') ?? false,
         ]);
     }
 
     public function export(Request $request): StreamedResponse
     {
-        $filtros = $request->only(['ativo', 'prestador_id', 'search']);
+        // Mesma allowlist da listagem: o CSV precisa corresponder ao que a tela
+        // estava mostrando, filtro de vistoria incluido.
+        $filtros = $request->only(['ativo', 'prestador_id', 'search', 'vistoria']);
         $data = $this->service->exportar($filtros);
 
         $filename = 'caminhoes_'.now()->format('Y-m-d_H-i-s').'.csv';

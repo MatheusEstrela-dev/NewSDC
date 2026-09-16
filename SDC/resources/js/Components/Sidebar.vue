@@ -664,15 +664,20 @@
         >
           Prestadores
         </NavItem>
+        <!-- Um item so. Caminhao e vistoria eram duas entradas, e a pergunta
+             que o analista faz e uma: "este veiculo pode rodar?". Nenhuma das
+             duas respondia sozinha -- a de caminhoes mostra `ativo`, que e flag
+             de cadastro, e a de vistorias nao sabe quais veiculos ficaram de
+             fora. Por isso a tela de vistoria continua acendendo este item. -->
         <NavItem
           v-if="_routes.hasTdapCaminhoes"
           :href="route('tdap.caminhoes.index')"
-          :active="isRouteActive('tdap.caminhoes.*')"
+          :active="isRouteActive('tdap.caminhoes.*') || isRouteActive('tdap.vistorias.*')"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
         >
-          Caminhões
+          Frota e Vistorias
         </NavItem>
         <NavItem
           v-if="_routes.hasTdapAtas"
@@ -727,16 +732,6 @@
           :collapsed="isCollapsed"
         >
           Viagens pendentes
-        </NavItem>
-        <NavItem
-          v-if="_routes.hasTdapVistorias"
-          :href="route('tdap.vistorias.index')"
-          :active="isRouteActive('tdap.vistorias.*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Vistorias
         </NavItem>
         <NavItem
           v-if="_routes.hasTdapHistoricos"
@@ -835,7 +830,6 @@ const _routes = {
   hasTdapCronogramas: route().has('tdap.cronogramas.index'),
   hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
   hasTdapViagensConfirmacao: route().has('tdap.viagens.confirmacao'),
-  hasTdapVistorias: route().has('tdap.vistorias.index'),
   hasTdapHistoricos: route().has('tdap.historicos.index'),
   hasCisterna: route().has('cisternas.beneficiarios.index'),
   hasInventario: route().has('inventario.index'),

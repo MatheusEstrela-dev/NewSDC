@@ -1,14 +1,15 @@
 <template>
-  <Head title="TDAP — Vistorias" />
+  <Head title="TDAP — Histórico de vistorias" />
   <div class="w-full space-y-6 pb-8">
     <PageHeader variant="gradient"
-      title="Vistorias de Veículos"
-      description="Inspeções técnicas dos caminhões-tanque (vigência 12 meses)"
+      title="Histórico de vistorias"
+      description="Uma linha por inspeção. A situação atual de cada veículo está em Frota e Vistorias."
       :icon="TruckIcon"
       :icon-image="moduleIcon('tdap')"
       :espaco-inferior="false"
     >
       <template #actions>
+        <ActionButton action="view" :allowed="true" variant="secondary" label="Frota e Vistorias" @click="router.visit(route('tdap.caminhoes.index'))" />
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
         <Link v-if="canCreate" :href="route('tdap.vistorias.create')">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">

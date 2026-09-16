@@ -71,6 +71,18 @@ class Caminhao extends Model
             ->latestOfMany('data');
     }
 
+    /**
+     * A vistoria mais recente, vigente ou nao.
+     *
+     * Serve para a tela distinguir "vistoria venceu em tal data" de "nunca foi
+     * vistoriado" -- sem ela, os dois casos aparecem como o mesmo vazio, e sao
+     * problemas diferentes: um exige renovar, o outro exige cadastrar.
+     */
+    public function ultimaVistoria(): HasOne
+    {
+        return $this->hasOne(Vistoria::class, 'placa_id')->latestOfMany('data');
+    }
+
     public function scopeAtivo(Builder $query): Builder
     {
         return $query->where('ativo', true);
