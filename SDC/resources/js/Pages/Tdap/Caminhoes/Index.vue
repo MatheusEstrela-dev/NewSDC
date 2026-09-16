@@ -3,11 +3,22 @@
 
   <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
-      title="Caminhões-Tanque"
-      description="Frota dos prestadores autorizados a transportar água potável"
+      title="Frota e Vistorias"
+      description="Caminhões-tanque com a situação de vistoria de cada veículo"
       :icon="TruckIcon"
+      :icon-image="moduleIcon('tdap')"
     >
       <template #actions>
+        <!-- O historico completo (uma linha por inspecao) deixou de ser item
+             de menu: daqui, e como detalhe desta tela. -->
+        <ActionButton
+          action="history"
+          module="tdap"
+          resource="vistorias"
+          :allowed="canVerVistoria"
+          label="Histórico de vistorias"
+          @click="router.visit(route('tdap.vistorias.index'))"
+        />
         <ActionButton
           action="export"
           :allowed="true"
@@ -26,23 +37,52 @@
       </template>
     </TdapPageHeader>
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-        <p class="text-sm text-slate-500 dark:text-slate-400">Total</p>
-        <p class="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
-      </div>
-      <div class="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm dark:border-emerald-500/25 dark:bg-slate-900/60">
-        <p class="text-sm text-slate-500 dark:text-slate-400">Ativos</p>
-        <p class="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-300">{{ estatisticas.ativos }}</p>
-      </div>
-      <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-        <p class="text-sm text-slate-500 dark:text-slate-400">Inativos</p>
-        <p class="mt-2 text-2xl font-bold text-slate-500 dark:text-slate-300">{{ estatisticas.inativos }}</p>
-      </div>
-      <div class="rounded-lg border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-500/25 dark:bg-slate-900/60">
-        <p class="text-sm text-slate-500 dark:text-slate-400">Capacidade total (m³)</p>
-        <p class="mt-2 text-2xl font-bold text-blue-600 dark:text-blue-300">{{ Number(estatisticas.capacidade_total_m3 || 0).toFixed(2) }}</p>
-      </div>
+    <!-- Cards por APTIDAO, e nao por `ativo`: a flag de cadastro dizia "132
+         ativos" enquanto so 2 veiculos podiam rodar. Clicar filtra a lista. -->
+    <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+      <StatCard
+        title="Total da frota"
+        :value="estatisticas.total"
+        :icon="TruckIcon"
+        variant="info"
+        clickable
+        @click="filtrarPorVistoria('')"
+      />
+      <StatCard
+        title="Aptos a operar"
+        :value="estatisticas.aptos"
+        :icon="CheckIcon"
+        variant="success"
+        subtitle="Vistoria vigente"
+        clickable
+        @click="filtrarPorVistoria('apto')"
+      />
+      <StatCard
+        title="Vistoria vencida"
+        :value="estatisticas.vistoria_vencida"
+        :icon="ClockIcon"
+        variant="warning"
+        subtitle="Precisa renovar"
+        clickable
+        @click="filtrarPorVistoria('vencida')"
+      />
+      <StatCard
+        title="Sem vistoria"
+        :value="estatisticas.sem_vistoria"
+        :icon="ClockIcon"
+        variant="danger"
+        subtitle="Nunca vistoriado"
+        clickable
+        @click="filtrarPorVistoria('sem_vistoria')"
+      />
+      <StatCard
+        title="Capacidade total"
+        :value="`${Number(estatisticas.capacidade_total_m3 || 0).toFixed(2)} m³`"
+        :icon="TruckIcon"
+        variant="info"
+        :format-number="false"
+        :subtitle="estatisticas.placas_duplicadas ? `${estatisticas.placas_duplicadas} placas duplicadas` : ''"
+      />
     </div>
 
     <TdapCaminhoesFiltersSection
@@ -80,8 +120,9 @@
                       <th class="px-4 py-3 text-left">Prestador</th>
                       <th class="px-4 py-3 text-left">Marca / Modelo</th>
                       <th class="px-4 py-3 text-right">Capacidade (m³)</th>
+                      <th class="px-4 py-3 text-left">Vistoria</th>
                       <th class="px-4 py-3 text-left">Status</th>
-                      <th class="w-28 px-4 py-3 text-right">Ações</th>
+                      <th class="w-36 px-4 py-3 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
@@ -112,6 +153,13 @@
                       <td class="whitespace-nowrap px-4 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
                         {{ Number(caminhao.capacidade_m3 || 0).toFixed(2) }}
                       </td>
+                      <td class="px-4 py-4">
+                        <VistoriaSituacaoBadge :situacao="caminhao.situacao_vistoria" :dias-restantes="caminhao.vistoria?.dias_restantes" />
+                        <p v-if="caminhao.vistoria" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {{ fmtDate(caminhao.vistoria.data) }}
+                          <span v-if="caminhao.total_vistorias > 1" class="text-slate-400">· {{ caminhao.total_vistorias }} no histórico</span>
+                        </p>
+                      </td>
                       <td class="whitespace-nowrap px-4 py-4">
                         <TdapStatusBadge :active="caminhao.ativo" />
                       </td>
@@ -137,12 +185,35 @@
                             tooltip-text="Editar caminhão"
                             @click="router.visit(route('tdap.caminhoes.edit', caminhao.id))"
                           />
+                          <!-- A vistoria deixou de ser tela separada: nasce
+                               daqui, ja com o caminhao escolhido. -->
+                          <ActionButton
+                            v-if="caminhao.vistoria"
+                            action="history"
+                            module="tdap"
+                            resource="vistorias"
+                            :allowed="canVerVistoria"
+                            :show-label="false"
+                            size="sm"
+                            tooltip-text="Ver vistoria mais recente"
+                            @click="router.visit(route('tdap.vistorias.show', caminhao.vistoria.id))"
+                          />
+                          <ActionButton
+                            action="create"
+                            module="tdap"
+                            resource="vistorias"
+                            :allowed="canCriarVistoria"
+                            :show-label="false"
+                            size="sm"
+                            tooltip-text="Nova vistoria deste caminhão"
+                            @click="router.visit(route('tdap.vistorias.create', { placa_id: caminhao.id }))"
+                          />
                         </div>
                       </td>
                     </tr>
         
                     <tr v-if="caminhoes.data.length === 0">
-                      <td colspan="6" class="px-4 py-10 text-center">
+                      <td colspan="7" class="px-4 py-10 text-center">
                         <TruckIcon class="mx-auto h-12 w-12 text-slate-400" />
                         <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum caminhão encontrado</p>
                         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou cadastre um novo caminhão.</p>
@@ -170,6 +241,13 @@
       </template>
 
       <template #mobile-c4="{ item: caminhao }">
+        <VistoriaSituacaoBadge :situacao="caminhao.situacao_vistoria" :dias-restantes="caminhao.vistoria?.dias_restantes" />
+        <span v-if="caminhao.vistoria" class="ml-1 text-xs text-slate-500 dark:text-slate-400">
+        {{ fmtDate(caminhao.vistoria.data) }}
+        </span>
+      </template>
+
+      <template #mobile-c5="{ item: caminhao }">
         <TdapStatusBadge :active="caminhao.ativo" />
       </template>
 
@@ -194,6 +272,27 @@
         size="sm"
         tooltip-text="Editar caminhão"
         @click="router.visit(route('tdap.caminhoes.edit', caminhao.id))"
+        />
+        <ActionButton
+        v-if="caminhao.vistoria"
+        action="history"
+        module="tdap"
+        resource="vistorias"
+        :allowed="canVerVistoria"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Ver vistoria mais recente"
+        @click="router.visit(route('tdap.vistorias.show', caminhao.vistoria.id))"
+        />
+        <ActionButton
+        action="create"
+        module="tdap"
+        resource="vistorias"
+        :allowed="canCriarVistoria"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Nova vistoria deste caminhão"
+        @click="router.visit(route('tdap.vistorias.create', { placa_id: caminhao.id }))"
         />
         </div>
       </template>
@@ -227,31 +326,48 @@ import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vu
 import TdapCaminhoesFiltersSection from '@/Components/Organisms/Tdap/TdapCaminhoesFiltersSection.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import VistoriaSituacaoBadge from '@/Components/Organisms/Tdap/VistoriaSituacaoBadge.vue';
+import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   caminhoes:    { type: Object, default: () => ({ data: [], meta: {} }) },
-  estatisticas: { type: Object, default: () => ({ total: 0, ativos: 0, inativos: 0, capacidade_total_m3: 0 }) },
+  estatisticas: { type: Object, default: () => ({ total: 0, ativos: 0, aptos: 0, vistoria_vencida: 0, sem_vistoria: 0, capacidade_total_m3: 0, placas_duplicadas: 0 }) },
   prestadores:  { type: Array, default: () => [] },
   filtros:      { type: Object, default: () => ({}) },
   canCreate:    { type: Boolean, default: false },
   canEdit:      { type: Boolean, default: false },
   canDelete:    { type: Boolean, default: false },
+  canVerVistoria:   { type: Boolean, default: false },
+  canCriarVistoria: { type: Boolean, default: false },
 });
 
 const activeFilters = ref({
   search: props.filtros.search ?? '',
   prestador_id: props.filtros.prestador_id ?? '',
   ativo: props.filtros.ativo ?? '',
+  vistoria: props.filtros.vistoria ?? '',
 });
 
-function aplicarFiltros(filters = activeFilters.value) {
-  router.get(route('tdap.caminhoes.index'), {
+/** Querystring a partir dos filtros, num lugar so (a paginacao usava outra). */
+function queryDosFiltros(filters = activeFilters.value) {
+  return {
     search:       filters.search || undefined,
     prestador_id: filters.prestador_id || undefined,
-    ativo:        filters.ativo !== '' ? filters.ativo : undefined,
-  }, { preserveState: true, replace: true });
+    ativo:        filters.ativo !== '' && filters.ativo !== undefined ? filters.ativo : undefined,
+    vistoria:     filters.vistoria || undefined,
+  };
+}
+
+function aplicarFiltros(filters = activeFilters.value) {
+  router.get(route('tdap.caminhoes.index'), queryDosFiltros(filters), {
+    preserveState: true,
+    replace: true,
+  });
 }
 
 function limparFiltros() {
@@ -259,18 +375,38 @@ function limparFiltros() {
   router.get(route('tdap.caminhoes.index'), {}, { preserveState: true, replace: true });
 }
 
+/**
+ * Card de contagem como filtro.
+ *
+ * O numero em destaque e a pergunta ("quantos nao podem rodar?"); clicar nele
+ * entrega a lista correspondente, sem obrigar o operador a abrir o bloco de
+ * filtros e repetir o que ja apontou.
+ */
+function filtrarPorVistoria(situacao) {
+  activeFilters.value = { ...activeFilters.value, vistoria: situacao };
+  aplicarFiltros();
+}
+
+function fmtDate(valor) {
+  if (! valor) return '-';
+
+  const [ano, mes, dia] = String(valor).slice(0, 10).split('-');
+
+  return `${dia}/${mes}/${ano}`;
+}
+
 // Exportacao CSV (mesmo padrao do Cronograma)
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.caminhoes.export');
 
 function onExport(params) {
-  handleExport(params, {
-    search:       activeFilters.value.search || undefined,
-    prestador_id: activeFilters.value.prestador_id || undefined,
-    ativo:        activeFilters.value.ativo !== '' ? activeFilters.value.ativo : undefined,
-  });
+  handleExport(params, queryDosFiltros());
 }
+
 function irParaPagina(page) {
-  router.get(route('tdap.caminhoes.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
+  router.get(route('tdap.caminhoes.index'), { ...queryDosFiltros(), page }, {
+    preserveState: true,
+    replace: true,
+  });
 }
 
 /**
@@ -285,6 +421,7 @@ const CAMPOS_MOBILE = [
   { key: 'c1', label: 'Prestador' },
   { key: 'c2', label: 'Marca / Modelo' },
   { key: 'c3', label: 'Capacidade (m³)' },
-  { key: 'c4', label: 'Status' },
+  { key: 'c4', label: 'Vistoria' },
+  { key: 'c5', label: 'Status' },
 ];
 </script>

@@ -26,6 +26,17 @@
       @update:model-value="updateFilter('ativo', $event)"
     />
 
+    <!-- Aptidao != status. `ativo` e flag de cadastro; quem decide se o
+         veiculo pode rodar e a vistoria vigente. -->
+    <FilterField
+      label="Vistoria"
+      type="select"
+      :model-value="localFilters.vistoria ?? ''"
+      :options="vistoriaOptions"
+      placeholder="Todas"
+      @update:model-value="updateFilter('vistoria', $event)"
+    />
+
     <div class="flex min-h-[4.25rem] items-end justify-end">
       <FilterActions @search="apply" @clear="clear" />
     </div>
@@ -55,6 +66,14 @@ const localFilters = ref({ ...props.filters });
 const statusOptions = [
   { value: '1', label: 'Ativos' },
   { value: '0', label: 'Inativos' },
+];
+
+// Tres estados, e nao dois: "nunca vistoriado" pede cadastro e "vencida" pede
+// renovacao. Achatar em "nao apto" tira do operador o que fazer em seguida.
+const vistoriaOptions = [
+  { value: 'apto', label: 'Aptos (vigente)' },
+  { value: 'vencida', label: 'Vistoria vencida' },
+  { value: 'sem_vistoria', label: 'Sem vistoria' },
 ];
 
 const prestadorOptions = computed(() => props.prestadores.map((prestador) => ({

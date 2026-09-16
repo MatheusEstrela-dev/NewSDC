@@ -5,31 +5,137 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Services;
 
 use App\Modules\Tdap\DTOs\CaminhaoDTO;
+use App\Modules\Tdap\Enums\ParecerVistoria;
 use App\Modules\Tdap\Models\Caminhao;
+use App\Modules\Tdap\Models\Vistoria;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class CaminhaoService
 {
     /**
+     * A frota com a situacao de vistoria de cada veiculo.
+     *
+     * Caminhao e vistoria viviam em telas separadas, e nenhuma das duas contava
+     * a verdade: a de caminhoes anuncia "132 ativos" -- mas `ativo` e flag de
+     * CADASTRO -- enquanto quem decide se o veiculo pode rodar e a vistoria
+     * vigente, que so 2 tinham. Aqui as duas metades ficam na mesma linha.
+     *
+     * `vistoriaVigente` e a MESMA relacao que CronogramaService::podeAtivar
+     * consulta; `ultimaVistoria` existe para a tela poder dizer "venceu em
+     * tal data" em vez de um vazio indistinguivel de "nunca vistoriado".
+     *
      * @param  array<string, mixed>  $filtros
      */
-    public function listar(int $perPage = 15, array $filtros = []): LengthAwarePaginator
+    public function listarFrota(int $perPage = 15, array $filtros = []): LengthAwarePaginator
     {
+        return $this->consultaDaFrota($filtros)
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * Consulta base da frota: mesmos vinculos e mesmos filtros para a tela e
+     * para o CSV. Exportacao que filtra diferente da listagem entrega um
+     * arquivo que nao corresponde ao que o usuario estava vendo.
+     *
+     * Colunas QUALIFICADAS no eager load: latestOfMany monta um self-join sobre
+     * tdap_vistorias, e `placa_id` cru fica ambiguo entre as duas pontas -- o
+     * Postgres recusa a consulta.
+     *
+     * @param  array<string, mixed>  $filtros
+     */
+    private function consultaDaFrota(array $filtros): Builder
+    {
+        $colunasDaVistoria = [
+            'tdap_vistorias.id', 'tdap_vistorias.placa_id', 'tdap_vistorias.data',
+            'tdap_vistorias.parecer', 'tdap_vistorias.ficha', 'tdap_vistorias.lacre',
+            'tdap_vistorias.nome',
+        ];
+
         return Caminhao::query()
-            ->with(['prestador:id,nome,cnpj'])
+            ->with([
+                'prestador:id,nome,cnpj',
+                'vistoriaVigente' => fn ($q) => $q->select($colunasDaVistoria),
+                'ultimaVistoria'  => fn ($q) => $q->select($colunasDaVistoria),
+            ])
+            ->withCount('vistorias')
             ->when(
                 array_key_exists('ativo', $filtros) && $filtros['ativo'] !== null && $filtros['ativo'] !== '',
                 fn ($q) => $q->where('ativo', (bool) $filtros['ativo']),
             )
-            ->when(
-                $filtros['prestador_id'] ?? null,
-                fn ($q, $id) => $q->doPrestador((int) $id),
-            )
+            ->when($filtros['prestador_id'] ?? null, fn ($q, $id) => $q->doPrestador((int) $id))
             ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->buscar((string) $termo))
-            ->orderBy('placa')
-            ->paginate($perPage)
-            ->withQueryString();
+            ->when($filtros['vistoria'] ?? null, function ($q, $situacao): void {
+                match ($situacao) {
+                    // Apto = o criterio real de operacao, nao a flag `ativo`.
+                    'apto'         => $q->whereHas('vistoriaVigente'),
+                    'vencida'      => $q->whereDoesntHave('vistoriaVigente')->whereHas('vistorias'),
+                    'sem_vistoria' => $q->whereDoesntHave('vistorias'),
+                    default        => null,
+                };
+            })
+            ->orderBy('placa');
+    }
+
+    /**
+     * Contadores da frota pelo criterio de APTIDAO, em uma consulta.
+     *
+     * @return array<string, int|float>
+     */
+    public function obterEstatisticasDaFrota(): array
+    {
+        $vigenciaDesde = now()->subMonths(Vistoria::VIGENCIA_MESES)->toDateString();
+        $aprovada = ParecerVistoria::Aprovada->value;
+
+        $row = Caminhao::query()
+            ->selectRaw('
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE ativo = TRUE) AS ativos,
+                COALESCE(SUM(capacidade_m3) FILTER (WHERE ativo = TRUE), 0) AS capacidade_total_m3
+            ')
+            ->selectRaw('COUNT(*) FILTER (WHERE EXISTS (
+                SELECT 1 FROM tdap_vistorias v
+                WHERE v.placa_id = tdap_caminhoes.id AND v.deleted_at IS NULL
+                  AND v.parecer = ? AND v.data >= ?
+            )) AS aptos', [$aprovada, $vigenciaDesde])
+            ->selectRaw('COUNT(*) FILTER (WHERE NOT EXISTS (
+                SELECT 1 FROM tdap_vistorias v WHERE v.placa_id = tdap_caminhoes.id AND v.deleted_at IS NULL
+            )) AS sem_vistoria', [])
+            ->first();
+
+        $total = (int) ($row->total ?? 0);
+        $aptos = (int) ($row->aptos ?? 0);
+        $semVistoria = (int) ($row->sem_vistoria ?? 0);
+
+        return [
+            'total'               => $total,
+            'ativos'              => (int) ($row->ativos ?? 0),
+            'aptos'               => $aptos,
+            // Vencida = tem historico de vistoria, mas nenhuma vigente.
+            'vistoria_vencida'    => max(0, $total - $aptos - $semVistoria),
+            'sem_vistoria'        => $semVistoria,
+            'capacidade_total_m3' => (float) ($row->capacidade_total_m3 ?? 0),
+            'placas_duplicadas'   => $this->contarPlacasDuplicadas(),
+        ];
+    }
+
+    /**
+     * Placas repetidas na frota.
+     *
+     * Nao e metrica de vaidade: sao 15 placas em 30 veiculos, com prestadores
+     * diferentes na mesma placa. Numa tela em que a placa e a identidade do
+     * registro, esconder isso faz o operador escolher o caminhao errado.
+     */
+    private function contarPlacasDuplicadas(): int
+    {
+        return Caminhao::query()
+            ->select('placa')
+            ->groupBy('placa')
+            ->havingRaw('COUNT(*) > 1')
+            ->get()
+            ->count();
     }
 
     /**
@@ -40,32 +146,42 @@ class CaminhaoService
      */
     public function exportar(array $filtros = []): array
     {
-        $rows = Caminhao::query()
-            ->with(['prestador:id,nome,cnpj'])
-            ->when(
-                array_key_exists('ativo', $filtros) && $filtros['ativo'] !== null && $filtros['ativo'] !== '',
-                fn ($q) => $q->where('ativo', (bool) $filtros['ativo']),
-            )
-            ->when(
-                $filtros['prestador_id'] ?? null,
-                fn ($q, $id) => $q->doPrestador((int) $id),
-            )
-            ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->buscar((string) $termo))
-            ->orderBy('placa')
-            ->get();
+        $rows = $this->consultaDaFrota($filtros)->get();
 
-        return $rows->map(fn (Caminhao $c) => [
-            'Placa'          => $c->placa,
-            'Marca'          => $c->marca,
-            'Modelo'         => $c->modelo,
-            'Cor'            => $c->cor,
-            'Ano'            => $c->ano,
-            'Capacidade m3'  => number_format((float) $c->capacidade_m3, 2, ',', '.'),
-            'Prestador'      => $c->prestador?->nome,
-            'CNPJ'           => $c->prestador?->cnpj,
-            'Situacao'       => $c->ativo ? 'Ativo' : 'Inativo',
-            'Observacoes'    => $c->observacoes,
-        ])->all();
+        return $rows->map(function (Caminhao $c): array {
+            $ultima = $c->ultimaVistoria;
+
+            return [
+                'Placa'          => $c->placa,
+                'Marca'          => $c->marca,
+                'Modelo'         => $c->modelo,
+                'Cor'            => $c->cor,
+                'Ano'            => $c->ano,
+                'Capacidade m3'  => number_format((float) $c->capacidade_m3, 2, ',', '.'),
+                'Prestador'      => $c->prestador?->nome,
+                'CNPJ'           => $c->prestador?->cnpj,
+                'Situacao'       => $c->ativo ? 'Ativo' : 'Inativo',
+                // Cadastro e aptidao sao coisas diferentes: sem estas colunas o
+                // CSV repetia "132 ativos" e escondia que so 2 podiam rodar.
+                'Vistoria'          => $this->rotuloDaSituacao($c),
+                'Data da vistoria'  => $ultima?->data?->format('d/m/Y'),
+                'Parecer'           => $ultima?->parecer?->value,
+                'Ficha'             => $ultima?->ficha,
+                'Lacre'             => $ultima?->lacre,
+                'Vistorias no total' => $c->vistorias_count ?? 0,
+                'Observacoes'       => $c->observacoes,
+            ];
+        })->all();
+    }
+
+    /** Mesmos tres estados da tela, escritos por extenso para o CSV. */
+    private function rotuloDaSituacao(Caminhao $caminhao): string
+    {
+        if ($caminhao->vistoriaVigente !== null) {
+            return 'Apto';
+        }
+
+        return $caminhao->ultimaVistoria !== null ? 'Vencida' : 'Sem vistoria';
     }
 
     public function obter(int $id): Caminhao
@@ -127,27 +243,5 @@ class CaminhaoService
         }
 
         return (bool) $caminhao->delete();
-    }
-
-    /**
-     * @return array<string, int|float>
-     */
-    public function obterEstatisticas(): array
-    {
-        $row = Caminhao::query()
-            ->selectRaw('
-                COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE ativo = TRUE) AS ativos,
-                COUNT(*) FILTER (WHERE ativo = FALSE) AS inativos,
-                COALESCE(SUM(capacidade_m3) FILTER (WHERE ativo = TRUE), 0) AS capacidade_total_m3
-            ')
-            ->first();
-
-        return [
-            'total'              => (int) ($row->total ?? 0),
-            'ativos'             => (int) ($row->ativos ?? 0),
-            'inativos'           => (int) ($row->inativos ?? 0),
-            'capacidade_total_m3' => (float) ($row->capacidade_total_m3 ?? 0),
-        ];
     }
 }
