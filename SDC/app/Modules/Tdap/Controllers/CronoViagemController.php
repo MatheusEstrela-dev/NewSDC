@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Municipio;
 use App\Modules\Tdap\DTOs\CronoViagemDTO;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Requests\StoreCronoViagemRequest;
@@ -25,10 +26,32 @@ class CronoViagemController extends Controller
     public function pendentes(Request $request): Response
     {
         $perPage = (int) $request->integer('per_page', 25);
-        $pendentes = $this->service->listarPendentesValidacao($perPage);
+
+        // Allowlist explicita, como em CronogramaController@index: filtro que
+        // nao estiver nesta lista e ignorado em silencio.
+        $filtros = $request->only(['search', 'municipio_id', 'prestador_id', 'cronograma_id']);
+
+        $pendentes = $this->service->listarPendentesValidacao($perPage, $filtros);
 
         return Inertia::render('Tdap/Viagens/Pendentes', [
-            'viagens'  => CronoViagemResource::collection($pendentes),
+            'viagens' => CronoViagemResource::collection($pendentes),
+            'filtros' => $filtros,
+
+            // Closures = lazy props do Inertia: nao recalculam num reload
+            // parcial, que e como a tela se atualiza depois de validar.
+            'estatisticas' => fn (): array => $this->service->obterEstatisticas(),
+            'municipios'   => fn () => Municipio::query()
+                ->whereIn('id', function ($sub): void {
+                    $sub->select('c.municipio_id')
+                        ->from('tdap_cronogramas as c')
+                        ->join('tdap_crono_caminhoes as cc', 'cc.cronograma_id', '=', 'c.id')
+                        ->join('tdap_crono_viagens as v', 'v.crono_caminhao_id', '=', 'cc.id')
+                        ->whereNull('v.validado')
+                        ->whereNull('v.deleted_at');
+                })
+                ->orderBy('nome')
+                ->get(['id', 'nome']),
+
             'canValidar' => $request->user()?->can('tdap.viagens.validar') ?? false,
         ]);
     }

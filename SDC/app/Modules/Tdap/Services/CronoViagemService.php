@@ -42,18 +42,81 @@ class CronoViagemService
             ->get();
     }
 
-    public function listarPendentesValidacao(int $perPage = 25): LengthAwarePaginator
+    /**
+     * Fila de viagens aguardando decisao.
+     *
+     * O eager load carrega o cronograma INTEIRO (e nao `id,numero`) porque a
+     * tela passou a mostrar prazo, municipio, prestador e valor: os accessors
+     * `estado`, `dt_final_efetiva` e `dias_restantes` dependem de colunas que a
+     * projecao enxuta deixava de fora, e cada uma delas viraria uma consulta
+     * extra por linha.
+     *
+     * @param  array<string, mixed>  $filtros
+     */
+    public function listarPendentesValidacao(int $perPage = 25, array $filtros = []): LengthAwarePaginator
     {
         return CronoViagem::query()
             ->with([
-                'cronoCaminhao.cronograma:id,numero',
-                'cronoCaminhao.caminhao:id,placa,marca,modelo',
+                'cronoCaminhao.cronograma.municipio:id,nome,uf',
+                'cronoCaminhao.cronograma.prestador:id,nome',
+                'cronoCaminhao.cronograma.lote:id,numero,valor_m3',
+                'cronoCaminhao.caminhao:id,placa,marca,modelo,capacidade_m3,ativo',
             ])
             ->pendente()
             ->whereHas('cronoCaminhao')
+            ->when($filtros['search'] ?? null, function ($q, $termo): void {
+                $termo = '%'.mb_strtoupper((string) $termo).'%';
+
+                $q->whereHas('cronoCaminhao', function ($sub) use ($termo): void {
+                    $sub->whereHas('caminhao', fn ($c) => $c->whereRaw('upper(placa) like ?', [$termo]))
+                        ->orWhereHas('cronograma', fn ($c) => $c->whereRaw('upper(numero) like ?', [$termo]));
+                });
+            })
+            ->when($filtros['municipio_id'] ?? null, fn ($q, $id) => $q->whereHas(
+                'cronoCaminhao.cronograma',
+                fn ($c) => $c->where('municipio_id', (int) $id),
+            ))
+            ->when($filtros['prestador_id'] ?? null, fn ($q, $id) => $q->whereHas(
+                'cronoCaminhao.cronograma',
+                fn ($c) => $c->where('prestador_id', (int) $id),
+            ))
+            ->when($filtros['cronograma_id'] ?? null, fn ($q, $id) => $q->whereHas(
+                'cronoCaminhao',
+                fn ($c) => $c->where('cronograma_id', (int) $id),
+            ))
+            // Fila velha primeiro: quem espera ha mais tempo decide antes.
             ->orderBy('data_registro')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * Contadores da fila, em UMA consulta.
+     *
+     * Mesmo padrao de CronogramaService::obterEstatisticas: COUNT(*) FILTER do
+     * PostgreSQL em vez de uma consulta por card.
+     *
+     * @return array<string, int>
+     */
+    public function obterEstatisticas(): array
+    {
+        $linha = DB::table('tdap_crono_viagens as v')
+            ->join('tdap_crono_caminhoes as cc', 'cc.id', '=', 'v.crono_caminhao_id')
+            ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
+            ->whereNull('v.deleted_at')
+            ->whereNull('v.validado')
+            ->selectRaw('count(*) as pendentes')
+            ->selectRaw("count(*) FILTER (WHERE v.data_registro < now() - interval '7 days') as aguardando_mais_de_7d")
+            ->selectRaw('count(*) FILTER (WHERE c.encerrado_em is not null) as de_cronograma_encerrado')
+            ->selectRaw('count(DISTINCT c.municipio_id) as municipios')
+            ->first();
+
+        return [
+            'pendentes'               => (int) ($linha->pendentes ?? 0),
+            'aguardando_mais_de_7d'   => (int) ($linha->aguardando_mais_de_7d ?? 0),
+            'de_cronograma_encerrado' => (int) ($linha->de_cronograma_encerrado ?? 0),
+            'municipios'              => (int) ($linha->municipios ?? 0),
+        ];
     }
 
     public function registrar(CronoViagemDTO $dto): CronoViagem

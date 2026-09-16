@@ -8,6 +8,7 @@ use App\Models\Municipio;
 use App\Models\User;
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
+use App\Modules\Tdap\Support\VigenciaAta;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -190,6 +191,37 @@ class Cronograma extends Model
     public function getDtFinalEfetivaAttribute(): ?\Carbon\Carbon
     {
         return $this->dt_final_prorrogacao ?? $this->dt_final;
+    }
+
+    /**
+     * Dias ate o fim da vigencia, assinado: negativo = ja passou, 0 = termina
+     * hoje, null = cronograma sem data final.
+     *
+     * Delega em VigenciaAta, a mesma classe que a Ata usa, em vez de um
+     * diffInDays proprio -- ter duas contas de prazo no modulo e como o sistema
+     * acaba dizendo "vence em 3 dias" numa tela e "vencido" na outra.
+     *
+     * A data de entrada e a EFETIVA, ja resolvida a prorrogacao: um cronograma
+     * prorrogado nao esta vencido so porque a data original passou.
+     */
+    public function getDiasRestantesAttribute(): ?int
+    {
+        return VigenciaAta::diasRestantes($this->dt_final_efetiva);
+    }
+
+    /**
+     * Cronograma em curso que termina dentro da janela de alerta (30 dias).
+     *
+     * So vale para cronograma ATIVO: rascunho ainda nao comecou e encerrado ja
+     * acabou -- nenhum dos dois merece aviso de prazo.
+     */
+    public function getProximaVencerAttribute(): bool
+    {
+        return VigenciaAta::isProximaVencer(
+            (bool) $this->ativo && ! $this->encerrado_em,
+            $this->dt_inicio_efetiva,
+            $this->dt_final_efetiva,
+        );
     }
 
     /**
