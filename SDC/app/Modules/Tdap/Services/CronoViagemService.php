@@ -6,6 +6,8 @@ namespace App\Modules\Tdap\Services;
 
 use App\Core\Events\DomainEvent;
 use App\Core\Outbox\OutboxDispatcher;
+use App\Models\User;
+use App\Support\Perfil\OrgaoDeLotacao;
 use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
 use App\Modules\Tdap\DTOs\CronoViagemDTO;
 use App\Modules\Tdap\Models\CronoCaminhao;
@@ -43,6 +45,22 @@ class CronoViagemService
     }
 
     /**
+     * Municipio ao qual o usuario esta restrito, ou null quando e estadual.
+     *
+     * Reusa OrgaoDeLotacao, a mesma regra que AjudaHumanitaria, PMDA e a
+     * PedidoAhPolicy ja usam -- inclusive a cadeia de fallback (orgao
+     * principal -> pivot is_principal -> unico orgao vinculado). Escrever uma
+     * consulta propria aqui criaria uma segunda definicao de "de qual municipio
+     * esta pessoa e".
+     *
+     * Null significa CEDEC: opera em ambito estadual e ve a fila inteira.
+     */
+    private function municipioDoUsuario(?User $user): ?int
+    {
+        return $user !== null ? OrgaoDeLotacao::municipioId($user) : null;
+    }
+
+    /**
      * Fila de viagens aguardando decisao.
      *
      * O eager load carrega o cronograma INTEIRO (e nao `id,numero`) porque a
@@ -51,11 +69,19 @@ class CronoViagemService
      * projecao enxuta deixava de fora, e cada uma delas viraria uma consulta
      * extra por linha.
      *
+     * Quem NAO e estadual so enxerga o proprio municipio, mesmo com permissao
+     * de validar: a permissao diz o que a pessoa pode fazer, o escopo diz sobre
+     * o que. Antes desta linha um coordenador municipal com `validar` via a
+     * fila do estado inteiro.
+     *
      * @param  array<string, mixed>  $filtros
      */
-    public function listarPendentesValidacao(int $perPage = 25, array $filtros = []): LengthAwarePaginator
+    public function listarPendentesValidacao(int $perPage = 25, array $filtros = [], ?User $usuario = null): LengthAwarePaginator
     {
+        $municipioDoUsuario = $this->municipioDoUsuario($usuario);
+
         return CronoViagem::query()
+            ->when($municipioDoUsuario !== null, fn ($q) => $q->doMunicipio($municipioDoUsuario))
             ->with([
                 'cronoCaminhao.cronograma.municipio:id,nome,uf',
                 'cronoCaminhao.cronograma.prestador:id,nome',
@@ -88,6 +114,107 @@ class CronoViagemService
             ->orderBy('data_registro')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * Fila do COMPDEC: viagens do municipio do usuario ainda sem confirmacao.
+     *
+     * O municipio e OBRIGATORIO e vem do usuario, nunca do request -- aceitar
+     * `municipio_id` de fora daria a qualquer COMPDEC a fila de qualquer outro
+     * com uma troca de querystring.
+     *
+     * Usuario sem municipio de lotacao recebe fila VAZIA, e nao a fila inteira:
+     * cadastro incompleto nao pode virar acesso total. Falha fechada.
+     *
+     * @param  array<string, mixed>  $filtros
+     */
+    public function listarParaConfirmacao(User $usuario, int $perPage = 25, array $filtros = []): LengthAwarePaginator
+    {
+        $municipioId = $this->municipioDoUsuario($usuario);
+
+        return CronoViagem::query()
+            ->when(
+                $municipioId !== null,
+                fn ($q) => $q->doMunicipio($municipioId),
+                fn ($q) => $q->whereRaw('1 = 0'),
+            )
+            ->naoConfirmada()
+            ->whereHas('cronoCaminhao')
+            ->with([
+                'cronoCaminhao.cronograma.municipio:id,nome,uf',
+                'cronoCaminhao.cronograma.prestador:id,nome',
+                'cronoCaminhao.cronograma.lote:id,numero,valor_m3',
+                'cronoCaminhao.caminhao:id,placa,marca,modelo,capacidade_m3,ativo',
+            ])
+            ->when($filtros['cronograma_id'] ?? null, fn ($q, $id) => $q->whereHas(
+                'cronoCaminhao',
+                fn ($c) => $c->where('cronograma_id', (int) $id),
+            ))
+            ->orderBy('data_registro')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * Confirma em lote as viagens que o municipio reconhece ter recebido.
+     *
+     * Duas checagens que NAO podem viver so na tela:
+     *
+     * 1. cada viagem tem de pertencer ao municipio do usuario -- os ids chegam
+     *    do navegador e podem ser trocados a mao;
+     * 2. a data final do cronograma tem de estar valida -- e o limite que a
+     *    issue #62 pede ("Compdec so poder aceitar ou reprovar as viagens
+     *    dentro do limite do cronograma").
+     *
+     * Confirmar NAO mexe em `validado`: o aceite para pagamento continua sendo
+     * ato da CEDEC.
+     *
+     * @param  list<int>  $ids
+     * @return array{confirmadas: int, recusadas: list<array{id: int, motivo: string}>}
+     */
+    public function confirmarEmLote(User $usuario, array $ids, ?string $observacao = null): array
+    {
+        $municipioId = $this->municipioDoUsuario($usuario);
+
+        if ($municipioId === null || $ids === []) {
+            return ['confirmadas' => 0, 'recusadas' => []];
+        }
+
+        $viagens = CronoViagem::query()
+            ->whereIn('id', $ids)
+            ->doMunicipio($municipioId)
+            ->naoConfirmada()
+            ->with('cronoCaminhao.cronograma')
+            ->get();
+
+        $recusadas = [];
+        $confirmadas = 0;
+        $hoje = now()->startOfDay();
+
+        DB::transaction(function () use ($viagens, $usuario, $observacao, $hoje, &$recusadas, &$confirmadas): void {
+            foreach ($viagens as $viagem) {
+                $limite = $viagem->cronoCaminhao?->cronograma?->dt_final_efetiva;
+
+                if ($limite !== null && $hoje->greaterThan($limite->copy()->startOfDay())) {
+                    $recusadas[] = [
+                        'id' => (int) $viagem->id,
+                        'motivo' => 'Fora do limite do cronograma (encerrado em '.$limite->format('d/m/Y').').',
+                    ];
+
+                    continue;
+                }
+
+                $viagem->forceFill([
+                    'confirmado_em'   => now(),
+                    'confirmado_por'  => $usuario->id,
+                    'obs_confirmacao' => $observacao,
+                ])->save();
+
+                $confirmadas++;
+            }
+        });
+
+        return ['confirmadas' => $confirmadas, 'recusadas' => $recusadas];
     }
 
     /**

@@ -8,10 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Municipio;
 use App\Modules\Tdap\DTOs\CronoViagemDTO;
 use App\Modules\Tdap\Models\CronoViagem;
+use App\Modules\Tdap\Requests\ConfirmarViagensRequest;
 use App\Modules\Tdap\Requests\StoreCronoViagemRequest;
 use App\Modules\Tdap\Requests\ValidarCronoViagemRequest;
 use App\Modules\Tdap\Resources\CronoViagemResource;
 use App\Modules\Tdap\Services\CronoViagemService;
+use App\Support\Perfil\OrgaoDeLotacao;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,7 +33,9 @@ class CronoViagemController extends Controller
         // nao estiver nesta lista e ignorado em silencio.
         $filtros = $request->only(['search', 'municipio_id', 'prestador_id', 'cronograma_id']);
 
-        $pendentes = $this->service->listarPendentesValidacao($perPage, $filtros);
+        // O usuario vai ao service porque o recorte por municipio e dele, nao
+        // do request: quem nao e estadual so enxerga a propria fila.
+        $pendentes = $this->service->listarPendentesValidacao($perPage, $filtros, $request->user());
 
         return Inertia::render('Tdap/Viagens/Pendentes', [
             'viagens' => CronoViagemResource::collection($pendentes),
@@ -54,6 +58,47 @@ class CronoViagemController extends Controller
 
             'canValidar' => $request->user()?->can('tdap.viagens.validar') ?? false,
         ]);
+    }
+
+    /**
+     * Fila do COMPDEC: o que o municipio ainda nao confirmou ter recebido.
+     */
+    public function confirmacao(Request $request): Response
+    {
+        $usuario = $request->user();
+        $perPage = (int) $request->integer('per_page', 25);
+        $filtros = $request->only(['cronograma_id']);
+
+        $viagens = $this->service->listarParaConfirmacao($usuario, $perPage, $filtros);
+
+        return Inertia::render('Tdap/Viagens/Confirmacao', [
+            'viagens'      => CronoViagemResource::collection($viagens),
+            'filtros'      => $filtros,
+            'municipio'    => OrgaoDeLotacao::resolver($usuario)?->municipio?->nome,
+            'semMunicipio' => OrgaoDeLotacao::municipioId($usuario) === null,
+            'canConfirmar' => $usuario?->can('tdap.viagens.confirmar') ?? false,
+        ]);
+    }
+
+    public function confirmarLote(ConfirmarViagensRequest $request): RedirectResponse
+    {
+        $resultado = $this->service->confirmarEmLote(
+            $request->user(),
+            $request->validated('ids'),
+            $request->validated('obs_confirmacao'),
+        );
+
+        $mensagem = $resultado['confirmadas'] === 1
+            ? '1 viagem confirmada.'
+            : "{$resultado['confirmadas']} viagens confirmadas.";
+
+        if ($resultado['recusadas'] !== []) {
+            $mensagem .= ' '.count($resultado['recusadas']).' recusada(s) por estarem fora do limite do cronograma.';
+
+            return back()->with('warning', $mensagem);
+        }
+
+        return back()->with('success', $mensagem);
     }
 
     public function store(StoreCronoViagemRequest $request): RedirectResponse

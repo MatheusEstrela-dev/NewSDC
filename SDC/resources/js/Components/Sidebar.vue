@@ -704,10 +704,24 @@
         >
           Cronogramas
         </NavItem>
+        <!-- Confirmacao do municipio: item proprio, nao aba da fila da CEDEC.
+             Sao publicos e atos diferentes -- o COMPDEC atesta recebimento, a
+             CEDEC libera pagamento -- e o gate de cada um ja separa quem ve o
+             que. -->
+        <NavItem
+          v-if="_routes.hasTdapViagensConfirmacao && podeConfirmarViagens"
+          :href="route('tdap.viagens.confirmacao')"
+          :active="isRouteActive('tdap.viagens.confirmacao')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Confirmar recebimento
+        </NavItem>
         <NavItem
           v-if="_routes.hasTdapViagensPendentes"
           :href="route('tdap.viagens.pendentes')"
-          :active="isRouteActive('tdap.viagens.*')"
+          :active="isRouteActive('tdap.viagens.pendentes')"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
@@ -830,6 +844,7 @@ const _routes = {
   hasTdapLotes: route().has('tdap.lotes.index'),
   hasTdapCronogramas: route().has('tdap.cronogramas.index'),
   hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
+  hasTdapViagensConfirmacao: route().has('tdap.viagens.confirmacao'),
   hasTdapVistorias: route().has('tdap.vistorias.index'),
   hasTdapHistoricos: route().has('tdap.historicos.index'),
   hasTdapProcessos: route().has('tdap.processos.swimlanes'),
@@ -998,6 +1013,10 @@ const canSeeOrgaos = computed(() => {
 const canSeeCedecPrefeituras = computed(() => {
   return hasPermission(['cedec.prefeituras.view']);
 });
+
+// A confirmacao e do municipio: quem nao tem o slug nao ve o item, mesmo
+// enxergando o resto do TDAP.
+const podeConfirmarViagens = computed(() => hasPermission(['tdap.viagens.confirmar']));
 
 const canSeeTdap = computed(() => {
   return hasPermission([

@@ -253,6 +253,14 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
                 ->name('validar')->whereNumber('viagem');
         });
 
+        // Confirmacao do municipio: ato distinto da validacao da CEDEC, e por
+        // isso com slug proprio. O recorte por municipio nao esta aqui -- vive
+        // no service, porque middleware nao filtra linha.
+        Route::middleware('can:tdap.viagens.confirmar')->group(function () {
+            Route::get('/confirmacao', [CronoViagemController::class, 'confirmacao'])->name('confirmacao');
+            Route::post('/confirmar-lote', [CronoViagemController::class, 'confirmarLote'])->name('confirmar-lote');
+        });
+
         Route::middleware('can:tdap.viagens.create')->group(function () {
             Route::post('/', [CronoViagemController::class, 'store'])->name('store');
             Route::delete('/{viagem}', [CronoViagemController::class, 'destroy'])
