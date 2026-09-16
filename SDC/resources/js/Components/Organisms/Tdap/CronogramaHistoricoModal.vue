@@ -1,7 +1,7 @@
 <template>
   <Modal :show="open" max-width="2xl" @close="$emit('close')">
     <div class="bg-slate-900 text-slate-200">
-      <div class="px-6 py-5 bg-gradient-to-r from-indigo-700/70 to-fuchsia-600/40 border-b border-slate-700/50">
+      <div class="px-6 py-5 modal-serie-header">
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-full bg-slate-900/40 border border-slate-700/40 flex items-center justify-center">

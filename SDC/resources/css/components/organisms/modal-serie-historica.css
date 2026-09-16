@@ -1,0 +1,46 @@
+/*
+ * Cabecalho das janelas de serie historica (PAE, PMDA, Cronograma, Vistoria).
+ *
+ * Existe como classe, e nao como cadeia de utilitarios repetida nos quatro
+ * arquivos, porque a cor e uma decisao de identidade: mudou aqui, mudou nos
+ * quatro. Antes eram quatro copias de
+ * `bg-gradient-to-r from-indigo-700/70 to-fuchsia-600/40`, e nada garantia que
+ * a quinta janela nascesse igual.
+ *
+ * O laranja escuro e o mesmo tom de alerta que o sistema ja usa em "vence em"
+ * e "vistoria vencida" -- serie historica e onde o prazo estourado aparece.
+ *
+ * Nao muda com o tema: o corpo destas janelas e escuro nos dois modos (o
+ * conteudo e uma timeline sobre `bg-slate-900`), entao o cabecalho acompanha.
+ */
+.modal-serie-header {
+  background-image: linear-gradient(
+    to right,
+    rgb(154 52 18 / 0.95),  /* orange-800 */
+    rgb(194 65 12 / 0.75),  /* orange-700 */
+    rgb(120 53 15 / 0.60)   /* amber-900  */
+  );
+  border-bottom: 1px solid rgb(51 65 85 / 0.5); /* slate-700/50 */
+}
+
+/*
+ * Aba ativa dentro do cabecalho.
+ *
+ * O azul de link nao sobrevive sobre laranja -- os dois brigam e a aba ativa
+ * some. Aqui o destaque e a ausencia de cor: branco puro com o traco embaixo.
+ */
+.modal-serie-aba {
+  border-bottom-width: 2px;
+  border-color: transparent;
+  color: rgb(255 237 213 / 0.75); /* orange-100, esmaecido */
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.modal-serie-aba:hover {
+  color: rgb(255 255 255);
+}
+
+.modal-serie-aba.is-ativa {
+  border-color: rgb(253 186 116); /* orange-300 */
+  color: rgb(255 255 255);
+}

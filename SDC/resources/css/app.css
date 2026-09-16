@@ -6,6 +6,7 @@
 @import './components/atoms/input.css';
 @import './components/beneficiario-card.css';
 @import './components/shepherd-sdc.css';
+@import './components/organisms/modal-serie-historica.css';
 
 /* Page Styles */
 @import './pages/rat/sections.css';

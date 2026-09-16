@@ -105,6 +105,13 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::get('/export', [CaminhaoController::class, 'export'])->name('export');
             Route::get('/{caminhao}', [CaminhaoController::class, 'show'])
                 ->name('show')->whereNumber('caminhao');
+
+            // JSON, nao Inertia: alimenta o modal de serie historica na propria
+            // listagem da frota. Sair da tela para consultar o historico fazia
+            // o operador perder filtro, pagina e posicao de rolagem -- e ele
+            // consulta caminhao a caminhao.
+            Route::get('/{caminhao}/vistorias', [CaminhaoController::class, 'vistorias'])
+                ->name('vistorias')->whereNumber('caminhao');
         });
 
         Route::middleware('can:tdap.caminhoes.create')->group(function () {

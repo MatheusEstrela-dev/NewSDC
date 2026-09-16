@@ -228,6 +228,16 @@
       @export="onExport"
     />
 
+    <!-- Serie historica em modal, no desenho do PAE: o operador consulta
+         caminhao a caminhao, e sair da listagem a cada consulta custava
+         filtro, pagina e posicao de rolagem. -->
+    <VistoriaHistoricoModal
+      :open="caminhaoDoHistorico !== null"
+      :caminhao="caminhaoDoHistorico"
+      :pode-ver-vistoria="canVerVistoria"
+      @close="caminhaoDoHistorico = null"
+    />
+
     <!-- Exclusao passa por confirmacao, como no PAE: o caminhao pode estar
          alocado em cronograma vivo, e o servico recusa com mensagem de negocio
          -- sem o dialogo, o clique errado so aparecia depois do redirect. -->
@@ -264,6 +274,7 @@ import VistoriaSituacaoBadge from '@/Components/Organisms/Tdap/VistoriaSituacaoB
 import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import VistoriaHistoricoModal from '@/Components/Organisms/Tdap/VistoriaHistoricoModal.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -334,6 +345,12 @@ function filtrarPorVistoria(situacao) {
  * caminhao, e o ActionButton filtra cada item pelo seu.
  */
 function acoesDaLinha(caminhao) {
+  // Sem vistoria nenhuma nao ha serie para mostrar. A entrada some da LISTA,
+  // e nao por `allowed: false`: super-admin faz bypass do RBAC no ActionButton
+  // (passo 1 de hasPermissionFor) e passaria por cima da regra de negocio --
+  // o Admin Geral via "Série histórica" num caminhao nunca vistoriado.
+  const temSerie = caminhao.vistoria !== null && caminhao.vistoria !== undefined;
+
   return [
     { action: 'view', handler: () => router.visit(route('tdap.caminhoes.show', caminhao.id)) },
     {
@@ -341,17 +358,14 @@ function acoesDaLinha(caminhao) {
       allowed: props.canEdit,
       handler: () => router.visit(route('tdap.caminhoes.edit', caminhao.id)),
     },
-    {
+    ...(temSerie && props.canVerVistoria ? [{
       action: 'history',
       placement: 'menu',
-      label: 'Ver última vistoria',
+      label: 'Série histórica',
       module: 'tdap',
       resource: 'vistorias',
-      // Sem vistoria nenhuma nao ha o que abrir -- e o menu nao deve oferecer
-      // um caminho que termina em 404.
-      allowed: props.canVerVistoria && caminhao.vistoria !== null,
-      handler: () => router.visit(route('tdap.vistorias.show', caminhao.vistoria.id)),
-    },
+      handler: () => { caminhaoDoHistorico.value = caminhao; },
+    }] : []),
     {
       action: 'create',
       placement: 'menu',
@@ -370,6 +384,7 @@ function acoesDaLinha(caminhao) {
   ];
 }
 
+const caminhaoDoHistorico = ref(null);
 const caminhaoParaExcluir = ref(null);
 const excluindo = ref(false);
 

@@ -8,11 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Modules\Tdap\DTOs\CaminhaoDTO;
 use App\Modules\Tdap\Models\Caminhao;
 use App\Modules\Tdap\Models\Prestador;
+use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Requests\StoreCaminhaoRequest;
 use App\Modules\Tdap\Requests\UpdateCaminhaoRequest;
 use App\Modules\Tdap\Resources\CaminhaoIndexResource;
 use App\Modules\Tdap\Resources\CaminhaoResource;
 use App\Modules\Tdap\Services\CaminhaoService;
+use App\Modules\Tdap\Support\VigenciaAta;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -82,6 +85,47 @@ class CaminhaoController extends Controller
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * Serie historica de vistorias de um caminhao, em JSON.
+     *
+     * O modal da listagem consome isto. A vistoria vigente responde "pode
+     * rodar HOJE"; a serie responde "este veiculo e confiavel?" -- reprovado
+     * tres vezes seguidas e um caminhao com problema, e isso so aparece quando
+     * as inspecoes ficam lado a lado.
+     */
+    public function vistorias(Caminhao $caminhao): JsonResponse
+    {
+        $vistorias = $caminhao->vistorias()
+            ->get(['id', 'placa_id', 'data', 'parecer', 'nome', 'ficha', 'lacre', 'edital', 'observacoes'])
+            ->map(fn (Vistoria $v) => [
+                'id'             => $v->id,
+                'data'           => $v->data?->toDateString(),
+                'parecer'        => $v->parecer?->value,
+                'parecer_label'  => $v->parecer?->label(),
+                'vistoriador'    => $v->nome,
+                'ficha'          => $v->ficha,
+                'lacre'          => $v->lacre,
+                'edital'         => $v->edital,
+                'observacoes'    => $v->observacoes,
+                'vigente'        => (bool) $v->esta_vigente,
+                // Mesma vigencia assinada do resto do modulo: negativo = venceu.
+                'dias_restantes' => $v->data === null ? null : VigenciaAta::diasRestantes(
+                    $v->data->copy()->addMonths(Vistoria::VIGENCIA_MESES),
+                ),
+            ])
+            ->values();
+
+        return response()->json([
+            'caminhao' => [
+                'id'    => $caminhao->id,
+                'placa' => $caminhao->placa,
+                'marca' => $caminhao->marca,
+                'modelo' => $caminhao->modelo,
+            ],
+            'vistorias' => $vistorias,
         ]);
     }
 
