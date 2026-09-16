@@ -10,7 +10,7 @@ use App\Modules\Compdec\Enums\TipoOrgao;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Support\LegacyParser;
 use App\Modules\Compdec\Support\MigracaoReport;
-use App\Modules\Compdec\Support\PonteMunicipioLegado;
+use App\Modules\Shared\Support\PonteMunicipioLegado;
 use App\Support\Cache\CachedRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;

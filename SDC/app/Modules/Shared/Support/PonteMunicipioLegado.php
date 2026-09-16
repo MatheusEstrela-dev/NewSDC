@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Compdec\Support;
+namespace App\Modules\Shared\Support;
 
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +18,11 @@ use Illuminate\Support\Facades\DB;
  * legado ja trazia o Codmundv, aqui o que existe e o id da cedec_municipio.
  * Por isso o mapa e carregado de uma vez (854 linhas) em vez de resolver
  * codigo a codigo.
+ *
+ * Vive em Shared, e nao em Compdec\Support, porque a importacao de pontos de
+ * captacao do Tdap passou a depender dela: um modulo importar Support de outro
+ * acopla dois dominios que nao tem relacao. O Pmda cita a mesma traducao em
+ * ComunidadeLegadoService, ainda com codigo proprio.
  */
 final class PonteMunicipioLegado
 {

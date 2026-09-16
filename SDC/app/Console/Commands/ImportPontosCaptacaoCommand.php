@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Modules\Shared\Support\PonteMunicipioLegado;
 use App\Modules\Tdap\Models\PontoCaptacao;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,15 @@ class ImportPontosCaptacaoCommand extends Command
             return self::FAILURE;
         }
 
-        $municipiosValidos = DB::table('municipios')->pluck('id')->flip();
+        // `pip_ponto_cap.id_municipio` NAO e o id de `municipios`: e o id da
+        // `cedec_municipio` do legado (7221, 2420...). Comparar os dois direto
+        // era o que fazia a importacao descartar quase tudo por "municipio
+        // inexistente" -- entraram 26 pontos de ~435, e os cronogramas ficaram
+        // apontando para ids que nunca chegaram.
+        //
+        // A traducao oficial do projeto passa por cedec_municipio.Codmundv =
+        // municipios.codigo_ibge, a mesma que Compdec, RAT e Cisterna usam.
+        $ponte = new PonteMunicipioLegado();
 
         $total = 0;
         $importados = 0;
@@ -46,14 +55,15 @@ class ImportPontosCaptacaoCommand extends Command
             DB::connection('legacy')
                 ->table('pip_ponto_cap')
                 ->orderBy('id_ponto')
-                ->chunk($chunk, function ($linhas) use (&$total, &$importados, &$ignorados, $municipiosValidos, $dryRun): void {
+                ->chunk($chunk, function ($linhas) use (&$total, &$importados, &$ignorados, $ponte, $dryRun): void {
                     foreach ($linhas as $linha) {
                         $total++;
-                        $municipioId = (int) $linha->id_municipio;
+                        $idLegado = (int) $linha->id_municipio;
+                        $municipioId = $ponte->resolver($idLegado);
 
-                        if (! $municipiosValidos->has($municipioId)) {
+                        if ($municipioId === null) {
                             $ignorados++;
-                            $this->warn("Ponto {$linha->id_ponto} ignorado: municipio {$municipioId} inexistente.");
+                            $this->warn("Ponto {$linha->id_ponto} ignorado: municipio legado {$idLegado} sem correspondente.");
 
                             continue;
                         }
