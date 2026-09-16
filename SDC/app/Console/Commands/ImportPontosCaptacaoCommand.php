@@ -69,19 +69,38 @@ class ImportPontosCaptacaoCommand extends Command
                         }
 
                         if (! $dryRun) {
-                            PontoCaptacao::withTrashed()->updateOrCreate(
-                                ['id' => (int) $linha->id_ponto],
-                                [
-                                    'municipio_id' => $municipioId,
-                                    'nome'         => mb_strtoupper(trim((string) $linha->nome)),
-                                    'tipo'         => $this->normalizarTipo($linha->tipo),
-                                    'latitude'     => $this->nullable($linha->latitude),
-                                    'longitude'    => $this->nullable($linha->longitude),
-                                    'capacidade'   => (float) ($linha->capacidade ?? 0),
-                                    'ativo'        => true,
-                                    'deleted_at'   => null,
-                                ],
-                            );
+                            $idPonto = (int) $linha->id_ponto;
+
+                            /*
+                             * forceFill com o `id`, e nao updateOrCreate.
+                             *
+                             * O id do legado E a chave de ligacao: os
+                             * cronogramas guardam `ponto_captacao_id` com o
+                             * valor de `pip_ponto_cap.id_ponto`. Com
+                             * updateOrCreate o id servia so de criterio de
+                             * BUSCA -- na criacao o Eloquent o descartava, por
+                             * nao estar no $fillable do model, e a linha nascia
+                             * com o id da sequence.
+                             *
+                             * O resultado disso foi pior que nao importar: os
+                             * ids do legado vao de 31 a 432, os gerados foram 1
+                             * a 258, e os cronogramas passaram a "resolver"
+                             * para o ponto errado em vez de falhar visivelmente.
+                             * "BICO DA PEDRA" (432 no legado) virou o 258 aqui.
+                             */
+                            $ponto = PontoCaptacao::withTrashed()->find($idPonto) ?? new PontoCaptacao();
+
+                            $ponto->forceFill([
+                                'id'           => $idPonto,
+                                'municipio_id' => $municipioId,
+                                'nome'         => mb_strtoupper(trim((string) $linha->nome)),
+                                'tipo'         => $this->normalizarTipo($linha->tipo),
+                                'latitude'     => $this->nullable($linha->latitude),
+                                'longitude'    => $this->nullable($linha->longitude),
+                                'capacidade'   => (float) ($linha->capacidade ?? 0),
+                                'ativo'        => true,
+                                'deleted_at'   => null,
+                            ])->save();
                         }
 
                         $importados++;

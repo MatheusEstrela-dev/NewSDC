@@ -17,6 +17,10 @@ return [
         'viewer' => 5,
         'user' => 6,
         'citizen' => 7,
+        // Perfil EXTERNO, fora da escala interna: o coordenador municipal nao
+        // e "menos" que um operador do estado, e outro publico. Fica no fim da
+        // hierarquia porque nao deve herdar nada dos cargos internos.
+        'compdec' => 8,
     ],
 
     /*
@@ -63,6 +67,11 @@ return [
         'citizen' => [
             'name' => 'Cidadao',
             'description' => 'Cargo de menor hierarquia para governanca de dados do cidadao externo - acesso somente leitura ao catalogo publico de Treinamento',
+            'is_active' => true,
+        ],
+        'compdec' => [
+            'name' => 'COMPDEC',
+            'description' => 'Coordenadoria Municipal - confirma no TDAP as viagens recebidas pelo proprio municipio',
             'is_active' => true,
         ],
     ],
@@ -235,6 +244,10 @@ return [
             'Viagens' => [
                 'view' => 'tdap.viagens.view',
                 'create' => 'tdap.viagens.create',
+                // Confirmar (municipio atesta o que recebeu) e validar (estado
+                // aceita para pagamento) sao atos distintos, de responsaveis
+                // distintos -- por isso dois slugs, e nao um so.
+                'confirmar' => 'tdap.viagens.confirmar',
                 'validar' => 'tdap.viagens.validar',
             ],
             'Vistorias' => [
@@ -246,11 +259,6 @@ return [
             ],
             'Historico' => [
                 'view' => 'tdap.historico.view',
-            ],
-            'Processos' => [
-                'view'      => 'tdap.processos.view',
-                'create'    => 'tdap.processos.create',
-                'transitar' => 'tdap.processos.transitar',
             ],
             'Admin' => [
                 'admin' => 'tdap.admin',
@@ -712,9 +720,6 @@ return [
             'tdap.vistorias.edit',
             'tdap.vistorias.aprovar',
             'tdap.historico.view',
-            'tdap.processos.view',
-            'tdap.processos.create',
-            'tdap.processos.transitar',
             // Treinamento - gestao completa
             'treinamento.cursos.view',
             'treinamento.cursos.create',
@@ -944,8 +949,6 @@ return [
             'tdap.vistorias.view',
             'tdap.vistorias.create',
             'tdap.historico.view',
-            'tdap.processos.view',
-            'tdap.processos.create',
             // Treinamento - view
             'treinamento.cursos.view',
             'treinamento.inscricoes.view',
@@ -1155,7 +1158,6 @@ return [
             'tdap.viagens.view',
             'tdap.vistorias.view',
             'tdap.historico.view',
-            'tdap.processos.view',
             'treinamento.cursos.view',
             'treinamento.inscricoes.view',
             'plantao.turnos.view',
@@ -1209,6 +1211,15 @@ return [
             // Cargo de governanca de dados - somente leitura do catalogo publico.
             // Nao concede acesso a nenhum outro modulo interno.
             'treinamento.cursos.view',
+        ],
+        'compdec' => [
+            // Perfil EXTERNO: o coordenador municipal enxerga apenas o proprio
+            // municipio, e o recorte nao vem daqui -- vem do escopo aplicado no
+            // CronoViagemService, derivado de users.orgao_principal_id.
+            // Permissao diz O QUE pode fazer; escopo diz SOBRE O QUE.
+            'tdap.viagens.view',
+            'tdap.viagens.confirmar',
+            'tdap.cronogramas.view',
         ],
     ],
 

@@ -38,6 +38,9 @@ class CronoViagem extends Model
         'obs_aprovacao',
         'validado',
         'user_validacao_id',
+        'confirmado_em',
+        'confirmado_por',
+        'obs_confirmacao',
     ];
 
     protected $casts = [
@@ -46,6 +49,8 @@ class CronoViagem extends Model
         'data_aprovacao'    => 'datetime',
         'validado'          => 'integer',
         'user_validacao_id' => 'integer',
+        'confirmado_em'     => 'datetime',
+        'confirmado_por'    => 'integer',
     ];
 
     public function cronoCaminhao(): BelongsTo
@@ -56,6 +61,12 @@ class CronoViagem extends Model
     public function validador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_validacao_id');
+    }
+
+    /** Quem, no municipio, atestou que a agua chegou. */
+    public function confirmador(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmado_por');
     }
 
     public function getStatusAttribute(): string
@@ -85,5 +96,30 @@ class CronoViagem extends Model
     public function scopeDoCaminhao(Builder $query, int $cronoCaminhaoId): Builder
     {
         return $query->where('crono_caminhao_id', $cronoCaminhaoId);
+    }
+
+    /** Ainda sem o aceite do municipio. */
+    public function scopeNaoConfirmada(Builder $query): Builder
+    {
+        return $query->whereNull('confirmado_em');
+    }
+
+    public function scopeConfirmada(Builder $query): Builder
+    {
+        return $query->whereNotNull('confirmado_em');
+    }
+
+    /**
+     * Viagens do municipio indicado, pelo cronograma a que pertencem.
+     *
+     * O recorte e feito no BANCO, e nao na tela: e o que impede um COMPDEC de
+     * alcancar viagem de outro municipio trocando um id na URL.
+     */
+    public function scopeDoMunicipio(Builder $query, int $municipioId): Builder
+    {
+        return $query->whereHas(
+            'cronoCaminhao.cronograma',
+            fn (Builder $c) => $c->where('municipio_id', $municipioId),
+        );
     }
 }

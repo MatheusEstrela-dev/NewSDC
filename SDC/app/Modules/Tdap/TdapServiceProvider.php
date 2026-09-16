@@ -5,16 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Tdap;
 
 use App\Core\Outbox\OutboxDispatcher;
-use App\Modules\Tdap\Application\Sagas\EncerramentoSaga;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
-use App\Modules\Tdap\Domain\Events\ExecucaoConcluidaV1;
-use App\Modules\Tdap\Domain\Events\ProcessoTdapAbertoV1;
-use App\Modules\Tdap\Domain\Events\ProcessoTdapTransitadoV1;
 use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
-use App\Modules\Tdap\Listeners\AtualizarProjecaoProcessoListener;
 use App\Modules\Tdap\Listeners\EnviarEmailCronogramaListener;
 use App\Modules\Tdap\Listeners\RegistrarHistoricoProcessoListener;
-use App\Modules\Tdap\Listeners\TransitarParaLiquidacaoListener;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Prestador;
@@ -31,7 +25,6 @@ use App\Modules\Tdap\Services\CronoViagemService;
 use App\Modules\Tdap\Services\HistoricoService;
 use App\Modules\Tdap\Services\LoteService;
 use App\Modules\Tdap\Services\PrestadorService;
-use App\Modules\Tdap\Services\ProcessoTdapService;
 use App\Modules\Tdap\Services\TdapExportBiService;
 use App\Modules\Tdap\Services\VistoriaService;
 use Illuminate\Support\Facades\Event;
@@ -72,17 +65,20 @@ class TdapServiceProvider extends ServiceProvider
         $this->app->singleton(HistoricoService::class);
         $this->app->singleton(TdapExportBiService::class);
 
-        // Workflow Event-Driven (Fase 6)
-        $this->app->singleton(ProcessoTdapService::class);
-
-        // Registra Domain Events no OutboxDispatcher (resolve FQN <-> chave)
+        /*
+         * Registra Domain Events no OutboxDispatcher (resolve FQN <-> chave).
+         *
+         * As chaves do modulo Processos (tdap.processo.aberto,
+         * tdap.processo.transitado, tdap.execucao.concluida) sairam com ele.
+         * Linhas antigas de outbox_events com esses nomes nao reidratam mais:
+         * o OutboxDispatcher captura o erro e apenas incrementa a tentativa,
+         * entao nada quebra -- mas `event:replay` lanca de fato. Foi conferido
+         * que nao ha pendencia dessas chaves antes da remocao.
+         */
         $this->app->extend(OutboxDispatcher::class, function (OutboxDispatcher $dispatcher) {
             return $dispatcher
-                ->register('tdap.processo.aberto',     1, ProcessoTdapAbertoV1::class)
-                ->register('tdap.processo.transitado', 1, ProcessoTdapTransitadoV1::class)
-                ->register('tdap.cronograma.ativado',  1, CronogramaAtivadoV1::class)
-                ->register('tdap.viagem.validada',     1, ViagemValidadaV1::class)
-                ->register('tdap.execucao.concluida',  1, ExecucaoConcluidaV1::class);
+                ->register('tdap.cronograma.ativado', 1, CronogramaAtivadoV1::class)
+                ->register('tdap.viagem.validada',    1, ViagemValidadaV1::class);
         });
     }
 
@@ -102,26 +98,11 @@ class TdapServiceProvider extends ServiceProvider
 
     private function registrarEventListeners(): void
     {
-        // ProcessoTdapAbertoV1
-        Event::listen(ProcessoTdapAbertoV1::class, [AtualizarProjecaoProcessoListener::class, 'handle']);
-        Event::listen(ProcessoTdapAbertoV1::class, [RegistrarHistoricoProcessoListener::class, 'handle']);
-
-        // ProcessoTdapTransitadoV1
-        Event::listen(ProcessoTdapTransitadoV1::class, [AtualizarProjecaoProcessoListener::class, 'handle']);
-        Event::listen(ProcessoTdapTransitadoV1::class, [RegistrarHistoricoProcessoListener::class, 'handle']);
-
         // CronogramaAtivadoV1
         Event::listen(CronogramaAtivadoV1::class, [EnviarEmailCronogramaListener::class, 'handle']);
         Event::listen(CronogramaAtivadoV1::class, [RegistrarHistoricoProcessoListener::class, 'handle']);
 
         // ViagemValidadaV1 (emitido por CronoViagemService::validar na aprovacao)
-        Event::listen(ViagemValidadaV1::class, [AtualizarProjecaoProcessoListener::class, 'handle']);
         Event::listen(ViagemValidadaV1::class, [RegistrarHistoricoProcessoListener::class, 'handle']);
-        Event::listen(ViagemValidadaV1::class, [EncerramentoSaga::class, 'handle']);
-
-        // ExecucaoConcluidaV1 - fecha o ciclo EM_EXECUCAO -> LIQUIDACAO_PENDENTE.
-        // A saga emitia o evento e ninguem escutava: o processo nao saia de
-        // EM_EXECUCAO nem depois de todas as viagens validadas.
-        Event::listen(ExecucaoConcluidaV1::class, [TransitarParaLiquidacaoListener::class, 'handle']);
     }
 }
