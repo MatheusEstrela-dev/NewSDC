@@ -1,6 +1,6 @@
 <template>
   <Modal :show="open" max-width="2xl" @close="$emit('close')">
-    <div class="flex max-h-full min-h-0 flex-col bg-slate-900 text-slate-200">
+    <div class="flex max-h-full min-h-0 flex-col modal-serie-corpo">
       <div class="shrink-0 px-4 py-4 md:px-6 md:py-5 modal-serie-header">
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-3 min-w-0">
@@ -61,38 +61,38 @@
       <div class="flex-1 min-h-0 overflow-y-auto p-4 pb-8 md:p-6">
         <!-- Timeline -->
         <div v-if="activeTab === 'timeline'">
-          <ol v-if="timelineCount" class="relative border-l border-slate-700 ml-5 space-y-6">
+          <ol v-if="timelineCount" class="modal-serie-trilho relative ml-5 space-y-6">
             <li v-for="event in historico.timeline" :key="event.id" class="ml-8 relative">
               <span
-                class="absolute flex items-center justify-center w-9 h-9 rounded-full -left-12 ring-8 ring-slate-900"
+                class="absolute flex items-center justify-center w-9 h-9 rounded-full -left-12 modal-serie-marcador"
                 :class="eventColor(event.tipo)"
               >
                 <component :is="eventIcon(event.tipo)" class="w-4 h-4" />
               </span>
 
-              <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
+              <div class="modal-serie-cartao rounded-xl p-4">
                 <div class="flex items-start justify-between gap-3 mb-2">
                   <div class="min-w-0">
-                    <h4 class="text-base font-semibold text-white truncate">{{ event.titulo }}</h4>
-                    <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                    <h4 class="text-base font-semibold modal-serie-titulo truncate">{{ event.titulo }}</h4>
+                    <div class="mt-1 flex flex-wrap items-center gap-2 text-xs modal-serie-apoio">
                       <Badge :variant="eventBadgeVariant(event.tipo)" size="sm">{{ eventLabel(event.tipo) }}</Badge>
-                      <span class="font-mono text-slate-400">{{ event.data }}</span>
+                      <span class="font-mono modal-serie-apoio">{{ event.data }}</span>
                     </div>
                   </div>
                 </div>
 
-                <p class="text-sm text-slate-300 leading-relaxed">{{ event.descricao }}</p>
+                <p class="text-sm modal-serie-texto leading-relaxed">{{ event.descricao }}</p>
 
-                <div class="mt-3 inline-flex items-center gap-2 bg-slate-900/40 border border-slate-700/40 px-3 py-1 rounded-full text-xs">
-                  <UsersIcon class="w-4 h-4 text-slate-400" />
-                  <span class="text-slate-400">Responsável:</span>
-                  <span class="text-slate-200 font-semibold">{{ event.responsavel || '—' }}</span>
+                <div class="mt-3 inline-flex items-center gap-2 modal-serie-pilula px-3 py-1 rounded-full text-xs">
+                  <UsersIcon class="w-4 h-4 modal-serie-apoio" />
+                  <span class="modal-serie-apoio">Responsável:</span>
+                  <span class="modal-serie-valor">{{ event.responsavel || '—' }}</span>
                 </div>
               </div>
             </li>
           </ol>
 
-          <div v-else class="text-center py-10 text-slate-400">
+          <div v-else class="text-center py-10 modal-serie-apoio">
             Nenhum evento registrado.
           </div>
         </div>
@@ -103,20 +103,20 @@
             <div
               v-for="a in historico.analises"
               :key="a.id"
-              class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4"
+              class="modal-serie-cartao rounded-xl p-4"
             >
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <h4 class="text-base font-semibold text-white">{{ a.titulo }}</h4>
-                  <p class="text-sm text-slate-400 mt-1">
-                    {{ a.data }} • <span class="font-semibold text-slate-300">{{ a.responsavel }}</span>
+                  <h4 class="text-base font-semibold modal-serie-titulo">{{ a.titulo }}</h4>
+                  <p class="text-sm modal-serie-apoio mt-1">
+                    {{ a.data }} • <span class="modal-serie-valor">{{ a.responsavel }}</span>
                   </p>
                 </div>
                 <Badge variant="success" size="sm">Concluída</Badge>
               </div>
             </div>
           </div>
-          <div v-else class="text-center py-10 text-slate-400">
+          <div v-else class="text-center py-10 modal-serie-apoio">
             Nenhuma análise registrada.
           </div>
         </div>
@@ -127,20 +127,20 @@
             <div
               v-for="n in historico.notificacoes"
               :key="n.id"
-              class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4"
+              class="modal-serie-cartao rounded-xl p-4"
             >
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <h4 class="text-base font-semibold text-white">{{ n.titulo }}</h4>
-                  <p class="text-sm text-slate-400 mt-1">
-                    {{ n.data }} • <span class="font-semibold text-slate-300">{{ n.responsavel }}</span>
+                  <h4 class="text-base font-semibold modal-serie-titulo">{{ n.titulo }}</h4>
+                  <p class="text-sm modal-serie-apoio mt-1">
+                    {{ n.data }} • <span class="modal-serie-valor">{{ n.responsavel }}</span>
                   </p>
                 </div>
                 <Badge variant="warning" size="sm">{{ n.canal }}</Badge>
               </div>
             </div>
           </div>
-          <div v-else class="text-center py-10 text-slate-400">
+          <div v-else class="text-center py-10 modal-serie-apoio">
             Nenhuma notificação registrada.
           </div>
         </div>

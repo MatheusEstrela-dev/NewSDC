@@ -1,38 +1,54 @@
 /*
- * Cabecalho das janelas de serie historica (PAE, PMDA, Cronograma, Vistoria).
+ * Janelas de serie historica (PAE, PMDA, Cronograma, Vistoria).
  *
- * Existe como classe, e nao como cadeia de utilitarios repetida nos quatro
- * arquivos, porque a cor e uma decisao de identidade: mudou aqui, mudou nos
+ * Existe como folha propria, e nao como cadeia de utilitarios repetida nos
+ * quatro arquivos, porque sao decisoes de identidade: mudou aqui, mudou nas
  * quatro. Antes eram quatro copias de
- * `bg-gradient-to-r from-indigo-700/70 to-fuchsia-600/40`, e nada garantia que
- * a quinta janela nascesse igual.
+ * `bg-gradient-to-r from-indigo-700/70 to-fuchsia-600/40` e um corpo fixo em
+ * `bg-slate-900` -- nada garantia que a quinta janela nascesse igual, e o
+ * corpo escuro ficava escuro tambem no tema claro.
  *
- * O laranja escuro e o mesmo tom de alerta que o sistema ja usa em "vence em"
- * e "vistoria vencida" -- serie historica e onde o prazo estourado aparece.
+ * O dark mode do projeto e por CLASSE (`darkMode: 'class'` no
+ * tailwind.config.js), entao cada regra tem o par sob `.dark`.
+ */
+
+/* ---------------------------------------------------------------- cabecalho */
+
+/*
+ * Azul escuro nos dois temas: o cabecalho e faixa de cor cheia, com texto
+ * branco por cima -- clarea-lo no tema claro tiraria o contraste do titulo.
+ * O que muda entre os temas e o CORPO, nao a faixa.
  *
- * Nao muda com o tema: o corpo destas janelas e escuro nos dois modos (o
- * conteudo e uma timeline sobre `bg-slate-900`), entao o cabecalho acompanha.
+ * O tom sai da propria casca do sistema: termina em `#020617`, o mesmo fundo
+ * que o AuthenticatedLayout usa no modo escuro, e passa pelo azul do
+ * `blue-600` que e a cor de acao em todo o projeto. A janela deixa de parecer
+ * peca de outro sistema colada por cima.
  */
 .modal-serie-header {
   background-image: linear-gradient(
     to right,
-    rgb(154 52 18 / 0.95),  /* orange-800 */
-    rgb(194 65 12 / 0.75),  /* orange-700 */
-    rgb(120 53 15 / 0.60)   /* amber-900  */
+    rgb(30 58 138),         /* blue-900 */
+    rgb(30 64 175 / 0.85),  /* blue-800 */
+    rgb(2 6 23 / 0.85)      /* slate-950 -- a casca do app */
   );
-  border-bottom: 1px solid rgb(51 65 85 / 0.5); /* slate-700/50 */
+  border-bottom: 1px solid rgb(30 64 175 / 0.45);
+}
+
+.dark .modal-serie-header {
+  border-bottom-color: rgb(51 65 85 / 0.5); /* slate-700/50 */
 }
 
 /*
  * Aba ativa dentro do cabecalho.
  *
- * O azul de link nao sobrevive sobre laranja -- os dois brigam e a aba ativa
- * some. Aqui o destaque e a ausencia de cor: branco puro com o traco embaixo.
+ * Como a faixa e a mesma nos dois temas, estas regras tambem sao. O traco usa
+ * `blue-300`, claro o bastante para aparecer sobre o azul escuro -- o
+ * `blue-400` original sumia no proprio fundo.
  */
 .modal-serie-aba {
   border-bottom-width: 2px;
   border-color: transparent;
-  color: rgb(255 237 213 / 0.75); /* orange-100, esmaecido */
+  color: rgb(219 234 254 / 0.75); /* blue-100, esmaecido */
   transition: color 150ms ease, border-color 150ms ease;
 }
 
@@ -41,6 +57,120 @@
 }
 
 .modal-serie-aba.is-ativa {
-  border-color: rgb(253 186 116); /* orange-300 */
+  border-color: rgb(147 197 253); /* blue-300 */
+  color: rgb(255 255 255);
+}
+
+/* -------------------------------------------------------------------- corpo */
+
+/* A janela inteira: fundo e cor de texto base. */
+.modal-serie-corpo {
+  background-color: rgb(255 255 255);
+  color: rgb(51 65 85); /* slate-700 */
+}
+
+.dark .modal-serie-corpo {
+  background-color: rgb(15 23 42); /* slate-900 */
+  color: rgb(226 232 240); /* slate-200 */
+}
+
+/* Cartao de cada evento da timeline. */
+.modal-serie-cartao {
+  background-color: rgb(248 250 252); /* slate-50 */
+  border: 1px solid rgb(226 232 240); /* slate-200 */
+}
+
+.dark .modal-serie-cartao {
+  background-color: rgb(30 41 59 / 0.6); /* slate-800/60 */
+  border-color: rgb(51 65 85 / 0.5); /* slate-700/50 */
+}
+
+/* Titulo dentro do cartao. */
+.modal-serie-titulo {
+  color: rgb(15 23 42); /* slate-900 */
+}
+
+.dark .modal-serie-titulo {
+  color: rgb(255 255 255);
+}
+
+/* Texto corrente do cartao (descricao, observacoes). */
+.modal-serie-texto {
+  color: rgb(71 85 105); /* slate-600 */
+}
+
+.dark .modal-serie-texto {
+  color: rgb(203 213 225); /* slate-300 */
+}
+
+/* Texto de apoio: datas, rotulos, estado vazio. */
+.modal-serie-apoio {
+  color: rgb(100 116 139); /* slate-500 */
+}
+
+.dark .modal-serie-apoio {
+  color: rgb(148 163 184); /* slate-400 */
+}
+
+/* Pilula de rodape ("Responsável: fulano", ficha, lacre). */
+.modal-serie-pilula {
+  background-color: rgb(241 245 249); /* slate-100 */
+  border: 1px solid rgb(226 232 240); /* slate-200 */
+}
+
+.dark .modal-serie-pilula {
+  background-color: rgb(15 23 42 / 0.4); /* slate-900/40 */
+  border-color: rgb(51 65 85 / 0.4); /* slate-700/40 */
+}
+
+/* Valor em destaque dentro da pilula. */
+.modal-serie-valor {
+  color: rgb(30 41 59); /* slate-800 */
+  font-weight: 600;
+}
+
+.dark .modal-serie-valor {
+  color: rgb(226 232 240); /* slate-200 */
+}
+
+/* Linha vertical da timeline e o anel em volta do marcador. */
+.modal-serie-trilho {
+  border-left: 1px solid rgb(226 232 240); /* slate-200 */
+}
+
+.dark .modal-serie-trilho {
+  border-left-color: rgb(51 65 85); /* slate-700 */
+}
+
+/*
+ * O anel isola o marcador da linha do trilho: precisa ser da cor do FUNDO da
+ * janela, senao vira um disco cinza no meio da timeline.
+ */
+.modal-serie-marcador {
+  box-shadow: 0 0 0 8px rgb(255 255 255);
+}
+
+.dark .modal-serie-marcador {
+  box-shadow: 0 0 0 8px rgb(15 23 42); /* slate-900 */
+}
+
+/* Elo secundario dentro do cartao ("Abrir ficha"). */
+.modal-serie-elo {
+  border: 1px solid rgb(203 213 225); /* slate-300 */
+  color: rgb(51 65 85); /* slate-700 */
+}
+
+.modal-serie-elo:hover {
+  border-color: rgb(37 99 235); /* blue-600 */
+  color: rgb(30 58 138); /* blue-900 */
+}
+
+.dark .modal-serie-elo {
+  border-color: rgb(51 65 85 / 0.6); /* slate-700/60 */
+  color: rgb(226 232 240); /* slate-200 */
+}
+
+.dark .modal-serie-elo:hover {
+  border-color: rgb(96 165 250); /* blue-400 */
   color: rgb(255 255 255);
 }

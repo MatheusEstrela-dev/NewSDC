@@ -1,6 +1,6 @@
 <template>
   <Modal :show="open" max-width="2xl" @close="$emit('close')">
-    <div class="bg-slate-900 text-slate-200">
+    <div class="modal-serie-corpo">
       <div class="px-6 py-5 modal-serie-header">
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-3 min-w-0">
@@ -28,42 +28,42 @@
       </div>
 
       <div class="p-6">
-        <div v-if="loading" class="text-center py-10 text-slate-400">
+        <div v-if="loading" class="text-center py-10 modal-serie-apoio">
           Carregando histórico...
         </div>
 
-        <ol v-else-if="timelineCount" class="relative border-l border-slate-700 ml-5 space-y-6">
+        <ol v-else-if="timelineCount" class="modal-serie-trilho relative ml-5 space-y-6">
           <li v-for="event in timeline" :key="event.id" class="ml-8 relative">
             <span
-              class="absolute flex items-center justify-center w-9 h-9 rounded-full -left-12 ring-8 ring-slate-900"
+              class="absolute flex items-center justify-center w-9 h-9 rounded-full -left-12 modal-serie-marcador"
               :class="eventColor(event.tipo)"
             >
               <component :is="eventIcon(event.tipo)" class="w-4 h-4" />
             </span>
 
-            <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
+            <div class="modal-serie-cartao rounded-xl p-4">
               <div class="flex items-start justify-between gap-3 mb-2">
                 <div class="min-w-0">
-                  <h4 class="text-base font-semibold text-white truncate">{{ event.titulo }}</h4>
-                  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                  <h4 class="text-base font-semibold modal-serie-titulo truncate">{{ event.titulo }}</h4>
+                  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs modal-serie-apoio">
                     <Badge :variant="eventBadgeVariant(event.tipo)" size="sm">{{ eventLabel(event.tipo) }}</Badge>
-                    <span class="font-mono text-slate-400">{{ event.data }}</span>
+                    <span class="font-mono modal-serie-apoio">{{ event.data }}</span>
                   </div>
                 </div>
               </div>
 
-              <p v-if="event.descricao" class="text-sm text-slate-300 leading-relaxed">{{ event.descricao }}</p>
+              <p v-if="event.descricao" class="text-sm modal-serie-texto leading-relaxed">{{ event.descricao }}</p>
 
-              <div class="mt-3 inline-flex items-center gap-2 bg-slate-900/40 border border-slate-700/40 px-3 py-1 rounded-full text-xs">
-                <UsersIcon class="w-4 h-4 text-slate-400" />
-                <span class="text-slate-400">Responsável:</span>
-                <span class="text-slate-200 font-semibold">{{ event.responsavel || '—' }}</span>
+              <div class="mt-3 inline-flex items-center gap-2 modal-serie-pilula px-3 py-1 rounded-full text-xs">
+                <UsersIcon class="w-4 h-4 modal-serie-apoio" />
+                <span class="modal-serie-apoio">Responsável:</span>
+                <span class="modal-serie-valor">{{ event.responsavel || '—' }}</span>
               </div>
             </div>
           </li>
         </ol>
 
-        <div v-else class="text-center py-10 text-slate-400">
+        <div v-else class="text-center py-10 modal-serie-apoio">
           Nenhum evento registrado.
         </div>
       </div>
