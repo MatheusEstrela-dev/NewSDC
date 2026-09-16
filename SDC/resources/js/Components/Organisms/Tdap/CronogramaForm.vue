@@ -10,20 +10,24 @@
         contrato esta operacao nasce -- e o bloco proprio so somava um titulo e
         uma dobra de rolagem entre campos que se leem juntos.
       -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <InputLabel for="numero" value="Número *" />
           <TextInput id="numero" v-model="form.numero" type="text" class="mt-1 block w-full uppercase" :class="fieldCls(form.numero, form.errors.numero)" maxlength="20" placeholder="Ex: 0001/2026" required />
           <InputError :message="form.errors.numero" class="mt-2" />
         </div>
+        <!--
+          Um campo de empenho so, e ele grava em `nota_empenho`.
+          A escolha nao e arbitraria: das 104 linhas da base, `nota_empenho`
+          esta preenchida em 104 (numero do empenho ou "S/EMPENHO") e `empenho`
+          em ZERO. Manter o input de `empenho` e esconder o de `nota_empenho`
+          deixaria na tela justamente o campo que a operacao nunca usou, e
+          tiraria de vista o unico que ela preenche.
+          A coluna `empenho` continua no banco, so nao aparece no formulario.
+        -->
         <div>
-          <InputLabel for="empenho" value="Empenho" />
-          <TextInput id="empenho" v-model="form.empenho" type="text" class="mt-1 block w-full" :class="fieldCls(form.empenho, form.errors.empenho)" maxlength="30" />
-          <InputError :message="form.errors.empenho" class="mt-2" />
-        </div>
-        <div>
-          <InputLabel for="nota_empenho" value="Nota de Empenho" />
-          <TextInput id="nota_empenho" v-model="form.nota_empenho" type="text" class="mt-1 block w-full" :class="fieldCls(form.nota_empenho, form.errors.nota_empenho)" maxlength="50" />
+          <InputLabel for="nota_empenho" value="Empenho" />
+          <TextInput id="nota_empenho" v-model="form.nota_empenho" type="text" class="mt-1 block w-full" :class="fieldCls(form.nota_empenho, form.errors.nota_empenho)" maxlength="50" placeholder="Ex: 2320 ou S/EMPENHO" />
           <InputError :message="form.errors.nota_empenho" class="mt-2" />
         </div>
       </div>
