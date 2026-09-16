@@ -43,15 +43,25 @@ class CronoViagemController extends Controller
 
             // Closures = lazy props do Inertia: nao recalculam num reload
             // parcial, que e como a tela se atualiza depois de validar.
-            'estatisticas' => fn (): array => $this->service->obterEstatisticas(),
+            'estatisticas' => fn (): array => $this->service->obterEstatisticas($request->user()),
+            // O filtro so oferece o que a pessoa pode ver: para quem nao e
+            // estadual, sobra o proprio municipio. Listar os 853 num select
+            // cujo resultado sempre volta vazio confunde mais que ajuda -- e
+            // ainda revela onde ha operacao acontecendo.
             'municipios'   => fn () => Municipio::query()
-                ->whereIn('id', function ($sub): void {
+                ->whereIn('id', function ($sub) use ($request): void {
                     $sub->select('c.municipio_id')
                         ->from('tdap_cronogramas as c')
                         ->join('tdap_crono_caminhoes as cc', 'cc.cronograma_id', '=', 'c.id')
                         ->join('tdap_crono_viagens as v', 'v.crono_caminhao_id', '=', 'cc.id')
                         ->whereNull('v.validado')
                         ->whereNull('v.deleted_at');
+
+                    $municipioDoUsuario = OrgaoDeLotacao::municipioId($request->user());
+
+                    if ($municipioDoUsuario !== null) {
+                        $sub->where('c.municipio_id', $municipioDoUsuario);
+                    }
                 })
                 ->orderBy('nome')
                 ->get(['id', 'nome']),

@@ -6,8 +6,6 @@ namespace App\Modules\Tdap\Models;
 
 use App\Models\Municipio;
 use App\Models\User;
-use App\Modules\Notificacoes\Enums\AcaoTrilha;
-use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use App\Modules\Tdap\Support\VigenciaAta;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -50,7 +48,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Cronograma extends Model
 {
     use SoftDeletes;
-    use TrilhaNoProtocoloPai;
 
     protected $table = 'tdap_cronogramas';
 
@@ -137,11 +134,6 @@ class Cronograma extends Model
     public function pontoCaptacao(): BelongsTo
     {
         return $this->belongsTo(PontoCaptacao::class, 'ponto_captacao_id');
-    }
-
-    public function processoTdap(): BelongsTo
-    {
-        return $this->belongsTo(ProcessoTdap::class, 'processo_tdap_id');
     }
 
     public function caminhoes(): HasMany
@@ -327,28 +319,15 @@ class Cronograma extends Model
         });
     }
 
-    // ─── Trilha de acoes no protocolo pai ───────────────────────────────────
-
-    public function protocoloDaTrilhaClasse(): string
-    {
-        return ProcessoTdap::class;
-    }
-
-    /**
-     * Cronograma solto (ainda sem processo) nao tem a quem reportar.
+    /*
+     * A trilha de acoes no protocolo pai saiu junto com o modulo Processos.
+     *
+     * O trait TrilhaNoProtocoloPai reportava cada save do cronograma ao
+     * ProcessoTdap, e `protocoloDaTrilhaChave()` devolvia `processo_tdap_id` --
+     * campo que nenhuma tela jamais preencheu. Ou seja: o gancho disparava em
+     * todo created/updated para, no fim, nao ter a quem reportar.
+     *
+     * A coluna `processo_tdap_id` continua na tabela, com a FK, para o caso de
+     * o fluxo de processo voltar.
      */
-    public function protocoloDaTrilhaChave(): int|string|null
-    {
-        return $this->processo_tdap_id;
-    }
-
-    /**
-     * Editado, e nao Relacionado: mudanca de data no cronograma e o que o dono do
-     * processo mais precisa acompanhar, e Relacionado so dispara na criacao -- as
-     * remarcacoes posteriores passariam em silencio.
-     */
-    public function acaoNaTrilhaDoProtocolo(): AcaoTrilha
-    {
-        return AcaoTrilha::Editado;
-    }
 }

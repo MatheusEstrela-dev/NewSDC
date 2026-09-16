@@ -748,16 +748,6 @@
         >
           Histórico
         </NavItem>
-        <NavItem
-          v-if="_routes.hasTdapProcessos"
-          :href="route('tdap.processos.swimlanes')"
-          :active="isRouteActive('tdap.processos.*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Processos (Workflow)
-        </NavItem>
       </div>
     </nav>
 
@@ -847,7 +837,6 @@ const _routes = {
   hasTdapViagensConfirmacao: route().has('tdap.viagens.confirmacao'),
   hasTdapVistorias: route().has('tdap.vistorias.index'),
   hasTdapHistoricos: route().has('tdap.historicos.index'),
-  hasTdapProcessos: route().has('tdap.processos.swimlanes'),
   hasCisterna: route().has('cisternas.beneficiarios.index'),
   hasInventario: route().has('inventario.index'),
   hasEstoque: route().has('estoque.index'),
@@ -899,9 +888,13 @@ const _activeRoutes = computed(() => {
     'tdap.lotes.*': route().current('tdap.lotes.*'),
     'tdap.cronogramas.*': route().current('tdap.cronogramas.*'),
     'tdap.viagens.*': route().current('tdap.viagens.*'),
+    // Cada fila tem o seu destaque: sao duas telas irmas sob o mesmo prefixo,
+    // e o padrao 'tdap.viagens.*' acenderia as duas ao mesmo tempo.
+    // isRouteActive so consulta ESTE mapa -- chave ausente nunca acende.
+    'tdap.viagens.pendentes': route().current('tdap.viagens.pendentes'),
+    'tdap.viagens.confirmacao': route().current('tdap.viagens.confirmacao'),
     'tdap.vistorias.*': route().current('tdap.vistorias.*'),
     'tdap.historicos.*': route().current('tdap.historicos.*'),
-    'tdap.processos.*': route().current('tdap.processos.*'),
     'cisternas.*': route().current('cisternas.*'),
     'pmda.*': route().current('pmda.*'),
     'inventario.*': route().current('inventario.*'),
@@ -1029,7 +1022,6 @@ const canSeeTdap = computed(() => {
     'tdap.viagens.view',
     'tdap.vistorias.view',
     'tdap.historico.view',
-    'tdap.processos.view',
   ]);
 });
 

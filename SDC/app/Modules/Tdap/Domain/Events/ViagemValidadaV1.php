@@ -10,9 +10,9 @@ use App\Core\Events\DomainEvent;
  * Disparado quando uma viagem e aprovada.
  *
  * Consumidores:
- *  - AtualizarProjecaoListener (incrementa contadores no read-model)
- *  - EncerramentoSaga (verifica se foi a ultima viagem prevista do cronograma
- *    e, em caso afirmativo, emite ExecucaoConcluidaV1)
+ *  - RegistrarHistoricoProcessoListener (grava em tdap_historicos)
+ *
+ * A projecao do read-model e a EncerramentoSaga sairam com o modulo Processos.
  */
 final readonly class ViagemValidadaV1 extends DomainEvent
 {

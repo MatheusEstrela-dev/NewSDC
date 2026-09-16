@@ -7,8 +7,6 @@ namespace App\Modules\Tdap\Listeners;
 use App\Core\Events\DomainEvent;
 use App\Core\Events\IdempotentListener;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
-use App\Modules\Tdap\Domain\Events\ProcessoTdapAbertoV1;
-use App\Modules\Tdap\Domain\Events\ProcessoTdapTransitadoV1;
 use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
 use Illuminate\Support\Facades\DB;
 
@@ -17,6 +15,11 @@ use Illuminate\Support\Facades\DB;
  *
  * Idempotente: cada evento gera no maximo um registro de historico
  * (chave evento_id deduplicada via processed_events).
+ *
+ * O nome fala em "Processo" por heranca: ele nasceu para o modulo de Processos,
+ * que saiu, mas continua sendo o unico registrador do historico de CRONOGRAMA
+ * ATIVADO e VIAGEM VALIDADA. Apagar junto com o resto teria calado a aba
+ * Historico para os dois eventos que ela de fato mostra.
  */
 class RegistrarHistoricoProcessoListener extends IdempotentListener
 {
@@ -25,7 +28,7 @@ class RegistrarHistoricoProcessoListener extends IdempotentListener
         $entityType = match (true) {
             $event instanceof CronogramaAtivadoV1 => 'cronograma',
             $event instanceof ViagemValidadaV1    => 'viagem',
-            default                               => 'processo_tdap',
+            default                               => 'tdap',
         };
 
         $entityId = $event->aggregateId;
@@ -36,13 +39,6 @@ class RegistrarHistoricoProcessoListener extends IdempotentListener
         }
 
         $obs = match (true) {
-            $event instanceof ProcessoTdapAbertoV1     => "Processo aberto.",
-            $event instanceof ProcessoTdapTransitadoV1 => sprintf(
-                'Transitado %s -> %s%s',
-                $event->payload()['estado_anterior'] ?? '?',
-                $event->payload()['estado_novo']     ?? '?',
-                ! empty($event->payload()['motivo']) ? ' ('.$event->payload()['motivo'].')' : '',
-            ),
             $event instanceof CronogramaAtivadoV1 => sprintf(
                 'Cronograma %s ativado (via outbox).',
                 $event->payload()['numero'] ?? '?',
@@ -56,7 +52,7 @@ class RegistrarHistoricoProcessoListener extends IdempotentListener
             'tipo_evento' => $event->eventName(),
             'entity_type' => $entityType,
             'entity_id'   => (int) (is_numeric($entityId) ? $entityId : 0),
-            'user_id'     => $event->metadata['user_id'] ?? $event->payload()['aberto_por'] ?? null,
+            'user_id'     => $event->metadata['user_id'] ?? null,
             'obs'         => $obs,
             'payload'     => json_encode($event->payload(), JSON_UNESCAPED_UNICODE),
             'created_at'  => now(),

@@ -223,15 +223,23 @@ class CronoViagemService
      * Mesmo padrao de CronogramaService::obterEstatisticas: COUNT(*) FILTER do
      * PostgreSQL em vez de uma consulta por card.
      *
+     * RECEBE O MESMO USUARIO da listagem, e nao e detalhe: sem o recorte, o
+     * card anunciava 12 pendentes acima de uma tabela vazia -- os numeros
+     * contavam o estado inteiro enquanto a lista ja mostrava so o municipio de
+     * quem olhava.
+     *
      * @return array<string, int>
      */
-    public function obterEstatisticas(): array
+    public function obterEstatisticas(?User $usuario = null): array
     {
+        $municipioDoUsuario = $this->municipioDoUsuario($usuario);
+
         $linha = DB::table('tdap_crono_viagens as v')
             ->join('tdap_crono_caminhoes as cc', 'cc.id', '=', 'v.crono_caminhao_id')
             ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
             ->whereNull('v.deleted_at')
             ->whereNull('v.validado')
+            ->when($municipioDoUsuario !== null, fn ($q) => $q->where('c.municipio_id', $municipioDoUsuario))
             ->selectRaw('count(*) as pendentes')
             ->selectRaw("count(*) FILTER (WHERE v.data_registro < now() - interval '7 days') as aguardando_mais_de_7d")
             ->selectRaw('count(*) FILTER (WHERE c.encerrado_em is not null) as de_cronograma_encerrado')
@@ -284,10 +292,8 @@ class CronoViagemService
      * Aprova ou rejeita uma viagem pendente.
      *
      * Na APROVACAO emite ViagemValidadaV1 no outbox, na mesma transacao do
-     * update. O evento estava registrado no TdapServiceProvider e tinha tres
-     * consumidores (projecao do processo, historico e EncerramentoSaga), mas
-     * ninguem o publicava: a projecao `tdap_processo_projecoes` nunca somava
-     * viagem, e o processo nunca saia de EM_EXECUCAO por conta propria.
+     * update. Hoje o unico consumidor e o registro em tdap_historicos -- a
+     * projecao do read-model e a EncerramentoSaga sairam com o modulo Processos.
      *
      * Rejeicao nao emite: nada foi entregue, nao ha execucao a acumular.
      */
@@ -338,13 +344,14 @@ class CronoViagemService
      * Monta e persiste ViagemValidadaV1 com o contexto que os consumidores
      * esperam (ver ViagemValidadaV1::payload()).
      *
-     * `processo_id` pode ser nulo: cronograma solto, sem ProcessoTdap, e caso
-     * legitimo -- a saga simplesmente ignora o evento.
+     * `processo_id` saiu do payload junto com o modulo Processos: o unico
+     * consumidor era a EncerramentoSaga, e a chave chegava sempre nula porque
+     * nenhuma tela jamais preencheu `processo_tdap_id`.
      */
     private function publicarViagemValidada(CronoViagem $viagem): void
     {
         $contexto = CronoCaminhao::query()
-            ->with(['cronograma:id,processo_tdap_id', 'caminhao:id,capacidade_m3'])
+            ->with('caminhao:id,capacidade_m3')
             ->find($viagem->crono_caminhao_id);
 
         $this->outbox->persist(new ViagemValidadaV1(
@@ -356,7 +363,6 @@ class CronoViagemService
                 'viagem_id'         => $viagem->id,
                 'crono_caminhao_id' => $viagem->crono_caminhao_id,
                 'cronograma_id'     => $contexto?->cronograma_id,
-                'processo_id'       => $contexto?->cronograma?->processo_tdap_id,
                 'capacidade_m3'     => (float) ($contexto?->caminhao?->capacidade_m3 ?? 0),
                 'user_id'           => Auth::id(),
             ],
