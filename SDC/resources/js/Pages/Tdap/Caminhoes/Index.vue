@@ -163,51 +163,9 @@
                       <td class="whitespace-nowrap px-4 py-4">
                         <TdapStatusBadge :active="caminhao.ativo" />
                       </td>
-                      <td class="px-4 py-4">
-                        <div class="flex items-center justify-end gap-1">
-                          <ActionButton
-                            action="view"
-                            module="tdap"
-                            resource="caminhoes"
-                            :allowed="true"
-                            :show-label="false"
-                            size="sm"
-                            tooltip-text="Visualizar caminhão"
-                            @click="router.visit(route('tdap.caminhoes.show', caminhao.id))"
-                          />
-                          <ActionButton
-                            action="edit"
-                            module="tdap"
-                            resource="caminhoes"
-                            :allowed="canEdit"
-                            :show-label="false"
-                            size="sm"
-                            tooltip-text="Editar caminhão"
-                            @click="router.visit(route('tdap.caminhoes.edit', caminhao.id))"
-                          />
-                          <!-- A vistoria deixou de ser tela separada: nasce
-                               daqui, ja com o caminhao escolhido. -->
-                          <ActionButton
-                            v-if="caminhao.vistoria"
-                            action="history"
-                            module="tdap"
-                            resource="vistorias"
-                            :allowed="canVerVistoria"
-                            :show-label="false"
-                            size="sm"
-                            tooltip-text="Ver vistoria mais recente"
-                            @click="router.visit(route('tdap.vistorias.show', caminhao.vistoria.id))"
-                          />
-                          <ActionButton
-                            action="create"
-                            module="tdap"
-                            resource="vistorias"
-                            :allowed="canCriarVistoria"
-                            :show-label="false"
-                            size="sm"
-                            tooltip-text="Nova vistoria deste caminhão"
-                            @click="router.visit(route('tdap.vistorias.create', { placa_id: caminhao.id }))"
-                          />
+                      <td class="table-actions-cell px-4 py-4">
+                        <div class="flex items-center justify-end">
+                          <ActionButton module="tdap" resource="caminhoes" :actions="acoesDaLinha(caminhao)" />
                         </div>
                       </td>
                     </tr>
@@ -252,48 +210,8 @@
       </template>
 
       <template #mobile-actions="{ item: caminhao }">
-        <div class="flex items-center justify-end gap-1">
-        <ActionButton
-        action="view"
-        module="tdap"
-        resource="caminhoes"
-        :allowed="true"
-        :show-label="false"
-        size="sm"
-        tooltip-text="Visualizar caminhão"
-        @click="router.visit(route('tdap.caminhoes.show', caminhao.id))"
-        />
-        <ActionButton
-        action="edit"
-        module="tdap"
-        resource="caminhoes"
-        :allowed="canEdit"
-        :show-label="false"
-        size="sm"
-        tooltip-text="Editar caminhão"
-        @click="router.visit(route('tdap.caminhoes.edit', caminhao.id))"
-        />
-        <ActionButton
-        v-if="caminhao.vistoria"
-        action="history"
-        module="tdap"
-        resource="vistorias"
-        :allowed="canVerVistoria"
-        :show-label="false"
-        size="sm"
-        tooltip-text="Ver vistoria mais recente"
-        @click="router.visit(route('tdap.vistorias.show', caminhao.vistoria.id))"
-        />
-        <ActionButton
-        action="create"
-        module="tdap"
-        resource="vistorias"
-        :allowed="canCriarVistoria"
-        :show-label="false"
-        size="sm"
-        tooltip-text="Nova vistoria deste caminhão"
-        @click="router.visit(route('tdap.vistorias.create', { placa_id: caminhao.id }))"
-        />
+        <div class="flex items-center justify-end">
+        <ActionButton module="tdap" resource="caminhoes" :actions="acoesDaLinha(caminhao)" />
         </div>
       </template>
     </ResponsiveTable>
@@ -308,6 +226,21 @@
       module-name="Caminhoes"
       @close="closeExportModal"
       @export="onExport"
+    />
+
+    <!-- Exclusao passa por confirmacao, como no PAE: o caminhao pode estar
+         alocado em cronograma vivo, e o servico recusa com mensagem de negocio
+         -- sem o dialogo, o clique errado so aparecia depois do redirect. -->
+    <ConfirmDialog
+      :is-open="caminhaoParaExcluir !== null"
+      variant="danger"
+      title="Excluir caminhão"
+      :message="`Excluir o caminhão ${caminhaoParaExcluir?.placa ?? ''}?`"
+      description="O veículo sai da frota e das listagens. Se estiver alocado em cronograma ativo ou em rascunho, a exclusão será recusada."
+      confirm-text="Excluir"
+      :loading="excluindo"
+      @confirm="confirmarExclusao"
+      @cancel="caminhaoParaExcluir = null"
     />
   </div>
 </template>
@@ -330,6 +263,7 @@ import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import VistoriaSituacaoBadge from '@/Components/Organisms/Tdap/VistoriaSituacaoBadge.vue';
 import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -385,6 +319,72 @@ function limparFiltros() {
 function filtrarPorVistoria(situacao) {
   activeFilters.value = { ...activeFilters.value, vistoria: situacao };
   aplicarFiltros();
+}
+
+/**
+ * Acoes da linha, no padrao de grupo do PAE.
+ *
+ * Duas ficam inline -- ver e editar, as que o operador usa a cada passagem --
+ * e o resto vai para o menu de opcoes. Antes eram quatro icones soltos lado a
+ * lado, sem rotulo: com a coluna de vistoria a linha ficou mais densa, e
+ * quatro alvos iguais de 32px e onde se clica em "excluir" achando que era
+ * "nova vistoria".
+ *
+ * Vistoria entra com `module`/`resource` proprios: a permissao dela nao e a do
+ * caminhao, e o ActionButton filtra cada item pelo seu.
+ */
+function acoesDaLinha(caminhao) {
+  return [
+    { action: 'view', handler: () => router.visit(route('tdap.caminhoes.show', caminhao.id)) },
+    {
+      action: 'edit',
+      allowed: props.canEdit,
+      handler: () => router.visit(route('tdap.caminhoes.edit', caminhao.id)),
+    },
+    {
+      action: 'history',
+      placement: 'menu',
+      label: 'Ver última vistoria',
+      module: 'tdap',
+      resource: 'vistorias',
+      // Sem vistoria nenhuma nao ha o que abrir -- e o menu nao deve oferecer
+      // um caminho que termina em 404.
+      allowed: props.canVerVistoria && caminhao.vistoria !== null,
+      handler: () => router.visit(route('tdap.vistorias.show', caminhao.vistoria.id)),
+    },
+    {
+      action: 'create',
+      placement: 'menu',
+      label: 'Nova vistoria',
+      module: 'tdap',
+      resource: 'vistorias',
+      allowed: props.canCriarVistoria,
+      handler: () => router.visit(route('tdap.vistorias.create', { placa_id: caminhao.id })),
+    },
+    {
+      action: 'delete',
+      placement: 'menu',
+      allowed: props.canDelete,
+      handler: () => { caminhaoParaExcluir.value = caminhao; },
+    },
+  ];
+}
+
+const caminhaoParaExcluir = ref(null);
+const excluindo = ref(false);
+
+function confirmarExclusao() {
+  if (caminhaoParaExcluir.value === null) return;
+
+  excluindo.value = true;
+
+  router.delete(route('tdap.caminhoes.destroy', caminhaoParaExcluir.value.id), {
+    preserveScroll: true,
+    onFinish: () => {
+      excluindo.value = false;
+      caminhaoParaExcluir.value = null;
+    },
+  });
 }
 
 function fmtDate(valor) {

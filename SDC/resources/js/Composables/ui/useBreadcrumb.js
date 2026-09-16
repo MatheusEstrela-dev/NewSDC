@@ -312,6 +312,120 @@ export function useBreadcrumb() {
         return trilhas[componentName] ?? null;
     };
 
+    /**
+     * Trilha do modulo TDAP.
+     *
+     * Pelo fallback automatico a trilha saia errada em tres frentes ao mesmo
+     * tempo, e as tres doem:
+     *
+     *  - o rotulo vinha do CAMINHO do componente: "Tdap" em vez da sigla,
+     *    "Caminhoes" sem acento e, pior, "Caminhoes" depois de a tela ter sido
+     *    renomeada para Frota e Vistorias -- o menu dizia uma coisa e a trilha
+     *    outra, para a mesma pagina;
+     *  - `rotaDe('Tdap')` nao acha nada (a raiz do modulo e `tdap.dashboard`,
+     *    nao `tdap.index`), entao o crumb do modulo nao era clicavel e o botao
+     *    Voltar, que varre a trilha atras do primeiro item com rota, pulava o
+     *    modulo inteiro e caia no Inicio;
+     *  - Show e Edit terminavam em "Visualizar"/"Edição", que nao dizem QUAL
+     *    registro esta aberto.
+     *
+     * Fica fora do `breadcrumbMap` pelo mesmo motivo do Cisterna: os rotulos
+     * dependem das PROPS da pagina, e o mapa e estatico.
+     */
+    const trilhaTdap = (componentName, props) => {
+        if (!componentName.startsWith('Tdap/')) {
+            return null;
+        }
+
+        const inicio = { label: 'Início', route: 'dashboard' };
+        const tdap = { label: 'TDAP', route: 'tdap.dashboard' };
+
+        // Os resources do modulo chegam ora embrulhados em `data`, ora nao,
+        // conforme a pagina use `Resource::make` ou o array cru.
+        const dado = (valor) => valor?.data ?? valor ?? null;
+
+        // Pai de cada recurso: e ele que o Voltar encontra primeiro.
+        const prestadores = { label: 'Prestadores', route: 'tdap.prestadores.index' };
+        const frota = { label: 'Frota e Vistorias', route: 'tdap.caminhoes.index' };
+        const atas = { label: 'Atas', route: 'tdap.atas.index' };
+        const lotes = { label: 'Lotes', route: 'tdap.lotes.index' };
+        const cronogramas = { label: 'Cronogramas', route: 'tdap.cronogramas.index' };
+        const historicos = { label: 'Histórico', route: 'tdap.historicos.index' };
+
+        // Ultimo degrau: a propria pagina, nunca link.
+        const aqui = (label) => ({ label, route: null });
+
+        const prestador = dado(props?.prestador);
+        const caminhao = dado(props?.caminhao);
+        const ata = dado(props?.ata);
+        const lote = dado(props?.lote);
+        const cronograma = dado(props?.cronograma);
+        const vistoria = dado(props?.vistoria);
+
+        // Identifica o registro pelo que o usuario reconhece -- placa, numero,
+        // nome -- com o rotulo generico so como ultimo recurso.
+        const rotulo = (valor, generico) => (valor ? String(valor) : generico);
+
+        const trilhas = {
+            'Tdap/Dashboard': [inicio, aqui('TDAP')],
+
+            'Tdap/Prestadores/Index': [inicio, tdap, aqui('Prestadores')],
+            'Tdap/Prestadores/Create': [inicio, tdap, prestadores, aqui('Novo prestador')],
+            'Tdap/Prestadores/Show': [inicio, tdap, prestadores, aqui(rotulo(prestador?.nome, 'Visualizar'))],
+            'Tdap/Prestadores/Edit': [inicio, tdap, prestadores, aqui(`Editar ${rotulo(prestador?.nome, 'prestador')}`)],
+
+            // "Caminhoes" continua sendo o caminho do componente, mas a tela
+            // virou a juncao com vistorias: a trilha segue o nome da tela.
+            'Tdap/Caminhoes/Index': [inicio, tdap, aqui('Frota e Vistorias')],
+            'Tdap/Caminhoes/Create': [inicio, tdap, frota, aqui('Novo caminhão')],
+            'Tdap/Caminhoes/Show': [inicio, tdap, frota, aqui(rotulo(caminhao?.placa, 'Visualizar'))],
+            'Tdap/Caminhoes/Edit': [inicio, tdap, frota, aqui(`Editar ${rotulo(caminhao?.placa, 'caminhão')}`)],
+
+            // Vistoria pertence a um caminhao, e o caminhao mora na frota: a
+            // trilha passa por ela, nao pelo historico.
+            'Tdap/Vistorias/Index': [inicio, tdap, frota, aqui('Histórico de vistorias')],
+            'Tdap/Vistorias/Create': [inicio, tdap, frota, aqui('Nova vistoria')],
+            'Tdap/Vistorias/Show': [
+                inicio,
+                tdap,
+                frota,
+                aqui(`Vistoria ${rotulo(vistoria?.caminhao?.placa, '')}`.trim()),
+            ],
+            'Tdap/Vistorias/Edit': [
+                inicio,
+                tdap,
+                frota,
+                aqui(`Editar vistoria ${rotulo(vistoria?.caminhao?.placa, '')}`.trim()),
+            ],
+
+            'Tdap/Atas/Index': [inicio, tdap, aqui('Atas')],
+            'Tdap/Atas/Create': [inicio, tdap, atas, aqui('Nova ata')],
+            'Tdap/Atas/Show': [inicio, tdap, atas, aqui(rotulo(ata?.numero, 'Visualizar'))],
+            'Tdap/Atas/Edit': [inicio, tdap, atas, aqui(`Editar ${rotulo(ata?.numero, 'ata')}`)],
+
+            'Tdap/Lotes/Index': [inicio, tdap, aqui('Lotes')],
+            'Tdap/Lotes/Create': [inicio, tdap, lotes, aqui('Novo lote')],
+            'Tdap/Lotes/Show': [inicio, tdap, lotes, aqui(rotulo(lote?.numero ?? lote?.nome, 'Visualizar'))],
+            'Tdap/Lotes/Edit': [inicio, tdap, lotes, aqui(`Editar ${rotulo(lote?.numero ?? lote?.nome, 'lote')}`)],
+
+            'Tdap/Cronogramas/Index': [inicio, tdap, aqui('Cronogramas')],
+            'Tdap/Cronogramas/Create': [inicio, tdap, cronogramas, aqui('Novo cronograma')],
+            'Tdap/Cronogramas/Show': [inicio, tdap, cronogramas, aqui(rotulo(cronograma?.numero, 'Visualizar'))],
+            'Tdap/Cronogramas/Edit': [inicio, tdap, cronogramas, aqui(`Editar ${rotulo(cronograma?.numero, 'cronograma')}`)],
+
+            // As duas filas sao irmas e nao filhas uma da outra: confirmar e da
+            // COMPDEC, validar e da CEDEC. Pendurar uma na outra sugeriria uma
+            // hierarquia que o permissionamento nao tem.
+            'Tdap/Viagens/Pendentes': [inicio, tdap, aqui('Viagens pendentes')],
+            'Tdap/Viagens/Confirmacao': [inicio, tdap, aqui('Confirmar recebimento')],
+
+            'Tdap/Historicos/Index': [inicio, tdap, aqui('Histórico')],
+            'Tdap/Historicos/Show': [inicio, tdap, historicos, aqui('Registro')],
+        };
+
+        return trilhas[componentName] ?? null;
+    };
+
     const breadcrumbItems = computed(() => {
         const componentName = page.component?.value || page.component;
 
@@ -319,10 +433,18 @@ export function useBreadcrumb() {
             return ['Início'];
         }
 
-        const doCisterna = trilhaCisterna(componentName, page.props?.value ?? page.props);
+        const propsDaPagina = page.props?.value ?? page.props;
+
+        const doCisterna = trilhaCisterna(componentName, propsDaPagina);
 
         if (doCisterna) {
             return doCisterna;
+        }
+
+        const doTdap = trilhaTdap(componentName, propsDaPagina);
+
+        if (doTdap) {
+            return doTdap;
         }
 
         if (breadcrumbMap[componentName]) {
@@ -474,7 +596,15 @@ export function useBreadcrumb() {
 
         for (let i = items.length - 2; i >= 0; i--) {
             if (items[i]?.route) {
-                router.visit(route(items[i].route));
+                // `params` e obrigatorio em rota com binding -- a trilha do
+                // Cisterna volta para a lista DAQUELE beneficiario. Sem
+                // repassar, o Ziggy lanca por falta do parametro e o Voltar
+                // nao faz nada.
+                const destino = items[i].params !== undefined
+                    ? route(items[i].route, items[i].params)
+                    : route(items[i].route);
+
+                router.visit(destino);
                 return;
             }
         }
