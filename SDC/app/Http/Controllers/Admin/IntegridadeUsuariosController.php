@@ -58,8 +58,11 @@ class IntegridadeUsuariosController extends Controller
 
         abort_unless(IntegridadeUsuariosService::regraExiste($regraId), 404);
 
+        // Os mesmos filtros da tela: exportar o conjunto inteiro embaixo de uma
+        // tabela filtrada entrega um arquivo que nao corresponde ao que a
+        // pessoa esta vendo.
         return $csv->export(
-            $this->service->todasAsLinhas($regraId),
+            $this->service->todasAsLinhas($regraId, $request->only(['orgao_id', 'search'])),
             ['Regra', 'Escopo', 'ID', 'Municipio', 'Orgao', 'Nome', 'Documento', 'E-mail', 'Evidencia'],
             fn (object $linha): array => [
                 $regraId,

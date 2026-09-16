@@ -194,7 +194,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
-            <tr v-for="linha in linhas.data" :key="`${linha.escopo}-${linha.ref_id}`" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+            <tr v-for="(linha, indice) in linhas.data" :key="`${linha.escopo}-${linha.ref_id}-${linha.orgao_id}-${indice}`" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
               <td class="px-4 lg:px-6 py-4 text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ linha.municipio }}</td>
               <td class="px-4 lg:px-6 py-4 text-sm font-medium text-slate-800 dark:text-slate-100">{{ linha.nome }}</td>
               <td class="px-4 lg:px-6 py-4 text-sm font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ linha.documento || '—' }}</td>

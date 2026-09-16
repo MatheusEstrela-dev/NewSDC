@@ -16,6 +16,7 @@ use App\Modules\Tdap\Resources\VistoriaResource;
 use App\Modules\Tdap\Services\VistoriaFotoService;
 use App\Modules\Tdap\Services\VistoriaService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -88,16 +89,24 @@ class VistoriaController extends Controller
 
     public function store(StoreVistoriaRequest $request): RedirectResponse
     {
+        // Ficha e fotos numa transacao so. Sem isso, uma falha de disco na
+        // terceira foto deixaria a vistoria gravada com duas -- e um 500 no
+        // lugar do redirect, sem que ninguem soubesse que o cadastro passou.
+        //
         // `except('fotos')`: o DTO descreve a ficha, nao os anexos. Deixar os
-        // arquivos entrarem ali faria o payload da vistoria carregar
-        // UploadedFile ate o Eloquent.
-        $vistoria = $this->service->criar(
-            VistoriaDTO::fromRequest($request->safe()->except('fotos')),
-        );
+        // arquivos entrarem ali faria o payload carregar UploadedFile ate o
+        // Eloquent.
+        $vistoria = DB::transaction(function () use ($request): Vistoria {
+            $vistoria = $this->service->criar(
+                VistoriaDTO::fromRequest($request->safe()->except('fotos')),
+            );
 
-        foreach ($request->file('fotos') ?? [] as $arquivo) {
-            $this->fotoService->store($vistoria, $arquivo);
-        }
+            foreach ($request->file('fotos') ?? [] as $arquivo) {
+                $this->fotoService->store($vistoria, $arquivo);
+            }
+
+            return $vistoria;
+        });
 
         return redirect()
             ->route('tdap.vistorias.show', $vistoria->id)

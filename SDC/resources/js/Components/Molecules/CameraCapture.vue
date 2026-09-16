@@ -22,11 +22,12 @@
       </Button>
     </div>
 
-    <!-- Sem getUserMedia (navegador antigo, ou pagina servida em http fora de
-         localhost) a camera ao vivo nao existe. O input com `capture` chama o
-         app de camera do proprio aparelho e resolve o mesmo problema. -->
+    <!-- SEMPRE renderizado, sem v-if. Ele atende dois casos: navegador sem
+         getUserMedia, e permissao negada em navegador que tem. O segundo so
+         se descobre no catch do iniciar(), e um v-if em `suportaCameraAoVivo`
+         deixava a ref nula exatamente ali -- o `?.` engolia o clique e quem
+         negasse a permissao ficava sem saida nenhuma. -->
     <input
-      v-if="!suportaCameraAoVivo"
       ref="inputNativo"
       type="file"
       class="hidden"
@@ -93,18 +94,28 @@ async function iniciar() {
     return;
   }
 
+  let novaStream = null;
+
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
+    novaStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: cameraTraseira.value ? 'environment' : 'user' },
       audio: false,
     });
 
-    videoRef.value.srcObject = stream;
+    videoRef.value.srcObject = novaStream;
     await videoRef.value.play();
+
+    // So aqui a stream vira estado do componente. Atribuir antes do play()
+    // deixava uma MediaStream viva orfa quando o play falhava: a proxima
+    // tentativa sobrescrevia a referencia e ninguem mais parava as tracks --
+    // no celular, luz da camera acesa sem video na tela.
+    stream = novaStream;
     ativo.value = true;
 
     detectarCameras();
   } catch {
+    novaStream?.getTracks().forEach((track) => track.stop());
+
     // Permissao negada, camera em uso por outro app, ou origem insegura.
     // Cair no app de camera do aparelho e melhor que deixar a pessoa sem saida.
     erro.value = 'Nao foi possivel abrir a camera aqui. Tente pelo aplicativo de camera do aparelho.';

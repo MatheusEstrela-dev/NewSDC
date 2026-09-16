@@ -125,6 +125,13 @@ export function useCollapsibleSection(namespace, sectionId, opcoes = {}) {
     estaExpandido.value = false;
   }
 
+  /** A primeira secao do namespace abre; as demais seguem fechadas. */
+  function semear() {
+    if (sanfonaNoMobile && isMobile.value && sanfona.value === null) {
+      sanfona.value = sectionId;
+    }
+  }
+
   onMounted(() => {
     carregar();
 
@@ -134,12 +141,13 @@ export function useCollapsibleSection(namespace, sectionId, opcoes = {}) {
 
     instanciasPorNamespace[namespace] = (instanciasPorNamespace[namespace] ?? 0) + 1;
 
-    // A PRIMEIRA secao a montar abre no celular: sanfona toda fechada entrega
-    // uma tela de titulos e nenhum campo.
-    if (isMobile.value && sanfona.value === null) {
-      sanfona.value = sectionId;
-    }
+    semear();
   });
+
+  // Semear so na montagem nao basta: girar o tablet para retrato DEPOIS de
+  // montado liga o modo sanfona com nenhuma secao aberta, e a tela vira uma
+  // pilha de titulos sem campo nenhum.
+  watch(isMobile, semear);
 
   onUnmounted(() => {
     if (!sanfonaNoMobile) {

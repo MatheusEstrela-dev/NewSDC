@@ -180,6 +180,28 @@ class IntegridadeUsuariosService
      */
     public function linhas(string $regraId, array $filtros = [], int $perPage = 25): LengthAwarePaginator
     {
+        return $this->filtrada($regraId, $filtros)->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Todas as linhas de uma regra, sem paginacao -- para exportacao.
+     *
+     * Aceita os mesmos filtros da tela de proposito: e o unico jeito de a
+     * planilha bater com a tabela que a pessoa tem na frente.
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    public function todasAsLinhas(string $regraId, array $filtros = [])
+    {
+        return $this->filtrada($regraId, $filtros)->get();
+    }
+
+    /**
+     * @param  array<string, mixed>  $filtros
+     */
+    private function filtrada(string $regraId, array $filtros): Builder
+    {
         $query = $this->query($regraId);
 
         if (! empty($filtros['orgao_id'])) {
@@ -191,17 +213,7 @@ class IntegridadeUsuariosService
             $query->whereRaw('upper(nome) like ?', [$termo]);
         }
 
-        return $query->orderBy('municipio')->orderBy('nome')->paginate($perPage)->withQueryString();
-    }
-
-    /**
-     * Todas as linhas de uma regra, sem paginacao -- para exportacao.
-     *
-     * @return \Illuminate\Support\Collection<int, object>
-     */
-    public function todasAsLinhas(string $regraId)
-    {
-        return $this->query($regraId)->orderBy('municipio')->orderBy('nome')->get();
+        return $query->orderBy('municipio')->orderBy('nome');
     }
 
     public static function regraExiste(string $regraId): bool
@@ -386,16 +398,26 @@ class IntegridadeUsuariosService
             ));
     }
 
+    /**
+     * A divergencia de funcao acontece no orgao do PIVOT, que nem sempre e o
+     * orgao principal da conta. Reportar a partir de `usuariosVivos()` mostra
+     * o orgao errado -- ou "(sem orgao)" com id 0, o que ainda tira a acao de
+     * abrir a tela. Hoje as 358 linhas da base coincidem, mas a regra existe
+     * justamente para achar quem nao coincide.
+     */
     private function regraB4(): Builder
     {
-        return $this->usuariosVivos()
+        return DB::table('users as u')
             ->join('compdec_orgao_user as p', 'p.user_id', '=', 'u.id')
+            ->join('compdec_orgaos as o', 'o.id', '=', 'p.orgao_id')
+            ->leftJoin('municipios as m', 'm.id', '=', 'o.municipio_id')
             ->join('compdec_equipes as e', function ($join): void {
                 $join->on('e.orgao_id', '=', 'p.orgao_id')
                     ->whereNull('e.deleted_at')
                     ->where('e.ativo', true)
                     ->whereRaw('u.cpf = '.$this->cpfLimpo('e.cpf'));
             })
+            ->whereNull('u.deleted_at')
             ->whereRaw('p.funcao <> e.funcao')
             ->selectRaw($this->colunasDeUsuario("'pivot: ' || p.funcao || '  |  equipe: ' || e.funcao"));
     }
