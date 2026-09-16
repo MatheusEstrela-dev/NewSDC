@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Municipio;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
 use App\Modules\Tdap\Models\Ata;
+use App\Modules\Pmda\Models\Comunidade;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\Lote;
 use App\Modules\Tdap\Models\PontoCaptacao;
@@ -103,6 +104,15 @@ class CronogramaController extends Controller
 
         return Inertia::render('Tdap/Cronogramas/Show', [
             'cronograma'       => CronogramaResource::make($cronograma),
+            // As comunidades do municipio atendido, com a populacao que a
+            // alocacao usa para calcular agua prevista e viagens. Sem elas o
+            // modal so aceitaria os dois numeros digitados a mao.
+            'comunidades'      => Comunidade::query()
+                ->where('municipio_id', $cronograma->municipio_id)
+                ->where('ativo', true)
+                ->whereNull('deleted_at')
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'pop_atendida']),
             'podeAtivar'       => $podeAtivar,
             'motivoBloqueio'   => $motivoBloqueio,
             'canEdit'          => $request->user()?->can('tdap.cronogramas.edit') ?? false,

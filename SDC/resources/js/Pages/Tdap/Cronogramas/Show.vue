@@ -204,6 +204,9 @@
       :cronograma-numero="c.numero"
       :caminhoes="caminhoesPrestador"
       :ja-alocados="(c.caminhoes || []).map(cc => cc.caminhao_id)"
+      :comunidades="comunidades"
+      :consumo-diario="c.consumo_diario"
+      :dias="c.dias"
       @close="showAlocar = false"
     />
 
@@ -259,6 +262,7 @@ defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   cronograma:        { type: Object, required: true },
+  comunidades:       { type: Array, default: () => [] },
   podeAtivar:        { type: Boolean, default: false },
   motivoBloqueio:    { type: String, default: '' },
   canEdit:           { type: Boolean, default: false },
