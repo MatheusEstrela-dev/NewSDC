@@ -66,20 +66,25 @@ class ApiRateLimiter
         $limitCheck = $this->checkRateLimit($key, $cost, $limits, $tier);
 
         if (!$limitCheck['allowed']) {
-            // Log de segurança para rate limit excedido
-            ActivityLogger::logSecurity(
-                event: 'rate_limit_exceeded',
-                data: [
-                    'user_id' => $user?->id,
-                    'ip' => $request->ip(),
-                    'tier' => $tier,
-                    'limit' => $limits['max_attempts'],
-                    'cost' => $cost,
-                    'current_usage' => $limitCheck['current_usage'],
-                    'path' => $request->path(),
-                ],
-                severity: 'warning'
-            );
+            // Log de seguranca apenas na requisicao que cruzou o limite. O
+            // ActivityLogger e sincrono (debug_backtrace + Redis + arquivo); sob
+            // enxurrada, logar cada recusa fazia a defesa custar mais que o
+            // ataque. Uma linha por chave por janela preserva o sinal.
+            if ($limitCheck['first_rejection'] ?? false) {
+                ActivityLogger::logSecurity(
+                    event: 'rate_limit_exceeded',
+                    data: [
+                        'user_id' => $user?->id,
+                        'ip' => $request->ip(),
+                        'tier' => $tier,
+                        'limit' => $limits['max_attempts'],
+                        'cost' => $cost,
+                        'current_usage' => $limitCheck['current_usage'],
+                        'path' => $request->path(),
+                    ],
+                    severity: 'warning'
+                );
+            }
 
             return response()->json([
                 'error' => 'Rate Limit Exceeded',
@@ -123,27 +128,32 @@ class ApiRateLimiter
                 return ['allowed' => true, 'current_usage' => 0, 'retry_after' => 0];
             }
 
-            $exists = Redis::exists($key);
-            $currentUsage = Redis::incrbyfloat($key, $cost);
+            // Um eval no lugar de exists + incrbyfloat + expire + ttl: quatro
+            // round-trips viravam um. Alem do custo, a sequencia solta tinha uma
+            // janela em que o processo morria entre o INCR e o EXPIRE e deixava a
+            // chave SEM expiracao -- o contador daquele usuario nunca mais zerava
+            // e ele ficava em 429 permanente.
+            [$usage, $ttl, $primeiraRecusa] = $this->evalRateLimit(
+                $key,
+                $cost,
+                $limits['decay_seconds'],
+                (float) $limits['max_attempts'],
+            );
 
-            if (!$exists) {
-                Redis::expire($key, $limits['decay_seconds']);
-            }
-
-            if ($currentUsage > $limits['max_attempts']) {
-                $retryAfter = Redis::ttl($key);
-
+            if ($usage > $limits['max_attempts']) {
                 return [
                     'allowed' => false,
-                    'current_usage' => $currentUsage,
-                    'retry_after' => $retryAfter > 0 ? $retryAfter : $limits['decay_seconds'],
+                    'current_usage' => $usage,
+                    'retry_after' => $ttl > 0 ? $ttl : $limits['decay_seconds'],
+                    'first_rejection' => $primeiraRecusa,
                 ];
             }
 
             return [
                 'allowed' => true,
-                'current_usage' => $currentUsage,
+                'current_usage' => $usage,
                 'retry_after' => 0,
+                'first_rejection' => false,
             ];
 
         } catch (\Throwable $e) {
@@ -158,11 +168,66 @@ class ApiRateLimiter
             $bypassOnError = ['pro', 'premium', 'enterprise', 'internal', 'admin', 'webhook'];
             if ((bool) config('resilience.rate_limit.fail_closed', true)
                 && !in_array($tier, $bypassOnError, true)) {
-                return ['allowed' => false, 'current_usage' => 0, 'retry_after' => 10];
+                return ['allowed' => false, 'current_usage' => 0, 'retry_after' => 10, 'first_rejection' => false];
             }
 
-            return ['allowed' => true, 'current_usage' => 0, 'retry_after' => 0];
+            return ['allowed' => true, 'current_usage' => 0, 'retry_after' => 0, 'first_rejection' => false];
         }
+    }
+
+    /**
+     * Passo atomico do limitador por chave.
+     *
+     * Devolve [uso, ttl, primeiraRecusa]. `primeiraRecusa` marca a requisicao que
+     * CRUZOU o limite nesta janela -- so ela merece log de seguranca: as demais
+     * repetem o mesmo evento e, numa enxurrada, transformariam a recusa (que
+     * existe para custar barato) numa tempestade de escrita.
+     *
+     * Numeros voltam como string porque o Lua converte numero em inteiro no
+     * retorno, o que truncaria o custo fracionario das rotas leves (0.5).
+     *
+     * @return array{0: float, 1: int, 2: bool}
+     */
+    private function evalRateLimit(string $key, float $cost, int $decaySeconds, float $maxAttempts): array
+    {
+        $lua = <<<'LUA'
+            local existia = redis.call('EXISTS', KEYS[1])
+            local anterior = 0
+
+            if existia == 1 then
+                anterior = tonumber(redis.call('GET', KEYS[1])) or 0
+            end
+
+            local uso = tonumber(redis.call('INCRBYFLOAT', KEYS[1], ARGV[1]))
+
+            if existia == 0 then
+                redis.call('EXPIRE', KEYS[1], ARGV[2])
+            end
+
+            local limite = tonumber(ARGV[3])
+            local primeira = 0
+
+            if uso > limite and anterior <= limite then
+                primeira = 1
+            end
+
+            return { tostring(uso), tostring(redis.call('TTL', KEYS[1])), primeira }
+        LUA;
+
+        $resultado = Redis::connection()->eval(
+            $lua,
+            1,
+            $key,
+            (string) $cost,
+            (string) $decaySeconds,
+            (string) $maxAttempts,
+        );
+
+        return [
+            (float) ($resultado[0] ?? 0),
+            (int) ($resultado[1] ?? $decaySeconds),
+            (int) ($resultado[2] ?? 0) === 1,
+        ];
     }
 
     /**
@@ -182,10 +247,20 @@ class ApiRateLimiter
         }
 
         try {
-            $current = (int) Redis::incr('rate_limit:global:per_second');
-            if ($current === 1) {
-                Redis::expire('rate_limit:global:per_second', 1);
-            }
+            // INCR e EXPIRE no mesmo script: soltos, a morte do processo entre
+            // os dois deixava a chave do segundo corrente sem expiracao nenhuma
+            // e todo tier baixo tomava 503 para sempre.
+            $lua = <<<'LUA'
+                local v = redis.call('INCR', KEYS[1])
+
+                if v == 1 then
+                    redis.call('EXPIRE', KEYS[1], 1)
+                end
+
+                return v
+            LUA;
+
+            $current = (int) Redis::connection()->eval($lua, 1, 'rate_limit:global:per_second');
 
             $threshold = (int) config('resilience.rate_limit.global_per_second', 1500);
             if ($current > $threshold && in_array($tier, ['public', 'free', 'default'], true)) {

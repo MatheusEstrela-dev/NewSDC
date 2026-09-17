@@ -51,13 +51,15 @@ class Kernel extends HttpKernel
         'api' => [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
-            // Backpressure/AcquireConnectionSlot NAO ficam no grupo global. Sob
-            // Swoole (hooks off) o usleep do ConnectionSemaphore bloqueia o worker
-            // inteiro e penalizava ate rotas leves (/health, /metrics, auth). Alem
-            // disso, as rotas pesadas (decretacoes/rat/tdap) ja declaram esses dois
-            // middlewares explicitamente -- no grupo global o slot era adquirido em
-            // DOBRO, vazando o contador db:slots:active. O slot agora vive so nas
-            // rotas que tocam DB pesado. Ver routes/api.php.
+            // Backpressure/AcquireConnectionSlot NAO ficam no grupo global. As
+            // rotas pesadas (decretacoes/rat/tdap) ja declaram esses dois
+            // middlewares explicitamente, entao no grupo global o slot era
+            // adquirido em DOBRO -- e, no desenho antigo de contador separado,
+            // isso vazava db:slots:active. Hoje a posse e um membro de sorted
+            // set e a segunda aquisicao do mesmo owner e idempotente, mas o slot
+            // segue restrito as rotas que tocam DB pesado: com hooks off, a
+            // espera por vaga custa um worker inteiro e penalizaria ate rotas
+            // leves (/health, /metrics, auth). Ver routes/api.php.
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\SetTenant::class,
             \App\Http\Middleware\LogApiRequests::class, // Mantendo específico para API

@@ -102,10 +102,16 @@ return [
     | os task workers (Octane::concurrently). Estourado o prazo, o helper
     | loga warning e reexecuta as closures sequencialmente no worker HTTP.
     |
+    | cooldown_s e a carencia apos um timeout: durante ela o helper nem tenta o
+    | despacho e vai direto ao sequencial. Sem carencia, cada request sob pool
+    | saturado pagava wait_ms de bloqueio E DEPOIS o trabalho inteiro -- espera
+    | e trabalho somados realimentavam a saturacao. 0 desliga a carencia.
+    |
     */
 
     'tasks' => [
         'wait_ms' => (int) env('OCTANE_TASK_WAIT_MS', 5000),
+        'cooldown_s' => (float) env('OCTANE_TASK_COOLDOWN_S', 10),
     ],
 
     /*

@@ -42,12 +42,17 @@ class AppServiceProvider extends ServiceProvider
             $cfg = $app['config']->get('resilience.db');
 
             // Resolver lazy: cada acquire/release pega a conexao da coroutine
-            // atual (coroutine-safe sob Swoole+pool). NAO capturar o client aqui
-            // -- este binding e singleton e a conexao seria compartilhada entre
+            // atual (coroutine-safe sob Swoole+pool). NAO capturar a conexao aqui
+            // -- este binding e singleton e o socket seria compartilhado entre
             // coroutines. Sem Redis: resolver null -> semaforo em modo no-op.
+            //
+            // Devolve a Connection do Laravel, nao o ->client() cru: o semaforo
+            // fala por eval(), cuja assinatura o Laravel normaliza entre phpredis
+            // e predis. Entregar o client amarrava a classe ao phpredis, que por
+            // ser extensao em C nao cede execucao sob os hooks de corrotina.
             $resolver = null;
             if ($app['config']->get('resilience.redis_enabled', true)) {
-                $resolver = static fn () => Redis::connection()->client();
+                $resolver = static fn () => Redis::connection();
             }
 
             return new ConnectionSemaphore(

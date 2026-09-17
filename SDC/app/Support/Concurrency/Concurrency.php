@@ -19,6 +19,13 @@ use Swoole\Coroutine;
 final class Concurrency
 {
     /**
+     * Instante (monotonico) ate o qual paramos de despachar para os task
+     * workers. Estado estatico sobrevive entre requests sob Octane, que e
+     * exatamente a intencao: e um unico float por processo.
+     */
+    private static ?float $poolIndisponivelAte = null;
+
+    /**
      * Roda a closure com um PDO emprestado do pool (Swoole) ou do Eloquent
      * (fallback). Retorna o que a closure retornar.
      *
@@ -96,8 +103,9 @@ final class Concurrency
      *    pela posicao no arquivo e closures na mesma linha serializam a
      *    closure errada; montar em foreach com static function () use (...);
      *  - resolver services dentro da closure: app(Service::class)->metodo();
-     *  - retornos precisam ser serializaveis e nunca false legitimo (false e
-     *    o marcador de task nao concluida e dispara recomputo sequencial);
+     *  - retornos precisam ser serializaveis; `false` legitimo E permitido (o
+     *    helper embrulha cada retorno, entao nao colide com o marcador de task
+     *    nao concluida do Octane);
      *  - paginators: passar a pagina explicitamente e reaplicar withPath()
      *    no worker HTTP (task worker nao tem request).
      *
@@ -111,30 +119,38 @@ final class Concurrency
             return [];
         }
 
-        if (self::usaTaskWorkers()) {
+        if (self::usaTaskWorkers() && ! self::poolIndisponivel()) {
             $waitMs ??= (int) config('octane.tasks.wait_ms', 5000);
 
             try {
-                $out = Octane::concurrently($closures, $waitMs);
+                $out = Octane::concurrently(self::embrulhar($closures), $waitMs);
             } catch (TaskTimeoutException) {
-                Log::warning('Concurrency::tasks: timeout nos task workers; reexecutando sequencial.', [
-                    'wait_ms' => $waitMs,
-                    'chaves' => array_keys($closures),
-                ]);
+                self::marcarPoolIndisponivel($waitMs, array_keys($closures));
 
                 return self::sequencial($closures);
             }
 
-            foreach ($out as $chave => $valor) {
-                if ($valor === false) {
-                    Log::warning('Concurrency::tasks: task nao concluida; recomputando chave.', [
-                        'chave' => $chave,
-                    ]);
-                    $out[$chave] = ($closures[$chave])();
+            $resultados = [];
+            foreach ($closures as $chave => $fn) {
+                $valor = $out[$chave] ?? false;
+
+                // Toda closure concluida volta embrulhada num array de um
+                // elemento (ver embrulhar()). Logo, qualquer coisa que NAO seja
+                // array e o `false` do Octane para "esta chave nao concluiu".
+                if (is_array($valor) && array_key_exists(0, $valor)) {
+                    $resultados[$chave] = $valor[0];
+
+                    continue;
                 }
+
+                Log::warning('Concurrency::tasks: task nao concluida; recomputando chave.', [
+                    'chave' => $chave,
+                ]);
+
+                $resultados[$chave] = $fn();
             }
 
-            return $out;
+            return $resultados;
         }
 
         if (self::usaCoroutinesComHooks()) {
@@ -216,6 +232,89 @@ final class Concurrency
             && Coroutine::getCid() >= 0
             && (int) config('octane.swoole.options.hook_flags', 0) !== 0
             && DB::connection()->transactionLevel() === 0;
+    }
+
+    /**
+     * Embrulha cada retorno num array de um elemento.
+     *
+     * O Octane devolve `false` na chave de uma task que nao concluiu no prazo
+     * (ver SwooleTaskDispatcher::resolve). Sem embrulho, uma closure que
+     * legitimamente retorna false era lida como "nao concluida" e recomputada no
+     * worker HTTP -- trabalho duplicado silencioso, e a razao de o
+     * PasswordVerifier precisar devolver 1/0 em vez de bool. Com o embrulho, o
+     * marcador do Octane e o valor de negocio deixam de ocupar o mesmo espaco.
+     *
+     * As closures sao montadas em foreach com `static function () use (...)`, e
+     * nao numa expressao aninhada: a SerializableClosure extrai o fonte pela
+     * posicao no arquivo e closures irmas na mesma linha serializam a closure
+     * errada.
+     *
+     * @param  array<array-key, \Closure(): mixed>  $closures
+     * @return array<array-key, \Closure(): array{0: mixed}>
+     */
+    private static function embrulhar(array $closures): array
+    {
+        $embrulhadas = [];
+
+        foreach ($closures as $chave => $fn) {
+            $embrulhadas[$chave] = static function () use ($fn): array {
+                return [$fn()];
+            };
+        }
+
+        return $embrulhadas;
+    }
+
+    /**
+     * Os task workers estao em periodo de carencia apos um timeout?
+     *
+     * Sem essa carencia, o timeout custava o PIOR dos dois mundos: o worker HTTP
+     * ficava bloqueado wait_ms inteiros (5s por padrao) esperando o pool saturado
+     * e SO ENTAO rodava todas as closures sequencialmente. Sob saturacao
+     * sustentada cada request pagava espera + trabalho integral, o que realimenta
+     * a propria saturacao em vez de alivia-la. Com a carencia, os requests
+     * seguintes vao direto ao sequencial e pagam so o trabalho.
+     */
+    private static function poolIndisponivel(): bool
+    {
+        if (self::$poolIndisponivelAte === null) {
+            return false;
+        }
+
+        if (microtime(true) < self::$poolIndisponivelAte) {
+            return true;
+        }
+
+        self::$poolIndisponivelAte = null;
+
+        return false;
+    }
+
+    /**
+     * @param  list<array-key>  $chaves
+     */
+    private static function marcarPoolIndisponivel(int $waitMs, array $chaves): void
+    {
+        $carencia = (float) config('octane.tasks.cooldown_s', 10);
+
+        self::$poolIndisponivelAte = $carencia > 0
+            ? microtime(true) + $carencia
+            : null;
+
+        Log::warning('Concurrency::tasks: timeout nos task workers; sequencial e carencia no pool.', [
+            'wait_ms' => $waitMs,
+            'carencia_s' => $carencia,
+            'chaves' => $chaves,
+        ]);
+    }
+
+    /**
+     * Zera a carencia. Existe para os testes do proprio mecanismo: o estado e
+     * estatico e vazaria de um caso de teste para o seguinte.
+     */
+    public static function esquecerTimeouts(): void
+    {
+        self::$poolIndisponivelAte = null;
     }
 
     /**
