@@ -92,31 +92,49 @@ services:
       OCTANE_SERVER: swoole
       OCTANE_HTTPS: "false"
       PORT: 8000
-      # 12 workers, nao 4. Com hook_flags=0 (hooks de corrotina desligados,
-      # exigencia do phpredis que o ConnectionSemaphore tipa como ?Redis) cada
-      # request ocupa um processo inteiro do inicio ao fim: PDO, Redis e arquivo
-      # bloqueiam. Logo a capacidade de requests EM VOO e igual ao numero de
-      # workers, e 4 requests lentos simultaneos (relatorio, export, chamada
-      # externa) paravam a aplicacao inteira, /health incluido. Worker gasta o
-      # tempo esperando o Postgres, nao queimando CPU, entao mais workers que
-      # cores e correto aqui. Custo medido: ~85 MB de RSS por worker.
-      # Dimensionado para OCUPAR o teto do ConnectionSemaphore (DB_MAX_CONCURRENT,
-      # abaixo), nao para caber com folga. O orcamento fecha exato:
+      # 40 workers, com hook_flags=0. Nesta configuracao cada request ocupa
+      # um processo inteiro do inicio ao fim (PDO, Redis e arquivo bloqueiam),
+      # entao a capacidade de requests EM VOO e igual ao numero de workers.
+      # O worker passa o tempo esperando o Postgres, nao queimando CPU, entao
+      # mais workers que cores e correto aqui. Custo medido: ~21 MB por
+      # processo alem de 475 MB de base compartilhada.
       #
-      #   40 workers HTTP + 16 task workers + 2 queue + 2 de reserva = 60
+      # POR QUE OS HOOKS DE CORROTINA NAO PODEM SER LIGADOS (17/09/2026)
       #
-      # Por que ocupar o teto e nao ficar abaixo: o backpressure de
-      # config/resilience.php dispara em fracao de UTILIZACAO do semaforo
-      # (BP_PUBLIC_DROP=0.7 -> 42 conexoes, BP_FREE_DROP=0.9 -> 54). Com 12+4
-      # workers o pico teorico era 18/60 = 30%, entao os limiares NUNCA eram
-      # alcancados e a protecao ficava inerte: sob carga o sistema degradava sem
-      # descartar nada. Com 58 de pico o mecanismo volta a existir.
+      # Nao e questao de ajuste: o modelo de isolamento do Octane e
+      # incompativel com varias requisicoes concorrentes no mesmo worker.
       #
-      # Requests em voo == numero de workers, porque hook_flags=0 (exigencia do
-      # phpredis): cada request ocupa um processo inteiro do inicio ao fim. O
-      # Swoole NAO tem worker elastico -- worker_num e fixo no boot, nao existe
-      # equivalente ao pm=dynamic do PHP-FPM. Quem absorve o excedente e o
-      # backpressure (descarta), nao um pool que cresce.
+      # O Octane clona a aplicacao por requisicao e instala o clone como
+      # container GLOBAL (Laravel\Octane\CurrentApplication::set ->
+      # Container::setInstance + Facade::setFacadeApplication). Isso e correto
+      # para uma requisicao por vez. Sob hooks, o worker atende varias em
+      # paralelo: enquanto a requisicao A espera I/O, a B instala o SEU
+      # container como global, e quando A volta, app(), config() e as facades
+      # dela passam a resolver no container da B -- que pode ate ja ter sido
+      # destruido no finally da B.
+      #
+      # MEDIDO com sonda comparando a identidade do container no inicio e no
+      # fim de cada requisicao: 125 TROCAS em cerca de 150 requisicoes com 30
+      # concorrentes. Nao e caso de borda, e o comportamento normal.
+      #
+      # A consequencia grave nao e o 'Class "config" does not exist' que
+      # aparece no log: e o vazamento de contexto entre requisicoes de
+      # usuarios diferentes (auth, tenant, sessao). Para este sistema isso e
+      # falha de isolamento, nao de desempenho.
+      #
+      # O mecanismo do Swoole em si funciona bem: 8 coroutines com
+      # pg_sleep(0.25s) levam 2101 ms com hook_flags=0 e 287 ms com
+      # SWOOLE_HOOK_ALL. O PDO pgsql e hookavel nesta versao e o phpredis
+      # tambem cede. O impedimento esta no Octane, nao no Swoole.
+      #
+      # Tres defeitos reais foram encontrados e corrigidos no caminho (socket
+      # Redis compartilhado, worker alcancavel antes de existir, devolucao de
+      # PDO resolvendo num container ja destruido). Eles valem por si, mas NAO
+      # destravam os hooks -- o problema acima e estrutural.
+      #
+      # Logo, a capacidade vem de processos e CPU, nao de corrotinas: requests
+      # em voo == numero de workers, e o teto e workers/latencia media.
+      OCTANE_HOOK_FLAGS_ENABLED: "false"
       OCTANE_WORKERS: 40
       # Task workers escalam COM os workers HTTP, nao independentes deles.
       # Concurrency::tasks() e sincrono do lado de quem chama: o worker HTTP fica
@@ -148,16 +166,15 @@ services:
       # A conta que ele faz:
       #   (WORKERS + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
       #       + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE <= PG_MAX_CONNECTIONS
-      #   (40 + 16 + 0) * 1 + 3 + 5 = 64  <=  100   OK
+      #   (40 + 16 + 0) * 1 + 16 + 5 = 77 <= 100
       #
       # Com isso um OCTANE_WORKERS excessivo aborta o boot com mensagem clara em
       # vez de degradar em producao. Foi o que faltou para 80 workers: a projecao
       # daria 118 e o gate barraria.
       PG_MAX_CONNECTIONS: 100
-      # Os 3 containers de fila dedicados (queue, queue_critical,
-      # queue_notificacoes). Somados UMA vez, nao por instancia -- o entrypoint
-      # estava projetando 0 externas e subestimando o consumo real.
-      EXTERNAL_DB_CONSUMERS: 3
+      # Seis consumidores, scheduler e folga para conexoes nomeadas de jobs.
+      # Somados uma vez, nao por replica HTTP.
+      EXTERNAL_DB_CONSUMERS: 16
       # Teto do ConnectionSemaphore. O default (100) era igual ao
       # max_connections do Postgres, que ainda reserva 3 para superuser: o
       # semaforo autorizava mais conexoes do que o banco aceita, e o
@@ -342,7 +359,7 @@ services:
   # Worker dedicado para Redis queues (welcome mail, reset password, webhooks,
   # exports async, notifications). Sem ele, Mail::queue/dispatch ficam parados
   # no Redis indefinidamente. Compartilha a imagem do app e bind-mounts.
-  queue:
+  queue: &queue-worker
     image: newsdc-swoole-dev:latest
     container_name: newsdc_dev_queue
     hostname: queue
@@ -437,6 +454,7 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
 
     volumes: &queue-volumes
+      - ./queue/worker.sh:/queue-worker.sh:ro
       # Override de opcache SO em dev: a imagem fixa validate_timestamps=0,
       # e com o codigo montado por bind isso faz arquivo editado nao ter
       # efeito nenhum nos workers. Ver docker/swoole/dev-opcache.ini.
@@ -481,38 +499,9 @@ services:
     # passa pelo /start.sh; o queue sobrescreve o CMD e pularia essa etapa.
     # dump-autoload --optimize (sem -a) reconstroi o classmap e reativa o PSR-4
     # fallback, fazendo o worker enxergar os modulos montados.
-    # Este worker consome apenas o trabalho DIFERIVEL. As filas critical e high
-    # sairam daqui para o servico queue_critical: um unico processo consumindo
-    # as cinco filas em ordem de prioridade e sequencial, entao um export
-    # pesado ou um webhook em retry (ate 60s cada) segurava a fila critical
-    # atras dele. Prioridade so decide a ordem de escolha do PROXIMO job, nao
-    # interrompe o que esta em execucao -- num sistema onde a fila carrega
-    # notificacao de alerta, isso e latencia inaceitavel.
-    # --timeout=120: job diferivel pode ser longo (export, relatorio).
-    # A fila "medalhao" (ETL do pipeline de dados) tambem nao entra na lista: ela
-    # roda no loop de background abaixo, com timeout de 300s, pelo mesmo motivo
-    # que critical e high sairam daqui. Em producao a separacao e feita pelo
-    # supervisor (docker/supervisor/medalhao-worker.conf); aqui, pelo loop.
-    # --max-time=3600: restart de hora em hora para evitar memory leak.
-    # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
-    # A guarda do marcador replica o /start.sh (este command sobrescreve o CMD
-    # da imagem, entao a checagem de mount do entrypoint nao rodaria aqui).
-    command:
-      - sh
-      - -c
-      - >
-        if [ -n "$${ANEXOS_ROOT:-}" ] && [ ! -e "$${ANEXOS_ROOT}/.sdc_storage_mounted" ]; then
-        echo "ERRO: ANEXOS_ROOT sem o marcador .sdc_storage_mounted (disco de anexos nao montado no host?)" && exit 1;
-        fi &&
-        umask 002 &&
-        composer dump-autoload --optimize --no-interaction &&
-        ( while true; do
-        php artisan queue:work redis --queue=medalhao --tries=3 --timeout=300 --max-time=3600 --sleep=5;
-        echo "[medalhao-worker] saiu (codigo $$?); reiniciando em 2s..."; sleep 2;
-        done & ) &&
-        exec php artisan queue:work redis
-        --queue=default,webhooks,low
-        --tries=2 --timeout=120 --max-time=3600 --sleep=3
+    # Filas demoradas possuem servicos proprios e retry_after correspondente.
+    stop_grace_period: 360s
+    command: ["sh", "/queue-worker.sh", "redis", "--queue=default,high-throughput", "--tries=3", "--timeout=120", "--max-time=3600", "--sleep=3"]
 
     healthcheck: &queue-healthcheck
       test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
@@ -526,85 +515,54 @@ services:
   # alerta e e-mail de reset de senha. --sleep=1 em vez de 3 reduz a espera
   # media de polling quando a fila esta vazia.
   queue_critical:
-    image: newsdc-swoole-dev:latest
+    <<: *queue-worker
     container_name: newsdc_dev_queue_critical
     hostname: queue-critical
-    restart: unless-stopped
-
-    mem_limit: 768m
-
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
     environment:
       <<: *queue-env
-      APP_NAME: "SDC Dev Queue Critical"
+      APP_NAME: "SDC Dev Queue critical"
+    stop_grace_period: 180s
+    command: ["sh", "/queue-worker.sh", "redis-critical", "--queue=critical,high", "--tries=3", "--timeout=60", "--max-time=3600", "--sleep=1"]
 
-    volumes: *queue-volumes
+  queue_webhooks:
+    <<: *queue-worker
+    container_name: newsdc_dev_queue_webhooks
+    hostname: queue-webhooks
+    environment:
+      <<: *queue-env
+      APP_NAME: "SDC Dev Queue webhooks"
+    stop_grace_period: 180s
+    command: ["sh", "/queue-worker.sh", "redis-webhooks", "--queue=webhooks", "--tries=3", "--timeout=60", "--max-time=3600", "--sleep=1"]
 
-    depends_on: *queue-depends
+  queue_low:
+    <<: *queue-worker
+    container_name: newsdc_dev_queue_low
+    hostname: queue-low
+    environment:
+      <<: *queue-env
+      APP_NAME: "SDC Dev Queue low"
+    stop_grace_period: 660s
+    command: ["sh", "/queue-worker.sh", "redis-low", "--queue=low", "--tries=3", "--timeout=600", "--max-time=3600", "--sleep=1"]
 
-    command:
-      - sh
-      - -c
-      - >
-        if [ -n "$${ANEXOS_ROOT:-}" ] && [ ! -e "$${ANEXOS_ROOT}/.sdc_storage_mounted" ]; then
-        echo "ERRO: ANEXOS_ROOT sem o marcador .sdc_storage_mounted (disco de anexos nao montado no host?)" && exit 1;
-        fi &&
-        umask 002 &&
-        composer dump-autoload --optimize --no-interaction &&
-        exec php artisan queue:work redis
-        --queue=critical,high
-        --tries=2 --timeout=60 --max-time=3600 --sleep=1
+  queue_medalhao:
+    <<: *queue-worker
+    container_name: newsdc_dev_queue_medalhao
+    hostname: queue-medalhao
+    environment:
+      <<: *queue-env
+      APP_NAME: "SDC Dev Queue medalhao"
+    stop_grace_period: 960s
+    command: ["sh", "/queue-worker.sh", "redis-medalhao", "--queue=medalhao", "--tries=3", "--timeout=900", "--max-time=3600", "--sleep=1"]
 
-    healthcheck: *queue-healthcheck
-
-  # Worker exclusivo das notificacoes (push e e-mail).
-  #
-  # Existe por causa de head-of-line blocking. O fan-out de uma notificacao para
-  # mil pessoas enfileirava mil jobs de I/O de rede; em `default`, com UM worker,
-  # isso segurava export, webhook e e-mail de reset de senha atras deles por
-  # minutos. Aqui uma rajada de notificacao so atrasa outra notificacao.
-  #
-  # As duas filas no mesmo processo, nesta ordem: alerta urgente passa na frente
-  # do aviso de rotina sem custar um container a mais. Os nomes vem de
-  # config/notificacoes.php (entrega.fila / entrega.fila_urgente).
-  #
-  # --timeout=120: o job de push fala com FCM/Mozilla/WNS e, no pior caso, cai
-  # para envio individual por dispositivo.
   queue_notificacoes:
-    image: newsdc-swoole-dev:latest
+    <<: *queue-worker
     container_name: newsdc_dev_queue_notificacoes
     hostname: queue-notificacoes
-    restart: unless-stopped
-
-    mem_limit: 768m
-
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
     environment:
       <<: *queue-env
-      APP_NAME: "SDC Dev Queue Notificacoes"
-
-    volumes: *queue-volumes
-
-    depends_on: *queue-depends
-
-    command:
-      - sh
-      - -c
-      - >
-        if [ -n "$${ANEXOS_ROOT:-}" ] && [ ! -e "$${ANEXOS_ROOT}/.sdc_storage_mounted" ]; then
-        echo "ERRO: ANEXOS_ROOT sem o marcador .sdc_storage_mounted (disco de anexos nao montado no host?)" && exit 1;
-        fi &&
-        umask 002 &&
-        composer dump-autoload --optimize --no-interaction &&
-        exec php artisan queue:work redis
-        --queue=notificacoes_urgente,notificacoes
-        --tries=2 --timeout=120 --max-time=3600 --sleep=1
-
-    healthcheck: *queue-healthcheck
+      APP_NAME: "SDC Dev Queue notificacoes"
+    stop_grace_period: 180s
+    command: ["sh", "/queue-worker.sh", "redis", "--queue=notificacoes_urgente,notificacoes", "--tries=3", "--timeout=120", "--max-time=3600", "--sleep=1"]
 
   # Scheduler. NAO existia em dev: o laravel-scheduler so estava no supervisor,
   # que e usado nas imagens de producao. O efeito era que NENHUM agendamento do

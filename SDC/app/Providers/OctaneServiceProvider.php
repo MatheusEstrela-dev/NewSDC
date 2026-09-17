@@ -63,8 +63,17 @@ class OctaneServiceProvider extends ServiceProvider
             }
             $this->tuneWorkerRuntime();
             $this->warmCaches();
-            $this->bootSwoolePdoPool();
-            $this->bootSwooleRedisPools();
+
+
+            // Pools de corrotina NAO existem em processo de task. Ver
+            // ehProcessoDeTask(): o task worker e justamente onde bloquear e
+            // o comportamento desejado, e tentar criar pool la e fatal.
+            if (! $this->ehProcessoDeTask()) {
+                $this->semCederExecucao(function (): void {
+                    $this->bootSwoolePdoPool();
+                    $this->bootSwooleRedisPools();
+                });
+            }
         });
 
         $this->app['events']->listen(RequestReceived::class, function () {
@@ -76,6 +85,83 @@ class OctaneServiceProvider extends ServiceProvider
             $this->releaseRedisCoroutine();
             $this->releasePgsqlCoroutine();
         });
+    }
+
+    /**
+     * Roda a closure com os hooks de corrotina DESLIGADOS, restaurando-os
+     * depois. Serve para o unico trecho do boot que nao pode ser interrompido.
+     *
+     * O PROBLEMA: o pre-aquecimento dos pools abre dezenas de conexoes. Com os
+     * hooks ligados, cada abertura CEDE execucao -- medido: com hook_flags=0 o
+     * warm() e atomico, com SWOOLE_HOOK_ALL ele cede no meio. Isso quebra uma
+     * premissa do Octane: o OnWorkerStart dele so atribui
+     * $workerState->worker DEPOIS de montar a aplicacao, e o callback de
+     * request faz $workerState->worker->handle(...) sem verificar nulo.
+     *
+     * Ou seja, enquanto o warm cede, o Swoole pode entregar uma requisicao a
+     * um worker que ainda nao terminou de subir, e ela morre com
+     * 'Call to a member function handle() on null'. Como o Octane trata isso
+     * como falha de boot (bootWorker engole a excecao, deixa o worker nulo e
+     * pede shutdown), o processo fica inutil para sempre -- e os requests
+     * roteados para ele simplesmente penduram.
+     *
+     * Com os hooks desligados aqui, o warm volta a ser bloqueante e o boot
+     * volta a ser atomico. O custo e alguns milissegundos por worker, uma vez
+     * na vida dele; o beneficio e o worker so ficar alcancavel quando existir.
+     */
+    protected function semCederExecucao(callable $fn): void
+    {
+        if (! class_exists(\Swoole\Runtime::class)
+            || ! method_exists(\Swoole\Runtime::class, 'setHookFlags')) {
+            $fn();
+
+            return;
+        }
+
+        $flags = \Swoole\Runtime::getHookFlags();
+        \Swoole\Runtime::setHookFlags(0);
+
+        try {
+            $fn();
+        } finally {
+            // finally, e nao depois da chamada: uma falha ao aquecer nao pode
+            // deixar o worker inteiro rodando sem hooks pelo resto da vida.
+            \Swoole\Runtime::setHookFlags($flags);
+        }
+    }
+
+    /**
+     * Este worker e um processo de TASK (e nao um worker HTTP)?
+     *
+     * Importa porque os dois papeis querem coisas opostas. O worker HTTP, sob
+     * hooks, precisa de uma conexao por coroutine para poder ceder execucao
+     * enquanto espera o banco. O processo de task existe exatamente para
+     * BLOQUEAR em paz, isolando trabalho pesado do pool HTTP -- ele quer PDO
+     * comum, nao pool.
+     *
+     * E nao e so preferencia: com hook_flags != 0 e task_enable_coroutine
+     * false, montar o pool no processo de task e FATAL. O warm() abre um
+     * Coroutine\run() para preencher o channel e o Swoole recusa com
+     * 'Unable to use async-io in task processes'. O processo morre, o manager
+     * o recria, ele morre de novo -- um loop de respawn que nao aparece como
+     * erro de request, so como task worker que nunca responde.
+     *
+     * A alternativa seria task_enable_coroutine=true, que esta desligado de
+     * proposito: nesta versao do Octane o callback de task tem a assinatura
+     * classica e o Swoole 6 passaria um Swoole\Server\Task como segundo
+     * argumento, derrubando o servidor por TypeError (ver config/octane.php).
+     */
+    protected function ehProcessoDeTask(): bool
+    {
+        if (! $this->app->bound(\Swoole\Http\Server::class)) {
+            return false;
+        }
+
+        try {
+            return (bool) ($this->app->make(\Swoole\Http\Server::class)->taskworker ?? false);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     protected function isRunningInOctane(): bool

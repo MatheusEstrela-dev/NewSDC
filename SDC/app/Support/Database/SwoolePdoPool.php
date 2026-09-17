@@ -182,7 +182,7 @@ final class SwoolePdoPool
 
         $pdo = $this->channel->pop($this->timeout);
         if ($pdo === false) {
-            throw new RuntimeException('SwoolePdoPool esgotado (timeout no acquire).');
+            throw new \App\Exceptions\PoolEsgotado('pgsql', 'SwoolePdoPool esgotado (timeout no acquire).');
         }
 
         return $pdo;

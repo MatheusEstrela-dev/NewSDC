@@ -162,7 +162,7 @@ final class SwooleRedisPool
 
         $conn = $this->channel->pop($this->timeout);
         if ($conn === false) {
-            throw new RuntimeException('SwooleRedisPool esgotado (timeout no acquire).');
+            throw new \App\Exceptions\PoolEsgotado('redis', 'SwooleRedisPool esgotado (timeout no acquire).');
         }
 
         return $conn;
@@ -172,6 +172,7 @@ final class SwooleRedisPool
     {
         $this->channel->push($conn);
     }
+
 
     public function discard(): void
     {

@@ -12,7 +12,7 @@
 #   app 2x (1.75 cpu / 2.25G) + queue 1/1.5G + reverb 0.5/512M + caddy 0.5/256M
 #   transiente de update (start-first, parallelism 1): +1 app (~2.25G)
 #
-# Guardrail PG: (6 + 2)*2 instancias + 5 externas + 5 reserva = 26 <= 100.
+# Guardrail PG inclui a terceira replica temporaria durante o rolling update.
 #
 # Uso (docker stack deploy NAO le .env; exporta antes):
 #   # pre-requisitos: rede sdc_internal criada + stack sdc-data no ar
@@ -51,10 +51,17 @@ services:
 
       START_EMBEDDED_QUEUE: "false"
 
-      # Guardrail de conexoes PG: (6 + 2)*2 + 5 + 5 = 26 <= 100.
+      # Terceira replica durante start-first + consumidores de filas/scheduler.
       PG_MAX_CONNECTIONS: "100"
+      # APP_INSTANCES alimenta o guardrail de conexoes do entrypoint e tem de
+      # ser o MESMO numero de deploy.replicas deste servico (2). Estava em 3:
+      # o gate projetava uma topologia que nao existe. Errava para o lado
+      # seguro, mas silenciosamente -- e o modo de falha perigoso e o inverso,
+      # subir replicas sem mexer aqui e so descobrir o estouro como
+      # "too many connections" no meio de um request. Mexeu em replicas,
+      # mexa aqui.
       APP_INSTANCES: "2"
-      EXTERNAL_DB_CONSUMERS: "5"
+      EXTERNAL_DB_CONSUMERS: "16"
 
       # Banco e Redis moram na stack sdc-data; resolucao via rede overlay
       # compartilhada (hostnames db/redis).
@@ -140,12 +147,13 @@ services:
         max-file: "5"
 
   # ==========================================================================
-  # QUEUE - Workers + Scheduler (Supervisor: numprocs=4 + laravel-scheduler)
+  # QUEUE - Sete workers isolados por carga + scheduler
   # stop-first: nao serve HTTP; jobs idempotentes retomam do Redis.
   # ==========================================================================
   queue:
     image: ${REGISTRY:-127.0.0.1:5000}/sdc-queue:${VERSION:-latest}
     hostname: queue
+    stop_grace_period: 16m
 
     environment:
       APP_ENV: production

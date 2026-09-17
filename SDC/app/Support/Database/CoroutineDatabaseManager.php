@@ -20,12 +20,30 @@ final class CoroutineDatabaseManager extends DatabaseManager
 {
     private const CTX_KEY = '__sdc_pgsql_coroutine_connection';
 
+    /**
+     * Pool guardado na PRIMEIRA aquisicao, e nao resolvido na devolucao.
+     *
+     * A devolucao roda dentro de um Coroutine::defer, que dispara quando a
+     * coroutine termina -- depois de o Octane ja ter desmontado o container
+     * daquela requisicao. Resolver 'swoole.pgsql.pool' ali produzia
+     * 'ReflectionException: Class "swoole.pgsql.pool" does not exist', e como
+     * o proprio relatorio desse erro tambem precisa do container ('config'),
+     * o segundo erro matava o processo. Guardar a referencia torna a
+     * devolucao independente do ciclo de vida do container.
+     */
+    private ?SwoolePdoPool $pool = null;
+
     public function connection($name = null)
     {
         if ($this->shouldPool($name)) {
             $ctx = Coroutine::getContext();
             if (! isset($ctx[self::CTX_KEY])) {
+                // Resolve o pool AQUI, onde o container existe.
+                $this->pool ??= $this->app->make('swoole.pgsql.pool');
                 $ctx[self::CTX_KEY] = $this->makePooledPgsqlConnection();
+                // Filhas criadas pelos helpers nao disparam RequestTerminated.
+                // A devolucao explicita no HTTP continua valida e e idempotente.
+                Coroutine::defer(fn () => $this->releaseCurrentCoroutine());
             }
 
             return $ctx[self::CTX_KEY];
@@ -34,10 +52,16 @@ final class CoroutineDatabaseManager extends DatabaseManager
         return parent::connection($name);
     }
 
-    /** Devolve ao pool a conexao da coroutine atual (chamar no RequestTerminated). */
+    /**
+     * Devolve ao pool a conexao da coroutine atual (chamar no RequestTerminated).
+     *
+     * Tudo aqui e defensivo de proposito: este metodo tambem roda por
+     * Coroutine::defer, e uma excecao escapando de um defer nao tem quem a
+     * pegue -- vira erro fatal e derruba o worker inteiro.
+     */
     public function releaseCurrentCoroutine(): void
     {
-        if (! $this->inCoroutine()) {
+        if (! $this->inCoroutine() || $this->pool === null) {
             return;
         }
 
@@ -56,11 +80,14 @@ final class CoroutineDatabaseManager extends DatabaseManager
         } catch (\Throwable $e) {
         }
 
-        $pool = $this->app->make('swoole.pgsql.pool');
         try {
-            $pool->release($conn->getPdo());
+            $this->pool->release($conn->getPdo());
         } catch (\Throwable $e) {
-            $pool->discard();
+            try {
+                $this->pool->discard();
+            } catch (\Throwable $e) {
+                // Nada a fazer: ja estamos no caminho de limpeza.
+            }
         }
 
         unset($ctx[self::CTX_KEY]);

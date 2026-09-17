@@ -337,9 +337,8 @@ class ActivityLogger
     private static function logToRedis(string $type, array $data): void
     {
         try {
-            // Verificar se Redis está disponível
-            if (!class_exists('Redis') && !class_exists('Predis\Client')) {
-                return; // Redis não disponível, skip silenciosamente
+            if (!self::redisUtilizavel()) {
+                return; // Redis indisponivel ou fora de contexto: skip silencioso
             }
 
             $key = "logs:{$type}";
@@ -347,9 +346,50 @@ class ActivityLogger
             Redis::lpush($key, json_encode($data));
             Redis::ltrim($key, 0, 999); // Mantém últimos 1000 logs
             Redis::expire($key, 3600); // Expira em 1 hora
-        } catch (\Exception $e) {
-            // Silencioso - não logar erro para evitar loop infinito
+        } catch (\Throwable $e) {
+            // Silencioso - não logar erro para evitar loop infinito.
+            // Throwable, e nao Exception: sob hooks de corrotina o phpredis
+            // lanca Swoole\Error, que estende Error e NAO e Exception -- com
+            // o catch antigo ele escapava daqui e matava o processo.
         }
+    }
+
+    /**
+     * Vale a pena tentar falar com o Redis a partir daqui?
+     *
+     * Alem de exigir um cliente, exige contexto de coroutine QUANDO os hooks
+     * estao ligados -- e essa segunda parte e conservadora de proposito.
+     *
+     * O que foi observado: com hooks ON, um erro fatal num worker levava o
+     * handler de excecao a chamar este logger, e ali dentro o phpredis
+     * lancava 'Swoole\Error: API must be called in the coroutine'. Como
+     * Swoole\Error estende Error e nao Exception, o catch(\Exception) que
+     * existia aqui NAO o pegava: o segundo erro escapava de dentro do
+     * tratamento do primeiro e o worker do Octane morria sem responder.
+     *
+     * O catch(\Throwable) abaixo e a correcao de fato dessa cascata. Esta
+     * guarda e a cinta de seguranca: fora de coroutine o phpredis PODE
+     * funcionar (foi medido funcionando em CLI), mas o caminho onde este
+     * logger roda sem coroutine e justamente o shutdown apos um fatal, com o
+     * runtime do Swoole ja se desmontando. Nao e lugar de fazer I/O opcional.
+     *
+     * Perder uma linha de log no Redis e aceitavel; derrubar o worker que
+     * atende todo mundo, nao. O log em arquivo do logEvent() nao depende
+     * disto e continua saindo.
+     */
+    private static function redisUtilizavel(): bool
+    {
+        if (!class_exists('Redis') && !class_exists('Predis\Client')) {
+            return false;
+        }
+
+        if (!extension_loaded('swoole') || !class_exists(\Swoole\Coroutine::class)) {
+            return true;
+        }
+
+        $hooks = (int) config('octane.swoole.options.hook_flags', 0);
+
+        return $hooks === 0 || \Swoole\Coroutine::getCid() > 0;
     }
 
     /**
@@ -358,16 +398,16 @@ class ActivityLogger
     private static function incrementMetric(string $type, string $event): void
     {
         try {
-            // Verificar se Redis está disponível
-            if (!class_exists('Redis') && !class_exists('Predis\Client')) {
-                return; // Redis não disponível, skip silenciosamente
+            if (!self::redisUtilizavel()) {
+                return; // Redis indisponivel ou fora de contexto: skip silencioso
             }
 
             $key = "metrics:{$type}:{$event}";
             Redis::incr($key);
             Redis::expire($key, 300); // 5 minutos
-        } catch (\Exception $e) {
-            // Silencioso - não quebrar por falha em métrica
+        } catch (\Throwable $e) {
+            // Silencioso - nao quebrar por falha em metrica. Ver o comentario
+            // em logToRedis() sobre Throwable x Exception sob hooks.
         }
     }
 
@@ -397,7 +437,7 @@ class ActivityLogger
             $logs = Redis::lrange("logs:{$type}", 0, $limit - 1);
             return array_map(fn($log) => json_decode($log, true), $logs);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [];
         }
     }
@@ -425,7 +465,7 @@ class ActivityLogger
 
             return $metrics;
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [];
         }
     }
