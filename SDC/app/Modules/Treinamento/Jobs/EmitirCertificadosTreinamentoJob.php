@@ -30,6 +30,7 @@ class EmitirCertificadosTreinamentoJob implements ShouldQueue
 
     public function __construct(public int $treinamentoId)
     {
+        $this->onQueue('low');
     }
 
     public function handle(CertificadoService $certificadoService): void

@@ -356,6 +356,7 @@ services:
         no_proxy: ${no_proxy:-}
     container_name: newsdc_queue
     hostname: queue
+    stop_grace_period: 16m
     restart: unless-stopped
     labels:
       - "com.docker.compose.project=newsdc"
@@ -406,7 +407,7 @@ services:
       resources:
         limits:
           cpus: '1'
-          memory: 512M
+          memory: 1G
         reservations:
           cpus: '0.25'
           memory: 128M

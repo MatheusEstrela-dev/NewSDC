@@ -19,7 +19,14 @@ use Illuminate\Queue\SerializesModels;
  * (debug_backtrace + ~5 round-trips Redis + escrita em arquivo) roda no worker de
  * fila, liberando o worker web imediatamente -- e o que tira os ~560ms/request do
  * teto da API (o gargalo medido no Ciclo 2). Auditoria continua completa, apenas
- * assincrona. Fila 'low' para nao competir com jobs de negocio.
+ * assincrona.
+ *
+ * Fila 'auditoria', com consumidor proprio. Na 'low' este job -- o mais
+ * frequente do sistema, um por requisicao -- ficava atras dos certificados,
+ * cujo timeout e de 600 segundos, num unico consumidor: um certificado longo
+ * segurava a auditoria inteira e o backlog crescia na memoria do Redis. Sao
+ * perfis opostos (muitos jobs curtos contra poucos longos) e nao podem
+ * dividir consumidor.
  */
 class RecordActivityLog implements ShouldQueue
 {
@@ -38,7 +45,7 @@ class RecordActivityLog implements ShouldQueue
         public ?string $userId = null,
         public string $level = 'info',
     ) {
-        $this->onQueue('low');
+        $this->onQueue('auditoria');
     }
 
     public function handle(): void

@@ -175,45 +175,30 @@ php artisan route:verify-signatures || { echo "FATAL: assinaturas de rota irreso
 
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-# Queue worker em background (mesmo padrao do entrypoint de producao).
-# Container unico no App Service: worker roda junto do Octane. O subshell herda
-# o "set -e"; o "set +e" abaixo garante que um crash do queue:work nao mate o
-# loop de restart. A lista de filas cobre TODAS as filas da aplicacao
-# (RequestPriority: critical/high/default/low + webhooks inbound) em ordem de
-# prioridade. `high-throughput` saiu: o nome so existe em config/api.php
-# ('queue.high_throughput'), que ninguem le, e nenhum dispatch aponta para ela --
-# era um BRPOP vazio por ciclo antes de chegar em webhooks/default — fila fora da lista vira
-# job orfao que nunca e consumido.
-#
-# START_EMBEDDED_QUEUE (default true): no Azure (container unico) o worker
-# PRECISA rodar aqui. Em topologias com container queue dedicado (compose
-# on-premise/dev), setar false para nao duplicar consumidores nem gastar
-# CPU/RAM/conexao PG com um segundo worker no container do app.
+# No container unico, cada classe de trabalho tem seu proprio consumidor.
+# Topologias com servico queue dedicado desativam estes processos.
+start_queue_worker() {
+    (
+        set +e
+        while true; do
+            php artisan queue:work "$1" --queue="$2" --timeout="$3" --tries=3 --sleep=1 --max-time=3600
+            sleep 2
+        done
+    ) &
+}
+
 if [ "${START_EMBEDDED_QUEUE:-true}" = "true" ]; then
-    echo "Iniciando queue worker em background..."
-    (
-        set +e
-        while true; do
-            php artisan queue:work --queue=critical,high,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
-            echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
-            sleep 2
-        done
-    ) &
-    # Worker do pipeline medalhao: processo SEPARADO, com timeout maior. A fila
-    # "medalhao" nao entra na lista acima de proposito — uma coleta de ETL que
-    # leve minutos seguraria o worker de requisicao e atrasaria notificacao e
-    # webhook, e o --timeout=90 de la e curto demais para ingestao.
-    echo "Iniciando medalhao worker em background..."
-    (
-        set +e
-        while true; do
-            php artisan queue:work --queue=medalhao --tries=3 --timeout=300 --sleep=5 --max-time=3600 2>&1
-            echo "[medalhao-worker] worker saiu (codigo $?); reiniciando em 2s..."
-            sleep 2
-        done
-    ) &
-else
-    echo "Queue worker embutido desativado (START_EMBEDDED_QUEUE=false); usando container queue dedicado."
+    start_queue_worker redis-critical critical,high 60
+    start_queue_worker redis default,high-throughput 120
+    start_queue_worker redis-webhooks webhooks 60
+    start_queue_worker redis-low low 600
+    start_queue_worker redis notificacoes_urgente,notificacoes 120
+    start_queue_worker redis-medalhao medalhao 900
+    # Auditoria tem consumidor proprio: e o job mais frequente do sistema e na
+    # 'low' ficava atras dos certificados (timeout 600s), que seguravam a fila
+    # inteira. Sem esta linha, na topologia de container unico os jobs de
+    # auditoria simplesmente nao teriam quem os consumisse.
+    start_queue_worker redis-auditoria auditoria 30
 fi
 
 # Oversubscribe de workers: ~83% do tempo de um request e I/O (DB/Redis), entao
@@ -262,7 +247,11 @@ TASK_WORKERS="${OCTANE_TASK_WORKERS:-4}"
 # Com o queue embutido desligado, este container nao mantem conexao de worker
 # de fila; o container queue dedicado entra em EXTERNAL_DB_CONSUMERS.
 if [ "${START_EMBEDDED_QUEUE:-true}" = "true" ]; then
-    QUEUE_WORKERS="${QUEUE_WORKERS:-1}"
+    # 7 = um por chamada de start_queue_worker acima (critical, default,
+    # webhooks, low, notificacoes, medalhao, auditoria). Este numero entra no
+    # orcamento de conexoes: errar para menos faz o guardrail aprovar um boot
+    # que o Postgres depois recusa no meio de um request.
+    QUEUE_WORKERS="${QUEUE_WORKERS:-7}"
 else
     QUEUE_WORKERS="${QUEUE_WORKERS:-0}"
 fi

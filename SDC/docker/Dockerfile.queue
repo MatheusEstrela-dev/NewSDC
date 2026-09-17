@@ -82,6 +82,7 @@ RUN composer install \
 # Copiar configuracao do Supervisor
 COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
 COPY docker/supervisor/laravel-worker.conf /etc/supervisor/conf.d/laravel-worker.conf
+COPY docker/supervisor/isolated-workers.conf /etc/supervisor/conf.d/isolated-workers.conf
 # Worker dedicado do pipeline medalhao (fila propria, timeout maior).
 COPY docker/supervisor/medalhao-worker.conf /etc/supervisor/conf.d/medalhao-worker.conf
 

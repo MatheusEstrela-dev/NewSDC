@@ -66,17 +66,20 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => 90,
+            // Inclui certificados de 300s ja enfileirados na fila default.
+            'retry_after' => 360,
             'block_for' => 5,
             'after_commit' => false,
         ],
 
-        // Fila crítica - máxima prioridade
+        // ProcessIntegration pode usar qualquer prioridade e tem timeout=120.
+        // A reserva considera o timeout do job, que vence o --timeout do worker.
+        // Fila critica - maxima prioridade.
         'redis-critical' => [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => 'critical',
-            'retry_after' => 30,
+            'retry_after' => 180,
             'block_for' => 2,
             'after_commit' => false,
         ],
@@ -86,7 +89,7 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => 'high',
-            'retry_after' => 60,
+            'retry_after' => 180,
             'block_for' => 3,
             'after_commit' => false,
         ],
@@ -96,7 +99,7 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => 'webhooks',
-            'retry_after' => 120,
+            'retry_after' => 180,
             'block_for' => 5,
             'after_commit' => false,
         ],
@@ -111,6 +114,37 @@ return [
             'queue' => 'low',
             'retry_after' => 660,
             'block_for' => 10,
+            'after_commit' => false,
+        ],
+
+        // Auditoria: fila propria, separada da 'low'.
+        //
+        // O RecordActivityLog e de longe o job mais frequente do sistema (ate um
+        // por requisicao) e o mais barato de executar. Compartilhando a fila
+        // 'low' com os certificados (timeout 600s) e um unico consumidor, um
+        // certificado de dez minutos PARAVA a auditoria inteira atras dele e o
+        // backlog crescia na memoria do Redis. Sao perfis opostos -- muitos jobs
+        // curtos contra poucos jobs longos -- e nao podem dividir consumidor.
+        //
+        // retry_after curto porque o job e curto: nao ha motivo para uma linha
+        // de auditoria presa por 11 minutos como acontecia na 'low'.
+        'redis-auditoria' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'auditoria',
+            'retry_after' => 90,
+            'block_for' => 5,
+            'after_commit' => false,
+        ],
+
+        // O consumidor deve selecionar esta conexao: --queue sozinho nao
+        // altera retry_after. O maior job do ETL tem timeout de 900 segundos.
+        'redis-medalhao' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'medalhao',
+            'retry_after' => 960,
+            'block_for' => 5,
             'after_commit' => false,
         ],
 

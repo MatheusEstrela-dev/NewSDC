@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Jobs\RecordActivityLog;
+use App\Support\Logging\AmostragemDeAuditoria;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,14 +39,17 @@ class LogSystemActivity
         $userId = auth()->id();
         $statusCode = $response->getStatusCode();
 
-        // Amostragem opcional do ruido de auditoria (ACTIVITY_LOG_SAMPLE_PERCENT,
-        // default 100 = loga tudo). Erros (>=400) e mutacoes (nao-GET) sao SEMPRE
-        // logados -- so leituras bem-sucedidas respeitam o percentual, entao o
-        // sinal de auditoria (quem alterou o que, o que falhou) nunca e perdido.
-        $samplePercent = (int) config('logging.activity_sample_percent', 100);
-        $amostravel = $statusCode < 400 && $request->isMethod('GET');
+        // O LogApiRequests ja registrou esta requisicao, com campos mais ricos
+        // (endpoint, user agent, query params, tamanho da resposta). Registrar de
+        // novo aqui era o dobro de jobs de auditoria por requisicao de API e dois
+        // registros do mesmo fato na fila.
+        if ($request->attributes->get(LogApiRequests::ATRIBUTO_AUDITADO) === true) {
+            return $response;
+        }
 
-        if ($amostravel && $samplePercent < 100 && random_int(1, 100) > $samplePercent) {
+        // Amostragem: ver AmostragemDeAuditoria. Erros e mutacoes sao sempre
+        // registrados; so leitura bem-sucedida respeita o percentual.
+        if (! AmostragemDeAuditoria::deveRegistrar($request, $statusCode)) {
             return $response;
         }
 

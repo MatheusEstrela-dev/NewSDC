@@ -22,29 +22,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | API Request Sampling
+    | Amostragem da auditoria
     |--------------------------------------------------------------------------
     |
-    | Taxa de amostragem do log de auditoria de requests API 2xx (LogApiRequests).
-    | Cada log faz debug_backtrace + ~5 round-trips Redis; sob Swoole isso pesa
-    | no hot path. 1 = loga todas (padrao, sem mudanca de comportamento); N = loga
-    | ~1 em N respostas 2xx. Erros (>=400) e respostas lentas SEMPRE sao logados,
-    | independente desta taxa. Endpoints de infra (health/metrics) nunca logam.
+    | Percentual de LEITURAS bem-sucedidas (GET < 400) que entram na fila de
+    | auditoria. Vale para os dois middlewares de log, que hoje decidem pela
+    | mesma politica (App\Support\Logging\AmostragemDeAuditoria) -- antes eram
+    | duas chaves com semanticas diferentes (uma taxa 1-em-N so para API, um
+    | percentual so para web), o que tornava o volume total impossivel de prever.
     |
-    */
-
-    'api_request_sample_rate' => (int) env('LOG_API_SAMPLE_RATE', 1),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Activity Log Sampling
-    |--------------------------------------------------------------------------
+    | 100 = loga tudo (padrao). Erros (>=400) e mutacoes (POST/PUT/PATCH/DELETE)
+    | SEMPRE sao logados, independente do percentual: o sinal de auditoria (quem
+    | alterou o que, o que falhou) nunca e amostrado. O percentual so mexe no
+    | ruido de leitura.
     |
-    | Percentual de leituras (GET < 400) que o LogSystemActivity despacha para
-    | a fila de auditoria. 100 = loga tudo (padrao, sem mudanca de
-    | comportamento). Erros (>=400) e mutacoes (POST/PUT/PATCH/DELETE) SEMPRE
-    | sao logados, independente do percentual — o sinal de auditoria (quem
-    | alterou o que, o que falhou) nunca e amostrado.
+    | Cada registro custa debug_backtrace + ~5 round-trips Redis + escrita em
+    | arquivo no worker de fila. E o volume de leitura que decide se a fila
+    | 'auditoria' acompanha a producao; ver docker/supervisor/isolated-workers.conf.
     |
     */
 
