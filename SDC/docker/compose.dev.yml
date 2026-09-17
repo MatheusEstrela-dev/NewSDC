@@ -544,6 +544,25 @@ services:
     stop_grace_period: 660s
     command: ["sh", "/queue-worker.sh", "redis-low", "--queue=low", "--tries=3", "--timeout=600", "--max-time=3600", "--sleep=1"]
 
+  # Worker dedicado a auditoria. E o job mais frequente do sistema (ate um por
+  # requisicao) e o mais barato de executar; ficava na fila 'low', atras dos
+  # certificados (timeout 600s), onde um certificado longo segurava a auditoria
+  # inteira. Perfis opostos nao dividem consumidor.
+  #
+  # Este compose define os consumidores por `command:` explicito, e nao pelos
+  # arquivos de docker/supervisor/ -- que valem para a imagem de fila do
+  # on-premise. Criar a fila sem criar o consumidor AQUI deixa os jobs parados
+  # no Redis sem erro nenhum, que foi o que aconteceu.
+  queue_auditoria:
+    <<: *queue-worker
+    container_name: newsdc_dev_queue_auditoria
+    hostname: queue-auditoria
+    environment:
+      <<: *queue-env
+      APP_NAME: "SDC Dev Queue auditoria"
+    stop_grace_period: 60s
+    command: ["sh", "/queue-worker.sh", "redis-auditoria", "--queue=auditoria", "--tries=2", "--timeout=30", "--max-time=3600", "--sleep=1"]
+
   queue_medalhao:
     <<: *queue-worker
     container_name: newsdc_dev_queue_medalhao
