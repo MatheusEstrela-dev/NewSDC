@@ -9,6 +9,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Context;
 use Throwable;
 
 /**
@@ -57,26 +58,22 @@ class ProcessInboundWebhook implements ShouldQueue
      */
     public function handle(): void
     {
-        if ($this->event === null) {
-            $this->event = $this->resolveEvent();
+        Context::forgetHidden($this->claimContextKey());
+        $this->event = $this->resolveEvent();
 
-            if ($this->event === null) {
-                return; // Duplicata: evento ja concluido ou em processamento ativo.
-            }
+        if ($this->event === null) {
+            return;
         }
 
-        // Marca como em processamento
-        $this->event->markAsProcessing();
-
-        Log::channel('webhooks')->info('Processing inbound webhook', [
-            'event_id' => $this->event->id,
-            'external_event_id' => $this->event->external_event_id,
-            'provider' => $this->event->provider,
-            'type' => $this->event->event_type,
-            'attempt' => $this->attempts(),
-        ]);
-
         try {
+            Log::channel('webhooks')->info('Processing inbound webhook', [
+                'event_id' => $this->event->id,
+                'external_event_id' => $this->event->external_event_id,
+                'provider' => $this->event->provider,
+                'type' => $this->event->event_type,
+                'attempt' => $this->attempts(),
+            ]);
+
             // Processa baseado no tipo de evento
             $result = $this->processWebhookByType(
                 $this->event->payload,
@@ -92,6 +89,10 @@ class ProcessInboundWebhook implements ShouldQueue
             ]);
 
         } catch (Throwable $e) {
+            // Libera uma falha conhecida para o retry com backoff. Deixar
+            // PROCESSING faria a proxima tentativa ser tratada como duplicata.
+            $this->event->markAsFailed($e->getMessage());
+
             Log::channel('webhooks')->error('Inbound webhook processing failed', [
                 'event_id' => $this->event->id,
                 'attempt' => $this->attempts(),
@@ -99,6 +100,8 @@ class ProcessInboundWebhook implements ShouldQueue
             ]);
 
             throw $e;
+        } finally {
+            Context::forgetHidden($this->claimContextKey());
         }
     }
 
@@ -110,27 +113,9 @@ class ProcessInboundWebhook implements ShouldQueue
      */
     protected function resolveEvent(): ?WebhookEvent
     {
-        $existing = WebhookEvent::where('external_event_id', $this->inbound['external_event_id'])
-            ->where('provider', $this->inbound['source'])
-            ->first();
-
-        if ($existing !== null) {
-            $processandoAtivo = $existing->status === WebhookEvent::STATUS_PROCESSING
-                && $existing->last_attempt_at?->gt(now()->subSeconds($this->timeout));
-
-            if ($existing->status === WebhookEvent::STATUS_COMPLETED || $processandoAtivo) {
-                Log::channel('webhooks')->info('Webhook already processed (idempotency)', [
-                    'external_event_id' => $this->inbound['external_event_id'],
-                    'provider' => $this->inbound['source'],
-                    'status' => $existing->status,
-                    'trace_id' => $this->inbound['trace_id'],
-                ]);
-
-                return null;
-            }
-        }
-
-        return WebhookEvent::updateOrCreate(
+        // firstOrCreate trata a disputa pelo indice unico sem sobrescrever
+        // payload/status de um evento que outro worker ja recebeu.
+        $event = $this->event ?? WebhookEvent::firstOrCreate(
             [
                 'external_event_id' => $this->inbound['external_event_id'],
                 'provider' => $this->inbound['source'],
@@ -141,6 +126,34 @@ class ProcessInboundWebhook implements ShouldQueue
                 'status' => WebhookEvent::STATUS_PENDING,
             ]
         );
+
+        if ($event->claimForProcessing($this->timeout)) {
+            // failed() recebe outra instancia, mas no mesmo processo. O
+            // contexto identifica a aquisicao ativa durante SIGALRM, cujo
+            // relogio comeca antes da consulta de aquisicao. Nao e um lock.
+            Context::addHidden($this->claimContextKey(), [
+                'event_id' => $event->getKey(),
+                'attempt' => $event->attempts,
+                'started_at' => $event->getRawOriginal('last_attempt_at'),
+            ]);
+
+            return $event;
+        }
+
+        if ($event->status === WebhookEvent::STATUS_PROCESSING) {
+            // Nao confirma uma entrega enquanto o dono ainda pode falhar.
+            $this->release($this->timeout + 5);
+        }
+
+        return null;
+    }
+
+    private function claimContextKey(): string
+    {
+        return 'webhook_claim:'.($this->job?->uuid()
+            ?? $this->inbound['trace_id']
+            ?? $this->event?->getKey()
+            ?? 'unresolved');
     }
 
     /**
@@ -149,6 +162,12 @@ class ProcessInboundWebhook implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
+        // Laravel reconstroi o job para failed(); o event resolvido em handle()
+        // nao faz parte do payload original quando o despacho usa inbound.
+        $this->event = $this->event?->fresh() ?? ($this->inbound === null ? null
+            : WebhookEvent::where('external_event_id', $this->inbound['external_event_id'])
+                ->where('provider', $this->inbound['source'])->first());
+
         if ($this->event === null) {
             Log::channel('webhooks')->error('Inbound webhook failed before event resolution', [
                 'external_event_id' => $this->inbound['external_event_id'] ?? null,
@@ -159,7 +178,35 @@ class ProcessInboundWebhook implements ShouldQueue
             return;
         }
 
-        $this->event->markAsFailed($exception->getMessage());
+        // Uma entrega esgotada nao pode sobrescrever sucesso ou uma execucao
+        // recente de outra entrega. failed() representa falha terminal da fila.
+        $claim = Context::getHidden($this->claimContextKey());
+        $updated = WebhookEvent::whereKey($this->event->getKey())
+            ->where(function ($query) use ($claim) {
+                $query->whereIn('status', [WebhookEvent::STATUS_PENDING, WebhookEvent::STATUS_FAILED])
+                    ->orWhere(function ($query) {
+                        $query->where('status', WebhookEvent::STATUS_PROCESSING)
+                            ->where('last_attempt_at', '<=', now()->subSeconds($this->timeout));
+                    });
+
+                if (is_array($claim) && $claim['event_id'] === $this->event->getKey()) {
+                    $query->orWhere(function ($query) use ($claim) {
+                        $query->where('status', WebhookEvent::STATUS_PROCESSING)
+                            ->where('attempts', $claim['attempt'])
+                            ->where('last_attempt_at', $claim['started_at']);
+                    });
+                }
+            })
+            ->update([
+                'status' => WebhookEvent::STATUS_DEAD_LETTER,
+                'error_message' => $exception->getMessage(),
+            ]);
+
+        if ($updated === 0) {
+            return;
+        }
+
+        $this->event->refresh();
 
         $isDeadLetter = $this->event->status === WebhookEvent::STATUS_DEAD_LETTER;
 

@@ -60,6 +60,35 @@ class WebhookEvent extends Model
     }
 
     /**
+     * Adquire o evento em uma unica escrita condicional. O indice unico
+     * protege a identidade; este UPDATE protege a execucao concorrente.
+     */
+    public function claimForProcessing(int $timeout): bool
+    {
+        $claimed = $this->newQuery()->whereKey($this->getKey())
+            ->where(function ($query) use ($timeout) {
+                $query->whereIn('status', [self::STATUS_PENDING, self::STATUS_FAILED])
+                    ->orWhere(function ($query) use ($timeout) {
+                        $query->where('status', self::STATUS_PROCESSING)
+                            ->where(function ($query) use ($timeout) {
+                                $query->whereNull('last_attempt_at')
+                                    ->orWhere('last_attempt_at', '<=', now()->subSeconds($timeout + 5));
+                            });
+                    });
+            })
+            ->update([
+                'status' => self::STATUS_PROCESSING,
+                'attempts' => $this->getConnection()->raw('attempts + 1'),
+                'last_attempt_at' => now(),
+                'error_message' => null,
+            ]);
+
+        $this->refresh();
+
+        return $claimed === 1;
+    }
+
+    /**
      * Marca evento como em processamento
      */
     public function markAsProcessing(): void
