@@ -19,9 +19,23 @@ use Illuminate\Support\Facades\DB;
  * insert-e-delete-na-mesma-transacao sairiam de sincronia na primeira coluna
  * nova da tabela -- e uma copia errada aqui significa notificacao existindo nas
  * duas tabelas, ou em nenhuma.
+ *
+ * Arquivar MUDA o que o painel do sino mostra, entao o servico avisa quem
+ * guarda estado derivado disso: o contador do badge e a versao do inbox. O
+ * aviso fica aqui, e nao em quem chama, porque sao dois chamadores com escopos
+ * diferentes (a poda diaria por idade e o botao Limpar por destinatario) e o
+ * que ambos tem em comum e exatamente esta rotina. A poda agendada, em
+ * particular, nao invalidava nada: o badge podia ficar velho, e com o ETag
+ * servido a partir da versao o painel continuaria mostrando um card ja
+ * arquivado ate a chave expirar.
  */
 class ArquivadorDeNotificacoes
 {
+    public function __construct(
+        private readonly ContadorNaoLidas $contador,
+        private readonly VersaoDoInbox $versao,
+    ) {}
+
     /**
      * Arquiva tudo que o builder selecionar. Devolve quantas foram movidas.
      *
@@ -34,9 +48,13 @@ class ArquivadorDeNotificacoes
         $lote = max(1, $lote);
         $movidas = 0;
 
+        // Destinatarios tocados, acumulados lote a lote: sao eles que precisam
+        // de contador e versao novos no final.
+        $afetados = [];
+
         // chunkById e nao chunk: as linhas somem da consulta a cada lote, e a
         // paginacao por offset pularia registros.
-        $alvos->orderBy('id')->chunkById($lote, function ($batch) use (&$movidas): void {
+        $alvos->orderBy('id')->chunkById($lote, function ($batch) use (&$movidas, &$afetados): void {
             $linhas = $batch->map(fn (Notificacao $n): array => [
                 'id' => $n->id,
                 'type' => $n->type,
@@ -60,7 +78,17 @@ class ArquivadorDeNotificacoes
                 Notificacao::query()->whereIn('id', $batch->pluck('id'))->delete();
                 $movidas += count($linhas);
             });
+
+            foreach ($batch->pluck('notifiable_id')->unique() as $id) {
+                $afetados[(string) $id] = $id;
+            }
         });
+
+        if ($afetados !== []) {
+            $ids = array_values($afetados);
+            $this->contador->invalidar($ids);
+            $this->versao->invalidar($ids);
+        }
 
         return $movidas;
     }

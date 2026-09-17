@@ -40,6 +40,7 @@ class NotificacaoDispatcher
     public function __construct(
         private readonly ContadorNaoLidas $contador,
         private readonly JanelaAgrupamento $janela,
+        private readonly VersaoDoInbox $versao,
     ) {}
 
     /**
@@ -122,8 +123,14 @@ class NotificacaoDispatcher
 
         // Invalida o contador so de quem realmente ganhou linha no inbox: quem
         // recebeu apenas por e-mail ou push nao teve o badge alterado.
+        //
+        // A versao do inbox anda junto: e ela que faz o painel do sino receber
+        // 200 em vez de 304 no proximo ciclo. Sem este incremento o servidor
+        // continuaria respondendo 'nada mudou' para um inbox que acabou de
+        // ganhar um card, e o sino ficaria congelado ate a chave expirar.
         if ($comInbox !== []) {
             $this->contador->invalidar($comInbox);
+            $this->versao->invalidar($comInbox);
         }
 
         return count($notificados);

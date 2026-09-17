@@ -28,6 +28,25 @@ let echoChannel = null;
 let etag = null;
 let assinantes = 0;
 
+// Consulta em voo, compartilhada. Timer, retorno da aba e reconexao do socket
+// disparavam consultas independentes: bastava o servidor demorar para os tres
+// se empilharem e o mesmo cliente manter varios GETs simultaneos do mesmo
+// recurso. Agora quem chega no meio de uma consulta espera a que ja existe.
+let consultaEmVoo = null;
+
+// Intervalo base vigente (muda com a cadencia) e falhas consecutivas, que
+// alimentam o recuo progressivo.
+let intervaloBase = null;
+let falhasSeguidas = 0;
+let ultimaConsultaEm = 0;
+
+// Geracao da cadeia de agendamento. ajustarCadencia() para e recria o ciclo, e
+// isso pode acontecer com uma consulta ainda em voo dentro do timeout antigo:
+// ao terminar, aquele callback agendaria a sua proxima passada ao lado da nova,
+// e o cliente passaria a consultar em duas cadencias ao mesmo tempo. Cada
+// callback so continua se a geracao que ele capturou ainda for a vigente.
+let geracaoPolling = 0;
+
 // Quantos cards o painel mostra. Vem do backend (config/notificacoes.inbox.painel_max)
 // na primeira resposta; o valor abaixo e apenas o palpite ate ela chegar.
 let limitePainel = 4;
@@ -38,6 +57,24 @@ const INTERVALO_POLLING_MS = 30000;
 // sem avisar (rede dormindo, proxy encerrando conexao ociosa), o painel se corrige
 // sozinho na proxima passada em vez de congelar. Custa um 304 a cada 5 minutos.
 const INTERVALO_RECONCILIACAO_MS = 300000;
+
+// Dispersao aleatoria aplicada a cada agendamento. Sem ela, os clientes que
+// carregaram a pagina juntos (um turno comecando, um deploy, a volta de uma
+// queda do Reverb) consultam em fase e o servidor recebe o trafego de um
+// intervalo inteiro concentrado no mesmo instante, em vez de diluido.
+const JITTER = 0.25;
+
+// Recuo progressivo em falha: o intervalo dobra a cada erro consecutivo, ate o
+// teto. Um servidor em dificuldade recebia a MESMA cadencia de sempre, porque
+// o erro era engolido e o timer seguia igual -- carga constante justamente
+// quando ele precisava de folga para se recuperar.
+const BACKOFF_MAX_MS = 300000;
+
+// Piso entre consultas disparadas por evento (voltar para a aba, reconectar).
+// Alternar de aba repetidamente disparava um GET por alternancia.
+const INTERVALO_MINIMO_MS = 5000;
+
+const comJitter = (ms) => Math.round(ms * (1 + (Math.random() * 2 - 1) * JITTER));
 
 export function useNotifications() {
     const page = usePage();
@@ -56,7 +93,7 @@ export function useNotifications() {
 
     const modoConfigurado = () => page.props?.notificacoes?.update_mode ?? 'auto';
 
-    const fetchNotifications = async () => {
+    const consultar = async () => {
         if (notifications.value.length === 0) isLoading.value = true;
 
         try {
@@ -66,6 +103,9 @@ export function useNotifications() {
                 validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
             });
 
+            // Consulta que chegou ao servidor zera o recuo, 304 inclusive.
+            falhasSeguidas = 0;
+
             if (response.status === 304) return;
 
             etag = response.headers?.etag ?? null;
@@ -74,10 +114,43 @@ export function useNotifications() {
 
             if (response.data.limit) limitePainel = response.data.limit;
         } catch (e) {
-            // Rede instavel nao deve limpar o que o usuario ja esta vendo.
+            // Rede instavel nao deve limpar o que o usuario ja esta vendo -- mas
+            // precisa afrouxar a cadencia: insistir na mesma frequencia contra um
+            // servidor que esta recusando (503/429) so aprofunda o problema.
+            falhasSeguidas += 1;
         } finally {
+            ultimaConsultaEm = Date.now();
             isLoading.value = false;
         }
+    };
+
+    /**
+     * Consulta o inbox no maximo uma vez por vez.
+     *
+     * Quem chamar enquanto houver consulta em andamento recebe a promessa da
+     * que ja esta em voo, em vez de abrir outra. Timer, visibilidade e
+     * reconexao podem coincidir sem que isso vire varios GETs do mesmo
+     * recurso partindo do mesmo cliente.
+     */
+    const fetchNotifications = () => {
+        if (consultaEmVoo) return consultaEmVoo;
+
+        consultaEmVoo = consultar().finally(() => {
+            consultaEmVoo = null;
+        });
+
+        return consultaEmVoo;
+    };
+
+    /**
+     * Consulta respeitando um piso desde a ultima. Para gatilhos de evento
+     * (voltar para a aba, socket reconectando), que o usuario pode repetir a
+     * vontade e que chegam em rajada depois de uma queda.
+     */
+    const consultarSeVencida = () => {
+        if (Date.now() - ultimaConsultaEm < INTERVALO_MINIMO_MS) return Promise.resolve();
+
+        return fetchNotifications();
     };
 
     /**
@@ -212,23 +285,53 @@ export function useNotifications() {
         }
     };
 
+    /**
+     * Quanto esperar ate a proxima consulta: intervalo base, dobrado uma vez
+     * por falha consecutiva ate o teto, e disperso por jitter.
+     */
+    const proximoIntervalo = () => {
+        const recuo = Math.min(intervaloBase * 2 ** falhasSeguidas, BACKOFF_MAX_MS);
+
+        return comJitter(recuo);
+    };
+
+    /**
+     * Agenda a proxima passada DEPOIS que a atual termina.
+     *
+     * Era um setInterval de periodo fixo, que tem dois problemas sob carga: ele
+     * dispara a proxima consulta mesmo com a anterior ainda aberta (o cliente
+     * enfileira consultas contra um servidor que ja esta lento) e mantem todos
+     * os clientes em fase, concentrando o trafego. Encadear timeouts apos a
+     * conclusao faz a cadencia respeitar o tempo real de resposta.
+     */
+    const agendarProxima = (geracao) => {
+        pollingHandle = setTimeout(async () => {
+            // Aba em segundo plano nao consulta: ninguem esta olhando o sininho
+            // e cada consulta custa o ciclo inteiro de request no servidor. O
+            // ciclo continua correndo (e barato) e volta a consultar sozinho
+            // quando a aba reaparece.
+            if (!document.hidden) await fetchNotifications();
+
+            // A cadencia pode ter sido trocada (ou parada) durante a consulta.
+            if (geracao !== geracaoPolling) return;
+
+            agendarProxima(geracao);
+        }, proximoIntervalo());
+    };
+
     const iniciarPolling = (intervalo = INTERVALO_POLLING_MS) => {
         if (pollingHandle) return;
 
-        // Aba em segundo plano nao consulta: ninguem esta olhando o sininho e
-        // cada consulta custa o ciclo inteiro de request no servidor. O
-        // intervalo continua correndo (e barato) e volta a consultar sozinho
-        // quando a aba reaparece.
-        pollingHandle = setInterval(() => {
-            if (document.hidden) return;
-            fetchNotifications();
-        }, intervalo);
+        intervaloBase = intervalo;
+        geracaoPolling += 1;
+        agendarProxima(geracaoPolling);
 
         // Ao voltar para a aba, consulta na hora em vez de esperar o proximo
-        // tick: sem isso o painel podia ficar ate um intervalo inteiro parado
-        // justamente no momento em que o usuario olha para ele.
+        // ciclo: sem isso o painel podia ficar ate um intervalo inteiro parado
+        // justamente no momento em que o usuario olha para ele. Com piso, para
+        // que alternar de aba repetidamente nao vire um GET por alternancia.
         visibilidadeHandler = () => {
-            if (!document.hidden) fetchNotifications();
+            if (!document.hidden) consultarSeVencida();
         };
         document.addEventListener('visibilitychange', visibilidadeHandler);
     };
@@ -239,8 +342,12 @@ export function useNotifications() {
             visibilidadeHandler = null;
         }
 
+        // Invalida a geracao ANTES de limpar o timer: se houver consulta em voo
+        // dentro do callback atual, e isto que a impede de se reagendar.
+        geracaoPolling += 1;
+
         if (!pollingHandle) return;
-        clearInterval(pollingHandle);
+        clearTimeout(pollingHandle);
         pollingHandle = null;
     };
 
@@ -268,9 +375,15 @@ export function useNotifications() {
         conexao.bind('state_change', ({ current }) => {
             if (current === 'connected') {
                 // Reconectou: buscar o que passou enquanto estava fora do ar.
+                //
+                // Com piso e nao imediato: quando o Reverb volta, TODOS os
+                // clientes reconectam praticamente juntos, e uma consulta
+                // imediata por cliente entrega ao servidor a onda inteira no
+                // mesmo instante -- justo depois de um incidente, que e quando
+                // ele tem menos folga.
                 etag = null;
-                fetchNotifications();
                 ajustarCadencia(true);
+                consultarSeVencida();
                 return;
             }
 

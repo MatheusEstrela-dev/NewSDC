@@ -9,6 +9,7 @@ use App\Modules\Notificacoes\Resources\NotificacaoResource;
 use App\Modules\Notificacoes\Models\Notificacao;
 use App\Modules\Notificacoes\Services\ArquivadorDeNotificacoes;
 use App\Modules\Notificacoes\Services\ContadorNaoLidas;
+use App\Modules\Notificacoes\Services\VersaoDoInbox;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,10 @@ use Inertia\Response as InertiaResponse;
  */
 class NotificacaoInboxController extends Controller
 {
-    public function __construct(private readonly ContadorNaoLidas $contador) {}
+    public function __construct(
+        private readonly ContadorNaoLidas $contador,
+        private readonly VersaoDoInbox $versao,
+    ) {}
 
     /**
      * Previa para o painel do sino: as N notificacoes mais recentes, lidas ou nao
@@ -44,6 +48,18 @@ class NotificacaoInboxController extends Controller
         // a lista completa vai para o historico. Isso mantem o payload previsivel e
         // evita que o dropdown cresca conforme o usuario acumula avisos.
         $limite = (int) config('notificacoes.inbox.painel_max', 4);
+
+        // O 304 e decidido ANTES de qualquer consulta. A assinatura antiga era
+        // calculada a partir das linhas, entao um ciclo de polling ocioso ainda
+        // custava duas idas ao banco (os cards e o recount) para so entao
+        // descobrir que nada mudou -- multiplicado por usuario ativo a cada 30s.
+        $etag = $this->assinatura($user, $limite);
+
+        if (trim((string) $request->header('If-None-Match'), '"') === $etag) {
+            return response()->noContent(Response::HTTP_NOT_MODIFIED)
+                ->setEtag($etag)
+                ->header('Cache-Control', 'private, must-revalidate');
+        }
 
         $itens = $this->base($request)
             ->maisRecentesPrimeiro()
@@ -65,17 +81,6 @@ class NotificacaoInboxController extends Controller
             'limit' => $limite,
         ];
 
-        // A assinatura cobre o que o cliente ve: quantidade nao lida e a versao
-        // mais nova entre as linhas retornadas (updated_at muda tambem quando um
-        // agrupamento incrementa o contador, sem criar linha).
-        $etag = $this->assinatura($itens, $total);
-
-        if (trim((string) $request->header('If-None-Match'), '"') === $etag) {
-            return response()->noContent(Response::HTTP_NOT_MODIFIED)
-                ->setEtag($etag)
-                ->header('Cache-Control', 'private, must-revalidate');
-        }
-
         return response()->json($payload)
             ->setEtag($etag)
             ->header('Cache-Control', 'private, must-revalidate');
@@ -95,6 +100,7 @@ class NotificacaoInboxController extends Controller
         if ($alvo->read_at === null) {
             $alvo->markAsRead();
             $this->contador->invalidar($request->user()->getKey());
+            $this->versao->invalidar($request->user()->getKey());
         }
 
         return response()->json(['unread_count' => $this->contador->para($request->user())]);
@@ -120,6 +126,7 @@ class NotificacaoInboxController extends Controller
 
         if ($afetadas > 0) {
             $this->contador->invalidar($request->user()->getKey());
+            $this->versao->invalidar($request->user()->getKey());
         }
 
         return response()->json([
@@ -136,6 +143,7 @@ class NotificacaoInboxController extends Controller
         $afetadas = $this->base($request)->naoLidas()->update(['read_at' => now()]);
 
         $this->contador->invalidar($request->user()->getKey());
+        $this->versao->invalidar($request->user()->getKey());
 
         return response()->json(['marcadas' => $afetadas, 'unread_count' => 0]);
     }
@@ -159,6 +167,7 @@ class NotificacaoInboxController extends Controller
         $arquivadas = $arquivador->arquivar($this->base($request));
 
         $this->contador->invalidar($request->user()->getKey());
+        $this->versao->invalidar($request->user()->getKey());
 
         return response()->json(['arquivadas' => $arquivadas, 'unread_count' => 0]);
     }
@@ -213,14 +222,23 @@ class NotificacaoInboxController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Notificacao>  $itens
+     * Assinatura da resposta do painel, obtida sem tocar no banco.
+     *
+     * Leva o id do destinatario alem da versao: o ETag e comparado pelo cliente,
+     * mas incluir o dono torna impossivel que a assinatura de uma caixa case com
+     * a de outra pessoa diante de um cache intermediario mal configurado.
+     *
+     * Leva tambem o limite do painel: ele vem da config, e mudar a config sem
+     * mudar a assinatura deixaria os clientes presos ao tamanho antigo.
      */
-    private function assinatura(\Illuminate\Support\Collection $itens, int $naoLidas): string
+    private function assinatura(\Illuminate\Database\Eloquent\Model $notifiable, int $limite): string
     {
-        $maisRecente = $itens
-            ->map(fn (Notificacao $n) => $n->updated_at?->getTimestamp() ?? 0)
-            ->max() ?? 0;
-
-        return md5(sprintf('%d:%d:%d', $naoLidas, $itens->count(), $maisRecente));
+        return md5(sprintf(
+            '%s:%s:%d:%d',
+            $notifiable->getMorphClass(),
+            (string) $notifiable->getKey(),
+            $this->versao->atual($notifiable),
+            $limite,
+        ));
     }
 }

@@ -232,6 +232,13 @@ return [
         'painel_max' => 4,
 
         'historico_por_pagina' => 25,
+
+        // Versao do inbox por usuario (VersaoDoInbox): permite responder 304 ao
+        // polling do sino sem tocar no banco. TTL longo porque a chave e
+        // minuscula e recria-la custa uma resposta 200 desnecessaria por
+        // usuario; o valor so precisa sobreviver mais que o intervalo de poll.
+        'versao_prefixo' => 'notif:inbox:versao:',
+        'versao_ttl_segundos' => 86400,
     ],
 
     /*
