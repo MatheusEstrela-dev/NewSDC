@@ -104,6 +104,23 @@ class SecurityHeaders
             "https://nominatim.openstreetmap.org",
         ];
 
+        // WebSocket do Reverb (tempo real). FORA do bloco de Vite dev abaixo: o
+        // broadcasting roda em producao tambem, e a porta do Reverb nao e porta
+        // de Vite -- ela nao estava em lista nenhuma, entao o navegador
+        // bloqueava a conexao por connect-src e o console enchia de
+        // "Content-Security-Policy: ... bloquearam o carregamento de um recurso
+        // (connect-src) em wss://localhost:8080/app/...".
+        //
+        // O efeito nao era so ruido: sem WebSocket, as telas do medalhao param
+        // de atualizar sozinhas e o operador ve dado velho sem nenhum aviso.
+        //
+        // Os dois esquemas entram porque o cliente (pusher-js) tem
+        // `enabledTransports: ['ws', 'wss']` e pode tentar o seguro mesmo em
+        // ambiente http; liberar wss num host que so fala ws nao cria risco --
+        // a conexao simplesmente falha no TLS, com erro proprio e diagnosticavel,
+        // em vez de morrer no CSP.
+        $connectSrc = array_merge($connectSrc, $this->origensDoWebsocket());
+
         // Allow app URL
         $appUrl = config('app.url');
         if ($appUrl) {
@@ -193,5 +210,55 @@ class SecurityHeaders
             "worker-src {$workerSrc}",
             app()->environment('production') ? 'upgrade-insecure-requests' : '',
         ]));
+    }
+
+    /**
+     * Origens que o cliente usa para abrir o WebSocket do broadcasting.
+     *
+     * Derivadas da config, nao fixas: a porta do Reverb e configuravel por
+     * REVERB_PORT, e uma lista com "8080" cravado voltaria a bloquear no dia em
+     * que alguem mudasse a porta -- com o mesmo sintoma obscuro de CSP.
+     *
+     * O host que importa e o que o NAVEGADOR usa, e nao REVERB_HOST: dentro do
+     * Docker o servidor se chama "reverb", mas o navegador chega por localhost.
+     * Por isso a preferencia e VITE_REVERB_HOST, que e justamente o valor
+     * entregue ao frontend.
+     *
+     * Devolve lista vazia quando o broadcasting esta desligado
+     * (BROADCAST_CONNECTION=null, que foi o padrao do projeto por meses): sem
+     * WebSocket, nao ha o que liberar.
+     *
+     * @return list<string>
+     */
+    private function origensDoWebsocket(): array
+    {
+        if (config('broadcasting.default') !== 'reverb') {
+            return [];
+        }
+
+        $porta = (int) env('VITE_REVERB_PORT', config('broadcasting.connections.reverb.options.port', 8080));
+
+        if ($porta <= 0) {
+            return [];
+        }
+
+        $hosts = array_unique(array_filter([
+            env('VITE_REVERB_HOST'),
+            'localhost',
+            '127.0.0.1',
+        ]));
+
+        $origens = [];
+
+        foreach ($hosts as $host) {
+            foreach (['ws', 'wss', 'http', 'https'] as $esquema) {
+                // http/https tambem: o pusher-js faz um POST de autenticacao de
+                // canal privado antes de abrir o socket, e ele sai pelo mesmo
+                // host:porta.
+                $origens[] = "{$esquema}://{$host}:{$porta}";
+            }
+        }
+
+        return $origens;
     }
 }
