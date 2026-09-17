@@ -14,6 +14,7 @@ use App\Modules\Decretacoes\Services\EntradaProcessoService;
 use App\Modules\Decretacoes\Services\ProcessoQueryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * API Controller para o modulo de Decretacoes.
@@ -137,6 +138,24 @@ class DecretacoesApiController extends Controller
      */
     public function exportPowerBI(Request $request): JsonResponse
     {
+        // Um COUNT antes de materializar. Este endpoint monta o conjunto inteiro
+        // duas vezes na memoria de um worker HTTP do Octane, que e compartilhado
+        // e persiste entre requisicoes: sem teto, um export que cresceu com a
+        // base tira um worker de circulacao para todos os usuarios, e nao apenas
+        // para quem pediu. O caminho assincrono ao lado nao tem esse limite.
+        $teto = (int) config('resilience.export.max_linhas_sincrono', 5000);
+        $linhas = $this->queryService->contarExportFlat($request);
+
+        if ($teto > 0 && $linhas > $teto) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Export grande demais para entrega sincrona; use o endpoint assincrono.',
+                'linhas' => $linhas,
+                'limite' => $teto,
+                'alternativa' => '/api/v1/decretacoes/export/power-bi/async',
+            ], Response::HTTP_PAYLOAD_TOO_LARGE);
+        }
+
         $data = $this->queryService->exportAllForApiFlat($request);
 
         return response()->json([

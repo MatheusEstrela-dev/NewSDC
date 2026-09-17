@@ -745,13 +745,7 @@ class ProcessoQueryService
      */
     public function exportAllForApiFlat(Request $request): array
     {
-        $query = $this->applyFilters($request);
-
-        if ($request->input('include_deleted', false)) {
-            $query->withTrashed();
-        }
-
-        $allProcessos = $query->get();
+        $allProcessos = $this->queryDoExportFlat($request)->get();
 
         if ($allProcessos->isEmpty()) {
             return [];
@@ -768,6 +762,38 @@ class ProcessoQueryService
         $this->enrichWithGeoData($allProcessos);
 
         return ProcessoFlatResource::collection($allProcessos)->resolve();
+    }
+
+    /**
+     * Query do export plano, com os mesmos filtros nos dois caminhos.
+     *
+     * Extraida para que a contagem previa e a extracao nao possam divergir: um
+     * teto conferido sobre um recorte diferente do que sera carregado nao
+     * protege nada.
+     */
+    private function queryDoExportFlat(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = $this->applyFilters($request);
+
+        if ($request->input('include_deleted', false)) {
+            $query->withTrashed();
+        }
+
+        return $query;
+    }
+
+    /**
+     * Quantas linhas o export plano devolveria com os filtros desta request.
+     *
+     * Serve ao caminho SINCRONO, que materializa o conjunto inteiro duas vezes
+     * (as models e depois os recursos resolvidos) dentro de um worker HTTP do
+     * Octane -- e o worker e um processo compartilhado, nao um por requisicao:
+     * um export grande demais nao derruba so quem pediu, ele tira um worker de
+     * circulacao para todo mundo. Custa um COUNT antes de decidir.
+     */
+    public function contarExportFlat(Request $request): int
+    {
+        return $this->queryDoExportFlat($request)->toBase()->getCountForPagination();
     }
 
     // Mapeamento de titulo de item para tipo de dano humano (fallback por nome)
@@ -1267,21 +1293,28 @@ class ProcessoQueryService
     }
 
     /**
-     * Busca processos vigentes usando Resource.
+     * Busca processos vigentes.
      *
-     * FLUXO: Query -> Filter (isVigente) -> Collection
+     * FLUXO: Query (scope vigentes) -> Collection
+     *
+     * O filtro roda no Postgres, pelo scope que ja existia no model e usa a
+     * mesma expressao canonica de [Vigencia::sqlVencimento()]. Antes, isto
+     * carregava TODOS os processos publicados para descartar em PHP a maior
+     * parte deles -- o custo crescia com o historico inteiro da base, nao com
+     * o tamanho da resposta, e nenhum indice ajudava.
+     *
+     * O whereNotNull segue explicito: o scope sozinho ACEITA publicacao nula
+     * (sem data nao ha prazo a expirar), enquanto este metodo sempre recortou
+     * apenas os publicados. Sem ele o conjunto mudaria.
      *
      * @return Collection Processos vigentes
      */
     public function getVigentes(): Collection
     {
         // Sem filtro por prazo_vigencia: quando ausente, vale o padrao de 180 dias.
-        $processos = Processo::whereNotNull('data_publicacao_mg')->get();
-
-        return $processos->filter(function (Processo $processo) {
-            $resource = new ProcessoResource($processo);
-            return $resource->isVigente();
-        });
+        return Processo::whereNotNull('data_publicacao_mg')
+            ->vigentes()
+            ->get();
     }
 
     /**
@@ -1301,19 +1334,19 @@ class ProcessoQueryService
     /**
      * Busca processos proximos de vencer (30 dias).
      *
-     * FLUXO: Query -> Filter (isProximoVencer) -> Collection
+     * FLUXO: Query (scope proximosVencer) -> Collection
+     *
+     * Mesmo motivo do getVigentes(): o recorte cabe no Postgres, pelo scope
+     * que ja aplica a janela de [Vigencia::JANELA_PROXIMO_VENCER_DIAS].
+     * Carregar a base inteira para devolver a dezena de decretos que vencem
+     * no mes era o caso mais desproporcional dos dois.
      *
      * @return Collection Processos proximos de vencer
      */
     public function getProximosVencer(): Collection
     {
         // Sem filtro por prazo_vigencia: quando ausente, vale o padrao de 180 dias.
-        $processos = Processo::whereNotNull('data_publicacao_mg')->get();
-
-        return $processos->filter(function (Processo $processo) {
-            $resource = new ProcessoResource($processo);
-            return $resource->isProximoVencer();
-        });
+        return Processo::proximosVencer()->get();
     }
 
     /**

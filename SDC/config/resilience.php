@@ -100,6 +100,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Export sincrono
+    |--------------------------------------------------------------------------
+    |
+    | Teto de linhas que o export Power BI aceita entregar de forma sincrona.
+    | Acima disso a resposta aponta o endpoint assincrono, que ja existe e e o
+    | caminho recomendado para volume.
+    |
+    | O motivo nao e o tempo, e a memoria: o caminho sincrono materializa o
+    | conjunto inteiro duas vezes (models e recursos resolvidos) dentro de um
+    | worker HTTP do Octane. O worker e compartilhado e vive entre requisicoes,
+    | entao um export desproporcional nao degrada apenas quem o pediu -- ele
+    | tira um worker de circulacao, e com hooks desligados a capacidade em voo
+    | do sistema E o numero de workers.
+    |
+    */
+
+    'export' => [
+        'max_linhas_sincrono' => (int) env('EXPORT_SYNC_MAX_ROWS', 5000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Backpressure (drop não-crítico sob carga)
     |--------------------------------------------------------------------------
     |
