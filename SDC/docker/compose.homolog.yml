@@ -279,6 +279,21 @@ services:
       CACHE_DRIVER: redis
       QUEUE_CONNECTION: redis
       BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-null}
+      # O worker PRECISA das credenciais do Reverb, nao so o app: quando
+      # BROADCAST_CONNECTION=reverb, o BroadcastManager e construido no boot de
+      # qualquer processo Laravel, inclusive `queue:work`. Sem APP_KEY o Pusher
+      # recebe auth_key nulo e o container morre em loop no boot.
+      #
+      # O buraco existia desde o inicio e so apareceu agora: a imagem anterior
+      # era de 28/08 e o codigo daquela epoca nao montava o broadcaster no boot
+      # de console. Nao e regressao do rebuild -- e um defeito que o rebuild
+      # revelou.
+      REVERB_APP_ID: ${REVERB_APP_ID:-}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
       MAIL_MAILER: log
 
     # A imagem traz um HEALTHCHECK que bate em localhost:8000/health -- correto
