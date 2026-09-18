@@ -215,23 +215,15 @@ services:
       - homolog_storage:/var/www/storage/app
       - homolog_logs:/var/www/storage/logs
 
-      # EXCECAO ao "codigo vem da imagem": o entrypoint entra por mount.
+      # O entrypoint NAO entra por mount. Ele ja entrou, enquanto o
+      # `bun install --frozen-lockfile` do Dockerfile falhava e nenhuma imagem
+      # podia ser reconstruida -- era o unico jeito de alterar o boot.
       #
-      # Dois motivos. O pratico: mexer no guardrail de conexoes ou na ordem de
-      # boot passa a custar um `up -d` em vez de um rebuild da imagem inteira,
-      # e este ambiente existe justamente para iterar nisso.
-      #
-      # O circunstancial, que e mais serio: a imagem NAO pode ser reconstruida
-      # hoje. O `bun install --frozen-lockfile` do Dockerfile falha porque o
-      # bun.lock esta fora de sincronia com o package.json -- e o Dockerfile
-      # instala o bun sem fixar versao (`curl https://bun.sh/install | bash`),
-      # entao cada build resolve com um bun diferente. Enquanto isso nao for
-      # resolvido, alteracao em entrypoint.sh so chega ao container por aqui.
-      #
-      # ATENCAO: em producao o entrypoint vem DA IMAGEM. Este mount faz o rig
-      # divergir nesse ponto -- ele nao pegaria um erro de "entrypoint nao foi
-      # copiado para a imagem".
-      - ./swoole/scripts/entrypoint.sh:/start.sh:ro
+      # Aquilo foi resolvido (faltava @fullcalendar/timegrid no bun.lock), entao
+      # o mount virou so divergencia: com ele, o rig nunca pegaria um erro de
+      # "entrypoint nao foi copiado para a imagem", que e exatamente o tipo de
+      # falha que producao teria. Ambiente de homologacao que diverge no boot
+      # nao homologa o boot.
 
     networks:
       - homolog
