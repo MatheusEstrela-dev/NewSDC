@@ -9,7 +9,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * 27 itens estruturais + obs cada.
+     * 28 itens estruturais + obs cada.
+     *
+     * (Dizia 27 e a lista sempre teve 28 -- a mesma contagem errada que o model
+     * ja corrigiu. So o texto muda; nenhuma coluna foi acrescentada.)
      *
      * @var array<int, string>
      */

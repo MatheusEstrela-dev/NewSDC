@@ -12,12 +12,14 @@ use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Requests\StoreVistoriaRequest;
 use App\Modules\Tdap\Requests\UpdateVistoriaRequest;
 use App\Modules\Tdap\Resources\CaminhaoResource;
+use App\Modules\Tdap\Resources\VistoriaFotoResource;
 use App\Modules\Tdap\Resources\VistoriaIndexResource;
 use App\Modules\Tdap\Resources\VistoriaResource;
+use App\Modules\Tdap\Resources\VistoriaSerieResource;
 use App\Modules\Tdap\Services\VistoriaFotoService;
 use App\Modules\Tdap\Services\VistoriaService;
 use App\Modules\Tdap\Support\ExportadorCsv;
-use App\Modules\Tdap\Support\VigenciaVistoria;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,14 +38,40 @@ class FrotaVistoriaController extends Controller
      */
     private const FILTROS = ['parecer', 'placa_id', 'vigente', 'search'];
 
+    /** Teto de itens por pagina, mesmo motivo do FrotaController. */
+    private const POR_PAGINA_MAX = 100;
+
     public function __construct(
         private readonly VistoriaService $service,
         private readonly VistoriaFotoService $fotoService,
     ) {}
 
+    /** Itens por pagina, dentro de um intervalo que a tela aguenta. */
+    private static function porPagina(Request $request): int
+    {
+        return max(1, min((int) $request->integer('per_page', 15), self::POR_PAGINA_MAX));
+    }
+
+    /**
+     * Frota ativa para os seletores desta tela (filtro de caminhao e troca de
+     * veiculo na edicao).
+     *
+     * Estava escrita duas vezes, com listas de colunas DIFERENTES -- o `edit`
+     * pedia cor, ano e capacidade a mais. Duplicacao que ja tinha divergido.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Caminhao>
+     */
+    private function caminhoesAtivos(): EloquentCollection
+    {
+        return Caminhao::ativo()
+            ->with('prestador:id,nome')
+            ->orderBy('placa')
+            ->get(['id', 'placa', 'marca', 'modelo', 'cor', 'ano', 'capacidade_m3', 'prestador_id']);
+    }
+
     public function index(Request $request): Response
     {
-        $perPage = (int) $request->integer('per_page', 15);
+        $perPage = self::porPagina($request);
         $filtros = $request->only(self::FILTROS);
 
         $vistorias = $this->service->listar($perPage, $filtros);
@@ -53,7 +81,7 @@ class FrotaVistoriaController extends Controller
             // Mesmos filtros da listagem: o card "Total" conta o que a grade
             // mostra (parecer/vigente ficam de fora — ver o service).
             'estatisticas'  => fn () => $this->service->obterEstatisticas($filtros),
-            'caminhoes'     => fn () => Caminhao::ativo()->with('prestador:id,nome')->orderBy('placa')->get(['id', 'placa', 'marca', 'modelo', 'prestador_id']),
+            'caminhoes'     => fn () => $this->caminhoesAtivos(),
             'pareceres'     => ParecerVistoria::options(),
             'filtros'       => $filtros,
             'canCreate'     => $request->user()?->can('tdap.vistorias.create') ?? false,
@@ -84,26 +112,15 @@ class FrotaVistoriaController extends Controller
      */
     public function vistoriasDoCaminhao(Caminhao $caminhao): JsonResponse
     {
-        $vistorias = $caminhao->vistorias()
-            ->get(['id', 'placa_id', 'data', 'parecer', 'nome', 'ficha', 'lacre', 'edital', 'observacoes'])
-            ->map(fn (Vistoria $v) => [
-                'id'             => $v->id,
-                'data'           => $v->data?->toDateString(),
-                'parecer'        => $v->parecer?->value,
-                'parecer_label'  => $v->parecer?->label(),
-                'vistoriador'    => $v->nome,
-                'ficha'          => $v->ficha,
-                'lacre'          => $v->lacre,
-                'edital'         => $v->edital,
-                'observacoes'    => $v->observacoes,
-                'vigente'        => (bool) $v->esta_vigente,
-                'valido_ate'     => $v->valido_ate?->toDateString(),
-                // Vigencia assinada: negativo = venceu. Sai de VigenciaVistoria,
-                // a mesma fonte do accessor -- antes reusava VigenciaAta, que e
-                // o prazo de OUTRO agregado.
-                'dias_restantes' => VigenciaVistoria::diasRestantes($v->data),
-            ])
-            ->values();
+        // O payload sai de VistoriaSerieResource, nao de um array montado aqui:
+        // era a unica representacao de vistoria do modulo sem Resource, e a
+        // terceira forma da mesma entidade. Os nomes dos campos continuam os
+        // mesmos -- o modal depende deles.
+        $vistorias = VistoriaSerieResource::collection(
+            $caminhao->vistorias()->get([
+                'id', 'placa_id', 'data', 'parecer', 'nome', 'ficha', 'lacre', 'edital', 'observacoes',
+            ]),
+        )->resolve();
 
         return response()->json([
             'caminhao' => [
@@ -152,7 +169,7 @@ class FrotaVistoriaController extends Controller
             );
 
             foreach ($request->file('fotos') ?? [] as $arquivo) {
-                $this->fotoService->store($vistoria, $arquivo);
+                $this->fotoService->store($vistoria, $arquivo, $request->input('descricao'));
             }
 
             return $vistoria;
@@ -172,7 +189,12 @@ class FrotaVistoriaController extends Controller
             // Prop propria, e nao dentro de `vistoria`: e ela que o
             // router.reload({ only: ['fotos'] }) repoe depois de anexar ou
             // remover, sem recarregar o resto da tela.
-            'fotos'            => $vistoria->fotos()->get(),
+            //
+            // `resolve()` em vez de deixar o Resource se serializar: a tela
+            // espera uma LISTA em `fotos`, e `::collection()` a envelopa em
+            // `data`. O Resource entra pelo que ele tira do payload (path,
+            // disk, uploaded_by), sem mudar o contrato da prop.
+            'fotos'            => VistoriaFotoResource::collection($vistoria->fotos()->get())->resolve(),
             'itensEstruturais' => Vistoria::ITENS_ESTRUTURAIS,
             'itensTanque'      => Vistoria::ITENS_TANQUE,
             'canEdit'          => $request->user()?->can('tdap.vistorias.edit') ?? false,
@@ -188,8 +210,8 @@ class FrotaVistoriaController extends Controller
             // router.reload({ only: ['fotos'] }) repoe sem recarregar o
             // formulario inteiro -- recarregar aqui perderia o que ja foi
             // digitado no checklist.
-            'fotos'            => $vistoria->fotos()->get(),
-            'caminhoes'        => Caminhao::ativo()->with('prestador:id,nome')->orderBy('placa')->get(['id', 'placa', 'marca', 'modelo', 'cor', 'ano', 'capacidade_m3', 'prestador_id']),
+            'fotos'            => VistoriaFotoResource::collection($vistoria->fotos()->get())->resolve(),
+            'caminhoes'        => $this->caminhoesAtivos(),
             'pareceres'        => ParecerVistoria::options(),
             'itensEstruturais' => Vistoria::ITENS_ESTRUTURAIS,
             'itensTanque'      => Vistoria::ITENS_TANQUE,
@@ -211,7 +233,15 @@ class FrotaVistoriaController extends Controller
             abort(403);
         }
 
-        $this->service->deletar($vistoria->id);
+        try {
+            $this->service->deletar($vistoria->id);
+        } catch (\DomainException $e) {
+            // Sustenta cronograma ativo: mensagem de negocio, nao 500 -- mesmo
+            // tratamento que a exclusao de caminhao ja recebia.
+            return redirect()
+                ->route('tdap.frota.vistorias.show', $vistoria->id)
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()
             ->route('tdap.frota.vistorias.index')

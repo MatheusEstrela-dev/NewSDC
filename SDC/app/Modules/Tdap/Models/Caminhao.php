@@ -135,10 +135,29 @@ class Caminhao extends Model
          */
         $digitos = Documento::digitos($termo);
 
-        return $query->where(function (Builder $q) use ($like, $digitos): void {
+        /*
+         * A placa e comparada SEM separador nos dois lados.
+         *
+         * A base tem os dois formatos convivendo: 131 das 132 linhas vieram do
+         * import legado com hifen (`BWA-6I04`), e tudo que a aplicacao grava
+         * passa por Documento::placa e fica sem (`BWA6I04`). Comparando a
+         * coluna crua, quem digita o formato "errado" nao acha o caminhao que
+         * esta na sua frente -- e nao ha formato certo enquanto as duas
+         * gravacoes coexistirem.
+         *
+         * REPLACE, e nao REGEXP_REPLACE: o unico separador que aparece na
+         * coluna e o hifen, e REPLACE e portavel.
+         */
+        $placa = Documento::placa($termo);
+
+        return $query->where(function (Builder $q) use ($like, $digitos, $placa): void {
             $q->whereRaw('UPPER(placa) LIKE ?', [$like])
               ->orWhereRaw('UPPER(modelo) LIKE ?', [$like])
               ->orWhereRaw('UPPER(marca) LIKE ?', [$like])
+              ->when($placa !== null, fn (Builder $p) => $p->orWhereRaw(
+                  "REPLACE(REPLACE(UPPER(placa), '-', ''), ' ', '') LIKE ?",
+                  ['%'.$placa.'%'],
+              ))
               ->orWhereHas('prestador', function (Builder $p) use ($like, $digitos): void {
                   $p->whereRaw('UPPER(nome) LIKE ?', [$like]);
 

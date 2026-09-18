@@ -95,6 +95,20 @@ final readonly class VistoriaDTO
     {
         $out = [];
         foreach ($campos as $campo) {
+            /*
+             * Item AUSENTE do payload fica de fora, em vez de virar `false`.
+             *
+             * Com o `?? false` de antes, um PUT parcial -- que a rota de update
+             * aceita -- apagava o checklist inteiro: 35 itens gravados como
+             * "nao conforme" porque o payload nao os mencionou. O formulario
+             * manda todos, entao o estrago so apareceria por chamada fora dele,
+             * que e onde ninguem procuraria. No cadastro nada muda: a coluna
+             * tem default `false`.
+             */
+            if (! array_key_exists($campo, $data) && ! array_key_exists("{$campo}_obs", $data)) {
+                continue;
+            }
+
             $check = (bool) ($data[$campo] ?? false);
             $obs   = self::nullable($data["{$campo}_obs"] ?? null);
             $out[$campo] = [$check, $obs];

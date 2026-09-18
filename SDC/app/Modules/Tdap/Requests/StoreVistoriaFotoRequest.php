@@ -24,6 +24,23 @@ class StoreVistoriaFotoRequest extends FormRequest
      */
     public const REGRAS_DO_ARQUIVO = ['file', 'max:15360', 'mimes:jpg,jpeg,png,webp,heic,heif'];
 
+    /**
+     * As mensagens andam com as regras.
+     *
+     * Elas viviam so aqui, embora a regra ja fosse compartilhada: a mesma foto
+     * de 20 MB recusada no cadastro da vistoria caia na mensagem generica do
+     * Laravel ("The fotos.0 field must not be greater than 15360 kilobytes"),
+     * e na tela de anexo recebia a frase em portugues. Mesma regra, duas
+     * explicacoes -- e a pior delas na tela onde o vistoriador esta em campo.
+     *
+     * @var array<string, string>
+     */
+    public const MENSAGENS_DO_ARQUIVO = [
+        'fotos.*.mimes' => 'Envie imagens JPG, PNG, WEBP ou HEIC.',
+        'fotos.*.max'   => 'Cada foto deve ter no maximo 15 MB.',
+        'fotos.max'     => 'Envie no maximo 10 fotos por vez.',
+    ];
+
     public function authorize(): bool
     {
         return $this->user()?->can('tdap.vistorias.edit') ?? false;
@@ -56,10 +73,6 @@ class StoreVistoriaFotoRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'fotos.*.mimes' => 'Envie imagens JPG, PNG, WEBP ou HEIC.',
-            'fotos.*.max'   => 'Cada foto deve ter no maximo 15 MB.',
-            'fotos.max'     => 'Envie no maximo 10 fotos por vez.',
-        ];
+        return self::MENSAGENS_DO_ARQUIVO;
     }
 }

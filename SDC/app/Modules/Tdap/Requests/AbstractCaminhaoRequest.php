@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Requests;
 
+use App\Modules\Tdap\Support\Documento;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
@@ -34,11 +35,10 @@ abstract class AbstractCaminhaoRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $placa = $this->input('placa');
+        // A limpeza mora em Documento::placa: o DTO tambem normaliza, e ter a
+        // expressao escrita duas vezes era o caminho para as duas divergirem.
         $this->merge([
-            'placa' => $placa
-                ? mb_strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $placa) ?? '')
-                : null,
+            'placa' => Documento::placa($this->input('placa')),
         ]);
     }
 
