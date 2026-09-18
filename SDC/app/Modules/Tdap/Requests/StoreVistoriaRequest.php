@@ -47,8 +47,13 @@ class StoreVistoriaRequest extends AbstractVistoriaRequest
     public function rules(): array
     {
         return array_merge(parent::rules(), [
-            'fotos'   => ['sometimes', 'array', 'max:'.StoreVistoriaFotoRequest::MAX_POR_LOTE],
-            'fotos.*' => StoreVistoriaFotoRequest::REGRAS_DO_ARQUIVO,
+            'fotos'     => ['sometimes', 'array', 'max:'.StoreVistoriaFotoRequest::MAX_POR_LOTE],
+            'fotos.*'   => StoreVistoriaFotoRequest::REGRAS_DO_ARQUIVO,
+            // Mesma legenda que a tela de anexo aceita. Sem esta regra o campo
+            // era descartado pelo `validated()` e as fotos enviadas junto com a
+            // ficha nasciam sempre sem descricao -- so as anexadas depois
+            // tinham.
+            'descricao' => ['nullable', 'string', 'max:255'],
         ]);
     }
 
@@ -58,5 +63,15 @@ class StoreVistoriaRequest extends AbstractVistoriaRequest
     public function attributes(): array
     {
         return ['fotos.*' => 'foto'];
+    }
+
+    /**
+     * As mensagens de arquivo vem da mesma fonte das regras.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return array_merge(parent::messages(), StoreVistoriaFotoRequest::MENSAGENS_DO_ARQUIVO);
     }
 }

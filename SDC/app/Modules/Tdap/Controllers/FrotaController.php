@@ -14,6 +14,7 @@ use App\Modules\Tdap\Resources\CaminhaoIndexResource;
 use App\Modules\Tdap\Resources\CaminhaoResource;
 use App\Modules\Tdap\Services\FrotaService;
 use App\Modules\Tdap\Support\ExportadorCsv;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,9 +36,60 @@ class FrotaController extends Controller
      */
     private const FILTROS = ['ativo', 'prestador_id', 'prestador_cnpj', 'search', 'vistoria'];
 
+    /**
+     * Situacoes aceitas em `?vistoria=`.
+     *
+     * O `match` do service tem `default => null`: valor desconhecido saia sem
+     * filtrar nada e a tela devolvia a frota inteira como se ninguem tivesse
+     * pedido recorte -- com o valor invalido ecoado de volta no bloco de
+     * filtros, dizendo que estava aplicado.
+     *
+     * @var array<int, string>
+     */
+    private const SITUACOES_DE_VISTORIA = ['apto', 'vencida', 'sem_vistoria'];
+
+    /** Teto de itens por pagina: `?per_page=100000` puxava a frota inteira. */
+    private const POR_PAGINA_MAX = 100;
+
     public function __construct(
         private readonly FrotaService $service,
     ) {}
+
+    /** Itens por pagina, dentro de um intervalo que a tela aguenta. */
+    private static function porPagina(Request $request): int
+    {
+        return max(1, min((int) $request->integer('per_page', 15), self::POR_PAGINA_MAX));
+    }
+
+    /**
+     * Filtros da allowlist, com `vistoria` conferido contra os valores que o
+     * service sabe aplicar.
+     *
+     * @return array<string, mixed>
+     */
+    private function filtrosValidos(Request $request): array
+    {
+        $filtros = $request->only(self::FILTROS);
+
+        if (isset($filtros['vistoria']) && ! in_array($filtros['vistoria'], self::SITUACOES_DE_VISTORIA, true)) {
+            unset($filtros['vistoria']);
+        }
+
+        return $filtros;
+    }
+
+    /**
+     * Prestadores para os seletores de filtro e de formulario.
+     *
+     * A mesma consulta estava escrita em index, create e edit -- tres copias da
+     * lista de colunas, que e exatamente como elas comecam a divergir.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Prestador>
+     */
+    private function prestadoresAtivos(): EloquentCollection
+    {
+        return Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']);
+    }
 
     /**
      * A frota: caminhao e situacao de vistoria na mesma tela.
@@ -49,15 +101,15 @@ class FrotaController extends Controller
      */
     public function index(Request $request): Response
     {
-        $perPage = (int) $request->integer('per_page', 15);
-        $filtros = $request->only(self::FILTROS);
+        $perPage = self::porPagina($request);
+        $filtros = $this->filtrosValidos($request);
 
         $caminhoes = $this->service->listarFrota($perPage, $filtros);
 
         return Inertia::render('Tdap/Frota/Index', [
             'caminhoes'    => CaminhaoIndexResource::collection($caminhoes),
             'estatisticas' => fn () => $this->service->obterEstatisticasDaFrota(),
-            'prestadores'  => fn () => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
+            'prestadores'  => fn () => $this->prestadoresAtivos(),
             'filtros'      => $filtros,
             'canCreate'    => $request->user()?->can('tdap.caminhoes.create') ?? false,
             'canEdit'      => $request->user()?->can('tdap.caminhoes.edit') ?? false,
@@ -92,14 +144,16 @@ class FrotaController extends Controller
     public function export(Request $request): StreamedResponse
     {
         return ExportadorCsv::baixar(
-            $this->service->exportar($request->only(self::FILTROS)),
+            // Mesmo saneamento da listagem, e nao `only()` cru: o CSV tem que
+            // corresponder ao que a tela mostrava, filtro invalido incluido.
+            $this->service->exportar($this->filtrosValidos($request)),
             'frota',
         );
     }
 
     public function create(Request $request): Response
     {
-        $prestadores = Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']);
+        $prestadores = $this->prestadoresAtivos();
 
         // `?prestador_id=` vem do botao "Cadastrar caminhao" da ficha do
         // prestador: sem o pre-preenchimento o usuario tinha que reencontrar a
@@ -137,8 +191,12 @@ class FrotaController extends Controller
     public function edit(Caminhao $caminhao): Response
     {
         return Inertia::render('Tdap/Frota/Edit', [
-            'caminhao'    => CaminhaoResource::make($caminhao->load('prestador')),
-            'prestadores' => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
+            // Pelo service, como o `show`: o `load('prestador')` cru trazia o
+            // prestador sem `email`, e o mesmo CaminhaoResource saia de duas
+            // telas com conteudo diferente -- o campo simplesmente sumia na
+            // edicao, sem nada no codigo dizendo que era de proposito.
+            'caminhao'    => CaminhaoResource::make($this->service->obter($caminhao->id)),
+            'prestadores' => $this->prestadoresAtivos(),
         ]);
     }
 

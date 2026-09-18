@@ -43,14 +43,25 @@ class CaminhaoIndexResource extends JsonResource
             'prestador_cnpj' => $this->whenLoaded('prestador', fn () => Documento::cnpj($this->prestador->cnpj)),
 
             /* Situacao de vistoria -- o que a outra tela guardava */
-            'apto'              => $vigente instanceof Vistoria,
+            //
+            // `relationLoaded` explicito: sem a relacao carregada, `whenLoaded`
+            // devolve MissingValue e `apto` saia `false` -- indistinguivel de
+            // "nao tem vistoria vigente". Quem esquecesse o eager load veria a
+            // frota inteira reprovada e nada apontaria o motivo. Agora esse
+            // caso vem `null`: nao sabemos, e a tela nao finge que sabe.
+            'apto'              => $this->relationLoaded('vistoriaVigente')
+                ? $vigente instanceof Vistoria
+                : null,
             'situacao_vistoria' => $this->situacaoDaVistoria(),
             'total_vistorias'   => $this->whenCounted('vistorias'),
 
             'vistoria' => $ultima instanceof Vistoria ? [
                 'id'             => $ultima->id,
                 'data'           => $ultima->data?->toDateString(),
-                'parecer'        => $ultima->parecer?->value ?? (string) $ultima->parecer,
+                // Sem fallback `?? (string) $parecer`: com o cast de enum ativo
+                // esse caminho nunca roda, e se rodasse lancaria (enum nao vira
+                // string). Era protecao da epoca em que a coluna vinha crua.
+                'parecer'        => $ultima->parecer?->value,
                 'vistoriador'    => $ultima->nome,
                 'ficha'          => $ultima->ficha,
                 'lacre'          => $ultima->lacre,

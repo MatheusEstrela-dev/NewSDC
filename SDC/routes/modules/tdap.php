@@ -23,6 +23,7 @@ use App\Modules\Tdap\Models\Historico;
 use App\Modules\Tdap\Models\Lote;
 use App\Modules\Tdap\Models\Prestador;
 use App\Modules\Tdap\Models\Vistoria;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -217,11 +218,34 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     |
     | Sem middleware de permissao: o destino ja cobra a permissao, e negar aqui
     | trocaria o redirect por um 403 sem explicacao.
+    |
+    | Closure em vez de `Route::redirect`: aquele descarta a QUERY STRING, e era
+    | ela que carregava o recorte -- `tdap/caminhoes?search=ABC` chegava na
+    | frota inteira, justamente no link que alguem tinha guardado por causa do
+    | filtro. Aqui a query vai junto.
     */
-    Route::redirect('/caminhoes', '/tdap/frota', 301);
-    Route::redirect('/caminhoes/{resto}', '/tdap/frota/{resto}', 301)->where('resto', '.*');
-    Route::redirect('/vistorias', '/tdap/frota/vistorias', 301);
-    Route::redirect('/vistorias/{resto}', '/tdap/frota/vistorias/{resto}', 301)->where('resto', '.*');
+    $paraNovoEndereco = function (string $destino) {
+        return function (Request $request) use ($destino) {
+            $query = $request->getQueryString();
+
+            return redirect($destino.($query !== null ? '?'.$query : ''), 301);
+        };
+    };
+
+    Route::any('/caminhoes', $paraNovoEndereco('/tdap/frota'));
+    Route::any('/vistorias', $paraNovoEndereco('/tdap/frota/vistorias'));
+
+    Route::any('/caminhoes/{resto}', function (Request $request, string $resto) {
+        $query = $request->getQueryString();
+
+        return redirect('/tdap/frota/'.$resto.($query !== null ? '?'.$query : ''), 301);
+    })->where('resto', '.*');
+
+    Route::any('/vistorias/{resto}', function (Request $request, string $resto) {
+        $query = $request->getQueryString();
+
+        return redirect('/tdap/frota/vistorias/'.$resto.($query !== null ? '?'.$query : ''), 301);
+    })->where('resto', '.*');
 
     /* Atas (Fase 2) */
     Route::prefix('atas')->name('atas.')->group(function () {

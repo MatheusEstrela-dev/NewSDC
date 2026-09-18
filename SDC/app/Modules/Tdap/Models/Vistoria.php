@@ -156,23 +156,15 @@ class Vistoria extends Model
             ->whereDate('data', '>=', VigenciaVistoria::dataLimite()->toDateString());
     }
 
-    /**
-     * Vistorias que cobrem a data de referencia (e nao so hoje).
-     *
-     * Contrapartida SQL de Vistoria::cobre(): quem precisa filtrar no banco --
-     * o guard de ativacao carrega a relacao, mas relatorio e listagem filtram
-     * na query -- usa esta, com a mesma borda do accessor.
+    /*
+     * `scopeCobrindo` vivia aqui como contrapartida SQL de `cobre()`, sem
+     * nenhum consumidor desde que nasceu e sem teste. Saiu: scope que ninguem
+     * chama nao tem como estar certo -- este, por exemplo, atravessou a
+     * correcao da borda bissexta de dataLimite() sem que ninguem notasse que
+     * ele tambem dependia dela. Quando um relatorio precisar filtrar no banco
+     * por "cobre a data X", o par `cobre()` + `VigenciaVistoria::dataLimite()`
+     * esta logo acima, e dessa vez nasce com chamador e com teste.
      */
-    public function scopeCobrindo(Builder $query, mixed $referencia): Builder
-    {
-        $limite = VigenciaVistoria::dataLimite(
-            $referencia instanceof \Carbon\Carbon ? $referencia : \Carbon\Carbon::parse((string) $referencia),
-        );
-
-        return $query
-            ->where('parecer', ParecerVistoria::Aprovada->value)
-            ->whereDate('data', '>=', $limite->toDateString());
-    }
 
     public function scopeDoCaminhao(Builder $query, int $caminhaoId): Builder
     {

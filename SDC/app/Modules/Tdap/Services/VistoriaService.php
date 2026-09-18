@@ -10,6 +10,7 @@ use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Support\VigenciaVistoria;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -66,7 +67,7 @@ class VistoriaService
             'Edital'       => $v->edital,
             'Ficha'        => $v->ficha,
             'Lacre'        => $v->lacre,
-            'Parecer'      => $v->parecer?->label() ?? (string) $v->parecer?->value,
+            'Parecer'      => $v->parecer?->label(),
             'Vigente'      => $v->esta_vigente ? 'Sim' : 'Nao',
             'Validade'     => VigenciaVistoria::validoAte($v->data)?->format('d/m/Y'),
             'Capacidade (m3)' => number_format((float) $v->capacidade, 2, ',', '.'),
@@ -104,11 +105,79 @@ class VistoriaService
         });
     }
 
+    /**
+     * Guard de integridade: vistoria que sustenta cronograma ATIVO nao sai.
+     *
+     * Mesmo motivo do guard de FrotaService::deletar -- a FK
+     * `restrictOnDelete` de tdap_vistorias nunca dispara, porque o delete daqui
+     * e soft. So que o dano e outro: nao e um vinculo apontando para registro
+     * invisivel, e um caminhao que perde a aptidao no meio de um cronograma em
+     * execucao. `podeAtivar` recusaria ATIVAR de novo, mas o cronograma que ja
+     * esta rodando continua com o veiculo que o guard reprovaria hoje -- e
+     * ninguem e avisado, porque excluir a vistoria nao tocava em nada.
+     *
+     * Rascunho NAO bloqueia: ali a ativacao ainda vai passar pelo guard e
+     * recusar com mensagem propria. Encerrado tambem nao: e registro historico.
+     *
+     * @throws \DomainException quando a vistoria sustenta cronograma ativo
+     */
     public function deletar(int $id): bool
     {
-        $vistoria = Vistoria::findOrFail($id);
+        return DB::transaction(function () use ($id): bool {
+            $vistoria = Vistoria::query()->with('caminhao:id,placa')->findOrFail($id);
 
-        return (bool) $vistoria->delete();
+            $cronogramas = $this->cronogramasAtivosQueDependemDe($vistoria);
+
+            if ($cronogramas->isNotEmpty()) {
+                throw new \DomainException(sprintf(
+                    'Esta e a vistoria aprovada mais recente do caminhao %s, que esta em execucao no(s) cronograma(s) %s. '
+                    .'Registre a vistoria nova antes de excluir esta.',
+                    $vistoria->caminhao?->placa ?? "id={$vistoria->placa_id}",
+                    $cronogramas->implode(', '),
+                ));
+            }
+
+            return (bool) $vistoria->delete();
+        });
+    }
+
+    /**
+     * Cronogramas ativos que dependem DESTA vistoria.
+     *
+     * So a aprovada mais recente do caminhao sustenta alguem: e ela que
+     * CronogramaService::caminhoesSemVistoriaAte consulta (via
+     * `ultimaVistoriaAprovada`). Excluir uma vistoria antiga, ou uma reprovada,
+     * nao muda a cobertura de ninguem -- e bloquear isso seria travar a
+     * limpeza de cadastro sem ganho nenhum.
+     *
+     * @return \Illuminate\Support\Collection<int, string>
+     */
+    private function cronogramasAtivosQueDependemDe(Vistoria $vistoria): Collection
+    {
+        if ($vistoria->parecer !== ParecerVistoria::Aprovada) {
+            return collect();
+        }
+
+        $maisRecenteAprovada = Vistoria::query()
+            ->where('placa_id', $vistoria->placa_id)
+            ->where('parecer', ParecerVistoria::Aprovada->value)
+            ->orderByDesc('data')
+            ->orderByDesc('id')
+            ->value('id');
+
+        if ($maisRecenteAprovada !== $vistoria->id) {
+            return collect();
+        }
+
+        return DB::table('tdap_crono_caminhoes as cc')
+            ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
+            ->where('cc.caminhao_id', $vistoria->placa_id)
+            ->whereNull('cc.deleted_at')
+            ->whereNull('c.deleted_at')
+            ->where('c.ativo', true)
+            ->whereNull('c.encerrado_em')
+            ->distinct()
+            ->pluck('c.numero');
     }
 
     /**

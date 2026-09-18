@@ -101,10 +101,29 @@ final class VigenciaVistoria
      * Existe para o SQL: scopeVigente e Caminhao::vistoriaVigente filtram com
      * `whereDate('data', '>=', ...)` e precisam da MESMA borda que o accessor,
      * senao voltamos ao bug de um dia que originou esta classe.
+     *
+     * `hoje - 12 meses` quase sempre e essa borda, mas NAO no dia 29/02:
+     * `subMonthsNoOverflow` fecha 29/02/2024 em 28/02/2023, e
+     * `validoAte(28/02/2023)` e 28/02/2024 -- um dia ANTES de hoje. O SQL
+     * aceitava uma vistoria que o accessor ja dava por vencida, e era o SQL que
+     * o guard de ativacao do cronograma consultava: a mesma classe de bug que
+     * esta classe nasceu para matar, sobrevivendo num dia a cada quatro anos.
+     *
+     * Por isso a borda e verificada contra o proprio `cobre()` e empurrada ate
+     * ficar coberta. O laco anda no maximo um dia (a aritmetica NoOverflow so
+     * erra o arredondamento de fim de mes) e o resultado continua sendo uma
+     * data fixa, do lado esquerdo de um `>=` -- o indice segue servindo.
      */
     public static function dataLimite(?Carbon $hoje = null): Carbon
     {
-        return self::hoje($hoje)->subMonthsNoOverflow(self::VIGENCIA_MESES);
+        $hoje = self::hoje($hoje);
+        $limite = $hoje->copy()->subMonthsNoOverflow(self::VIGENCIA_MESES);
+
+        while (! self::cobre($limite, $hoje)) {
+            $limite->addDay();
+        }
+
+        return $limite;
     }
 
     /**

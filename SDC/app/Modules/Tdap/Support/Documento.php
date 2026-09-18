@@ -77,6 +77,29 @@ final class Documento
         return substr($digitos, 0, 5).'-'.substr($digitos, 5);
     }
 
+    /**
+     * Placa sem separador e em maiuscula: `BWA-6I04` vira `BWA6I04`.
+     *
+     * A normalizacao estava escrita em AbstractCaminhaoRequest e o
+     * `mb_strtoupper` sozinho, de novo, no CaminhaoDTO -- quem montasse o DTO
+     * fora do formulario (seeder, import, comando) gravava a placa com o hifen,
+     * que e exatamente o formato de 131 das 132 linhas legadas hoje no banco.
+     *
+     * Vale para os dois padroes, o antigo (AAA1111) e o Mercosul (AAA1A11): os
+     * dois tem 7 caracteres alfanumericos, e o que varia entre as bases e so o
+     * separador.
+     */
+    public static function placa(?string $valor): ?string
+    {
+        if ($valor === null) {
+            return null;
+        }
+
+        $placa = mb_strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $valor) ?? '');
+
+        return $placa === '' ? null : $placa;
+    }
+
     /** Extrai apenas os digitos; string vazia vira null. */
     public static function digitos(?string $valor): ?string
     {
