@@ -263,7 +263,10 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
-import { applyCpfMask } from '@/Utils/cpfMask';
+// '@/utils' em minusculo: e assim que o diretorio esta versionado e e a
+// convencao do projeto. No Windows '@/Utils' resolve igual e passa batido;
+// no container Linux o build quebra com ENOENT.
+import { applyCpfMask } from '@/utils/cpfMask';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });

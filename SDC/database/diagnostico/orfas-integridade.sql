@@ -33,10 +33,20 @@
 SELECT count(*) AS fks_existentes FROM pg_constraint WHERE contype = 'f';
 
 \echo ''
-\echo '=== 2. AS 6 FKs QUE FALTAM EM HOMOLOGACAO: existem aqui? ==='
+\echo '=== 2. AS 6 FKs: existem, E ESTAO SENDO CUMPRIDAS? ==='
+\echo '    ATENCAO: "presente" NAO significa "cumprida". Uma constraint pode estar'
+\echo '    marcada convalidated=true, bloquear escrita nova, e ainda assim ter linhas'
+\echo '    que a violam -- e o que acontece quando dados entram com os gatilhos'
+\echo '    desligados (session_replication_role=replica, ou pg_restore'
+\echo '    --disable-triggers). O Postgres nao revalida o que ja esta gravado.'
+\echo '    Cruze esta secao com a secao 3: constraint presente + orfas > 0 e o'
+\echo '    caso mais perigoso, porque o banco reporta integridade que nao tem.'
 SELECT
     esperada.conname AS foreign_key,
-    CASE WHEN c.oid IS NULL THEN 'AUSENTE' ELSE 'presente' END AS situacao
+    CASE WHEN c.oid IS NULL THEN 'AUSENTE' ELSE 'presente' END AS situacao,
+    CASE WHEN c.oid IS NULL THEN '-'
+         WHEN c.convalidated THEN 'marcada validada'
+         ELSE 'NOT VALID' END AS validacao
 FROM (VALUES
     ('tdap_lotes_municipio_id_foreign'),
     ('tdap_crono_caminhoes_cronograma_id_foreign'),
@@ -47,6 +57,38 @@ FROM (VALUES
 ) AS esperada(conname)
 LEFT JOIN pg_constraint c ON c.conname = esperada.conname AND c.contype = 'f'
 ORDER BY 2 DESC, 1;
+
+\echo ''
+\echo '=== 2b. VEREDITO: o banco esta mentindo sobre a propria integridade? ==='
+\echo '    Se vier > 0, ha constraint que o Postgres considera validada e que os'
+\echo '    dados violam. Qualquer auditoria que olhe so pg_constraint conclui que'
+\echo '    esta tudo certo -- e nao esta.'
+SELECT sum(x.orfas) AS linhas_violando_constraint_marcada_validada
+FROM (
+    SELECT count(*) AS orfas FROM tdap_lotes l LEFT JOIN municipios m ON m.id = l.municipio_id
+     WHERE l.municipio_id IS NOT NULL AND m.id IS NULL
+       AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tdap_lotes_municipio_id_foreign' AND convalidated)
+    UNION ALL
+    SELECT count(*) FROM tdap_crono_caminhoes c LEFT JOIN tdap_cronogramas p ON p.id = c.cronograma_id
+     WHERE c.cronograma_id IS NOT NULL AND p.id IS NULL
+       AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tdap_crono_caminhoes_cronograma_id_foreign' AND convalidated)
+    UNION ALL
+    SELECT count(*) FROM tdap_crono_viagens v LEFT JOIN tdap_crono_caminhoes p ON p.id = v.crono_caminhao_id
+     WHERE v.crono_caminhao_id IS NOT NULL AND p.id IS NULL
+       AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tdap_crono_viagens_crono_caminhao_id_foreign' AND convalidated)
+    UNION ALL
+    SELECT count(*) FROM tdap_cronogramas c LEFT JOIN pip_pmda_ponto p ON p.id = c.ponto_captacao_id
+     WHERE c.ponto_captacao_id IS NOT NULL AND p.id IS NULL
+       AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tdap_cronogramas_ponto_captacao_id_foreign' AND convalidated)
+    UNION ALL
+    SELECT count(*) FROM dec_decreto_municipios d LEFT JOIN dec_entrada_processos p ON p.id = d.entrada_processos_id
+     WHERE d.entrada_processos_id IS NOT NULL AND p.id IS NULL
+       AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dec_decreto_municipios_entrada_processos_id_foreign' AND convalidated)
+    UNION ALL
+    SELECT count(*) FROM dec_entrada_decretos e LEFT JOIN dec_entrada_processos p ON p.id = e.entrada_processos_id
+     WHERE e.entrada_processos_id IS NOT NULL AND p.id IS NULL
+       AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dec_entrada_decretos_entrada_processos_id_foreign' AND convalidated)
+) x;
 
 \echo ''
 \echo '=== 3. CONTAGEM DE ORFAS POR RELACAO ==='
