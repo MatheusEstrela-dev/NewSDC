@@ -23,7 +23,7 @@ class DecretosTools
     public function listar_decretos_municipio(int $municipio_id, string $filtroStatus = ''): string
     {
         try {
-            $query = DB::connection('pgsql_read')
+            $query = DB::connection('pgsql_ai')
                 ->table('dec_entrada_processos as p')
                 ->join('dec_decreto_municipios as m', 'p.id', '=', 'm.entrada_processos_id')
                 ->where('m.municipio_id', $municipio_id)
@@ -80,7 +80,7 @@ class DecretosTools
         }
 
         try {
-            $processo = DB::connection('pgsql_read')
+            $processo = DB::connection('pgsql_ai')
                 ->table('dec_entrada_processos as p')
                 ->whereNull('p.deleted_at')
                 ->where(function ($q) use ($fide, $sei) {
@@ -115,7 +115,7 @@ class DecretosTools
                 ]);
             }
 
-            $municipios = DB::connection('pgsql_read')
+            $municipios = DB::connection('pgsql_ai')
                 ->table('dec_decreto_municipios as dm')
                 ->join('municipios as m', 'dm.municipio_id', '=', 'm.id')
                 ->where('dm.entrada_processos_id', $processo->id)
@@ -183,7 +183,7 @@ class DecretosTools
     public function obter_diagnostico_municipio(string $nome_municipio): string
     {
         try {
-            $municipio = DB::connection('pgsql_read')
+            $municipio = DB::connection('pgsql_ai')
                 ->table('municipios')
                 ->where('nome', 'ilike', "%{$nome_municipio}%")
                 ->where('uf', 'MG')
@@ -194,7 +194,7 @@ class DecretosTools
                 return json_encode(['encontrado' => false, 'municipio' => $nome_municipio]);
             }
 
-            $historico = DB::connection('pgsql_read')
+            $historico = DB::connection('pgsql_ai')
                 ->table('dec_entrada_processos as p')
                 ->join('dec_decreto_municipios as m', 'p.id', '=', 'm.entrada_processos_id')
                 ->where('m.municipio_id', $municipio->id)
@@ -226,7 +226,7 @@ class DecretosTools
                 ];
             })->toArray();
 
-            $totalDecretos = DB::connection('pgsql_read')
+            $totalDecretos = DB::connection('pgsql_ai')
                 ->table('dec_decreto_municipios')
                 ->where('municipio_id', $municipio->id)
                 ->count();
@@ -259,7 +259,7 @@ class DecretosTools
         }
 
         try {
-            $processo = DB::connection('pgsql_read')
+            $processo = DB::connection('pgsql_ai')
                 ->table('dec_entrada_processos as p')
                 ->whereNull('p.deleted_at')
                 ->where('p.n_protocolo_fide', 'ilike', "%{$fide}%")

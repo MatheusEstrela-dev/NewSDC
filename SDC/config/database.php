@@ -258,10 +258,25 @@ return [
             ],
         ],
 
-        // Conexao para workload de IA/embeddings (db_ai container ou schema dedicado).
-        // Aponta para o container Docker em dev; em prod aponta para o mesmo Azure
-        // PG17 (database separada ou schema 'sdc_ai') quando DB_PGSQL_HOST nao for definido.
-        'pgsql_read' => [
+        // Conexao usada pelas ferramentas de IA (core/IA) para consultar o banco
+        // OPERACIONAL -- decretos, processos, municipios. Nao e banco de
+        // embeddings, apesar do sufixo '-ai' no application_name; o sufixo existe
+        // so para separar essas sessoes das do trafego web no pg_stat_activity.
+        //
+        // NAO E REPLICA DE LEITURA. O nome anterior era 'pgsql_read', que
+        // convidava exatamente a esse engano: quem apontasse DB_PGSQL_HOST para um
+        // standby faria as ferramentas de IA lerem com atraso de replicacao, e quem
+        // seguisse o comentario antigo e setasse DB_PGSQL_DATABASE=sdc_ai as faria
+        // consultar um banco onde decreto nenhum existe.
+        //
+        // Com DB_PGSQL_* nao definido -- que e o caso em dev, homologacao e
+        // producao hoje -- ela resolve para o MESMO host e o MESMO banco da
+        // conexao 'pgsql'. As variaveis existem para o dia em que a carga de IA
+        // precisar de instancia propria.
+        //
+        // Split de leitura de verdade nao se faz aqui: seria um bloco
+        // 'read'/'write' dentro da conexao 'pgsql', com 'sticky'.
+        'pgsql_ai' => [
             'driver' => 'pgsql',
             'host' => env('DB_PGSQL_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('DB_PGSQL_PORT', env('DB_PORT', '5432')),
