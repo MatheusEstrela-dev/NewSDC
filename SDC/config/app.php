@@ -29,6 +29,27 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Proxies confiaveis para X-Forwarded-*
+    |--------------------------------------------------------------------------
+    |
+    | Lido pelo App\Http\Middleware\TrustProxies. Precisa viver AQUI e nao num
+    | env() dentro do middleware: com `config:cache` -- que o entrypoint roda no
+    | boot -- o .env deixa de ser carregado em runtime e env() fora de arquivo
+    | de config devolve null. O override simplesmente nao funcionaria, sem erro.
+    |
+    | Padrao: faixas privadas. Requisicao vinda de endereco publico tem o
+    | X-Forwarded-* ignorado. Ajuste para a faixa exata da overlay quando a
+    | souber. Ver o racional completo no middleware.
+    |
+    */
+
+    'trusted_proxies' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('TRUSTED_PROXIES', '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1,::1,fc00::/7'))
+    ))),
+
     'metrics_token' => env('METRICS_TOKEN'),
 
     /*
