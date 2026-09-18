@@ -259,6 +259,28 @@ class SecurityHeaders
             }
         }
 
-        return $origens;
+        // A PROPRIA ORIGEM DA APLICACAO, em ws/wss.
+        //
+        // O bloco acima so cobre o caso em que o Reverb e exposto direto numa
+        // porta propria -- verdade no ambiente de dev, falso em homologacao e em
+        // producao, onde o Caddy faz proxy de /app/* e o websocket sobe pela
+        // mesma porta da pagina. Sem esta parte, o navegador monta a URL certa e
+        // o CSP a bloqueia, com a degradacao silenciosa de sempre: sem socket, o
+        // polling cai de 5min para 30s e ninguem e avisado.
+        //
+        // 'self' nao substitui isto: navegadores divergem sobre se 'self' cobre
+        // ws: quando o documento e http:, e depender dessa ambiguidade e apostar
+        // o tempo real do sistema numa diferenca entre motores.
+        $appUrl = (string) config('app.url');
+
+        if ($appUrl !== '' && ($partes = parse_url($appUrl)) && isset($partes['host'])) {
+            $seguro = ($partes['scheme'] ?? 'http') === 'https';
+            $portaDaApp = $partes['port'] ?? ($seguro ? 443 : 80);
+            $autoridade = $partes['host'].':'.$portaDaApp;
+
+            $origens[] = ($seguro ? 'wss' : 'ws').'://'.$autoridade;
+        }
+
+        return array_values(array_unique($origens));
     }
 }

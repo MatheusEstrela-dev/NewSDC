@@ -73,7 +73,15 @@ let echoPromise = null;
 export const initEcho = () => {
     if (echoPromise) return echoPromise;
 
-    const key = import.meta.env.VITE_REVERB_APP_KEY;
+    // A chave vem PRIMEIRO da meta tag servida pelo Laravel (runtime), e so
+    // depois da VITE_ assada no bundle. A ordem importa: build feito dentro da
+    // imagem Docker nao enxerga o .env, entao a VITE_ fica undefined la -- e era
+    // isso que derrubava o websocket em homologacao e producao sem ninguem ver.
+    // A VITE_ continua valendo para o build do host, que o ambiente de dev monta.
+    const meta = (nome) =>
+        document.querySelector(`meta[name="${nome}"]`)?.content || null;
+
+    const key = meta('reverb-key') || import.meta.env.VITE_REVERB_APP_KEY;
 
     // Sem chave publicada nao ha servidor de websocket para este ambiente.
     if (!key) return Promise.resolve(null);
@@ -88,7 +96,13 @@ export const initEcho = () => {
             window.Pusher = Pusher;
 
             const scheme = import.meta.env.VITE_REVERB_SCHEME ?? window.location.protocol.replace(':', '');
-            const porta = import.meta.env.VITE_REVERB_PORT ?? (scheme === 'https' ? 443 : 8080);
+            // O padrao e a PORTA DA PAGINA, nao 8080: tanto em homologacao
+            // quanto em producao o Caddy faz proxy de /app/* para o Reverb, entao
+            // o websocket sobe pela mesma origem do documento. O 8080 fixo so
+            // vale onde o Reverb e exposto direto, que e o caso do ambiente de
+            // dev -- e la a VITE_REVERB_PORT esta definida e tem precedencia.
+            const portaDaPagina = window.location.port || (scheme === 'https' ? 443 : 80);
+            const porta = import.meta.env.VITE_REVERB_PORT ?? portaDaPagina;
 
             window.Echo = new Echo({
                 broadcaster: 'reverb',
