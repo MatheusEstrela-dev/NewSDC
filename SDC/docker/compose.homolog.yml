@@ -54,7 +54,13 @@ services:
     depends_on:
       - app
     mem_limit: 256m
-    cpus: 0.5
+    # 1.0, nao 0.5. A medicao de 18/09 mostrou o balanceador a 72% de
+    # utilizacao quando o andar de aplicacao estava a 35%: a 0,343 ms/req ele
+    # saturaria em ~1.460 req/s, contra ~3.080 do app. Com 0.5 vCPU a unica
+    # porta de entrada virava o gargalo antes de tudo que ela protege, e um
+    # ensaio de capacidade mediria o teto do proxy achando que media o da
+    # aplicacao.
+    cpus: 1.0
 
   # --------------------------------------------------------------------------
   # Aplicacao. SEM container_name e SEM ports: os dois impedem `--scale`.
@@ -259,7 +265,16 @@ services:
     command:
       - "sh"
       - "-c"
-      - "php artisan queue:work redis --queue=critical,high,auditoria,webhooks,notificacoes,default,low --sleep=1 --tries=3 --max-time=3600 --timeout=120"
+      # notificacoes_urgente ANTES de notificacoes: a ordem da lista e a
+      # prioridade. Ela estava fora do consumo e alerta urgente ficava parado
+      # no Redis para sempre, sem erro e sem aviso -- producao consome
+      # (isolated-workers.conf:38), homologacao nao consumia.
+      #
+      # medalhao NAO entra aqui: ela tem worker proprio abaixo, como em
+      # producao (medalhao-worker.conf). Junta-la a esta lista criaria inversao
+      # de prioridade -- um job de coleta externa lento seguraria o worker por
+      # ate 120s enquanto alerta urgente espera.
+      - "php artisan queue:work redis --queue=critical,high,notificacoes_urgente,auditoria,webhooks,notificacoes,default,low --sleep=1 --tries=3 --max-time=3600 --timeout=120"
     environment:
       APP_NAME: "SDC Homologacao Queue"
       APP_ENV: staging
@@ -300,6 +315,88 @@ services:
     # para o app, errado aqui: este container nao serve HTTP. Sem sobrescrever,
     # ele fica 'unhealthy' para sempre estando perfeitamente vivo, e um estado
     # falso e pior que nenhum: ninguem confia no painel depois.
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      - homolog_storage:/var/www/storage/app
+      - homolog_logs:/var/www/storage/logs
+    networks:
+      - homolog
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
+  # Worker DEDICADO da fila medalhao, espelhando producao
+  # (docker/supervisor/medalhao-worker.conf).
+  #
+  # Por que separado e nao mais um item na lista do worker principal: os jobs
+  # de medalhao sao coletas em APIs externas (INMET, CEMADEN, sismos,
+  # geoespacial) e podem ficar presos ate o timeout. No worker unico isso
+  # seguraria alerta urgente atras de uma requisicao HTTP lenta de terceiro --
+  # inversao de prioridade com consequencia operacional real.
+  #
+  # Ate agora homologacao nao consumia esta fila de forma alguma: os 7
+  # despachos onQueue('medalhao') do codigo entravam no Redis e ficavam la.
+  # --------------------------------------------------------------------------
+  queue_medalhao:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_homolog_queue_medalhao
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+    command:
+      - "sh"
+      - "-c"
+      # timeout maior que o do worker principal: coleta externa e lenta por
+      # natureza, e matar em 120s produziria retentativa em vez de resultado.
+      - "php artisan queue:work redis --queue=medalhao --sleep=3 --tries=2 --max-time=3600 --timeout=300"
+    environment:
+      APP_NAME: "SDC Homologacao Queue"
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD:-sdc}
+      DB_SSLMODE: disable
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PREFIX: sdc_homolog_
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-null}
+      # O worker PRECISA das credenciais do Reverb, nao so o app: quando
+      # BROADCAST_CONNECTION=reverb, o BroadcastManager e construido no boot de
+      # qualquer processo Laravel, inclusive `queue:work`. Sem APP_KEY o Pusher
+      # recebe auth_key nulo e o container morre em loop no boot.
+      #
+      # O buraco existia desde o inicio e so apareceu agora: a imagem anterior
+      # era de 28/08 e o codigo daquela epoca nao montava o broadcaster no boot
+      # de console. Nao e regressao do rebuild -- e um defeito que o rebuild
+      # revelou.
+      REVERB_APP_ID: ${REVERB_APP_ID:-}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
+      MAIL_MAILER: log
+      # Sem o token, config/medalhao.php:53 fica nulo e o InmetApiClient falha
+      # em toda coleta. E o unico servico do homolog que precisa dele -- o app
+      # nao chama a API do INMET, quem chama sao os jobs desta fila.
+      MEDALHAO_INMET_TOKEN: ${MEDALHAO_INMET_TOKEN:-}
+
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
       interval: 30s

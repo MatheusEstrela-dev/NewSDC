@@ -158,6 +158,30 @@ services:
     environment:
       APP_ENV: production
       APP_KEY: ${APP_KEY}
+
+      # O worker PRECISA destas quatro, e a ausencia de cada uma falha calada:
+      #
+      # APP_URL   -- todo link gerado dentro de job ou e-mail sai daqui. Sem
+      #              ela, config/app.php cai em 'http://localhost' e o cidadao
+      #              recebe e-mail com link que nao abre. Quem gera o e-mail e
+      #              ESTE container, nao o app, entao a variavel do app nao
+      #              socorre.
+      # APP_NAME  -- vira o application_name das conexoes no Postgres
+      #              (config/database.php:214). Sem ela as sessoes da fila
+      #              aparecem como 'sdc-laravel' no pg_stat_activity, e fica
+      #              impossivel separar carga de fila de carga de request na
+      #              hora de diagnosticar.
+      # LOG_LEVEL -- config/logging.php usa 'debug' como padrao. A fila de
+      #              producao estava logando em nivel debug: volume desnecessario
+      #              e risco de gravar em log dado que nao deveria sair do
+      #              processo.
+      # LOG_CHANNEL -- para a fila escrever no mesmo destino que o app, em vez
+      #              do 'stack' padrao.
+      APP_NAME: ${APP_NAME:-SDC}
+      APP_URL: ${APP_URL}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+
       DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: "5432"
