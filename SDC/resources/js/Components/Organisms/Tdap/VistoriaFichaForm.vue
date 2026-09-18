@@ -56,7 +56,24 @@
     <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
       <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Caminhão vistoriado</h3>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="md:col-span-2">
+        <!--
+          Caminhao fixo: a vistoria nasce da linha do proprio veiculo na tela de
+          Frota, e a rota e aninhada (tdap/frota/{caminhao}/vistorias). Oferecer
+          um select com a frota inteira convidaria a trocar o veiculo depois de
+          ja ter clicado nele -- e o backend ignoraria a troca, porque `placa_id`
+          vem da URL (ver StoreVistoriaRequest::prepareForValidation).
+        -->
+        <div v-if="caminhaoFixo" class="md:col-span-2">
+          <InputLabel value="Caminhão" />
+          <p class="mt-1 flex items-center rounded-md border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 text-slate-900 dark:text-slate-100">
+            {{ caminhaoFixo.placa }} — {{ caminhaoFixo.marca || '' }} {{ caminhaoFixo.modelo || '' }}
+            <span v-if="caminhaoFixo.prestador?.nome" class="ml-1 text-slate-500 dark:text-slate-400">
+              ({{ caminhaoFixo.prestador.nome }})
+            </span>
+          </p>
+          <InputError :message="form.errors.placa_id" class="mt-2" />
+        </div>
+        <div v-else class="md:col-span-2">
           <InputLabel for="placa_id" value="Caminhão *" />
           <select
             id="placa_id"
@@ -189,6 +206,9 @@ import VistoriaChecklistGroup from '@/Components/Organisms/Tdap/VistoriaChecklis
 const props = defineProps({
   form: { type: Object, required: true },
   caminhoes: { type: Array, default: () => [] },
+  // Quando a vistoria vem de uma rota aninhada, o veiculo ja esta decidido pela
+  // URL e o select da lugar a um bloco de leitura.
+  caminhaoFixo: { type: Object, default: null },
   pareceres: { type: Array, default: () => [] },
   itensEstruturais: { type: Array, default: () => [] },
   itensTanque: { type: Array, default: () => [] },
@@ -198,7 +218,9 @@ const props = defineProps({
 defineEmits(['submit', 'cancel']);
 
 const caminhaoSelecionado = computed(
-  () => props.caminhoes.find(c => Number(c.id) === Number(props.form.placa_id)) ?? null,
+  () => props.caminhaoFixo
+    ?? props.caminhoes.find(c => Number(c.id) === Number(props.form.placa_id))
+    ?? null,
 );
 
 function onCaminhaoChange() {

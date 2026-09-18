@@ -12,6 +12,26 @@ abstract class AbstractCaminhaoRequest extends FormRequest
 {
     abstract protected function placaUniqueRule(): Unique;
 
+    /**
+     * Placa unica DENTRO DO PRESTADOR, casando com o indice do banco.
+     *
+     * A regra era unicidade GLOBAL, mais restritiva que a realidade: um caminhao
+     * que troca de empresa entre contratos aparece legitimamente nos dois
+     * cadastros -- 14 dos 15 casos de placa repetida na base sao exatamente
+     * isso. E, por ser so de aplicacao, nao segurava import, seeder nem duas
+     * requisicoes concorrentes.
+     *
+     * Agora espelha `tdap_caminhoes_placa_por_prestador_unq`
+     * (migration 2026_09_17_100000). Validacao e banco divergirem foi o que fez
+     * o cadastro de Prestador devolver 23505 em vez de mensagem de negocio.
+     */
+    protected function placaUnicaNoPrestador(): Unique
+    {
+        return Rule::unique('tdap_caminhoes', 'placa')
+            ->where('prestador_id', $this->input('prestador_id'))
+            ->whereNull('deleted_at');
+    }
+
     protected function prepareForValidation(): void
     {
         $placa = $this->input('placa');

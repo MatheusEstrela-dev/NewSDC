@@ -4,11 +4,34 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Requests;
 
+use App\Modules\Tdap\Models\Caminhao;
+
 class StoreVistoriaRequest extends AbstractVistoriaRequest
 {
     public function authorize(): bool
     {
         return $this->user()?->can('tdap.vistorias.create') ?? false;
+    }
+
+    /**
+     * O caminhao vem da ROTA, nao do corpo.
+     *
+     * A rota e aninhada (`tdap/frota/{caminhao}/vistorias`), entao `placa_id` e
+     * decidido pela URL. Sobrescrever aqui, em vez de confiar no que o front
+     * mandar, impede que um POST forjado grave a vistoria no caminhao errado --
+     * e e o que faz o pre-preenchimento funcionar de verdade.
+     *
+     * `placa_id` e o nome legado da coluna: guarda o ID do caminhao, nao a placa.
+     */
+    protected function prepareForValidation(): void
+    {
+        $caminhao = $this->route('caminhao');
+
+        if ($caminhao !== null) {
+            $this->merge([
+                'placa_id' => $caminhao instanceof Caminhao ? $caminhao->id : (int) $caminhao,
+            ]);
+        }
     }
 
     /**

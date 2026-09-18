@@ -46,7 +46,7 @@
             <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Caminhões-tanque</h3>
             <Link
               v-if="canEdit"
-              :href="route('tdap.caminhoes.create', { prestador_id: p.id })"
+              :href="route('tdap.frota.create', { prestador_id: p.id })"
               class="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400"
             >
               + Cadastrar caminhão
@@ -56,7 +56,7 @@
           <ul v-if="caminhoes.length" class="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
             <li v-for="caminhao in caminhoes" :key="caminhao.id" class="flex items-center justify-between gap-3 py-2">
               <Link
-                :href="route('tdap.caminhoes.show', caminhao.id)"
+                :href="route('tdap.frota.show', caminhao.id)"
                 class="font-mono font-semibold text-slate-900 hover:text-blue-600 dark:text-slate-100"
               >
                 {{ caminhao.placa }}
@@ -96,7 +96,7 @@
           <p class="text-3xl font-semibold text-slate-900 dark:text-slate-100 mt-1">{{ totalCaminhoes }}</p>
           <Link
             v-if="temCaminhoes"
-            :href="route('tdap.caminhoes.index', { prestador_id: p.id })"
+            :href="route('tdap.frota.index', { prestador_id: p.id })"
             class="text-sm text-blue-600 hover:text-blue-800 mt-2 inline-block"
           >
             Ver caminhões

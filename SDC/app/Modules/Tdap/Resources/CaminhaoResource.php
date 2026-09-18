@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Resources;
 
+use App\Modules\Tdap\Support\Documento;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +24,8 @@ class CaminhaoResource extends JsonResource
             'prestador'     => $this->whenLoaded('prestador', fn () => [
                 'id'    => $this->prestador->id,
                 'nome'  => $this->prestador->nome,
-                'cnpj'  => $this->prestador->cnpj,
+                // Mascarado na saida: a coluna guarda somente digitos.
+                'cnpj'  => Documento::cnpj($this->prestador->cnpj),
                 'email' => $this->prestador->email ?? null,
             ]),
             'placa'         => $this->placa,

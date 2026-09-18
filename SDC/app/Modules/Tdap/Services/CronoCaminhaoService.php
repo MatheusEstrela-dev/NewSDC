@@ -15,11 +15,42 @@ use Illuminate\Support\Facades\DB;
 
 class CronoCaminhaoService
 {
+    /**
+     * Colunas QUALIFICADAS: `ultimaVistoriaAprovada` usa latestOfMany, que monta
+     * um self-join sobre tdap_vistorias, e `placa_id` cru fica ambiguo entre as
+     * duas pontas -- o Postgres recusa a consulta. Mesmo motivo documentado em
+     * FrotaService::consultaDaFrota.
+     *
+     * @var array<int, string>
+     */
+    private const COLUNAS_DA_VISTORIA = [
+        'tdap_vistorias.id', 'tdap_vistorias.placa_id',
+        'tdap_vistorias.data', 'tdap_vistorias.parecer',
+    ];
+
+    /**
+     * Vinculos da listagem.
+     *
+     * `cronograma` e `caminhao.ultimaVistoriaAprovada` entram porque
+     * CronoCaminhaoResource sinaliza a vistoria que vence antes do fim do
+     * cronograma; sem eles cada linha dispara duas consultas.
+     *
+     * @return array<string, mixed>
+     */
+    private function vinculosDaListagem(): array
+    {
+        return [
+            'cronograma:id,numero,dt_inicio,dt_final,dt_inicio_prorrogacao,dt_final_prorrogacao',
+            'caminhao:id,placa,marca,modelo,capacidade_m3,ativo',
+            'caminhao.ultimaVistoriaAprovada' => fn ($q) => $q->select(self::COLUNAS_DA_VISTORIA),
+        ];
+    }
+
     public function listarDoCronograma(int $cronogramaId): Collection
     {
         return CronoCaminhao::query()
             ->doCronograma($cronogramaId)
-            ->with(['caminhao:id,placa,marca,modelo,capacidade_m3,ativo'])
+            ->with($this->vinculosDaListagem())
             ->withCount(['viagensValidadas', 'viagensPendentes'])
             ->orderBy('ordem')
             ->get();
@@ -28,7 +59,7 @@ class CronoCaminhaoService
     public function obter(int $id): CronoCaminhao
     {
         return CronoCaminhao::query()
-            ->with(['cronograma:id,numero', 'caminhao:id,placa,marca,modelo,capacidade_m3'])
+            ->with($this->vinculosDaListagem())
             ->withCount(['viagensValidadas', 'viagensPendentes'])
             ->findOrFail($id);
     }
@@ -45,6 +76,32 @@ class CronoCaminhaoService
             $caminhao = Caminhao::findOrFail($dto->caminhao_id);
             if (! $caminhao->ativo) {
                 throw new \DomainException("Caminhao {$caminhao->placa} esta inativo.");
+            }
+
+            /*
+             * O caminhao tem que ser da empresa contratada no cronograma.
+             *
+             * Nao havia nada garantindo isso: `tdap_caminhoes.prestador_id` e
+             * `tdap_cronogramas.prestador_id` sao independentes, e o
+             * StoreCronoCaminhaoRequest so valida `exists`. Dava para alocar
+             * caminhao de outra empresa e pagar a errada -- o valor da viagem sai
+             * de `lote.valor_m3` do cronograma, nao do cadastro do veiculo.
+             *
+             * Verificado antes de ligar: 2 alocacoes em 1.276 violavam a regra, e
+             * as duas eram o mesmo caso (um caminhao alocado em duplicidade num
+             * cronograma de outro prestador). A regra entra sem exigir saneamento
+             * em massa -- alocacoes ja gravadas nao sao revalidadas.
+             */
+            if ($cronograma->prestador_id !== null && $caminhao->prestador_id !== $cronograma->prestador_id) {
+                $cronograma->loadMissing('prestador:id,nome');
+                $caminhao->loadMissing('prestador:id,nome');
+
+                throw new \DomainException(sprintf(
+                    'Caminhao %s pertence a %s, mas o cronograma e de %s. Aloque um caminhao da empresa contratada.',
+                    $caminhao->placa,
+                    $caminhao->prestador?->nome ?? "prestador id={$caminhao->prestador_id}",
+                    $cronograma->prestador?->nome ?? "prestador id={$cronograma->prestador_id}",
+                ));
             }
 
             $jaAlocado = CronoCaminhao::query()

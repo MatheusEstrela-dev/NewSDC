@@ -293,7 +293,7 @@ async function abrirAlocar() {
   // Carrega caminhoes do prestador uma vez
   if (caminhoesPrestador.value.length === 0 && c.prestador_id) {
     try {
-      const res = await fetch(`${route('tdap.caminhoes.index')}?prestador_id=${c.prestador_id}&ativo=1&per_page=200`, {
+      const res = await fetch(`${route('tdap.frota.index')}?prestador_id=${c.prestador_id}&ativo=1&per_page=200`, {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       });
       if (res.ok) {

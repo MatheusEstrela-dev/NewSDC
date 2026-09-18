@@ -1,10 +1,12 @@
 <template>
   <FilterSection title="Filtros de Pesquisa" :columns="4" :default-collapsed="true" class="mb-6">
+    <!-- A busca passou a cobrir tambem nome e CNPJ do prestador: quem cobra a
+         operacao chega com a nota ou o oficio na mao, nao com a placa. -->
     <FilterField
       label="Busca"
       type="search"
       :model-value="localFilters.search || ''"
-      placeholder="Placa, marca ou modelo"
+      placeholder="Placa, marca, modelo, prestador ou CNPJ"
       @update:model-value="updateFilter('search', $event)"
     />
 
@@ -15,6 +17,18 @@
       :options="prestadorOptions"
       placeholder="Todos"
       @update:model-value="updateFilter('prestador_id', $event)"
+    />
+
+    <!-- Filtro exato por CNPJ, ao lado do select por nome: sao dois caminhos
+         ate a mesma empresa, e quem tem o documento em maos nao precisa
+         descobrir sob que nome ela foi cadastrada. Aceita com e sem mascara --
+         o scope normaliza via Documento::digitos. -->
+    <FilterField
+      label="CNPJ do prestador"
+      type="search"
+      :model-value="localFilters.prestador_cnpj || ''"
+      placeholder="Com ou sem máscara"
+      @update:model-value="updateFilter('prestador_cnpj', $event)"
     />
 
     <FilterField
@@ -106,7 +120,9 @@ function cleanFilters(filters) {
 function updateFilter(key, value) {
   localFilters.value = { ...localFilters.value, [key]: value };
 
-  if (key === 'search') {
+  // Campos digitados esperam a pessoa parar de digitar; os selects aplicam na
+  // hora. Sem o debounce o CNPJ dispararia 14 requisicoes ate ficar completo.
+  if (key === 'search' || key === 'prestador_cnpj') {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(apply, 350);
     return;

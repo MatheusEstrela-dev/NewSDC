@@ -93,7 +93,7 @@
 
                   <Link
                     v-if="podeVerVistoria"
-                    :href="route('tdap.vistorias.show', vistoria.id)"
+                    :href="route('tdap.frota.vistorias.show', vistoria.id)"
                     class="modal-serie-elo shrink-0 rounded-lg px-3 py-1 text-xs font-semibold transition"
                   >
                     Abrir ficha
@@ -223,7 +223,7 @@ watch(
       let url;
 
       try {
-        url = route('tdap.caminhoes.vistorias', id);
+        url = route('tdap.frota.vistorias.do-caminhao', id);
       } catch {
         erro.value = 'Esta tela está desatualizada. Recarregue a página (Ctrl+Shift+R) e tente de novo.';
         return;

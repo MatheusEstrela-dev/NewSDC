@@ -38,6 +38,35 @@ class CronoCaminhaoResource extends JsonResource
             ]),
             'viagens_validadas_count' => (int) ($this->viagens_validadas_count ?? 0),
             'viagens_pendentes_count' => (int) ($this->viagens_pendentes_count ?? 0),
+            'vistoria_vence_durante_o_cronograma' => $this->vistoriaVenceNoMeio(),
+            'vistoria_valida_ate' => $this->vistoriaValidaAte()?->toDateString(),
         ];
+    }
+
+    /**
+     * A vistoria do caminhao vence antes do fim do cronograma?
+     *
+     * SINALIZACAO, e nao bloqueio. O guard de
+     * CronogramaService::caminhoesSemVistoriaAte ja impede ATIVAR um cronograma
+     * assim, mas ele so roda na ativacao: cronograma ja ativo cuja vistoria
+     * vence no meio do caminho passaria despercebido. Medido na base ao ligar a
+     * regra: 14 dos 79 cronogramas ativos estavam nessa situacao.
+     */
+    private function vistoriaVenceNoMeio(): bool
+    {
+        $fim = $this->cronograma?->dt_final_efetiva;
+        $validoAte = $this->vistoriaValidaAte();
+
+        if ($fim === null || $validoAte === null) {
+            return false;
+        }
+
+        return $validoAte->lessThan($fim->copy()->startOfDay());
+    }
+
+    /** Ultimo dia coberto pela vistoria aprovada mais recente do caminhao. */
+    private function vistoriaValidaAte(): ?\Carbon\Carbon
+    {
+        return $this->caminhao?->ultimaVistoriaAprovada?->valido_ate;
     }
 }

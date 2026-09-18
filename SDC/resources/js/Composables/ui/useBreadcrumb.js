@@ -346,7 +346,7 @@ export function useBreadcrumb() {
 
         // Pai de cada recurso: e ele que o Voltar encontra primeiro.
         const prestadores = { label: 'Prestadores', route: 'tdap.prestadores.index' };
-        const frota = { label: 'Frota e Vistorias', route: 'tdap.caminhoes.index' };
+        const frota = { label: 'Frota e Vistorias', route: 'tdap.frota.index' };
         const atas = { label: 'Atas', route: 'tdap.atas.index' };
         const lotes = { label: 'Lotes', route: 'tdap.lotes.index' };
         const cronogramas = { label: 'Cronogramas', route: 'tdap.cronogramas.index' };
@@ -374,24 +374,30 @@ export function useBreadcrumb() {
             'Tdap/Prestadores/Show': [inicio, tdap, prestadores, aqui(rotulo(prestador?.nome, 'Visualizar'))],
             'Tdap/Prestadores/Edit': [inicio, tdap, prestadores, aqui(`Editar ${rotulo(prestador?.nome, 'prestador')}`)],
 
-            // "Caminhoes" continua sendo o caminho do componente, mas a tela
-            // virou a juncao com vistorias: a trilha segue o nome da tela.
-            'Tdap/Caminhoes/Index': [inicio, tdap, aqui('Frota e Vistorias')],
-            'Tdap/Caminhoes/Create': [inicio, tdap, frota, aqui('Novo caminhão')],
-            'Tdap/Caminhoes/Show': [inicio, tdap, frota, aqui(rotulo(caminhao?.placa, 'Visualizar'))],
-            'Tdap/Caminhoes/Edit': [inicio, tdap, frota, aqui(`Editar ${rotulo(caminhao?.placa, 'caminhão')}`)],
+            // O caminho do componente agora e o mesmo da tela: Frota.
+            'Tdap/Frota/Index': [inicio, tdap, aqui('Frota e Vistorias')],
+            'Tdap/Frota/Create': [inicio, tdap, frota, aqui('Novo caminhão')],
+            'Tdap/Frota/Show': [inicio, tdap, frota, aqui(rotulo(caminhao?.placa, 'Visualizar'))],
+            'Tdap/Frota/Edit': [inicio, tdap, frota, aqui(`Editar ${rotulo(caminhao?.placa, 'caminhão')}`)],
 
             // Vistoria pertence a um caminhao, e o caminhao mora na frota: a
             // trilha passa por ela, nao pelo historico.
-            'Tdap/Vistorias/Index': [inicio, tdap, frota, aqui('Histórico de vistorias')],
-            'Tdap/Vistorias/Create': [inicio, tdap, frota, aqui('Nova vistoria')],
-            'Tdap/Vistorias/Show': [
+            'Tdap/Frota/Vistorias/Index': [inicio, tdap, frota, aqui('Histórico de vistorias')],
+            // A vistoria nasce de um caminhao: com a rota aninhada, a placa
+            // sempre chega na prop `caminhao` e a trilha pode nomea-la.
+            'Tdap/Frota/Vistorias/Create': [
+                inicio,
+                tdap,
+                frota,
+                aqui(`Nova vistoria ${rotulo(caminhao?.placa, '')}`.trim()),
+            ],
+            'Tdap/Frota/Vistorias/Show': [
                 inicio,
                 tdap,
                 frota,
                 aqui(`Vistoria ${rotulo(vistoria?.caminhao?.placa, '')}`.trim()),
             ],
-            'Tdap/Vistorias/Edit': [
+            'Tdap/Frota/Vistorias/Edit': [
                 inicio,
                 tdap,
                 frota,

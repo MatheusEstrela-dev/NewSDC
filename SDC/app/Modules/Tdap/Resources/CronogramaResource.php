@@ -62,6 +62,8 @@ class CronogramaResource extends JsonResource
                 'dt_inicio' => $this->ata->dt_inicio?->toDateString(),
                 'dt_final'  => $this->ata->dt_final?->toDateString(),
             ]),
+            // Ver Cronograma::getForaDaVigenciaDaAtaAttribute: sinalizacao, nao bloqueio.
+            'fora_da_vigencia_da_ata' => $this->whenLoaded('ata', fn () => $this->fora_da_vigencia_da_ata),
             'lote_id'        => $this->lote_id,
             'lote'           => $this->whenLoaded('lote', fn () => [
                 'id'     => $this->lote->id,

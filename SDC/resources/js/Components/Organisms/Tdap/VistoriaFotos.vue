@@ -108,7 +108,7 @@ const erro = ref('');
 const cameraVisivel = ref(false);
 
 // O disco 'tdap' e privado: a miniatura vem por rota, nao por URL de storage.
-const urlDaFoto = (foto) => route('tdap.vistorias.fotos.show', [props.vistoriaId, foto.id]);
+const urlDaFoto = (foto) => route('tdap.frota.vistorias.fotos.show', [props.vistoriaId, foto.id]);
 
 /**
  * Recarrega SO a prop `fotos`. A grade se atualiza sem recarregar a tela
@@ -128,7 +128,7 @@ const enviar = (arquivos) => {
   enviando.value = true;
 
   router.post(
-    route('tdap.vistorias.fotos.store', props.vistoriaId),
+    route('tdap.frota.vistorias.fotos.store', props.vistoriaId),
     { fotos: lista },
     {
       forceFormData: true,
@@ -150,7 +150,7 @@ const remover = (foto) => {
     return;
   }
 
-  router.delete(route('tdap.vistorias.fotos.destroy', [props.vistoriaId, foto.id]), {
+  router.delete(route('tdap.frota.vistorias.fotos.destroy', [props.vistoriaId, foto.id]), {
     preserveScroll: true,
     preserveState: true,
     onSuccess: () => recarregarFotos(),

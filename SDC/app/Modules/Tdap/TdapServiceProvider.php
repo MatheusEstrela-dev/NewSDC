@@ -18,7 +18,7 @@ use App\Modules\Tdap\Observers\CronoViagemObserver;
 use App\Modules\Tdap\Observers\PrestadorObserver;
 use App\Modules\Tdap\Observers\VistoriaObserver;
 use App\Modules\Tdap\Services\AtaService;
-use App\Modules\Tdap\Services\CaminhaoService;
+use App\Modules\Tdap\Services\FrotaService;
 use App\Modules\Tdap\Services\CronoCaminhaoService;
 use App\Modules\Tdap\Services\CronogramaService;
 use App\Modules\Tdap\Services\CronoViagemService;
@@ -46,7 +46,7 @@ class TdapServiceProvider extends ServiceProvider
     {
         // Cadastros base (Fase 1)
         $this->app->singleton(PrestadorService::class);
-        $this->app->singleton(CaminhaoService::class);
+        $this->app->singleton(FrotaService::class);
 
         // Instrumentos contratuais (Fase 2)
         $this->app->singleton(AtaService::class);

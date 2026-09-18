@@ -70,8 +70,8 @@ const form = useForm(base);
 // Devolve o nome `data` na requisicao: o contrato do backend nao muda.
 form.transform(({ data_vistoria: dataVistoria, ...resto }) => ({ ...resto, data: dataVistoria }));
 
-function submit() { form.put(route('tdap.vistorias.update', v.id)); }
-function cancelar() { router.visit(route('tdap.vistorias.show', v.id)); }
+function submit() { form.put(route('tdap.frota.vistorias.update', v.id)); }
+function cancelar() { router.visit(route('tdap.frota.vistorias.show', v.id)); }
 
 // Datas vem como 'YYYY-MM-DD' (date puro). `new Date('2026-05-01')` e lido como
 // meia-noite UTC e, no fuso do Brasil, exibia o dia anterior.

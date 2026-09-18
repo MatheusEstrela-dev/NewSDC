@@ -9,13 +9,22 @@
       :espaco-inferior="false"
     >
       <template #actions>
-        <ActionButton action="view" :allowed="true" variant="secondary" label="Frota e Vistorias" @click="router.visit(route('tdap.caminhoes.index'))" />
+        <ActionButton action="view" :allowed="true" variant="secondary" label="Frota e Vistorias" @click="router.visit(route('tdap.frota.index'))" />
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
-        <Link v-if="canCreate" :href="route('tdap.vistorias.create')">
-          <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-            <span>Nova Vistoria</span>
-          </Button>
-        </Link>
+        <!-- Abre o seletor de caminhao, e nao a rota direto: `vistorias.create`
+             exige o caminhao no caminho (`frota/{caminhao}/vistorias/nova`).
+             Sem o parametro, o `route()` do Ziggy LANCA na renderizacao -- esta
+             tela ficava em branco para quem tem permissao de criar vistoria. -->
+        <Button
+          v-if="canCreate"
+          variant="primary"
+          size="md"
+          :icon="PlusIcon"
+          icon-position="left"
+          @click="seletorDeVistoriaAberto = true"
+        >
+          <span>Nova Vistoria</span>
+        </Button>
       </template>
     </PageHeader>
 
@@ -89,7 +98,7 @@
                   <tr v-for="v in vistorias.data" :key="v.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                     <td class="px-4 py-3">{{ fmtDate(v.data) }}</td>
                     <td class="px-4 py-3">
-                      <Link :href="route('tdap.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
+                      <Link :href="route('tdap.frota.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
                       <p v-if="v.caminhao_modelo" class="text-xs text-slate-500">{{ v.caminhao_modelo }}</p>
                     </td>
                     <td class="px-4 py-3">
@@ -117,15 +126,17 @@
                     </td>
                     <td class="px-4 py-3">
                       <div class="flex items-center justify-end gap-1">
+                        <!-- Sem `:allowed`: com module+resource declarados, quem
+                             decide e `tdap.vistorias.view`. Um `:allowed="true"`
+                             aqui e ignorado, e so faz parecer que ha um gate. -->
                         <ActionButton
                           action="view"
                           module="tdap"
                           resource="vistorias"
-                          :allowed="true"
                           :show-label="false"
                           size="sm"
                           tooltip-text="Visualizar vistoria"
-                          @click="router.visit(route('tdap.vistorias.show', v.id))"
+                          @click="router.visit(route('tdap.frota.vistorias.show', v.id))"
                         />
                         <ActionButton
                           action="edit"
@@ -135,7 +146,7 @@
                           :show-label="false"
                           size="sm"
                           tooltip-text="Editar vistoria"
-                          @click="router.visit(route('tdap.vistorias.edit', v.id))"
+                          @click="router.visit(route('tdap.frota.vistorias.edit', v.id))"
                         />
                       </div>
                     </td>
@@ -148,7 +159,7 @@
       </template>
 
       <template #mobile-c1="{ item: v }">
-        <Link :href="route('tdap.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
+        <Link :href="route('tdap.frota.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
         <p v-if="v.caminhao_modelo" class="text-xs text-slate-500">{{ v.caminhao_modelo }}</p>
       </template>
 
@@ -182,11 +193,10 @@
         action="view"
         module="tdap"
         resource="vistorias"
-        :allowed="true"
         :show-label="false"
         size="sm"
         tooltip-text="Visualizar vistoria"
-        @click="router.visit(route('tdap.vistorias.show', v.id))"
+        @click="router.visit(route('tdap.frota.vistorias.show', v.id))"
         />
         <ActionButton
         action="edit"
@@ -196,7 +206,7 @@
         :show-label="false"
         size="sm"
         tooltip-text="Editar vistoria"
-        @click="router.visit(route('tdap.vistorias.edit', v.id))"
+        @click="router.visit(route('tdap.frota.vistorias.edit', v.id))"
         />
         </div>
       </template>
@@ -211,6 +221,16 @@
       module-name="Vistorias"
       @close="closeExportModal"
       @export="onExport"
+    />
+
+    <!-- Mesma janela da tela de frota: o fluxo de cadastro de vistoria e um so,
+         venha do botao daqui ou do de la. A lista e a que o filtro de caminhao
+         desta tela ja usa (ativos, por placa). -->
+    <NovaVistoriaCaminhaoModal
+      :open="seletorDeVistoriaAberto"
+      :caminhoes="caminhoes"
+      @close="seletorDeVistoriaAberto = false"
+      @select="irParaNovaVistoria"
     />
   </div>
 </template>
@@ -240,6 +260,7 @@ import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
+import NovaVistoriaCaminhaoModal from '@/Components/Organisms/Tdap/NovaVistoriaCaminhaoModal.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -253,6 +274,15 @@ const props = defineProps({
   canEdit:      { type: Boolean, default: false },
   canDelete:    { type: Boolean, default: false },
 });
+
+const seletorDeVistoriaAberto = ref(false);
+
+function irParaNovaVistoria(caminhao) {
+  seletorDeVistoriaAberto.value = false;
+
+  // Posicional: a rota e aninhada no caminhao (frota/{caminhao}/vistorias/nova).
+  router.visit(route('tdap.frota.vistorias.create', caminhao.id));
+}
 
 const filtroSearch   = ref(props.filtros.search ?? '');
 const filtroCaminhao = ref(props.filtros.placa_id ?? '');
@@ -273,7 +303,7 @@ function limparFiltros() {
   filtroCaminhao.value = '';
   filtroParecer.value = '';
   filtroVigente.value = false;
-  router.get(route('tdap.vistorias.index'), {}, { preserveState: false });
+  router.get(route('tdap.frota.vistorias.index'), {}, { preserveState: false });
 }
 
 // Fonte unica dos parametros: busca, cards, paginacao e export usam este objeto.
@@ -287,7 +317,7 @@ function queryFiltros() {
 }
 
 function aplicarFiltros() {
-  router.get(route('tdap.vistorias.index'), queryFiltros(), { preserveState: true, replace: true });
+  router.get(route('tdap.frota.vistorias.index'), queryFiltros(), { preserveState: true, replace: true });
 }
 
 // Cards de estatistica como filtros rapidos: objeto vazio limpa parecer/vigente (Total),
@@ -299,7 +329,7 @@ function filtrarRapido({ parecer = '', vigente = false } = {}) {
 }
 
 // Exportacao CSV (mesmo padrao dos outros modulos)
-const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.vistorias.export');
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.frota.vistorias.export');
 
 function onExport(params) {
   handleExport(params, queryFiltros());
@@ -317,7 +347,7 @@ function fmtDate(d) {
 // Pagina mantendo os filtros da tela (os refs, nao o snapshot de props: o
 // usuario podia trocar um filtro, paginar e voltar ao recorte antigo).
 function irParaPagina(page) {
-  router.get(route('tdap.vistorias.index'), { ...queryFiltros(), page }, { preserveState: true, replace: true });
+  router.get(route('tdap.frota.vistorias.index'), { ...queryFiltros(), page }, { preserveState: true, replace: true });
 }
 
 /**

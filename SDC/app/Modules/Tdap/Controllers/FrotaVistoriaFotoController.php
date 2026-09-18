@@ -13,7 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class VistoriaFotoController extends Controller
+class FrotaVistoriaFotoController extends Controller
 {
     public function __construct(
         private readonly VistoriaFotoService $service,

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Requests;
 
 use App\Modules\Tdap\Requests\Concerns\ResolveIdDaRota;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
 class UpdateCaminhaoRequest extends AbstractCaminhaoRequest
@@ -21,8 +20,6 @@ class UpdateCaminhaoRequest extends AbstractCaminhaoRequest
 
     protected function placaUniqueRule(): Unique
     {
-        return Rule::unique('tdap_caminhoes', 'placa')
-            ->ignore($this->idDaRota('caminhao'))
-            ->whereNull('deleted_at');
+        return $this->placaUnicaNoPrestador()->ignore($this->idDaRota('caminhao'));
     }
 }

@@ -9,6 +9,7 @@ use App\Core\Outbox\OutboxDispatcher;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
 use App\Modules\Tdap\Models\Cronograma;
+use App\Modules\Tdap\Models\Vistoria;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -234,17 +235,68 @@ class CronogramaService
             return [false, 'Cronograma exige ao menos 1 caminhao alocado.'];
         }
 
-        // GUARD Vistoria (Fase 4) - regra real ligada:
-        // todos os caminhoes alocados precisam ter vistoria aprovada vigente (<= 12 meses).
-        $cronograma->load(['caminhoes.caminhao.vistoriaVigente']);
-        foreach ($cronograma->caminhoes as $cc) {
-            if (! $cc->caminhao?->vistoriaVigente) {
-                $placa = $cc->caminhao?->placa ?? "id={$cc->caminhao_id}";
-                return [false, "Caminhao {$placa} nao tem vistoria aprovada vigente (12 meses). Registre/aprove vistoria antes."];
-            }
+        foreach ($this->caminhoesSemVistoriaAte($cronograma, $cronograma->dt_final_efetiva) as $erro) {
+            return [false, $erro];
         }
 
         return [true, null];
+    }
+
+    /**
+     * Caminhoes alocados cuja vistoria nao cobre a data informada.
+     *
+     * GUARD Vistoria - a vistoria tem que COBRIR O CRONOGRAMA INTEIRO.
+     *
+     * Antes o guard exigia `vistoriaVigente`, que significa "vigente HOJE". Um
+     * cronograma de jan a dez ativado em janeiro passava com uma vistoria que
+     * vencia em marco, e nada avisava: o caminhao rodava nove meses sem inspecao
+     * valida. A pergunta certa nao e "esta vigente agora" e sim "cobre ate
+     * dt_final_efetiva".
+     *
+     * Usa ultimaVistoriaAprovada (nao vistoriaVigente): interessa a vistoria
+     * aprovada mais nova, vigente ou nao -- e ela que define ate quando o
+     * veiculo esta coberto, e a mensagem precisa dizer ate quando.
+     *
+     * Ativacao e prorrogacao compartilham este metodo de proposito: eram dois
+     * caminhos para a mesma decisao, e foi assim que a validacao mais fraca da
+     * prorrogacao deixou encurtar prazo no passado.
+     *
+     * @return \Generator<int, string> Mensagens de erro, uma por caminhao reprovado
+     */
+    private function caminhoesSemVistoriaAte(Cronograma $cronograma, ?Carbon $dataLimite): \Generator
+    {
+        $cronograma->load(['caminhoes.caminhao.ultimaVistoriaAprovada']);
+
+        foreach ($cronograma->caminhoes as $cc) {
+            $caminhao = $cc->caminhao;
+            $placa = $caminhao?->placa ?? "id={$cc->caminhao_id}";
+            $vistoria = $caminhao?->ultimaVistoriaAprovada;
+
+            if ($vistoria === null) {
+                yield "Caminhao {$placa} nao tem vistoria aprovada. Registre/aprove vistoria antes.";
+
+                continue;
+            }
+
+            // Cronograma sem data final: nao ha periodo a cobrir, vigente hoje basta.
+            if ($dataLimite === null) {
+                if (! $vistoria->esta_vigente) {
+                    yield "Caminhao {$placa} nao tem vistoria aprovada vigente ("
+                        .Vistoria::VIGENCIA_MESES.' meses). Registre/aprove vistoria antes.';
+                }
+
+                continue;
+            }
+
+            if (! $vistoria->cobre($dataLimite)) {
+                yield sprintf(
+                    'Caminhao %s tem vistoria valida ate %s, mas o periodo vai ate %s. Renove a vistoria antes.',
+                    $placa,
+                    $vistoria->valido_ate?->format('d/m/Y') ?? 'data desconhecida',
+                    $dataLimite->format('d/m/Y'),
+                );
+            }
+        }
     }
 
     public function ativar(int $id): Cronograma
@@ -348,6 +400,17 @@ class CronogramaService
                     'A prorrogacao deve comecar em ou depois do fim da vigencia atual ('
                     .$cronograma->dt_final->format('d/m/Y').').'
                 );
+            }
+
+            /*
+             * A prorrogacao passa pelo mesmo guard de vistoria da ativacao.
+             *
+             * Sem isto o guard novo seria contornavel por construcao: bastava
+             * ativar com uma janela curta que a vistoria cobre e, no dia
+             * seguinte, prorrogar para um ano a frente sem revistoriar nada.
+             */
+            foreach ($this->caminhoesSemVistoriaAte($cronograma, $finalProrrogacao) as $erro) {
+                throw new \DomainException($erro);
             }
 
             $cronograma->update([
