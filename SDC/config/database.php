@@ -2,6 +2,32 @@
 
 use Illuminate\Support\Str;
 
+/*
+|--------------------------------------------------------------------------
+| Prepares emulados: pre-requisito do PgBouncer em transaction mode
+|--------------------------------------------------------------------------
+|
+| Prepared statement tem escopo de SESSAO. Em transaction mode o pooler
+| entrega cada transacao a uma conexao de servidor possivelmente diferente,
+| entao o PREPARE acontece numa conexao e o EXECUTE seguinte pode cair em
+| outra -- que nao o conhece. O sintoma e
+|
+|     SQLSTATE[26000]: prepared statement "pdo_stmt_00000001" does not exist
+|
+| intermitente, sob carga, e so em producao. Nao e defeito do pooler: e o que
+| transaction mode faz de proposito.
+|
+| DEFAULT false = comportamento atual, inalterado. A flag existe para que o
+| dia de ligar o PgBouncer seja uma variavel de ambiente e nao um deploy de
+| codigo. Ligar TAMBEM muda o bind de parametros (passa a ser feito pelo
+| cliente, com escaping do driver), entao vale medir junto.
+|
+| ALTERNATIVA PREFERIVEL: PgBouncer 1.21+ com max_prepared_statements > 0,
+| que rastreia os prepares e os refaz na conexao nova. Ai esta flag continua
+| false e nao se perde nada.
+*/
+$emularPrepares = filter_var(env('DB_EMULATE_PREPARES', false), FILTER_VALIDATE_BOOLEAN);
+
 return [
 
     /*
@@ -194,7 +220,9 @@ return [
             // On-premise modesto: medir max_connections do servidor e reduzir
             //   SWOOLE_PG_POOL_SIZE (ex.: 8) para nao esgotar o Postgres.
             'options' => [
-                PDO::ATTR_EMULATE_PREPARES => false,
+                // false por padrao; true so ao ligar o PgBouncer. Ver o bloco no
+                // topo deste arquivo.
+                PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
                 // Default false: PDO persistente sob Octane/Swoole reusa a MESMA
                 // conexao entre requests do worker e vaza estado/transacao.
                 // Ligar apenas via env em runtime nao-residente (ex.: FPM legado).
@@ -224,7 +252,9 @@ return [
             'application_name' => env('APP_NAME', 'sdc-laravel').'-webhook',
             'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
             'options' => [
-                PDO::ATTR_EMULATE_PREPARES => false,
+                // false por padrao; true so ao ligar o PgBouncer. Ver o bloco no
+                // topo deste arquivo.
+                PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
             ],
         ],
 
@@ -246,7 +276,9 @@ return [
             'sslrootcert' => env('DB_SSL_CA') ?: null,
             'application_name' => env('APP_NAME', 'sdc-laravel') . '-ai',
             'options' => [
-                PDO::ATTR_EMULATE_PREPARES => false,
+                // false por padrao; true so ao ligar o PgBouncer. Ver o bloco no
+                // topo deste arquivo.
+                PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
                 // Mesmo racional da conexao pgsql: persistente e inseguro sob Octane.
                 PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
             ],

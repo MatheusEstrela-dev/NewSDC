@@ -137,8 +137,21 @@ if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null || grep -q "^APP_KEY=$" .env 2>
 fi
 
 # Migrations
+#
+# --isolated: com mais de uma replica, TODAS executam este entrypoint, e sem o
+# lock elas disputam o mesmo `migrate`. Duas rodando DDL concorrente sobre a
+# mesma tabela dao desde erro de migration ja aplicada ate schema pela metade,
+# e o modo de falha depende do momento -- nao e reproduzivel.
+#
+# Nao e hipotese: o on-premise sobe com `replicas: 2` e `order: start-first`,
+# entao as duas podem chegar aqui ao mesmo tempo. Vale tambem para
+# `docker compose up --scale app=N` em homologacao.
+#
+# O lock vive no cache (Redis). Quem nao pega o lock sai com codigo 0 sem rodar,
+# que e o comportamento desejado: a primeira replica migra, as demais seguem
+# para o boot.
 echo "Executando migrations..."
-php artisan migrate --force || echo "Aviso: Erro ao executar migrations"
+php artisan migrate --force --isolated || echo "Aviso: Erro ao executar migrations"
 
 # Seeders de dados mock apenas quando SEED_MOCK_DATA=true. Sao idempotentes
 # (updateOrCreate): rodar em todo restart de producao RESETARIA as senhas dos
@@ -284,24 +297,87 @@ fi
 CONN_PER_INSTANCE=$(((WORKERS * CONN_POR_WORKER) + TASK_WORKERS + QUEUE_WORKERS))
 CONN_PROJECTED=$((CONN_PER_INSTANCE * APP_INSTANCES + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE))
 echo "Modo de conexao: ${MODO_CONN}"
-echo "Conexoes PG projetadas: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
+
+# Com POOLER, o destino das conexoes do app muda e a conta acima deixa de ser
+# sobre o Postgres.
+#
+# Sem pooler a relacao e direta: cada worker abre uma conexao NO BANCO, entao o
+# teto do app e max_connections. Com PgBouncer em transaction mode o app abre
+# contra o POOLER (que aceita muitos clientes baratos, porque sao apenas sockets)
+# e o pooler mantem um punhado de conexoes reais contra o Postgres.
+#
+# Sao dois orcamentos independentes, e checar so o antigo produz o pior erro
+# possivel: o gate recusaria um boot perfeitamente valido por um limite que nao
+# se aplica mais -- e a descoberta disso acontece com a janela de deploy aberta.
+POOLER_MODE="${DB_POOLER_MODE:-}"
+
+if [ -n "${POOLER_MODE}" ]; then
+    PGB_MAX_CLIENTES="${PGBOUNCER_MAX_CLIENT_CONN:-1000}"
+    PGB_POOL_SIZE="${PGBOUNCER_DEFAULT_POOL_SIZE:-25}"
+    require_uint PGBOUNCER_MAX_CLIENT_CONN "$PGB_MAX_CLIENTES"
+    require_uint PGBOUNCER_DEFAULT_POOL_SIZE "$PGB_POOL_SIZE"
+
+    CONN_APP=$((CONN_PER_INSTANCE * APP_INSTANCES))
+    echo "Pooler: DB_POOLER_MODE=${POOLER_MODE} -- o app conecta no PgBouncer, nao no Postgres."
+    echo "Clientes no pooler: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} = ${CONN_APP} (teto ${PGB_MAX_CLIENTES})"
+
+    if [ "${CONN_APP}" -gt "${PGB_MAX_CLIENTES}" ]; then
+        echo "FATAL: clientes projetados (${CONN_APP}) excedem PGBOUNCER_MAX_CLIENT_CONN (${PGB_MAX_CLIENTES})."
+        echo "       Suba max_client_conn no PgBouncer (cliente ocioso custa pouco: e socket, nao backend),"
+        echo "       ou reduza OCTANE_WORKERS / APP_INSTANCES. Abortando boot."
+        exit 1
+    fi
+
+    # O que chega ao Postgres agora e o pool do PgBouncer, nao os workers.
+    CONN_PROJECTED=$((PGB_POOL_SIZE + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE))
+    echo "Conexoes PG projetadas: ${PGB_POOL_SIZE} do pool + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
+else
+    echo "Conexoes PG projetadas: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
+fi
+
 if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
     require_uint PG_MAX_CONNECTIONS "$PG_MAX_CONNECTIONS"
     if [ "${CONN_PROJECTED}" -gt "${PG_MAX_CONNECTIONS}" ]; then
         echo "FATAL: conexoes projetadas (${CONN_PROJECTED}) excedem PG_MAX_CONNECTIONS (${PG_MAX_CONNECTIONS})."
-        echo "       Reduza OCTANE_WORKERS / OCTANE_WORKER_MULTIPLIER / OCTANE_TASK_WORKERS,"
-        echo "       diminua APP_INSTANCES/EXTERNAL_DB_CONSUMERS, ou suba o tier do Postgres. Abortando boot."
-        if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
-            echo "       Sob hooks ON a alavanca mais barata e SWOOLE_PG_POOL_SIZE (hoje ${CONN_POR_WORKER}):"
-            echo "       o orcamento e pool_size x workers <= ${PG_MAX_CONNECTIONS} - ${EXTERNAL_DB_CONSUMERS} - ${PG_ADMIN_RESERVE} - ${TASK_WORKERS}."
-            echo "       Alternativa: OCTANE_HOOK_FLAGS_ENABLED=false volta a 1 conexao/worker."
+        if [ -n "${POOLER_MODE}" ]; then
+            echo "       Com pooler a alavanca e PGBOUNCER_DEFAULT_POOL_SIZE (hoje ${PGB_POOL_SIZE}):"
+            echo "       o orcamento e pool_size <= ${PG_MAX_CONNECTIONS} - ${EXTERNAL_DB_CONSUMERS} - ${PG_ADMIN_RESERVE}."
+            echo "       Numero de workers e de replicas NAO entra nesta conta -- so o pool."
+        else
+            echo "       Reduza OCTANE_WORKERS / OCTANE_WORKER_MULTIPLIER / OCTANE_TASK_WORKERS,"
+            echo "       diminua APP_INSTANCES/EXTERNAL_DB_CONSUMERS, ou suba o tier do Postgres."
+            if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+                echo "       Sob hooks ON a alavanca mais barata e SWOOLE_PG_POOL_SIZE (hoje ${CONN_POR_WORKER}):"
+                echo "       o orcamento e pool_size x workers <= ${PG_MAX_CONNECTIONS} - ${EXTERNAL_DB_CONSUMERS} - ${PG_ADMIN_RESERVE} - ${TASK_WORKERS}."
+                echo "       Alternativa: OCTANE_HOOK_FLAGS_ENABLED=false volta a 1 conexao/worker."
+            fi
+            echo "       Alternativa estrutural: DB_POOLER_MODE=transaction com PgBouncer, que"
+            echo "       desacopla numero de workers de numero de conexoes no banco."
         fi
+        echo "       Abortando boot."
         exit 1
     fi
     echo "OK: dentro do teto de ${PG_MAX_CONNECTIONS} conexoes do Postgres."
 else
     echo "AVISO: PG_MAX_CONNECTIONS nao definido -- guardrail de conexoes inativo."
     echo "       Defina PG_MAX_CONNECTIONS (= SHOW max_connections) para ativar o gate."
+fi
+
+# Prepared statements + transaction mode: incompatibilidade classica.
+#
+# Prepared statement tem escopo de SESSAO. Em transaction mode o PREPARE pode
+# cair numa conexao de servidor e o EXECUTE seguinte em outra, que nao o conhece
+# -- o erro e "prepared statement ... does not exist", intermitente e so sob
+# carga. Duas saidas: PgBouncer 1.21+ com max_prepared_statements > 0, ou
+# DB_EMULATE_PREPARES=true (prepara no cliente). Avisar no boot e barato; o
+# contrario e descobrir em producao.
+if [ "${POOLER_MODE}" = "transaction" ] \
+   && [ "$(printf '%s' "${DB_EMULATE_PREPARES:-false}" | tr '[:upper:]' '[:lower:]')" != "true" ] \
+   && [ "${PGBOUNCER_MAX_PREPARED_STATEMENTS:-0}" = "0" ]; then
+    echo "AVISO: transaction mode com prepared statements do servidor."
+    echo "       Ligue max_prepared_statements no PgBouncer (1.21+) OU defina"
+    echo "       DB_EMULATE_PREPARES=true. Sem um dos dois, esperar"
+    echo "       'prepared statement does not exist' sob carga."
 fi
 
 # Iniciar servidor Octane (Swoole)
