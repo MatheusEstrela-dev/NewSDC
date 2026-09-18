@@ -56,10 +56,16 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 p-4 sm:p-6">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 p-4 sm:p-6">
               <div class="space-y-1">
                 <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ID</div>
                 <div class="text-sm font-medium text-slate-900 dark:text-slate-100">#{{ user.id }}</div>
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CPF</div>
+                <!-- tabular-nums alinha os digitos entre linhas; sem isso a
+                     mascara dança conforme a largura de cada algarismo. -->
+                <div class="text-sm font-medium tabular-nums text-slate-900 dark:text-slate-100">{{ cpfFormatado }}</div>
               </div>
               <div class="space-y-1">
                 <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Criado em</div>
@@ -257,6 +263,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import { applyCpfMask } from '@/Utils/cpfMask';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -302,6 +309,20 @@ const PermissionsIcon = () => h('svg', { fill: 'none', stroke: 'currentColor', v
 const ShieldIcon = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
   h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' })
 ]);
+
+// applyCpfMask do @/Utils/cpfMask, e nao uma funcao local: a mesma mascara ja
+// estava reescrita a mao dentro de BeneficiariosTable e PrintBeneficiarioModal.
+// Uma terceira copia so aumentaria a conta de onde corrigir quando a regra
+// mudar.
+//
+// O guarda existe porque applyCpfMask chama .replace() direto no argumento e
+// estoura com null -- e cpf e nullable em users. Cadastro vindo de convite,
+// que e o caso da tela que motivou isto, costuma chegar sem CPF.
+const cpfFormatado = computed(() => {
+  const cpf = props.user.cpf;
+
+  return cpf ? applyCpfMask(String(cpf)) : '—';
+});
 
 const userInitials = computed(() => {
   const names = props.user.name.split(' ');
