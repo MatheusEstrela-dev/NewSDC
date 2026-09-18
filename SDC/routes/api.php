@@ -57,7 +57,12 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class])
 // ============================================================================
 
 // Health Checks (sem autenticação - para load balancers)
-Route::middleware('statement_timeout:2000')->group(function () {
+// throttle:monitoring em vez do balde do grupo api: health check de load
+// balancer e scrape de metricas nao podem disputar cota com trafego de
+// negocio. Ver o racional no RouteServiceProvider.
+Route::middleware(['statement_timeout:2000', 'throttle:monitoring'])
+    ->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class.':api')
+    ->group(function () {
     Route::get('/health', [HealthCheckController::class, 'basic'])->name('health.basic');
     // Metricas Prometheus para scrape pelo monitoramento (sem auth, ACL via IP allowlist no proxy).
     Route::get('/metrics', \App\Http\Controllers\Api\MetricsController::class)->name('metrics');

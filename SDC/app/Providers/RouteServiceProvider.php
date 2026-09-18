@@ -36,7 +36,23 @@ class RouteServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            return Limit::perMinute((int) env('RATE_LIMIT_API_PERMIN', 60))->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute((int) env('RATE_LIMIT_API_PERMIN', 300))->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Monitoramento tem balde PROPRIO, separado do trafego de negocio.
+        //
+        // Antes, /api/health e /api/metrics dividiam os mesmos 60/min do grupo
+        // api. Duas consequencias ruins: um load balancer batendo a cada 5s ja
+        // consome 12/min, e varios nos de LB saindo pelo mesmo IP somavam ate
+        // estourar -- o health check passava a responder 429 e o balanceador
+        // tirava do ar uma replica saudavel. Pior: trafego de negocio intenso
+        // vindo do mesmo IP podia esgotar o balde e derrubar o health check
+        // junto, transformando pico de uso em queda de disponibilidade.
+        //
+        // Limite alto em vez de Limit::none(): mantem defesa contra rajada
+        // absurda sem que operacao normal chegue perto.
+        RateLimiter::for('monitoring', function (Request $request) {
+            return Limit::perMinute((int) env('RATE_LIMIT_MONITORING_PERMIN', 1200))->by($request->ip());
         });
 
         RateLimiter::for('login', function (Request $request) {
