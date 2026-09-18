@@ -186,6 +186,38 @@ class Cronograma extends Model
     }
 
     /**
+     * O cronograma extrapola a vigencia da Ata que o autoriza?
+     *
+     * SINALIZACAO, NUNCA BLOQUEIO -- mesma escolha de
+     * CronoViagemResource::foraDaVigencia. Medido na base antes de decidir: 85
+     * dos 92 cronogramas (92%) terminam depois do fim da ata, 71 deles ativos, e
+     * NENHUM comeca antes. Nao e acervo legado sujo: e o padrao corrente de
+     * operacao. Como FormRequest tambem roda no update, transformar isso em
+     * regra inviabilizaria editar quase todo cronograma em producao.
+     *
+     * A pergunta de fundo -- a ata deveria ter sido prorrogada, ou o cronograma
+     * pode ultrapassa-la? -- e de negocio, nao de implementacao. Ate ela ser
+     * respondida, a tela mostra e a pessoa decide.
+     *
+     * Exige a relacao `ata` carregada; sem ela devolve false (nao ha o que
+     * comparar) em vez de disparar consulta por linha na listagem.
+     */
+    public function getForaDaVigenciaDaAtaAttribute(): bool
+    {
+        if (! $this->relationLoaded('ata')) {
+            return false;
+        }
+
+        $fimDaAta = $this->ata?->dt_final?->copy()->startOfDay();
+        $inicioDaAta = $this->ata?->dt_inicio?->copy()->startOfDay();
+        $inicio = $this->dt_inicio_efetiva?->copy()->startOfDay();
+        $fim = $this->dt_final_efetiva?->copy()->startOfDay();
+
+        return ($inicioDaAta !== null && $inicio !== null && $inicio->lessThan($inicioDaAta))
+            || ($fimDaAta !== null && $fim !== null && $fim->greaterThan($fimDaAta));
+    }
+
+    /**
      * Dias ate o fim da vigencia, assinado: negativo = ja passou, 0 = termina
      * hoje, null = cronograma sem data final.
      *

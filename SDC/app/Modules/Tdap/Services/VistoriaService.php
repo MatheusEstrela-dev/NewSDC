@@ -7,6 +7,7 @@ namespace App\Modules\Tdap\Services;
 use App\Modules\Tdap\DTOs\VistoriaDTO;
 use App\Modules\Tdap\Enums\ParecerVistoria;
 use App\Modules\Tdap\Models\Vistoria;
+use App\Modules\Tdap\Support\VigenciaVistoria;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -67,7 +68,7 @@ class VistoriaService
             'Lacre'        => $v->lacre,
             'Parecer'      => $v->parecer?->label() ?? (string) $v->parecer?->value,
             'Vigente'      => $v->esta_vigente ? 'Sim' : 'Nao',
-            'Validade'     => $v->data?->copy()->addMonths(Vistoria::VIGENCIA_MESES)->format('d/m/Y'),
+            'Validade'     => VigenciaVistoria::validoAte($v->data)?->format('d/m/Y'),
             'Capacidade (m3)' => number_format((float) $v->capacidade, 2, ',', '.'),
         ])->all();
     }
@@ -124,7 +125,7 @@ class VistoriaService
      */
     public function obterEstatisticas(array $filtros = []): array
     {
-        $limite = now()->subMonths(Vistoria::VIGENCIA_MESES)->toDateString();
+        $limite = VigenciaVistoria::dataLimite()->toDateString();
 
         $recorte = array_diff_key($filtros, ['parecer' => null, 'vigente' => null]);
 

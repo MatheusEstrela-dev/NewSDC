@@ -8,24 +8,35 @@ use App\Http\Controllers\Controller;
 use App\Modules\Tdap\DTOs\CaminhaoDTO;
 use App\Modules\Tdap\Models\Caminhao;
 use App\Modules\Tdap\Models\Prestador;
-use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Requests\StoreCaminhaoRequest;
 use App\Modules\Tdap\Requests\UpdateCaminhaoRequest;
 use App\Modules\Tdap\Resources\CaminhaoIndexResource;
 use App\Modules\Tdap\Resources\CaminhaoResource;
-use App\Modules\Tdap\Services\CaminhaoService;
-use App\Modules\Tdap\Support\VigenciaAta;
-use Illuminate\Http\JsonResponse;
+use App\Modules\Tdap\Services\FrotaService;
+use App\Modules\Tdap\Support\ExportadorCsv;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class CaminhaoController extends Controller
+class FrotaController extends Controller
 {
+    /**
+     * Allowlist de filtros da frota.
+     *
+     * Constante, e nao duas chamadas iguais a `$request->only(...)`: listagem e
+     * CSV precisam filtrar identico -- exportacao que filtra diferente da tela
+     * entrega um arquivo que nao corresponde ao que a pessoa estava vendo -- e
+     * duas copias sempre acabam divergindo na primeira vez que um filtro novo
+     * entra so em uma delas.
+     *
+     * @var array<int, string>
+     */
+    private const FILTROS = ['ativo', 'prestador_id', 'prestador_cnpj', 'search', 'vistoria'];
+
     public function __construct(
-        private readonly CaminhaoService $service,
+        private readonly FrotaService $service,
     ) {}
 
     /**
@@ -39,11 +50,11 @@ class CaminhaoController extends Controller
     public function index(Request $request): Response
     {
         $perPage = (int) $request->integer('per_page', 15);
-        $filtros = $request->only(['ativo', 'prestador_id', 'search', 'vistoria']);
+        $filtros = $request->only(self::FILTROS);
 
         $caminhoes = $this->service->listarFrota($perPage, $filtros);
 
-        return Inertia::render('Tdap/Caminhoes/Index', [
+        return Inertia::render('Tdap/Frota/Index', [
             'caminhoes'    => CaminhaoIndexResource::collection($caminhoes),
             'estatisticas' => fn () => $this->service->obterEstatisticasDaFrota(),
             'prestadores'  => fn () => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
@@ -56,77 +67,34 @@ class CaminhaoController extends Controller
             // sai daqui, nao de um item de menu proprio.
             'canVerVistoria'   => $request->user()?->can('tdap.vistorias.view') ?? false,
             'canCriarVistoria' => $request->user()?->can('tdap.vistorias.create') ?? false,
+
+            /*
+            | A frota inteira para o seletor de "Nova Vistoria" do cabecalho.
+            |
+            | `lazy`: sao 132 registros que so interessam a quem abre o modal --
+            | pendura-los em toda visita a listagem seria pagar o custo em cada
+            | carga de pagina por causa de um botao. O Vue busca com
+            | `router.reload({ only: ['frotaParaVistoria'] })` na abertura.
+            |
+            | Sob `tdap.vistorias.create`, e nao `tdap.caminhoes.view`: a
+            | situacao de vistoria vai junto de cada placa, e quem nao pode
+            | registrar vistoria nao tem o que fazer com esta lista. Mesma
+            | separacao que tirou a serie historica do controller de caminhao.
+            */
+            'frotaParaVistoria' => Inertia::lazy(
+                fn () => $request->user()?->can('tdap.vistorias.create')
+                    ? CaminhaoIndexResource::collection($this->service->listarParaSelecaoDeVistoria())
+                    : [],
+            ),
         ]);
     }
 
     public function export(Request $request): StreamedResponse
     {
-        // Mesma allowlist da listagem: o CSV precisa corresponder ao que a tela
-        // estava mostrando, filtro de vistoria incluido.
-        $filtros = $request->only(['ativo', 'prestador_id', 'search', 'vistoria']);
-        $data = $this->service->exportar($filtros);
-
-        $filename = 'caminhoes_'.now()->format('Y-m-d_H-i-s').'.csv';
-
-        return response()->streamDownload(function () use ($data): void {
-            $handle = fopen('php://output', 'w');
-
-            // BOM UTF-8 para Excel reconhecer acentuacao.
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            if (! empty($data)) {
-                fputcsv($handle, array_keys($data[0]), ';');
-            }
-
-            foreach ($data as $row) {
-                fputcsv($handle, array_values($row), ';');
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
-    }
-
-    /**
-     * Serie historica de vistorias de um caminhao, em JSON.
-     *
-     * O modal da listagem consome isto. A vistoria vigente responde "pode
-     * rodar HOJE"; a serie responde "este veiculo e confiavel?" -- reprovado
-     * tres vezes seguidas e um caminhao com problema, e isso so aparece quando
-     * as inspecoes ficam lado a lado.
-     */
-    public function vistorias(Caminhao $caminhao): JsonResponse
-    {
-        $vistorias = $caminhao->vistorias()
-            ->get(['id', 'placa_id', 'data', 'parecer', 'nome', 'ficha', 'lacre', 'edital', 'observacoes'])
-            ->map(fn (Vistoria $v) => [
-                'id'             => $v->id,
-                'data'           => $v->data?->toDateString(),
-                'parecer'        => $v->parecer?->value,
-                'parecer_label'  => $v->parecer?->label(),
-                'vistoriador'    => $v->nome,
-                'ficha'          => $v->ficha,
-                'lacre'          => $v->lacre,
-                'edital'         => $v->edital,
-                'observacoes'    => $v->observacoes,
-                'vigente'        => (bool) $v->esta_vigente,
-                // Mesma vigencia assinada do resto do modulo: negativo = venceu.
-                'dias_restantes' => $v->data === null ? null : VigenciaAta::diasRestantes(
-                    $v->data->copy()->addMonths(Vistoria::VIGENCIA_MESES),
-                ),
-            ])
-            ->values();
-
-        return response()->json([
-            'caminhao' => [
-                'id'    => $caminhao->id,
-                'placa' => $caminhao->placa,
-                'marca' => $caminhao->marca,
-                'modelo' => $caminhao->modelo,
-            ],
-            'vistorias' => $vistorias,
-        ]);
+        return ExportadorCsv::baixar(
+            $this->service->exportar($request->only(self::FILTROS)),
+            'frota',
+        );
     }
 
     public function create(Request $request): Response
@@ -138,7 +106,7 @@ class CaminhaoController extends Controller
         // empresa numa lista de todos os prestadores ativos.
         $prestadorId = $request->integer('prestador_id') ?: null;
 
-        return Inertia::render('Tdap/Caminhoes/Create', [
+        return Inertia::render('Tdap/Frota/Create', [
             'prestadores'  => $prestadores,
             'prestadorId'  => $prestadores->contains('id', $prestadorId) ? $prestadorId : null,
         ]);
@@ -151,7 +119,7 @@ class CaminhaoController extends Controller
         );
 
         return redirect()
-            ->route('tdap.caminhoes.show', $caminhao->id)
+            ->route('tdap.frota.show', $caminhao->id)
             ->with('success', "Caminhão {$caminhao->placa} cadastrado.");
     }
 
@@ -159,7 +127,7 @@ class CaminhaoController extends Controller
     {
         $caminhao = $this->service->obter($caminhao->id);
 
-        return Inertia::render('Tdap/Caminhoes/Show', [
+        return Inertia::render('Tdap/Frota/Show', [
             'caminhao'  => CaminhaoResource::make($caminhao),
             'canEdit'   => $request->user()?->can('tdap.caminhoes.edit') ?? false,
             'canDelete' => $request->user()?->can('tdap.caminhoes.delete') ?? false,
@@ -168,7 +136,7 @@ class CaminhaoController extends Controller
 
     public function edit(Caminhao $caminhao): Response
     {
-        return Inertia::render('Tdap/Caminhoes/Edit', [
+        return Inertia::render('Tdap/Frota/Edit', [
             'caminhao'    => CaminhaoResource::make($caminhao->load('prestador')),
             'prestadores' => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
         ]);
@@ -182,7 +150,7 @@ class CaminhaoController extends Controller
         );
 
         return redirect()
-            ->route('tdap.caminhoes.show', $atualizado->id)
+            ->route('tdap.frota.show', $atualizado->id)
             ->with('success', "Caminhão {$atualizado->placa} atualizado.");
     }
 
@@ -199,12 +167,12 @@ class CaminhaoController extends Controller
         } catch (\DomainException $e) {
             // Alocado em cronograma vivo: mensagem de negocio, nao 500.
             return redirect()
-                ->route('tdap.caminhoes.show', $caminhao->id)
+                ->route('tdap.frota.show', $caminhao->id)
                 ->with('error', $e->getMessage());
         }
 
         return redirect()
-            ->route('tdap.caminhoes.index')
+            ->route('tdap.frota.index')
             ->with('success', "Caminhão {$placa} excluído.");
     }
 }

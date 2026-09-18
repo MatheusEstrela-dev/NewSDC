@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Models;
 
 use App\Modules\Tdap\Enums\ParecerVistoria;
+use App\Modules\Tdap\Support\Documento;
+use App\Modules\Tdap\Support\VigenciaVistoria;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -61,13 +63,31 @@ class Caminhao extends Model
 
     /**
      * Vistoria aprovada vigente (<= 12 meses), mais recente.
-     * Usada pelo CronogramaService::podeAtivar.
+     *
+     * A borda sai de VigenciaVistoria, a mesma que Vistoria::scopeVigente e o
+     * accessor usam -- antes este `whereDate` era uma quarta copia da regra.
      */
     public function vistoriaVigente(): HasOne
     {
         return $this->hasOne(Vistoria::class, 'placa_id')
             ->where('parecer', ParecerVistoria::Aprovada->value)
-            ->whereDate('data', '>=', now()->subMonths(Vistoria::VIGENCIA_MESES)->toDateString())
+            ->whereDate('data', '>=', VigenciaVistoria::dataLimite()->toDateString())
+            ->latestOfMany('data');
+    }
+
+    /**
+     * Vistoria aprovada mais recente, vigente ou nao.
+     *
+     * E a que o guard de ativacao do cronograma precisa avaliar: a pergunta la
+     * nao e "esta vigente hoje" e sim "cobre o fim do cronograma", e so a
+     * vistoria aprovada mais nova pode responder isso. Separada de
+     * ultimaVistoria() porque aquela inclui reprovada -- util para a tela
+     * distinguir "reprovado" de "nunca vistoriado", inutil para o guard.
+     */
+    public function ultimaVistoriaAprovada(): HasOne
+    {
+        return $this->hasOne(Vistoria::class, 'placa_id')
+            ->where('parecer', ParecerVistoria::Aprovada->value)
             ->latestOfMany('data');
     }
 
@@ -101,10 +121,43 @@ class Caminhao extends Model
 
         $like = '%'.mb_strtoupper($termo).'%';
 
-        return $query->where(function (Builder $q) use ($like): void {
+        /*
+         * O CNPJ do prestador tambem identifica o caminhao.
+         *
+         * Quem cobra a operacao chega com o CNPJ da empresa em maos (nota,
+         * empenho, oficio), nao com a placa. Sem isto a unica saida era abrir
+         * Prestadores, achar a empresa e voltar filtrando por prestador_id.
+         *
+         * `Documento::digitos` porque a coluna guarda SOMENTE DIGITOS -- a busca
+         * tem que funcionar tanto com "12.345.678/0001-95" quanto com
+         * "12345678000195". Mesma normalizacao de Prestador::scopeBuscar; ver o
+         * contrato em Tdap\Support\Documento.
+         */
+        $digitos = Documento::digitos($termo);
+
+        return $query->where(function (Builder $q) use ($like, $digitos): void {
             $q->whereRaw('UPPER(placa) LIKE ?', [$like])
               ->orWhereRaw('UPPER(modelo) LIKE ?', [$like])
-              ->orWhereRaw('UPPER(marca) LIKE ?', [$like]);
+              ->orWhereRaw('UPPER(marca) LIKE ?', [$like])
+              ->orWhereHas('prestador', function (Builder $p) use ($like, $digitos): void {
+                  $p->whereRaw('UPPER(nome) LIKE ?', [$like]);
+
+                  if ($digitos !== null) {
+                      $p->orWhere('cnpj', 'LIKE', '%'.$digitos.'%');
+                  }
+              });
         });
+    }
+
+    /** Caminhoes do prestador identificado pelo CNPJ (com ou sem mascara). */
+    public function scopeDoCnpj(Builder $query, ?string $cnpj): Builder
+    {
+        $digitos = Documento::digitos((string) $cnpj);
+
+        if ($digitos === null) {
+            return $query;
+        }
+
+        return $query->whereHas('prestador', fn (Builder $p) => $p->where('cnpj', $digitos));
     }
 }

@@ -7,7 +7,7 @@
       :icon="TruckIcon"
     >
       <template #actions>
-        <Link v-if="canEdit" :href="route('tdap.caminhoes.edit', c.id)">
+        <Link v-if="canEdit" :href="route('tdap.frota.edit', c.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
         <DangerButton v-if="canDelete" @click="excluir">
@@ -80,6 +80,6 @@ const c = computed(() => props.caminhao.data ?? props.caminhao);
 
 function excluir() {
   if (!confirm(`Excluir o caminhão ${c.value.placa}? Esta ação não pode ser desfeita.`)) return;
-  router.delete(route('tdap.caminhoes.destroy', c.value.id));
+  router.delete(route('tdap.frota.destroy', c.value.id));
 }
 </script>

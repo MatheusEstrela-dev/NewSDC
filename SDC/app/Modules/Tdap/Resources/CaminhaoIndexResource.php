@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Resources;
 
 use App\Modules\Tdap\Models\Vistoria;
-use App\Modules\Tdap\Support\VigenciaAta;
+use App\Modules\Tdap\Support\Documento;
+use App\Modules\Tdap\Support\VigenciaVistoria;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -37,7 +38,9 @@ class CaminhaoIndexResource extends JsonResource
             'capacidade_m3'  => (float) $this->capacidade_m3,
             'ativo'          => (bool) $this->ativo,
             'prestador_nome' => $this->whenLoaded('prestador', fn () => $this->prestador->nome),
-            'prestador_cnpj' => $this->whenLoaded('prestador', fn () => $this->prestador->cnpj),
+            // Mascarado na saida: a coluna guarda somente digitos (ver
+            // Tdap\Support\Documento) e "37628085000167" na tela nao e legivel.
+            'prestador_cnpj' => $this->whenLoaded('prestador', fn () => Documento::cnpj($this->prestador->cnpj)),
 
             /* Situacao de vistoria -- o que a outra tela guardava */
             'apto'              => $vigente instanceof Vistoria,
@@ -78,15 +81,15 @@ class CaminhaoIndexResource extends JsonResource
         return $temHistorico ? 'vencida' : 'sem_vistoria';
     }
 
-    /** Vigencia da vistoria: 12 meses a contar da data dela. */
+    /**
+     * Vigencia da vistoria: 12 meses a contar da data dela.
+     *
+     * Antes reusava VigenciaAta, que e de outro agregado: o prazo da vistoria
+     * nao tem relacao com o prazo da ata, e a coincidencia de ambos serem
+     * "dias ate uma data" nao faz deles a mesma regra.
+     */
     private function diasDeVigenciaRestantes(Vistoria $vistoria): ?int
     {
-        if ($vistoria->data === null) {
-            return null;
-        }
-
-        return VigenciaAta::diasRestantes(
-            $vistoria->data->copy()->addMonths(Vistoria::VIGENCIA_MESES),
-        );
+        return VigenciaVistoria::diasRestantes($vistoria->data);
     }
 }

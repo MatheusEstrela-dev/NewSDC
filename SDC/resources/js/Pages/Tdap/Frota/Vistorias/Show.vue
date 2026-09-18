@@ -7,7 +7,7 @@
       :icon="TruckIcon"
     >
       <template #actions>
-        <Link v-if="canEdit" :href="route('tdap.vistorias.edit', v.id)">
+        <Link v-if="canEdit" :href="route('tdap.frota.vistorias.edit', v.id)">
           <Button variant="primary" size="md" :icon="PencilIcon" icon-position="left">Editar</Button>
         </Link>
         <Button v-if="canDelete" variant="danger" size="md" :icon="TrashIcon" icon-position="left" @click="excluir">
@@ -36,7 +36,7 @@
             <div>
               <dt class="text-slate-500">Placa</dt>
               <dd>
-                <Link :href="route('tdap.caminhoes.show', v.caminhao.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">
+                <Link :href="route('tdap.frota.show', v.caminhao.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">
                   {{ v.caminhao.placa }}
                 </Link>
               </dd>
@@ -147,7 +147,7 @@ function countOk(itens) {
 
 function excluir() {
   if (!confirm(`Excluir vistoria #${v.value.id}?`)) return;
-  router.delete(route('tdap.vistorias.destroy', v.value.id));
+  router.delete(route('tdap.frota.vistorias.destroy', v.value.id));
 }
 
 // Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no

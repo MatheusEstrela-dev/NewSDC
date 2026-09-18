@@ -45,10 +45,10 @@ const form = useForm({
 });
 
 function submit() {
-  form.put(route('tdap.caminhoes.update', c.id));
+  form.put(route('tdap.frota.update', c.id));
 }
 
 function cancelar() {
-  router.visit(route('tdap.caminhoes.show', c.id));
+  router.visit(route('tdap.frota.show', c.id));
 }
 </script>

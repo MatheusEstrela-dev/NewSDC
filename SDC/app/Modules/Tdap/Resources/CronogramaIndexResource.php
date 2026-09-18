@@ -27,6 +27,9 @@ class CronogramaIndexResource extends JsonResource
             'dt_inicio'       => $this->dt_inicio?->toDateString(),
             'dt_final'        => $this->dt_final?->toDateString(),
             'ata_numero'      => $this->whenLoaded('ata', fn () => $this->ata?->numero),
+            // Ver Cronograma::getForaDaVigenciaDaAtaAttribute: sinalizacao, nao bloqueio.
+            'ata_dt_final'    => $this->whenLoaded('ata', fn () => $this->ata?->dt_final?->toDateString()),
+            'fora_da_vigencia_da_ata' => $this->whenLoaded('ata', fn () => $this->fora_da_vigencia_da_ata),
             'lote_numero'     => $this->whenLoaded('lote', fn () => $this->lote?->numero),
             'municipio_nome'  => $this->whenLoaded('municipio', fn () => $this->municipio?->nome),
             'municipio_uf'    => $this->whenLoaded('municipio', fn () => $this->municipio?->uf),

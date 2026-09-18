@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Requests;
 
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
 class StoreCaminhaoRequest extends AbstractCaminhaoRequest
@@ -16,6 +15,6 @@ class StoreCaminhaoRequest extends AbstractCaminhaoRequest
 
     protected function placaUniqueRule(): Unique
     {
-        return Rule::unique('tdap_caminhoes', 'placa')->whereNull('deleted_at');
+        return $this->placaUnicaNoPrestador();
     }
 }

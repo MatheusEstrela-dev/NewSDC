@@ -1,5 +1,5 @@
 <template>
-  <Head title="TDAP - Caminhões" />
+  <Head title="TDAP — Frota e Vistorias" />
 
   <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
@@ -10,14 +10,21 @@
     >
       <template #actions>
         <!-- O historico completo (uma linha por inspecao) deixou de ser item
-             de menu: daqui, e como detalhe desta tela. -->
+             de menu: daqui, e como detalhe desta tela.
+
+             `alias-override="view"`: sem ele o ActionButton monta
+             `tdap.vistorias.history`, permissao que nao existe no banco -- e
+             slug inexistente nao falha aberto, some para todos menos
+             super-admin. Ler a serie e leitura de vistoria, e e `view` o que a
+             rota de destino cobra. -->
         <ActionButton
           action="history"
           module="tdap"
           resource="vistorias"
+          alias-override="view"
           :allowed="canVerVistoria"
           label="Histórico de vistorias"
-          @click="router.visit(route('tdap.vistorias.index'))"
+          @click="router.visit(route('tdap.frota.vistorias.index'))"
         />
         <ActionButton
           action="export"
@@ -26,13 +33,26 @@
           label="Exportar"
           @click="openExportModal"
         />
+        <!-- O fluxo de cadastro de vistoria comeca aqui, e nao so no menu da
+             linha: quem vem "registrar a vistoria de hoje" chega pelo topo da
+             tela, e ate agora tinha de caçar a placa na grade paginada antes de
+             achar a acao. O modal pergunta o caminhao -- a rota e aninhada
+             nele -- e leva direto a ficha. -->
+        <ActionButton
+          action="create"
+          module="tdap"
+          resource="vistorias"
+          label="Nova Vistoria"
+          :allowed="canCriarVistoria"
+          @click="abrirSeletorDeVistoria"
+        />
         <ActionButton
           action="create"
           module="tdap"
           resource="caminhoes"
           label="Novo Caminhão"
           :allowed="canCreate"
-          @click="router.visit(route('tdap.caminhoes.create'))"
+          @click="router.visit(route('tdap.frota.create'))"
         />
       </template>
     </TdapPageHeader>
@@ -133,7 +153,7 @@
                     >
                       <td class="whitespace-nowrap px-4 py-4">
                         <Link
-                          :href="route('tdap.caminhoes.show', caminhao.id)"
+                          :href="route('tdap.frota.show', caminhao.id)"
                           class="font-mono font-bold text-slate-900 transition hover:text-blue-600 dark:text-slate-100"
                         >
                           {{ caminhao.placa }}
@@ -238,6 +258,14 @@
       @close="caminhaoDoHistorico = null"
     />
 
+    <NovaVistoriaCaminhaoModal
+      :open="seletorDeVistoriaAberto"
+      :caminhoes="frotaDoSeletor"
+      :carregando="carregandoFrotaDoSeletor"
+      @close="seletorDeVistoriaAberto = false"
+      @select="irParaNovaVistoria"
+    />
+
     <!-- Exclusao passa por confirmacao, como no PAE: o caminhao pode estar
          alocado em cronograma vivo, e o servico recusa com mensagem de negocio
          -- sem o dialogo, o clique errado so aparecia depois do redirect. -->
@@ -256,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -275,6 +303,7 @@ import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import VistoriaHistoricoModal from '@/Components/Organisms/Tdap/VistoriaHistoricoModal.vue';
+import NovaVistoriaCaminhaoModal from '@/Components/Organisms/Tdap/NovaVistoriaCaminhaoModal.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -289,6 +318,9 @@ const props = defineProps({
   canDelete:    { type: Boolean, default: false },
   canVerVistoria:   { type: Boolean, default: false },
   canCriarVistoria: { type: Boolean, default: false },
+  // Prop `lazy` do controller: so chega depois do reload disparado ao abrir o
+  // seletor de "Nova Vistoria". Ate la e undefined, dai o default.
+  frotaParaVistoria: { type: [Object, Array], default: () => [] },
 });
 
 const activeFilters = ref({
@@ -309,7 +341,7 @@ function queryDosFiltros(filters = activeFilters.value) {
 }
 
 function aplicarFiltros(filters = activeFilters.value) {
-  router.get(route('tdap.caminhoes.index'), queryDosFiltros(filters), {
+  router.get(route('tdap.frota.index'), queryDosFiltros(filters), {
     preserveState: true,
     replace: true,
   });
@@ -317,7 +349,7 @@ function aplicarFiltros(filters = activeFilters.value) {
 
 function limparFiltros() {
   activeFilters.value = {};
-  router.get(route('tdap.caminhoes.index'), {}, { preserveState: true, replace: true });
+  router.get(route('tdap.frota.index'), {}, { preserveState: true, replace: true });
 }
 
 /**
@@ -352,11 +384,11 @@ function acoesDaLinha(caminhao) {
   const temSerie = caminhao.vistoria !== null && caminhao.vistoria !== undefined;
 
   return [
-    { action: 'view', handler: () => router.visit(route('tdap.caminhoes.show', caminhao.id)) },
+    { action: 'view', handler: () => router.visit(route('tdap.frota.show', caminhao.id)) },
     {
       action: 'edit',
       allowed: props.canEdit,
-      handler: () => router.visit(route('tdap.caminhoes.edit', caminhao.id)),
+      handler: () => router.visit(route('tdap.frota.edit', caminhao.id)),
     },
     ...(temSerie && props.canVerVistoria ? [{
       action: 'history',
@@ -364,6 +396,9 @@ function acoesDaLinha(caminhao) {
       label: 'Série histórica',
       module: 'tdap',
       resource: 'vistorias',
+      // Mesma razao do botao de cabecalho: `tdap.vistorias.history` nao existe
+      // no banco, e o verbo certo para consultar a serie e `view`.
+      aliasOverride: 'view',
       handler: () => { caminhaoDoHistorico.value = caminhao; },
     }] : []),
     {
@@ -373,7 +408,9 @@ function acoesDaLinha(caminhao) {
       module: 'tdap',
       resource: 'vistorias',
       allowed: props.canCriarVistoria,
-      handler: () => router.visit(route('tdap.vistorias.create', { placa_id: caminhao.id })),
+      // Posicional, nao `{ placa_id }`: a rota e aninhada no caminhao. Como
+      // query string o backend nunca lia o parametro e o formulario abria vazio.
+      handler: () => router.visit(route('tdap.frota.vistorias.create', caminhao.id)),
     },
     {
       action: 'delete',
@@ -382,6 +419,47 @@ function acoesDaLinha(caminhao) {
       handler: () => { caminhaoParaExcluir.value = caminhao; },
     },
   ];
+}
+
+/* ---------------------------------------------- Nova vistoria pelo cabecalho */
+
+const seletorDeVistoriaAberto = ref(false);
+const carregandoFrotaDoSeletor = ref(false);
+
+// CaminhaoIndexResource::collection envelopa em `data`; aceitar as duas formas
+// evita quebrar se o Resource mudar de envelope.
+const frotaDoSeletor = computed(() => props.frotaParaVistoria?.data ?? props.frotaParaVistoria ?? []);
+
+/**
+ * Abre o seletor e so entao busca a frota.
+ *
+ * A grade desta tela e paginada (15 de 132) e obedece aos filtros aplicados --
+ * escolher por ela o caminhao da vistoria deixaria de fora justamente quem o
+ * operador procura, e "nao esta na lista" viraria "nao existe". O reload
+ * parcial traz a frota inteira sem recarregar grade, filtros nem estatisticas.
+ *
+ * Uma vez carregada, fica: reabrir o seletor na mesma visita nao repete a
+ * consulta.
+ */
+function abrirSeletorDeVistoria() {
+  seletorDeVistoriaAberto.value = true;
+
+  if (frotaDoSeletor.value.length > 0) return;
+
+  carregandoFrotaDoSeletor.value = true;
+
+  router.reload({
+    only: ['frotaParaVistoria'],
+    onFinish: () => { carregandoFrotaDoSeletor.value = false; },
+  });
+}
+
+function irParaNovaVistoria(caminhao) {
+  seletorDeVistoriaAberto.value = false;
+
+  // Posicional, nao `{ placa_id }`: a rota e aninhada no caminhao -- o mesmo
+  // motivo documentado na acao "Nova vistoria" da linha.
+  router.visit(route('tdap.frota.vistorias.create', caminhao.id));
 }
 
 const caminhaoDoHistorico = ref(null);
@@ -393,7 +471,7 @@ function confirmarExclusao() {
 
   excluindo.value = true;
 
-  router.delete(route('tdap.caminhoes.destroy', caminhaoParaExcluir.value.id), {
+  router.delete(route('tdap.frota.destroy', caminhaoParaExcluir.value.id), {
     preserveScroll: true,
     onFinish: () => {
       excluindo.value = false;
@@ -411,14 +489,14 @@ function fmtDate(valor) {
 }
 
 // Exportacao CSV (mesmo padrao do Cronograma)
-const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.caminhoes.export');
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.frota.export');
 
 function onExport(params) {
   handleExport(params, queryDosFiltros());
 }
 
 function irParaPagina(page) {
-  router.get(route('tdap.caminhoes.index'), { ...queryDosFiltros(), page }, {
+  router.get(route('tdap.frota.index'), { ...queryDosFiltros(), page }, {
     preserveState: true,
     replace: true,
   });

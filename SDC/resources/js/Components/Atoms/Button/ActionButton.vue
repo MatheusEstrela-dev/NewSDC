@@ -259,6 +259,19 @@ const props = defineProps({
   },
   actions: { type: Array, default: null },
   allowed: { type: Boolean, default: null },
+  /*
+   * Verbo a usar no slug de permissao, no lugar da `action`.
+   *
+   * Cada item do modo GRUPO ja aceitava isto; no modo unico nao havia como
+   * dizer a mesma coisa, e o botao solto ficava preso ao verbo da action --
+   * `history` pedindo `{module}.{resource}.history`, que em varios modulos nao
+   * existe. Slug inexistente nao "falha aberto": ele some para todo mundo que
+   * nao seja super-admin, calado.
+   *
+   * Serve para reaproveitar permissao que existe em vez de inventar slug --
+   * mesmo uso documentado em Cisterna/BeneficiariosTable.vue.
+   */
+  aliasOverride: { type: String, default: null },
   fallback: { type: String, default: 'hide', validator: v => ['hide', 'disable'].includes(v) },
   variant: { type: String, default: null },
   label: { type: String, default: null },
@@ -368,6 +381,7 @@ const hasPermissionSingle = computed(() => hasPermissionFor({
   module: props.module,
   resource: props.resource,
   allowed: props.allowed,
+  aliasOverride: props.aliasOverride,
 }));
 
 const shouldRenderSingle = computed(() => {

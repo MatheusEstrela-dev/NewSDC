@@ -6,6 +6,7 @@ namespace App\Modules\Tdap\Models;
 
 use App\Models\User;
 use App\Modules\Tdap\Enums\ParecerVistoria;
+use App\Modules\Tdap\Support\VigenciaVistoria;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -61,8 +62,13 @@ class Vistoria extends Model
         'valv_expul', 'tampa_ved', 'agua_pot',
     ];
 
-    /** Vigencia em meses. */
-    public const VIGENCIA_MESES = 12;
+    /**
+     * Vigencia em meses.
+     *
+     * O valor tem um dono so (VigenciaVistoria); a constante segue exposta aqui
+     * porque chamadores e mensagens de erro referenciam Vistoria::VIGENCIA_MESES.
+     */
+    public const VIGENCIA_MESES = VigenciaVistoria::VIGENCIA_MESES;
 
     protected $guarded = ['id', 'created_at', 'updated_at', 'deleted_at'];
 
@@ -98,23 +104,37 @@ class Vistoria extends Model
      * comparacao antiga dava FALSE para a vistoria feita exatamente 12 meses
      * atras, enquanto scopeVigente() -- que usa whereDate -- a considerava
      * vigente. O accessor e o scope divergiam por um dia, e era o scope que o
-     * guard de ativacao do cronograma usava.
+     * guard de ativacao do cronograma usava. Hoje os dois saem de
+     * VigenciaVistoria, entao a borda e a mesma por construcao.
      */
     public function getEstaVigenteAttribute(): bool
     {
-        if ($this->parecer !== ParecerVistoria::Aprovada || $this->data === null) {
+        if ($this->parecer !== ParecerVistoria::Aprovada) {
             return false;
         }
 
-        return $this->data->startOfDay()->gte(
-            now()->subMonths(self::VIGENCIA_MESES)->startOfDay(),
-        );
+        return VigenciaVistoria::estaVigente($this->data);
     }
 
     /** Ultimo dia de validade da vistoria; null quando nao ha data. */
     public function getValidoAteAttribute(): ?\Carbon\Carbon
     {
-        return $this->data?->copy()->addMonths(self::VIGENCIA_MESES);
+        return VigenciaVistoria::validoAte($this->data);
+    }
+
+    /**
+     * A vistoria cobre a data de referencia?
+     *
+     * Usado pelo guard de ativacao do cronograma, que precisa saber se a
+     * vistoria vale ate o FIM do cronograma -- nao apenas hoje.
+     */
+    public function cobre(mixed $referencia): bool
+    {
+        if ($this->parecer !== ParecerVistoria::Aprovada) {
+            return false;
+        }
+
+        return VigenciaVistoria::cobre($this->data, $referencia);
     }
 
     /* Scopes */
@@ -133,7 +153,25 @@ class Vistoria extends Model
     {
         return $query
             ->where('parecer', ParecerVistoria::Aprovada->value)
-            ->whereDate('data', '>=', now()->subMonths(self::VIGENCIA_MESES)->toDateString());
+            ->whereDate('data', '>=', VigenciaVistoria::dataLimite()->toDateString());
+    }
+
+    /**
+     * Vistorias que cobrem a data de referencia (e nao so hoje).
+     *
+     * Contrapartida SQL de Vistoria::cobre(): quem precisa filtrar no banco --
+     * o guard de ativacao carrega a relacao, mas relatorio e listagem filtram
+     * na query -- usa esta, com a mesma borda do accessor.
+     */
+    public function scopeCobrindo(Builder $query, mixed $referencia): Builder
+    {
+        $limite = VigenciaVistoria::dataLimite(
+            $referencia instanceof \Carbon\Carbon ? $referencia : \Carbon\Carbon::parse((string) $referencia),
+        );
+
+        return $query
+            ->where('parecer', ParecerVistoria::Aprovada->value)
+            ->whereDate('data', '>=', $limite->toDateString());
     }
 
     public function scopeDoCaminhao(Builder $query, int $caminhaoId): Builder

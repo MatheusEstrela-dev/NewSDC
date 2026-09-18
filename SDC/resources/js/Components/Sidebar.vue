@@ -668,11 +668,15 @@
              que o analista faz e uma: "este veiculo pode rodar?". Nenhuma das
              duas respondia sozinha -- a de caminhoes mostra `ativo`, que e flag
              de cadastro, e a de vistorias nao sabe quais veiculos ficaram de
-             fora. Por isso a tela de vistoria continua acendendo este item. -->
+             fora.
+
+             O `:active` era a uniao de dois padroes porque as rotas viviam em
+             prefixos separados; agora `tdap.frota.*` cobre as duas, que e o
+             sentido da fusao. -->
         <NavItem
-          v-if="_routes.hasTdapCaminhoes"
-          :href="route('tdap.caminhoes.index')"
-          :active="isRouteActive('tdap.caminhoes.*') || isRouteActive('tdap.vistorias.*')"
+          v-if="_routes.hasTdapFrota"
+          :href="route('tdap.frota.index')"
+          :active="isRouteActive('tdap.frota.*')"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
@@ -824,7 +828,7 @@ const _routes = {
   hasCedec: route().has('cedec.prefeituras.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
-  hasTdapCaminhoes: route().has('tdap.caminhoes.index'),
+  hasTdapFrota: route().has('tdap.frota.index'),
   hasTdapAtas: route().has('tdap.atas.index'),
   hasTdapLotes: route().has('tdap.lotes.index'),
   hasTdapCronogramas: route().has('tdap.cronogramas.index'),
@@ -877,7 +881,8 @@ const _activeRoutes = computed(() => {
     'tdap.*': route().current('tdap.*'),
     'tdap.dashboard': route().current('tdap.dashboard'),
     'tdap.prestadores.*': route().current('tdap.prestadores.*'),
-    'tdap.caminhoes.*': route().current('tdap.caminhoes.*'),
+    // Frota = caminhao + vistoria; um padrao so cobre as duas desde a fusao.
+    'tdap.frota.*': route().current('tdap.frota.*'),
     'tdap.atas.*': route().current('tdap.atas.*'),
     'tdap.lotes.*': route().current('tdap.lotes.*'),
     'tdap.cronogramas.*': route().current('tdap.cronogramas.*'),
@@ -887,7 +892,6 @@ const _activeRoutes = computed(() => {
     // isRouteActive so consulta ESTE mapa -- chave ausente nunca acende.
     'tdap.viagens.pendentes': route().current('tdap.viagens.pendentes'),
     'tdap.viagens.confirmacao': route().current('tdap.viagens.confirmacao'),
-    'tdap.vistorias.*': route().current('tdap.vistorias.*'),
     'tdap.historicos.*': route().current('tdap.historicos.*'),
     'cisternas.*': route().current('cisternas.*'),
     'pmda.*': route().current('pmda.*'),
