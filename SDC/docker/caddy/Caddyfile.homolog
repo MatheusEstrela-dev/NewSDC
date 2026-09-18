@@ -1,0 +1,105 @@
+# ============================================================================
+# Caddy - balanceador do ambiente de HOMOLOGACAO (Docker Engine, sem Swarm).
+#
+# POR QUE ESTE ARQUIVO E DIFERENTE DO Caddyfile DE PRODUCAO
+#
+# Producao roda em Swarm, e la `reverse_proxy app:8000` basta: o nome do
+# servico resolve para um VIP e o proprio Swarm (IPVS) distribui entre as
+# tasks. O Caddy enxerga um endereco so.
+#
+# Homologacao roda em Docker Engine com `--scale app=N`. Ai o nome `app`
+# resolve para VARIOS registros A -- um por container -- e o upstream estatico
+# nao serve: o Caddy resolve o DNS UMA VEZ, no start, e fixa no primeiro IP que
+# recebeu. O resultado seria todo o trafego indo para uma replica com as outras
+# ociosas, e uma medicao de capacidade que nao mede nada.
+#
+# `dynamic a` reconsulta o DNS a cada `refresh` e devolve a lista atual, entao
+# subir ou descer replica com --scale passa a ser visto sem reiniciar o Caddy.
+# ============================================================================
+{
+	# Sem TLS automatico: homologacao e interna e o alvo e medir HTTP puro.
+	auto_https off
+
+	# Log de erro do proprio Caddy no stdout do container.
+	log {
+		output stdout
+		format console
+		level INFO
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	# Reverb (websocket). Mesma rota da producao: o handshake do
+	# laravel-echo/pusher-js cai em /app/{key}, sem prefixo de path.
+	@reverb path /app/*
+	reverse_proxy @reverb reverb:8080
+
+	# Endpoint do proprio balanceador, para separar "o Caddy esta de pe" de
+	# "as replicas estao de pe" durante um teste de carga.
+	respond /lb-health 200 {
+		body "caddy ok"
+	}
+
+	reverse_proxy {
+		# Lista viva de replicas. refresh curto porque em homologacao a
+		# escala muda a toda hora (`docker compose up -d --scale app=N`);
+		# em producao isto seria desperdicio de consulta DNS.
+		dynamic a {
+			name app
+			port 8000
+			refresh 5s
+			versions ipv4
+		}
+
+		# round_robin espelha o que o Swarm faz em producao (IPVS). Para
+		# medir capacidade com rotas de custo desigual, `least_conn`
+		# distribui melhor -- mas ai o ensaio deixa de refletir producao.
+		# Trocar de proposito, nunca por engano.
+		lb_policy round_robin
+
+		# Segura a requisicao ate 5s esperando uma replica saudavel em vez
+		# de devolver 502 na hora. E o que faz um deploy rolling (subir a
+		# nova antes de derrubar a velha) passar sem erro visivel.
+		lb_try_duration 5s
+		lb_try_interval 250ms
+
+		# Checagem ATIVA: bate em /health de tempos em tempos e tira do
+		# rodizio quem nao responde. 10s e um meio-termo -- mais curto
+		# gera ruido no log durante o boot de ~3min do Octane.
+		health_uri /health
+		health_interval 10s
+		health_timeout 3s
+		health_status 2xx
+
+		# Checagem PASSIVA: observa as requisicoes reais. Vale mais que a
+		# ativa sob carga, porque /health pode responder enquanto a replica
+		# ja esta afogada nas rotas de verdade.
+		fail_duration 10s
+		max_fails 3
+		unhealthy_status 5xx
+
+		# Octane monta URL de asset a partir do que recebe. Sem isto a
+		# aplicacao acha que foi acessada em app:8000 e gera link quebrado
+		# para quem entrou pelo balanceador.
+		#
+		# X-Forwarded-Host NAO entra aqui: o proprio Caddy avisa que e
+		# redundante, porque repassar o Host ao upstream ja e o padrao dele.
+		header_up X-Forwarded-Proto http
+		header_up X-Real-IP {remote_host}
+
+		# Devolve QUAL replica atendeu. Sem isto nao ha como provar que o
+		# balanceamento esta distribuindo -- o log de acesso do Caddy nao
+		# registra o upstream escolhido, e todas as replicas respondem igual.
+		#
+		# So em homologacao: em producao isto entregaria topologia interna a
+		# quem chama.
+		header_down X-Upstream {http.reverse_proxy.upstream.hostport}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

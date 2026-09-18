@@ -1,0 +1,560 @@
+# ============================================================================
+# SDC - HOMOLOGACAO: Caddy balanceando N replicas do app, banco real.
+#
+# Uso (da pasta SDC/):
+#   APP_INSTANCES=2 dotenvx run -f docker/.env -- docker compose -f docker/compose.homolog.yml up -d --scale app=2
+#   APP_INSTANCES=6 dotenvx run -f docker/.env -- docker compose -f docker/compose.homolog.yml up -d --scale app=6
+#
+# Entrada:   http://localhost:8090      (Caddy, balanceando) <- use esta
+# Replicas:  http://localhost:8091..8098 (direto, uma por replica, p/ diagnostico)
+#            http://localhost:8090/lb-health   responde sem tocar nas replicas
+# Postgres:  host:5435     Redis: host:6381
+#
+# ---------------------------------------------------------------------------
+# POR QUE ESTE AMBIENTE EXISTE, E NO QUE ELE DIFERE DO compose.dev.yml
+#
+# O dev serve para DESENVOLVER: codigo por bind mount, opcache revalidando,
+# uma replica so, portas fixas. Nada disso mede capacidade -- o bind mount do
+# Windows e o revalidate do opcache cobram um custo por requisicao que
+# producao nao paga.
+#
+# Aqui o objetivo e OUTRO: reproduzir a forma de producao para que um numero
+# medido signifique alguma coisa. Por isso:
+#
+#   - codigo vem da IMAGEM, sem bind mount (igual a producao)
+#   - sem o override dev-opcache.ini, entao validate_timestamps=0
+#   - cada replica tem a forma da replica on-premise: 1,75 vCPU, 6 workers
+#   - o banco tem a forma do banco on-premise: 2 vCPU, 4 GB, onprem.conf
+#   - o Caddy entra na frente, como em producao
+#
+# O QUE ISTO AINDA NAO E: um ensaio de capacidade valido. Os dados aqui tem
+# cardinalidade de desenvolvimento, e o Postgres escolhe outros planos com o
+# volume real. Serve para medir CUSTO POR REQUISICAO e ORDEM DE SATURACAO, que
+# nao dependem disso, e para exercitar o balanceamento de verdade.
+# ============================================================================
+
+name: newsdc-homolog
+
+services:
+  # --------------------------------------------------------------------------
+  # Balanceador. Em producao o Swarm distribui pelo VIP do servico; aqui, sem
+  # Swarm, quem distribui e o Caddy -- e por isso o Caddyfile de homologacao
+  # usa `dynamic a`, que reconsulta o DNS. Ver docker/caddy/Caddyfile.homolog.
+  # --------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    container_name: newsdc_homolog_caddy
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    volumes:
+      - ./caddy/Caddyfile.homolog:/etc/caddy/Caddyfile:ro
+    networks:
+      - homolog
+    depends_on:
+      - app
+    mem_limit: 256m
+    cpus: 0.5
+
+  # --------------------------------------------------------------------------
+  # Aplicacao. SEM container_name e SEM ports: os dois impedem `--scale`.
+  #
+  # cpus/mem espelham UMA replica do stack.app.onpremise.yml (1,75 vCPU /
+  # 2,25 GB), entao `--scale app=2` reproduz a producao de hoje e `--scale
+  # app=6` mostra o que 6 entregariam.
+  #
+  # --------------------------------------------------------------------------
+  app:
+    image: newsdc-swoole-dev:latest
+    build:
+      context: ..
+      dockerfile: docker/swoole/Dockerfile
+      args:
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
+    restart: unless-stopped
+    mem_limit: 2304m
+    cpus: 1.75
+
+    # Uma porta por replica, alocada da faixa. O Compose distribui: a primeira
+    # replica pega 8091, a segunda 8092, e assim por diante -- e o range e o que
+    # permite isso conviver com --scale (uma porta fixa tornaria o servico
+    # inescalavel, que foi o motivo de nao haver `ports` aqui antes).
+    #
+    # NAO e por onde o trafego deve entrar: para isso existe o Caddy na 8090.
+    # Serve para o que o balanceador atrapalha:
+    #
+    #   - bater numa replica especifica para isolar um problema que so ocorre
+    #     nela (ver se e a replica ou a aplicacao)
+    #   - medir UMA replica sem o custo e a distribuicao do proxy, que e o
+    #     numero a comparar com os ~130 req/s por replica do on-premise
+    #   - conferir que uma replica subiu antes de o balanceador incluir ela
+    ports:
+      - "8091-8098:8000"
+
+    environment:
+      WORKDIR: /var/www
+      APP_NAME: "SDC Homologacao"
+      # staging, e nao production, por UM motivo especifico: o middleware
+      # ForceHttps redireciona (302) toda requisicao nao-segura quando o
+      # ambiente e 'production', e aqui a entrada e HTTP puro na 8090. Com
+      # 'production' o balanceador devolveria 302 em vez de exercitar as
+      # replicas -- mediria o redirect, nao a aplicacao.
+      #
+      # Tudo o mais que importa continua igual a producao: APP_DEBUG=false,
+      # opcache sem revalidacao, codigo vindo da imagem.
+      #
+      # Para exercitar TAMBEM o caminho HTTPS (ForceHttps, cookie seguro),
+      # troque para production E ponha `tls internal` no Caddyfile.homolog --
+      # ai o Caddy emite certificado da CA local dele e o cliente de carga
+      # precisa de -k. Custa handshake TLS na medicao, que producao tambem paga.
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env}
+      # O acesso e pelo Caddy na 8090 (8080 e do reverb do dev), e e essa URL que
+      # a aplicacao deve gerar nos assets -- nao a porta interna 8000.
+      APP_URL: http://localhost:8090
+
+      OCTANE_SERVER: swoole
+      OCTANE_HTTPS: "false"
+      PORT: 8000
+      # Forma da replica on-premise: 6 workers HTTP + 2 task.
+      OCTANE_WORKERS: 6
+      OCTANE_TASK_WORKERS: 2
+      OCTANE_MAX_REQUESTS: 1000
+      OCTANE_HOOK_FLAGS_ENABLED: "false"
+      DB_PERSISTENT: "false"
+
+      # Classmap ja vem pronto na imagem; regenerar so atrasaria o boot de cada
+      # replica sem motivo, porque aqui nao ha codigo entrando por bind mount.
+      AUTOLOAD_REFRESH_ON_BOOT: "false"
+
+      # Consumidor de fila dedicado (servico queue abaixo).
+      START_EMBEDDED_QUEUE: "false"
+
+      # Guardrail de conexoes.
+      #
+      # APP_INSTANCES precisa bater com o --scale, e o container nao tem como
+      # descobrir a escala sozinho -- por isso vem por variavel, para que os
+      # dois numeros sejam passados no MESMO comando:
+      #
+      #   APP_INSTANCES=4 dotenvx run -f docker/.env -- \
+      #     docker compose -f docker/compose.homolog.yml up -d --scale app=4
+      #
+      # Deixar desatualizado nao quebra nada visivelmente: o gate apenas
+      # projeta MENOS conexoes do que serao abertas e aprova um arranjo que
+      # nao cabe. A falha aparece depois, como "too many connections" no meio
+      # de um request -- que e precisamente o que este guardrail existe para
+      # evitar.
+      PG_MAX_CONNECTIONS: 100
+      APP_INSTANCES: ${APP_INSTANCES:-2}
+      EXTERNAL_DB_CONSUMERS: 8
+      DB_MAX_CONCURRENT: 60
+
+      # Destino do banco: direto ou pelo pooler. E o A/B que este ambiente
+      # existe para permitir -- os dois arranjos, mesma carga, mesmo rig:
+      #
+      #   direto (padrao):
+      #     APP_INSTANCES=4 dotenvx run -f docker/.env -- \
+      #       docker compose -f docker/compose.homolog.yml up -d --scale app=4
+      #
+      #   pelo PgBouncer:
+      #     DB_TARGET_HOST=pgbouncer DB_TARGET_PORT=6432 DB_POOLER_MODE=transaction \
+      #     APP_INSTANCES=4 dotenvx run -f docker/.env -- \
+      #       docker compose -f docker/compose.homolog.yml up -d --scale app=4
+      #
+      # DB_POOLER_MODE nao e cosmetico: ele muda o comportamento da aplicacao
+      # (SetStatementTimeout vira no-op, porque SET de sessao vaza no pool) e a
+      # conta do guardrail de conexoes no entrypoint.
+      DB_CONNECTION: pgsql
+      DB_HOST: ${DB_TARGET_HOST:-db}
+      DB_PORT: ${DB_TARGET_PORT:-5432}
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD:-sdc}
+      DB_SSLMODE: disable
+      DB_POOLER_MODE: ${DB_POOLER_MODE:-}
+
+      # Lidos pelo guardrail do entrypoint quando DB_POOLER_MODE esta setado.
+      # Precisam espelhar o que o servico pgbouncer abaixo realmente usa, senao
+      # o gate projeta um orcamento que nao corresponde ao pooler que subiu.
+      PGBOUNCER_MAX_CLIENT_CONN: 1000
+      PGBOUNCER_DEFAULT_POOL_SIZE: 25
+      PGBOUNCER_MAX_PREPARED_STATEMENTS: 200
+
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_SCHEME: tcp
+      REDIS_PREFIX: sdc_homolog_
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      SESSION_SECURE_COOKIE: "false"
+
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-null}
+      REVERB_APP_ID: ${REVERB_APP_ID:-}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
+
+      MAIL_MAILER: log
+
+    volumes:
+      # So o que precisa de estado compartilhado entre replicas. Codigo, nao:
+      # ele vem da imagem, como em producao.
+      - homolog_storage:/var/www/storage/app
+      - homolog_logs:/var/www/storage/logs
+
+      # EXCECAO ao "codigo vem da imagem": o entrypoint entra por mount.
+      #
+      # Dois motivos. O pratico: mexer no guardrail de conexoes ou na ordem de
+      # boot passa a custar um `up -d` em vez de um rebuild da imagem inteira,
+      # e este ambiente existe justamente para iterar nisso.
+      #
+      # O circunstancial, que e mais serio: a imagem NAO pode ser reconstruida
+      # hoje. O `bun install --frozen-lockfile` do Dockerfile falha porque o
+      # bun.lock esta fora de sincronia com o package.json -- e o Dockerfile
+      # instala o bun sem fixar versao (`curl https://bun.sh/install | bash`),
+      # entao cada build resolve com um bun diferente. Enquanto isso nao for
+      # resolvido, alteracao em entrypoint.sh so chega ao container por aqui.
+      #
+      # ATENCAO: em producao o entrypoint vem DA IMAGEM. Este mount faz o rig
+      # divergir nesse ponto -- ele nao pegaria um erro de "entrypoint nao foi
+      # copiado para a imagem".
+      - ./swoole/scripts/entrypoint.sh:/start.sh:ro
+
+    networks:
+      - homolog
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # O boot do Octane leva ~3min; sem esta folga o Docker mata a replica
+      # antes de ela terminar de subir e o --scale nunca estabiliza.
+      start_period: 240s
+
+  # --------------------------------------------------------------------------
+  # Consumidor de fila. Um so, como no on-premise (la sao 10 processos de
+  # supervisor dentro de 1 vCPU). Aqui o mesmo teto, para que a fila sature no
+  # mesmo ponto que saturaria em producao.
+  # --------------------------------------------------------------------------
+  queue:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_homolog_queue
+    restart: unless-stopped
+    mem_limit: 1536m
+    cpus: 1
+    command:
+      - "sh"
+      - "-c"
+      - "php artisan queue:work redis --queue=critical,high,auditoria,webhooks,notificacoes,default,low --sleep=1 --tries=3 --max-time=3600 --timeout=120"
+    environment:
+      APP_NAME: "SDC Homologacao Queue"
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD:-sdc}
+      DB_SSLMODE: disable
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PREFIX: sdc_homolog_
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-null}
+      MAIL_MAILER: log
+
+    # A imagem traz um HEALTHCHECK que bate em localhost:8000/health -- correto
+    # para o app, errado aqui: este container nao serve HTTP. Sem sobrescrever,
+    # ele fica 'unhealthy' para sempre estando perfeitamente vivo, e um estado
+    # falso e pior que nenhum: ninguem confia no painel depois.
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      - homolog_storage:/var/www/storage/app
+      - homolog_logs:/var/www/storage/logs
+    networks:
+      - homolog
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
+  # Banco. Mesma forma do stack.data.onpremise.yml: 2 vCPU, 4 GB, e o MESMO
+  # arquivo de configuracao -- inclusive o statement_timeout de 120s. Medir
+  # contra um Postgres com outros parametros nao diria nada sobre producao.
+  # --------------------------------------------------------------------------
+  db:
+    image: postgis/postgis:18-3.6-alpine
+    container_name: newsdc_homolog_db
+    restart: unless-stopped
+    mem_limit: 4g
+    cpus: 2
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-sdc}
+      POSTGRES_USER: ${DB_USERNAME:-sdc}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sdc}
+    volumes:
+      - ./postgres/onprem.conf:/etc/postgresql/postgresql.conf:ro
+      # PG 18 mudou o layout: o mount vai na RAIZ e a imagem coloca o cluster
+      # num subdiretorio. Montar em /data (layout do 16) faz o container entrar
+      # em loop de restart reclamando de incompatibilidade de versao. O
+      # compose.dev.yml ja usa este formato -- e ele roda a mesma 18.
+      - homolog_pgdata:/var/lib/postgresql
+      # Cria a role de replicacao e libera o pg_hba para os standbys. So roda
+      # na inicializacao de um cluster novo -- num volume que ja existe, os
+      # mesmos passos precisam ser aplicados a mao.
+      - ./postgres/initdb-replicacao.sh:/docker-entrypoint-initdb.d/10-replicacao.sh:ro
+    ports:
+      - "5435:5432"
+    networks:
+      - homolog
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sdc} -d ${DB_DATABASE:-sdc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # --------------------------------------------------------------------------
+  # STANDBYS DE LEITURA (streaming replication).
+  #
+  # Topologia: 1 primario que aceita escrita + 2 standbys somente leitura. O
+  # banco desta aplicacao e 95,38% leitura (medido em pg_stat_database), entao
+  # e a forma que a carga pede.
+  #
+  # O QUE ELES RESOLVEM
+  #   - descarregam leitura do primario, que hoje satura em ~300 req/s
+  #   - cada um e um standby quente: o Postgres deixa de ser ponto unico de
+  #     falha, e essa razao sozinha ja justifica a replicacao
+  #
+  # O QUE ELES CUSTAM, E E PRECISO DECIDIR ANTES DE USAR
+  #   Replicacao e ASSINCRONA. Quem escreve e le em seguida pode nao ver o que
+  #   acabou de gravar. Para um sistema de Defesa Civil isso nao e detalhe:
+  #   registrar uma ocorrencia e nao ve-la na tela seguinte e falha de uso.
+  #
+  #   Por isso o caminho seguro e adotar em duas etapas -- primeiro como
+  #   standby de HA (ninguem le deles, risco zero), e so depois rotear leitura,
+  #   e apenas de rotas comprovadamente tolerantes a atraso: export Power BI,
+  #   dashboards ja cacheados, relatorios. NUNCA o inbox de notificacoes nem
+  #   qualquer leitura logo apos escrita.
+  #
+  # Recursos menores que o primario de proposito: standby so aplica WAL e serve
+  # leitura, nao carrega escrita nem autovacuum pesado.
+  # --------------------------------------------------------------------------
+  db_replica_1: &db-standby
+    image: postgis/postgis:18-3.6-alpine
+    container_name: newsdc_homolog_db_replica_1
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1
+    user: postgres
+    entrypoint: ["bash", "/standby-entrypoint.sh"]
+    environment:
+      PGDATA: /var/lib/postgresql/pgdata
+      PRIMARY_HOST: db
+      PRIMARY_PORT: 5432
+      REPLICATION_USER: replicator
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replicator}
+      SLOT_NAME: standby_1
+      POSTGRES_USER: ${DB_USERNAME:-sdc}
+    volumes:
+      - ./postgres/standby-entrypoint.sh:/standby-entrypoint.sh:ro
+      - homolog_pgdata_replica_1:/var/lib/postgresql
+    ports:
+      - "5436:5432"
+    networks:
+      - homolog
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # pg_isready sozinho nao distingue standby de primario; a consulta
+      # confirma que este cluster esta MESMO em recuperacao, que e o estado
+      # de um standby saudavel.
+      # -U com o superusuario do cluster: aqui e 'sdc' (POSTGRES_USER do
+      # primario), nao 'postgres'. O standby e copia fisica do primario, entao
+      # herda os MESMOS papeis -- 'postgres' nao existe e o healthcheck falharia
+      # para sempre num standby que esta perfeitamente saudavel.
+      test: ["CMD-SHELL", "psql -U ${DB_USERNAME:-sdc} -d postgres -tAc 'SELECT pg_is_in_recovery()' | grep -q t"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  db_replica_2:
+    <<: *db-standby
+    container_name: newsdc_homolog_db_replica_2
+    environment:
+      PGDATA: /var/lib/postgresql/pgdata
+      PRIMARY_HOST: db
+      PRIMARY_PORT: 5432
+      REPLICATION_USER: replicator
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replicator}
+      SLOT_NAME: standby_2
+      POSTGRES_USER: ${DB_USERNAME:-sdc}
+    volumes:
+      - ./postgres/standby-entrypoint.sh:/standby-entrypoint.sh:ro
+      - homolog_pgdata_replica_2:/var/lib/postgresql
+    ports:
+      - "5437:5432"
+
+  # --------------------------------------------------------------------------
+  # PgBouncer. Sobe sempre, mas so e USADO quando DB_TARGET_HOST=pgbouncer --
+  # assim da para medir com e sem, no mesmo ambiente, sem reconstruir nada.
+  #
+  # O QUE ELE RESOLVE: sem pooler, worker e conexao de banco sao a mesma coisa,
+  # entao 22 replicas x 6 workers = 132 conexoes contra um max_connections de
+  # 100. Com pooler, as replicas abrem contra ELE (sockets baratos) e ele mantem
+  # um punhado de conexoes reais contra o Postgres.
+  #
+  # O QUE ELE NAO RESOLVE: CPU do banco. O teto de ~300 req/s do Postgres de
+  # 2 vCPU continua onde estava -- o pooler desacopla conexao, nao cria
+  # processamento.
+  # --------------------------------------------------------------------------
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: newsdc_homolog_pgbouncer
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 1
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD:-sdc}
+      DB_NAME: ${DB_DATABASE:-sdc}
+
+      # transaction mode e o que desacopla worker de conexao: a conexao de
+      # servidor volta ao pool no fim de CADA transacao, nao no fim da sessao.
+      # E tambem o que quebra prepared statement de servidor -- ver abaixo.
+      POOL_MODE: transaction
+      LISTEN_PORT: 6432
+
+      # Cliente ocioso e barato (um socket), conexao de servidor e cara (um
+      # processo no Postgres). Dai a assimetria entre os dois numeros.
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 25
+
+      # PgBouncer 1.21+ rastreia os PREPARE e os refaz na conexao nova. E o que
+      # permite manter PDO::ATTR_EMULATE_PREPARES=false (prepares do servidor)
+      # sem tomar 'prepared statement does not exist' sob carga. A imagem traz
+      # 1.25.2, entao esta coberto.
+      MAX_PREPARED_STATEMENTS: 200
+
+      AUTH_TYPE: scram-sha-256
+      ADMIN_USERS: ${DB_USERNAME:-sdc}
+    ports:
+      # Exposta para inspecao: `psql -h localhost -p 6433 -U sdc pgbouncer`
+      # e depois SHOW POOLS / SHOW STATS mostram o pool ao vivo.
+      - "6433:6432"
+    networks:
+      - homolog
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${DB_USERNAME:-sdc} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: newsdc_homolog_redis
+    restart: unless-stopped
+    mem_limit: 1280m
+    cpus: 0.5
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "6381:6379"
+    networks:
+      - homolog
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  reverb:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_homolog_reverb
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    environment:
+      APP_NAME: "SDC Homologacao Reverb"
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env}
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-null}
+      REVERB_APP_ID: ${REVERB_APP_ID:-}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      REVERB_SERVER_HOST: 0.0.0.0
+      REVERB_SERVER_PORT: "8080"
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PREFIX: sdc_homolog_
+      CACHE_DRIVER: redis
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD:-sdc}
+      DB_SSLMODE: disable
+    networks:
+      - homolog
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    # A imagem traz um HEALTHCHECK que bate em localhost:8000/health -- correto
+    # para o app, errado aqui: este container nao serve HTTP. Sem sobrescrever,
+    # ele fica 'unhealthy' para sempre estando perfeitamente vivo, e um estado
+    # falso e pior que nenhum: ninguem confia no painel depois.
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'reverb:start' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  homolog:
+    driver: bridge
+
+volumes:
+  homolog_pgdata:
+  homolog_pgdata_replica_1:
+  homolog_pgdata_replica_2:
+  homolog_storage:
+  homolog_logs:
