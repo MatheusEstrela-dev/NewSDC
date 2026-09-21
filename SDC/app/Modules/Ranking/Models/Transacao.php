@@ -34,7 +34,9 @@ final class Transacao extends RankingModel
     protected function casts(): array
     {
         return [
-            'event_id' => 'integer',
+            // uuid na coluna, string em PHP. Cast para integer devolvia 0 em
+            // toda leitura e destruiria a barreira tecnica de idempotencia.
+            'event_id' => 'string',
             'regra_id' => 'integer',
             'actor_user_id' => 'integer',
             'credited_user_id' => 'integer',
