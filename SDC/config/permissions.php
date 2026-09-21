@@ -488,6 +488,34 @@ return [
                 'view' => 'cedec.contatos.view',
             ],
         ],
+        // Placar de pontos por entrega de negocio, extrato e faixas
+        // (Bronze/Prata/Ouro/Diamante). Leitura e separada por dimensao: ver o
+        // proprio placar nao autoriza ver o extrato nominal de terceiros.
+        // Ajustes tem visualizar, solicitar e decidir como acoes distintas -
+        // quem pede correcao nao pode aprovar a propria.
+        'RANKING' => [
+            'Placar' => [
+                'view'   => 'ranking.placar.view',
+                'orgao'  => 'ranking.placar.orgao',
+                'estado' => 'ranking.placar.estado',
+            ],
+            'Extrato' => [
+                'view'    => 'ranking.extrato.view',
+                'equipe'  => 'ranking.extrato.equipe',
+                'export'  => 'ranking.extrato.export',
+            ],
+            'Regras' => [
+                'view' => 'ranking.regras.view',
+            ],
+            'Ajustes' => [
+                'view'    => 'ranking.ajustes.view',
+                'create'  => 'ranking.ajustes.create',
+                'decidir' => 'ranking.ajustes.decidir',
+            ],
+            'Admin' => [
+                'admin' => 'ranking.admin',
+            ],
+        ],
         // Painel estadual de cobertura + envio do plano pelo proprio municipio.
         // O dado vive em compdec_planos_contingencia; a gestao completa
         // (versoes, aprovacao) fica em COMPDEC > Planos.
@@ -630,8 +658,21 @@ return [
             'pmda.*',
             'plancon.*',
             'geoespacial.*',
+            'ranking.*',
         ],
         'manager' => [
+            // RANKING - ve os tres placares e o extrato da propria equipe, e
+            // decide pedidos de ajuste. Nao recebe ranking.admin: reconstruir
+            // placar e republicar snapshot e operacao de administrador.
+            'ranking.placar.view',
+            'ranking.placar.orgao',
+            'ranking.placar.estado',
+            'ranking.extrato.view',
+            'ranking.extrato.equipe',
+            'ranking.extrato.export',
+            'ranking.regras.view',
+            'ranking.ajustes.view',
+            'ranking.ajustes.decidir',
             // PAE - CRUD completo exceto delete
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
@@ -875,6 +916,14 @@ return [
             'pmda.analise.pedir_alteracao',
         ],
         'analyst' => [
+            // RANKING - placar do proprio orgao e extrato pessoal. Solicita
+            // correcao, mas nao decide: quem pede ajuste nao aprova o proprio.
+            'ranking.placar.view',
+            'ranking.placar.orgao',
+            'ranking.extrato.view',
+            'ranking.regras.view',
+            'ranking.ajustes.view',
+            'ranking.ajustes.create',
             // GEOESPACIAL - papel do municipio que envia E corrige. Sem
             // revisar nem arquivar: quem envia nao aprova o proprio envio, e
             // retirar area do mapa estadual e da CEDEC.
@@ -1035,6 +1084,11 @@ return [
             'estoque.inventarios.create',
         ],
         'operator' => [
+            // RANKING - placar e extrato proprios; solicita correcao.
+            'ranking.placar.view',
+            'ranking.extrato.view',
+            'ranking.regras.view',
+            'ranking.ajustes.create',
             // GEOESPACIAL - envia e baixa o proprio arquivo, mas nao edita:
             // a descricao do papel e "visualizar e criar registros basicos", e
             // corrigir metadado de camada ja publicada nao e basico. Quem
@@ -1131,6 +1185,9 @@ return [
             'estoque.movimentacoes.history',
         ],
         'viewer' => [
+            // RANKING - somente leitura do proprio placar.
+            'ranking.placar.view',
+            'ranking.regras.view',
             // GEOESPACIAL - so leitura do mapa estadual.
             'geoespacial.camadas.view',
             // Somente visualizacao em todos os modulos
@@ -1185,6 +1242,8 @@ return [
             'estoque.movimentacoes.history',
         ],
         'user' => [
+            // RANKING - so o proprio placar.
+            'ranking.placar.view',
             // Acesso basico apenas
             'pae.empreendimentos.view',
             'pae.protocolos.view',
@@ -1213,6 +1272,15 @@ return [
             'treinamento.cursos.view',
         ],
         'compdec' => [
+            // RANKING - o coordenador municipal ve o placar do proprio
+            // municipio e o extrato da equipe dele. O recorte por municipio nao
+            // vem da permissao: vem do escopo aplicado no LeaderboardQuery.
+            'ranking.placar.view',
+            'ranking.placar.orgao',
+            'ranking.extrato.view',
+            'ranking.extrato.equipe',
+            'ranking.regras.view',
+            'ranking.ajustes.create',
             // Perfil EXTERNO: o coordenador municipal enxerga apenas o proprio
             // municipio, e o recorte nao vem daqui -- vem do escopo aplicado no
             // CronoViagemService, derivado de users.orgao_principal_id.
