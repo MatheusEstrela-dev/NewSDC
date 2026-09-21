@@ -139,6 +139,9 @@ return new class extends Migration
                 contexto           jsonb        NOT NULL DEFAULT '{}'::jsonb,
                 criado_em          timestamptz  NOT NULL DEFAULT now(),
 
+                CONSTRAINT ck_ranking_transacoes_decisao CHECK (
+                    decisao IN ('confirmada', 'pendente', 'zero', 'em_apuracao', 'estornada')
+                ),
                 CONSTRAINT uq_ranking_transacoes_event     UNIQUE (event_id),
                 CONSTRAINT uq_ranking_transacoes_canonica  UNIQUE (chave_canonica, familia),
 
@@ -219,6 +222,7 @@ return new class extends Migration
                 inicia_em   timestamptz NULL,
                 termina_em  timestamptz NULL,
 
+                CONSTRAINT ck_ranking_periodos_tipo CHECK (tipo IN ('mes', 'ano', 'acumulado')),
                 CONSTRAINT uq_ranking_periodos_chave UNIQUE (chave)
             )
         SQL);
@@ -245,6 +249,8 @@ return new class extends Migration
                 faixa         varchar(12)  NOT NULL DEFAULT 'bronze',
                 atualizado_em timestamptz  NOT NULL DEFAULT now(),
 
+                CONSTRAINT ck_ranking_saldos_escopo CHECK (escopo IN ('usuario', 'orgao', 'municipio')),
+                CONSTRAINT ck_ranking_saldos_faixa  CHECK (faixa IN ('bronze', 'prata', 'ouro', 'diamante')),
                 CONSTRAINT uq_ranking_saldos UNIQUE (geracao, periodo_id, escopo, entidade_id, modulo)
             )
         SQL);
@@ -268,6 +274,7 @@ return new class extends Migration
                 -- registrado: some do placar, nao do historico.
                 elegivel    boolean     NOT NULL DEFAULT true,
 
+                CONSTRAINT ck_ranking_participantes_escopo CHECK (escopo IN ('usuario', 'orgao', 'municipio')),
                 CONSTRAINT uq_ranking_participantes UNIQUE (periodo_id, escopo, entidade_id)
             )
         SQL);
@@ -289,6 +296,7 @@ return new class extends Migration
                 motivo           varchar(160) NULL,
                 criado_em        timestamptz NOT NULL DEFAULT now(),
 
+                CONSTRAINT ck_ranking_snapshots_escopo CHECK (escopo IN ('usuario', 'orgao', 'municipio')),
                 CONSTRAINT uq_ranking_snapshots UNIQUE (periodo_id, escopo, revisao)
             )
         SQL);
@@ -307,6 +315,8 @@ return new class extends Migration
                 posicao     integer     NOT NULL,
                 faixa       varchar(12) NOT NULL DEFAULT 'bronze',
 
+                CONSTRAINT ck_ranking_snapshot_itens_escopo CHECK (escopo IN ('usuario', 'orgao', 'municipio')),
+                CONSTRAINT ck_ranking_snapshot_itens_faixa  CHECK (faixa IN ('bronze', 'prata', 'ouro', 'diamante')),
                 CONSTRAINT uq_ranking_snapshot_itens UNIQUE (snapshot_id, escopo, entidade_id)
             )
         SQL);
@@ -331,6 +341,9 @@ return new class extends Migration
                 evidencia    varchar(20) NOT NULL DEFAULT 'em_apuracao',
                 criado_em    timestamptz NOT NULL DEFAULT now(),
 
+                CONSTRAINT ck_ranking_vinculos_evidencia CHECK (
+                    evidencia IN ('comprovado', 'inferido', 'em_apuracao')
+                ),
                 CONSTRAINT uq_ranking_vinculos UNIQUE (user_id, orgao_id, valido_de)
             )
         SQL);
@@ -352,6 +365,9 @@ return new class extends Migration
                 decidido_em         timestamptz  NULL,
                 criado_em           timestamptz  NOT NULL DEFAULT now(),
 
+                CONSTRAINT ck_ranking_ajuste_dominio CHECK (
+                    decisao IN ('pendente', 'aprovado', 'recusado')
+                ),
                 CONSTRAINT ck_ranking_ajuste_decisao CHECK (
                     decisao <> 'pendente' OR (aprovador_user_id IS NULL AND decidido_em IS NULL)
                 )
