@@ -242,6 +242,7 @@ return [
         App\Modules\Compdec\CompdecServiceProvider::class,
         App\Modules\Cisterna\CisternaServiceProvider::class,
         App\Modules\Cedec\CedecServiceProvider::class,
+        App\Modules\Ranking\RankingServiceProvider::class,
     ])->toArray(),
 
     /*
