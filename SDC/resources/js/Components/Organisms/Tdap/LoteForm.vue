@@ -1,93 +1,14 @@
 <template>
   <form @submit.prevent="$emit('submit', form)" class="space-y-6">
+    <!--
+      Identificacao e vinculos eram dois cards. Sao o mesmo assunto do lote
+      (quem e e a que ata/territorio/prestador se liga) e o card extra so
+      dobrava a rolagem entre campos que se leem juntos.
+    -->
     <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Vínculos</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <InputLabel for="ata_id" value="Ata *" />
-          <select
-            id="ata_id"
-            v-model="form.ata_id"
-            class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-            required
-          >
-            <option :value="null">Selecione a Ata</option>
-            <option v-for="a in atas" :key="a.id" :value="a.id">
-              {{ a.numero }}
-              <template v-if="a.dt_inicio && a.dt_final"> ({{ formatDate(a.dt_inicio) }} – {{ formatDate(a.dt_final) }})</template>
-            </option>
-          </select>
-          <InputError :message="form.errors.ata_id" class="mt-2" />
-        </div>
-        <!--
-          O lote atende VARIOS municipios ("...destinado aos municipios de A, B
-          e C"): multi-selecao com busca, em vez do select unico que forcava um
-          municipio so por lote.
-        -->
-        <div>
-          <InputLabel value="Municípios atendidos *" />
-          <div class="mt-1 rounded-md border border-slate-300 dark:border-slate-700 dark:bg-slate-900/50">
-            <div class="p-2 border-b border-slate-200 dark:border-slate-700">
-              <TextInput
-                v-model="buscaMunicipio"
-                type="search"
-                class="block w-full text-sm"
-                placeholder="Buscar município..."
-              />
-            </div>
-            <div v-if="municipiosSelecionados.length" class="flex flex-wrap gap-1 p-2 border-b border-slate-200 dark:border-slate-700">
-              <button
-                v-for="m in municipiosSelecionados"
-                :key="m.id"
-                type="button"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-xs text-blue-800 dark:text-blue-200"
-                :title="`Remover ${m.nome}`"
-                @click="alternarMunicipio(m.id)"
-              >
-                {{ m.nome }}<span aria-hidden="true">×</span>
-              </button>
-            </div>
-            <ul class="max-h-52 overflow-y-auto p-2 space-y-1">
-              <li v-for="m in municipiosFiltrados" :key="m.id">
-                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    :checked="estaSelecionado(m.id)"
-                    @change="alternarMunicipio(m.id)"
-                  />
-                  <span>{{ m.nome }}<span v-if="m.uf" class="text-slate-400"> / {{ m.uf }}</span></span>
-                </label>
-              </li>
-              <li v-if="municipiosFiltrados.length === 0" class="text-sm text-slate-400 px-1 py-2">
-                Nenhum município encontrado.
-              </li>
-            </ul>
-          </div>
-          <p class="mt-1 text-xs text-slate-500">{{ municipiosSelecionados.length }} selecionado(s)</p>
-          <InputError :message="form.errors.municipio_ids" class="mt-2" />
-        </div>
-        <div class="md:col-span-2">
-          <InputLabel for="prestador_id" value="Prestador *" />
-          <select
-            id="prestador_id"
-            v-model="form.prestador_id"
-            class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-            required
-          >
-            <option :value="null">Selecione o prestador</option>
-            <option v-for="p in prestadores" :key="p.id" :value="p.id">
-              {{ p.nome }} ({{ p.cnpj }})
-            </option>
-          </select>
-          <InputError :message="form.errors.prestador_id" class="mt-2" />
-        </div>
-      </div>
-    </div>
+      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Identificação e Vínculos</h3>
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Identificação</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <InputLabel for="numero" value="Número do Lote *" />
           <TextInput
@@ -124,6 +45,95 @@
             placeholder="Ex: 123/2026"
           />
           <InputError :message="form.errors.contrato" class="mt-2" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <InputLabel for="ata_id" value="Ata *" />
+          <select
+            id="ata_id"
+            v-model="form.ata_id"
+            class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+            required
+          >
+            <option :value="null">Selecione a Ata</option>
+            <option v-for="a in atas" :key="a.id" :value="a.id">
+              {{ a.numero }}
+              <template v-if="a.dt_inicio && a.dt_final">
+                ({{ formatDate(a.dt_inicio) }} – {{ formatDate(a.dt_final) }})
+              </template>
+            </option>
+          </select>
+          <InputError :message="form.errors.ata_id" class="mt-2" />
+        </div>
+
+        <!--
+          O lote atende VARIOS municipios ("...destinado aos municipios de A, B
+          e C"): multi-selecao com busca, em vez do select unico que forcava um
+          municipio so por lote.
+        -->
+        <div>
+          <InputLabel value="Municípios atendidos *" />
+          <div class="mt-1 rounded-md border border-slate-300 dark:border-slate-700 dark:bg-slate-900/50">
+            <div class="p-2 border-b border-slate-200 dark:border-slate-700">
+              <TextInput
+                v-model="buscaMunicipio"
+                type="search"
+                class="block w-full text-sm"
+                placeholder="Buscar município..."
+              />
+            </div>
+            <div
+              v-if="municipiosSelecionados.length"
+              class="flex flex-wrap gap-1 p-2 border-b border-slate-200 dark:border-slate-700"
+            >
+              <button
+                v-for="m in municipiosSelecionados"
+                :key="m.id"
+                type="button"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-xs text-blue-800 dark:text-blue-200"
+                :title="`Remover ${m.nome}`"
+                @click="alternarMunicipio(m.id)"
+              >
+                {{ m.nome }}<span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <ul class="max-h-52 overflow-y-auto p-2 space-y-1">
+              <li v-for="m in municipiosFiltrados" :key="m.id">
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    :checked="estaSelecionado(m.id)"
+                    @change="alternarMunicipio(m.id)"
+                  />
+                  <span>{{ m.nome }}<span v-if="m.uf" class="text-slate-400"> / {{ m.uf }}</span></span>
+                </label>
+              </li>
+              <li v-if="municipiosFiltrados.length === 0" class="text-sm text-slate-400 px-1 py-2">
+                Nenhum município encontrado.
+              </li>
+            </ul>
+          </div>
+          <p class="mt-1 text-xs text-slate-500">{{ municipiosSelecionados.length }} selecionado(s)</p>
+          <InputError :message="form.errors.municipio_ids" class="mt-2" />
+        </div>
+
+        <div class="md:col-span-2">
+          <InputLabel for="prestador_id" value="Prestador *" />
+          <select
+            id="prestador_id"
+            v-model="form.prestador_id"
+            class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+            required
+          >
+            <option :value="null">Selecione o prestador</option>
+            <option v-for="p in prestadores" :key="p.id" :value="p.id">
+              {{ p.nome }} ({{ p.cnpj }})
+            </option>
+          </select>
+          <InputError :message="form.errors.prestador_id" class="mt-2" />
         </div>
       </div>
     </div>
