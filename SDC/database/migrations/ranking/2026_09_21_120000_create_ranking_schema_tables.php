@@ -10,37 +10,51 @@ use Illuminate\Support\Facades\DB;
  *
  * Plano: docs/superpowers/plans/2026-09-21-ranqueamento-ipcm.md
  *
- * POR QUE SCHEMA E NAO DATABASE SEPARADA
- * O plano original pedia a database `sdc_ranking` com tres conexoes proprias.
- * O teto de conexoes documentado em config/database.php (SWOOLE_PG_POOL_SIZE x
- * OCTANE_WORKERS x instancias <= max_connections) e restricao dura on-premise,
- * e tres conexoes novas por worker sairiam caro por um isolamento que, no mesmo
- * cluster, e logico de qualquer forma. Schema da o mesmo isolamento de tabelas
- * e de privilegios (GRANT por schema), reaproveita a conexao `pgsql` e mantem a
- * promocao futura para database propria como troca de env var - nenhuma tabela
- * aqui referencia o schema public por FK, justamente para isso.
+ * ESTA MIGRATION NAO RODA COM `php artisan migrate`
+ * Ela vive em database/migrations/ranking/, subdiretorio que o migrator padrao
+ * nao varre, e se aplica exclusivamente contra a conexao `ranking`:
+ *
+ *   php artisan migrate --database=ranking --path=database/migrations/ranking
+ *
+ * O destino e a database independente `sdc_ranking`. O guard em validarDestino()
+ * aborta se apontarem esta migration para a base operacional: criar o schema de
+ * ranking dentro de `sdc` e exatamente o que a separacao existe para impedir, e
+ * um --database esquecido nao pode ter esse efeito silenciosamente.
  *
  * POR QUE NAO HA FK PARA users / compdec_orgaos / municipios
- * O livro e append-only e sobrevive ao ciclo de vida do cadastro. Remover um
- * usuario nao pode cascatear no ledger nem abortar por RESTRICT: o ponto ja foi
- * conquistado e a auditoria precisa continuar legivel. As colunas ficam como
- * bigint indexado e a integridade e verificada na ingestao.
+ * Alem de serem outra database - o que ja tornaria a FK impossivel -, o livro e
+ * append-only e sobrevive ao ciclo de vida do cadastro. Remover um usuario nao
+ * pode cascatear no ledger nem abortar por RESTRICT: o ponto ja foi conquistado
+ * e a auditoria precisa continuar legivel. As colunas ficam como bigint
+ * indexado e a integridade e verificada na ingestao.
  */
 return new class extends Migration
 {
+    /**
+     * Conexao fixa. Nao herda a conexao default em nenhuma circunstancia.
+     */
+    protected $connection = 'ranking';
+
+    /**
+     * Bases operacionais que esta migration nunca pode tocar.
+     */
+    private const DESTINOS_PROIBIDOS = ['sdc', 'forge'];
+
     public function up(): void
     {
-        if (DB::getDriverName() !== 'pgsql') {
+        if ($this->conexao()->getDriverName() !== 'pgsql') {
             return;
         }
 
-        DB::statement('CREATE SCHEMA IF NOT EXISTS ranking');
+        $this->validarDestino();
+
+        $this->exec('CREATE SCHEMA IF NOT EXISTS ranking');
 
         // Catalogo versionado. A regra vigente na COMPETENCIA do fato e que
         // vale - por isso vigencia e versao ficam na linha, e uma regra nunca
         // e editada no lugar: publica-se outra versao. Replay de evento antigo
         // reaplica a versao antiga e nao gera segunda premiacao.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.regras (
                 id                  bigserial PRIMARY KEY,
                 rule_key            varchar(120) NOT NULL,
@@ -77,7 +91,7 @@ return new class extends Migration
         SQL);
 
         // Uma unica versao vigente (sem data de fim) por rule_key.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE UNIQUE INDEX IF NOT EXISTS uq_ranking_regras_vigente
                 ON ranking.regras (rule_key) WHERE vigente_ate IS NULL
         SQL);
@@ -86,7 +100,7 @@ return new class extends Migration
         // linha aqui, inclusive quando a decisao e zero ou apuracao: ausencia
         // de linha significa que o fato nunca foi avaliado, o que e diferente
         // de ter sido avaliado e nao pontuado.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.transacoes (
                 id                 bigserial PRIMARY KEY,
 
@@ -138,12 +152,12 @@ return new class extends Migration
             )
         SQL);
 
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_transacoes_decisao ON ranking.transacoes (decisao, competencia_em)');
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_transacoes_modulo ON ranking.transacoes (event_name, competencia_em)');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_transacoes_decisao ON ranking.transacoes (decisao, competencia_em)');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_transacoes_modulo ON ranking.transacoes (event_name, competencia_em)');
 
         // Livro de pontos. APPEND-ONLY: nada aqui e alterado ou removido.
         // Correcao vira lancamento novo apontando para o original.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.lancamentos (
                 id               bigserial PRIMARY KEY,
                 transacao_id     bigint       NOT NULL REFERENCES ranking.transacoes (id) ON DELETE RESTRICT,
@@ -185,13 +199,13 @@ return new class extends Migration
         SQL);
 
         // Indices de extrato: as tres dimensoes sempre filtram por competencia.
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_usuario ON ranking.lancamentos (credited_user_id, competencia_em) WHERE credited_user_id IS NOT NULL');
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_orgao ON ranking.lancamentos (orgao_id, competencia_em) WHERE orgao_id IS NOT NULL');
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_municipio ON ranking.lancamentos (municipio_id, competencia_em) WHERE municipio_id IS NOT NULL');
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_transacao ON ranking.lancamentos (transacao_id)');
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_estorno ON ranking.lancamentos (estorno_de_id) WHERE estorno_de_id IS NOT NULL');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_usuario ON ranking.lancamentos (credited_user_id, competencia_em) WHERE credited_user_id IS NOT NULL');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_orgao ON ranking.lancamentos (orgao_id, competencia_em) WHERE orgao_id IS NOT NULL');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_municipio ON ranking.lancamentos (municipio_id, competencia_em) WHERE municipio_id IS NOT NULL');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_transacao ON ranking.lancamentos (transacao_id)');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_lanc_estorno ON ranking.lancamentos (estorno_de_id) WHERE estorno_de_id IS NOT NULL');
 
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.periodos (
                 id          bigserial PRIMARY KEY,
                 tipo        varchar(12) NOT NULL,
@@ -210,7 +224,7 @@ return new class extends Migration
         SQL);
 
         // Projecao de leitura. O placar consulta SO esta tabela.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.saldos (
                 id            bigserial PRIMARY KEY,
 
@@ -235,13 +249,13 @@ return new class extends Migration
             )
         SQL);
 
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_saldos_placar ON ranking.saldos (geracao, periodo_id, escopo, modulo, pontos DESC, entidade_id)');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_saldos_placar ON ranking.saldos (geracao, periodo_id, escopo, modulo, pontos DESC, entidade_id)');
 
         // Participante elegivel aparece no placar mesmo com saldo zero; sem
         // isso o placar mostraria apenas quem ja pontuou e esconderia a base
         // de comparacao. Regiao e tipo ficam congelados no periodo para que
         // reorganizacao administrativa nao reescreva ranking antigo.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.participantes (
                 id          bigserial PRIMARY KEY,
                 periodo_id  bigint      NOT NULL REFERENCES ranking.periodos (id) ON DELETE CASCADE,
@@ -258,7 +272,7 @@ return new class extends Migration
             )
         SQL);
 
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.snapshots (
                 id               bigserial PRIMARY KEY,
                 periodo_id       bigint      NOT NULL REFERENCES ranking.periodos (id) ON DELETE CASCADE,
@@ -281,7 +295,7 @@ return new class extends Migration
 
         // escopo repetido no item de proposito: sem ele, usuario 7 e orgao 7
         // colidiriam na unicidade abaixo.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.snapshot_itens (
                 id          bigserial PRIMARY KEY,
                 snapshot_id bigint      NOT NULL REFERENCES ranking.snapshots (id) ON DELETE CASCADE,
@@ -297,13 +311,13 @@ return new class extends Migration
             )
         SQL);
 
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_snapshot_itens_posicao ON ranking.snapshot_itens (snapshot_id, posicao)');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_snapshot_itens_posicao ON ranking.snapshot_itens (snapshot_id, posicao)');
 
         // Vinculo historico usuario -> orgao -> municipio. Copia local com
         // intervalo de validade, porque a pivot compdec_orgao_user guarda o
         // estado ATUAL e nao permite responder "a que orgao Ana pertencia em
         // marco". Data desconhecida fica explicita em `evidencia`.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.vinculos (
                 id           bigserial PRIMARY KEY,
                 user_id      bigint      NOT NULL,
@@ -321,12 +335,12 @@ return new class extends Migration
             )
         SQL);
 
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_vinculos_janela ON ranking.vinculos (user_id, valido_de, valido_ate)');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_vinculos_janela ON ranking.vinculos (user_id, valido_de, valido_ate)');
 
         // Ajuste nunca edita saldo direto: gera pedido, decisao e lancamento
         // corretivo no livro. Sem este caminho, a unica forma de corrigir seria
         // UPDATE no ledger, que quebraria a auditoria.
-        DB::statement(<<<'SQL'
+        $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS ranking.pedidos_ajuste (
                 id                  bigserial PRIMARY KEY,
                 lancamento_id       bigint       NULL REFERENCES ranking.lancamentos (id) ON DELETE RESTRICT,
@@ -344,18 +358,49 @@ return new class extends Migration
             )
         SQL);
 
-        DB::statement('CREATE INDEX IF NOT EXISTS ix_ranking_ajuste_pendentes ON ranking.pedidos_ajuste (decisao, criado_em)');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_ajuste_pendentes ON ranking.pedidos_ajuste (decisao, criado_em)');
     }
 
     public function down(): void
     {
-        if (DB::getDriverName() !== 'pgsql') {
+        if ($this->conexao()->getDriverName() !== 'pgsql') {
             return;
         }
+
+        $this->validarDestino();
 
         // CASCADE derruba as tabelas do schema de uma vez. Seguro aqui porque
         // nenhum objeto fora de `ranking` referencia estas tabelas - o modulo
         // nao cria FK a partir do schema public.
-        DB::statement('DROP SCHEMA IF EXISTS ranking CASCADE');
+        $this->exec('DROP SCHEMA IF EXISTS ranking CASCADE');
+    }
+
+    private function conexao(): \Illuminate\Database\Connection
+    {
+        return DB::connection($this->connection);
+    }
+
+    private function exec(string $sql): void
+    {
+        $this->conexao()->statement($sql);
+    }
+
+    /**
+     * Recusa aplicar o schema de ranking sobre a base operacional.
+     *
+     * Checa o nome real da database na conexao aberta, e nao apenas o valor de
+     * config: um --database=ranking apontando por engano para `sdc` no .env
+     * passaria por qualquer verificacao feita so na configuracao.
+     */
+    private function validarDestino(): void
+    {
+        $atual = (string) $this->conexao()->selectOne('SELECT current_database() AS db')->db;
+
+        if (in_array($atual, self::DESTINOS_PROIBIDOS, true)) {
+            throw new RuntimeException(
+                "Migration de ranking recusada: destino '{$atual}' e base operacional. "
+                . 'Aplique com --database=ranking apontando para sdc_ranking.'
+            );
+        }
     }
 };
