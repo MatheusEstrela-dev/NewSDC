@@ -230,6 +230,63 @@ return [
             ],
         ],
 
+        // Ranking possui database propria. Credenciais nunca herdam o usuario
+        // operacional; sem configuracao explicita a conexao deve falhar.
+        'ranking' => [
+            'driver' => 'pgsql',
+            'host' => env('RANKING_DB_HOST', '127.0.0.1'),
+            'port' => env('RANKING_DB_PORT', '5432'),
+            'database' => env('RANKING_DB_DATABASE', 'sdc_ranking'),
+            'username' => env('RANKING_DB_USERNAME', ''),
+            'password' => env('RANKING_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'timezone' => 'UTC',
+            'sslmode' => env('RANKING_DB_SSLMODE', 'prefer'),
+            'application_name' => 'sdc-ranking-writer',
+            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares],
+        ],
+
+        // Usuario leitor exclusivo das projecoes. Conceder SELECT no destino.
+        'ranking_read' => [
+            'driver' => 'pgsql',
+            'host' => env('RANKING_DB_HOST', '127.0.0.1'),
+            'port' => env('RANKING_DB_PORT', '5432'),
+            'database' => env('RANKING_DB_DATABASE', 'sdc_ranking'),
+            'username' => env('RANKING_READ_USERNAME', ''),
+            'password' => env('RANKING_READ_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'timezone' => 'UTC',
+            'sslmode' => env('RANKING_DB_SSLMODE', 'prefer'),
+            'application_name' => 'sdc-ranking-reader',
+            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares],
+        ],
+
+        // Origem somente leitura, preferencialmente replica. O DBA deve
+        // conceder apenas SELECT; nome da conexao nao substitui privilegios.
+        // Nao usar o OutboxDispatcher aqui: ele grava na origem.
+        'ranking_source_ro' => [
+            'driver' => 'pgsql',
+            'host' => env('RANKING_SOURCE_HOST', '127.0.0.1'),
+            'port' => env('RANKING_SOURCE_PORT', '5432'),
+            'database' => env('RANKING_SOURCE_DATABASE', 'sdc'),
+            'username' => env('RANKING_SOURCE_USERNAME', ''),
+            'password' => env('RANKING_SOURCE_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'timezone' => 'UTC',
+            'sslmode' => env('RANKING_SOURCE_SSLMODE', 'prefer'),
+            'application_name' => 'sdc-ranking-source-ro',
+            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares],
+        ],
+
         // Conexao isolada para jobs de webhook (ProcessWebhook, ProcessInboundWebhook).
         // Aponta para o mesmo host do pgsql, mas com application_name distinto e
         // sem ATTR_PERSISTENT — jobs nao reusam conexao entre execucoes.
