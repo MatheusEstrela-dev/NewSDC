@@ -16,20 +16,17 @@ return [
     // antes de publicar posicao para os usuarios.
     'modo_sombra' => (bool) env('RANKING_MODO_SOMBRA', true),
 
-    // Schema Postgres do modulo. Os models montam $table como
-    // "<schema>.<tabela>". Isolado aqui para que a promocao futura para uma
-    // database propria seja troca de configuracao, nao edicao de model.
-    'schema' => env('RANKING_SCHEMA', 'ranking'),
-
-    // Conexao usada pelo modulo. Hoje a mesma do SDC: o schema ja isola
-    // tabelas e privilegios, e conexao nova custa caro no teto documentado em
-    // config/database.php (SWOOLE_PG_POOL_SIZE x OCTANE_WORKERS x instancias).
-    'conexao' => env('RANKING_CONEXAO', env('DB_CONNECTION', 'pgsql')),
+    // Schema fixo dentro da database independente sdc_ranking.
+    // Nunca reutilizar a conexao operacional como fallback.
+    'schema' => 'ranking',
+    'conexao' => 'ranking',
+    'conexao_origem' => 'ranking_source_ro',
+    'conexao_leitura' => 'ranking_read',
 
     'fila' => [
         // Fila propria para que o processamento de pontos nunca dispute worker
         // com notificacao ou webhook. Vide docker/supervisor/.
-        'nome' => env('RANKING_FILA', 'low'),
+        'nome' => env('RANKING_FILA', 'ranking'),
         'tentativas' => (int) env('RANKING_FILA_TENTATIVAS', 3),
         'timeout' => (int) env('RANKING_FILA_TIMEOUT', 120),
         'backoff_segundos' => [10, 30, 60],
