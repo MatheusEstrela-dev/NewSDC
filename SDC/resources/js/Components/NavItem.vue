@@ -89,6 +89,11 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2.25c3.5 4 6 7.5 6 10.5a6 6 0 11-12 0c0-3 2.5-6.5 6-10.5z" />
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.5 13.5a2.5 2.5 0 002.5 2.5" />
     </svg>
+    <svg v-else-if="icon === 'trophy'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4h8v5a4 4 0 11-8 0V4z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H5.5A1.5 1.5 0 004 6.5v.5a4 4 0 004 4m8-10h2.5A1.5 1.5 0 0120 6.5v.5a4 4 0 01-4 4" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13v4m-3 3h6" />
+    </svg>
     <svg v-else-if="icon === 'logs-list'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h8" />
     </svg>
