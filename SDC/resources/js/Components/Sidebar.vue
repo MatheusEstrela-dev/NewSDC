@@ -300,6 +300,16 @@
           Treinamento
         </NavItem>
 
+        <NavItem
+          v-if="page.props.rankingDisponivel && route().has('ranking.index')"
+          :href="route('ranking.index')"
+          :active="route().current('ranking.*')"
+          icon="checkbadge"
+          :collapsed="isCollapsed"
+        >
+          Ranking
+        </NavItem>
+
         <!-- PlanCon (Plano de Contingencia) -->
         <NavItem
           v-if="canSeePlanCon && _routes.hasPlancon"

@@ -149,6 +149,15 @@ return [
         ],
 
         // Dead Letter Queue - webhooks falhos para analise manual
+        'redis-ranking' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => env('RANKING_FILA', 'ranking'),
+            'retry_after' => 180,
+            'block_for' => 5,
+            'after_commit' => true,
+        ],
+
         'dead-letter' => [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),

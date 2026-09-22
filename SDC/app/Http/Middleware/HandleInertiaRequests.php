@@ -55,6 +55,7 @@ class HandleInertiaRequests extends Middleware
             // Nao vazar a arvore de ACL/permissoes em paginas publicas (login, etc).
             // Antes: era exposta no data-page do Inertia mesmo sem usuario autenticado.
             'acl' => fn() => $user ? $this->getCachedAclConfig() : (object) [],
+            'rankingDisponivel' => fn() => \App\Modules\Ranking\Support\RankingAccess::visivel($user),
             // Inertia::always() porque flash PRECISA viajar tambem no reload
             // parcial. Sem isso o `only:` do reload filtra o flash da resposta,
             // o cliente mantem o objeto da visita anterior, e o watcher do

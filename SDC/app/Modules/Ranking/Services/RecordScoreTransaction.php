@@ -69,14 +69,14 @@ class RecordScoreTransaction
     private const TAMANHO_ENTRY_KEY = 220;
 
     public function __construct(
-        private readonly int $geracaoPadrao = 1,
+        private readonly ?int $geracaoPadrao = null,
     ) {}
 
     /**
      * Registra a decisao e projeta o saldo. Idempotente por event_id e por
      * (chave_canonica, familia).
      *
-     * @param array<string, mixed> $contexto
+     * @param  array<string, mixed>  $contexto
      */
     public function registrar(
         string $eventId,
@@ -98,8 +98,6 @@ class RecordScoreTransaction
         ?int $geracao = null,
     ): Transacao {
         $this->validarEntrada($eventId, $eventName, $chaveCanonica, $familia, $modulo, $decisao, $regraId);
-
-        $geracao ??= $this->geracaoPadrao;
 
         return DB::connection(self::CONEXAO)->transaction(function () use (
             $eventId, $eventName, $chaveCanonica, $familia, $modulo, $decisao,
@@ -159,7 +157,7 @@ class RecordScoreTransaction
      */
     public function entryKey(string $chaveCanonica, string $familia, string $natureza): string
     {
-        $bruta = $chaveCanonica . '|' . $familia . '|' . $natureza;
+        $bruta = $chaveCanonica.'|'.$familia.'|'.$natureza;
 
         if (strlen($bruta) <= self::TAMANHO_ENTRY_KEY) {
             return $bruta;
@@ -167,7 +165,7 @@ class RecordScoreTransaction
 
         $digest = sha1($bruta);
 
-        return substr($bruta, 0, self::TAMANHO_ENTRY_KEY - strlen($digest) - 1) . '|' . $digest;
+        return substr($bruta, 0, self::TAMANHO_ENTRY_KEY - strlen($digest) - 1).'|'.$digest;
     }
 
     /**
@@ -245,7 +243,7 @@ class RecordScoreTransaction
             return;
         }
 
-        $geracao ??= $this->geracaoPadrao;
+        $geracao ??= $this->geracaoPadrao ?? $this->geracaoAtiva();
         $periodos = $this->resolverPeriodos($competencia);
 
         // Linha do modulo + linha de total. Se o chamador ja pediu o rotulo de
@@ -274,13 +272,29 @@ class RecordScoreTransaction
         DB::connection(self::CONEXAO)->statement(
             'INSERT INTO ranking.saldos
                 (geracao, periodo_id, escopo, entidade_id, modulo, pontos, faixa, atualizado_em)
-             VALUES ' . implode(', ', $linhas) . '
+             VALUES '.implode(', ', $linhas).'
              ON CONFLICT (geracao, periodo_id, escopo, entidade_id, modulo) DO UPDATE SET
-                pontos = ' . $total . ',
-                faixa = ' . $this->expressaoFaixa($total) . ',
+                pontos = '.$total.',
+                faixa = '.$this->expressaoFaixa($total).',
                 atualizado_em = now()',
             $valores,
         );
+    }
+
+    /**
+     * Resolve a geracao publicada no instante da escrita.
+     *
+     * O valor nao pode ficar preso no singleton: depois de um rebuild, toda
+     * nova escrita precisa acompanhar a geracao que o placar passou a ler.
+     * Chamadores de manutencao ainda podem informar uma geracao explicitamente.
+     */
+    public function geracaoAtiva(): int
+    {
+        $linha = DB::connection(self::CONEXAO)->selectOne(
+            'SELECT COALESCE(MAX(geracao), 1) AS geracao FROM ranking.saldos'
+        );
+
+        return $linha === null ? 1 : (int) $linha->geracao;
     }
 
     /**
@@ -312,7 +326,7 @@ class RecordScoreTransaction
     }
 
     /**
-     * @param array<string, mixed> $contexto
+     * @param  array<string, mixed>  $contexto
      * @return int|null id inserido, ou null quando uma das barreiras impediu
      */
     private function inserirTransacao(
@@ -407,7 +421,7 @@ class RecordScoreTransaction
         if ($linha === null) {
             throw new RuntimeException(
                 'Conflito de unicidade sem linha correspondente em ranking.transacoes: '
-                . "event_id={$eventId} chave={$chaveCanonica} familia={$familia}."
+                ."event_id={$eventId} chave={$chaveCanonica} familia={$familia}."
             );
         }
 
@@ -434,7 +448,7 @@ class RecordScoreTransaction
             $sql .= " WHEN {$expressaoTotal} >= {$faixa->pontosMinimos()} THEN '{$faixa->value}'";
         }
 
-        return $sql . " ELSE '" . FaixaRanking::deSaldo(0)->value . "' END";
+        return $sql." ELSE '".FaixaRanking::deSaldo(0)->value."' END";
     }
 
     private function instante(?DateTimeInterface $momento): ?string
@@ -487,7 +501,7 @@ class RecordScoreTransaction
         // lancamento com esse modulo tornaria o total indistinguivel da parcela.
         if ($modulo === self::MODULO_TOTAL) {
             throw new InvalidArgumentException(
-                "'" . self::MODULO_TOTAL . "' e reservado para a linha de total do placar."
+                "'".self::MODULO_TOTAL."' e reservado para a linha de total do placar."
             );
         }
 

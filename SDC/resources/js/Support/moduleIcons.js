@@ -40,6 +40,7 @@ export const MODULE_ICONS = {
   rat: file,
   inicio: house,
   dashboard: house,
+  ranking: chart,
   tdap: tankTruck,
   'plano-contingencia': shield,
   'ajuda-humanitaria': heartAttack,
