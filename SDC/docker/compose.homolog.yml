@@ -180,6 +180,30 @@ services:
       DB_USERNAME: ${DB_USERNAME:-sdc}
       DB_PASSWORD: ${DB_PASSWORD:-sdc}
       DB_SSLMODE: disable
+
+      # Ranking. Precisa vir daqui: o .env vem assado na imagem e nao tem
+      # nenhuma RANKING_*. Sem estas variaveis o modulo cai nos defaults de
+      # config/ranking.php (habilitado=false) e /ranking responde 404 para
+      # todos, junto com o widget do dashboard e o item de menu - os tres
+      # dependem de RankingAccess::visivel.
+      #
+      # A database e separada da operacional, no mesmo servidor de homolog.
+      RANKING_HABILITADO: "true"
+      RANKING_MODO_SOMBRA: "false"
+      RANKING_DB_HOST: ${DB_TARGET_HOST:-db}
+      RANKING_DB_PORT: ${DB_TARGET_PORT:-5432}
+      RANKING_DB_DATABASE: sdc_ranking
+      RANKING_DB_USERNAME: ${DB_USERNAME:-sdc}
+      RANKING_DB_PASSWORD: ${DB_PASSWORD:-sdc}
+      RANKING_DB_SSLMODE: disable
+      RANKING_READ_USERNAME: ${DB_USERNAME:-sdc}
+      RANKING_READ_PASSWORD: ${DB_PASSWORD:-sdc}
+      RANKING_SOURCE_HOST: ${DB_TARGET_HOST:-db}
+      RANKING_SOURCE_PORT: ${DB_TARGET_PORT:-5432}
+      RANKING_SOURCE_DATABASE: ${DB_DATABASE:-sdc}
+      RANKING_SOURCE_USERNAME: ${DB_USERNAME:-sdc}
+      RANKING_SOURCE_PASSWORD: ${DB_PASSWORD:-sdc}
+      RANKING_SOURCE_SSLMODE: disable
       DB_POOLER_MODE: ${DB_POOLER_MODE:-}
 
       # Lidos pelo guardrail do entrypoint quando DB_POOLER_MODE esta setado.
@@ -208,6 +232,13 @@ services:
       REVERB_SCHEME: http
 
       MAIL_MAILER: log
+
+      # Ensaio de capacidade: quando preenchido, requisicao com o mesmo valor em
+      # X-Loadtest-Bypass fica sem limite de taxa. Sem isso, medir o teto real a
+      # partir de uma unica fonte e impossivel -- o gerador esbarra no limite
+      # por IP muito antes de o servidor saturar, e o ensaio acaba medindo o
+      # rate limiter. Vazio por padrao, e NAO deve ser definido em producao.
+      LOADTEST_BYPASS_TOKEN: ${LOADTEST_BYPASS_TOKEN:-}
 
     volumes:
       # So o que precisa de estado compartilhado entre replicas. Codigo, nao:
