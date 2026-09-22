@@ -182,6 +182,33 @@ services:
       # folga para queue worker, psql de manutencao e as reservadas.
       DB_MAX_CONCURRENT: 60
 
+      # Ranking. Precisa vir daqui e nao do SDC/.env: o .env do host NAO e
+      # montado no container - o app usa o que foi assado na imagem, que nao
+      # tem nenhuma RANKING_*. Sem estas variaveis o modulo fica desligado por
+      # default e /ranking responde 404 para todo mundo, inclusive admin.
+      #
+      # A database e independente e vive no MESMO Postgres de dev; em producao
+      # ela deve ficar em instancia propria. O usuario de leitura e o mesmo em
+      # dev por simplicidade - no destino real sao credenciais distintas, com
+      # apenas SELECT para o leitor.
+      RANKING_HABILITADO: "true"
+      RANKING_MODO_SOMBRA: "false"
+      RANKING_DB_HOST: db
+      RANKING_DB_PORT: 5432
+      RANKING_DB_DATABASE: sdc_ranking
+      RANKING_DB_USERNAME: ${DB_USERNAME:-sdc}
+      RANKING_DB_PASSWORD: ${DB_PASSWORD:-secret}
+      RANKING_DB_SSLMODE: disable
+      RANKING_READ_USERNAME: ${DB_USERNAME:-sdc}
+      RANKING_READ_PASSWORD: ${DB_PASSWORD:-secret}
+      # Origem somente leitura: em dev aponta para a propria base operacional.
+      RANKING_SOURCE_HOST: db
+      RANKING_SOURCE_PORT: 5432
+      RANKING_SOURCE_DATABASE: sdc
+      RANKING_SOURCE_USERNAME: ${DB_USERNAME:-sdc}
+      RANKING_SOURCE_PASSWORD: ${DB_PASSWORD:-secret}
+      RANKING_SOURCE_SSLMODE: disable
+
       # Raiz dos anexos por modulo (bind mount do disco dedicado; ver volumes).
       # filesystems.php reponta os disks pae/rat/compdec/tdap/exports para
       # ANEXOS_ROOT/{MODULO} quando esta env existe.
