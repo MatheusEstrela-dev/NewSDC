@@ -4,7 +4,22 @@ declare(strict_types=1);
 
 namespace App\Modules\Ranking;
 
+use App\Modules\Pae\Domain\Events\FormularioValidadoV1;
+use App\Modules\Pae\Domain\Events\ParecerConcluidoV1;
+use App\Modules\Pae\Domain\Events\ProtocoloEnviadoV1;
+use App\Modules\Pae\Domain\Events\RevisaoAceitaV1;
+use App\Modules\Rat\Domain\Events\RegistroCompletoV1;
+use App\Modules\Rat\Domain\Events\RelatorioFinalizadoV1;
+use App\Modules\Rat\Domain\Events\VistoriaValidadaV1;
+use App\Modules\Ranking\Adapters\PaeAdapter;
+use App\Modules\Ranking\Adapters\RatAdapter;
+use App\Modules\Ranking\Contracts\ModuleAdapter;
+use App\Modules\Ranking\Listeners\PontuarFatoDeNegocio;
+use App\Modules\Ranking\Services\ConfirmScoreTransaction;
 use App\Modules\Ranking\Services\InstitutionalContextResolver;
+use App\Modules\Ranking\Services\ProcessarFatoDoRanking;
+use App\Modules\Ranking\Services\RegraVigenteRepository;
+use Illuminate\Support\Facades\Event;
 use App\Modules\Ranking\Services\LeaderboardQuery;
 use App\Modules\Ranking\Services\RecordScoreTransaction;
 use App\Modules\Ranking\Services\ReverseScoreEntry;
@@ -51,6 +66,21 @@ class RankingServiceProvider extends ServiceProvider
 
         $this->app->singleton(RecordScoreTransaction::class);
         $this->app->singleton(ReverseScoreEntry::class);
+        $this->app->singleton(ConfirmScoreTransaction::class);
+        $this->app->singleton(RegraVigenteRepository::class);
+        $this->app->singleton(ProcessarFatoDoRanking::class);
+
+        // Um adaptador por dominio, resolvidos por tag: adicionar modulo novo
+        // ao ranking passa a ser registrar o adaptador aqui, sem tocar no
+        // listener nem no orquestrador.
+        $this->app->singleton(RatAdapter::class);
+        $this->app->singleton(PaeAdapter::class);
+        $this->app->tag([RatAdapter::class, PaeAdapter::class], 'ranking.adaptadores');
+
+        $this->app->bind(PontuarFatoDeNegocio::class, fn ($app) => new PontuarFatoDeNegocio(
+            $app->tagged('ranking.adaptadores'),
+            $app->make(ProcessarFatoDoRanking::class),
+        ));
 
         // Leitura do placar usa a conexao de SELECT, separada da de escrita.
         $this->app->singleton(LeaderboardQuery::class, fn ($app) => new LeaderboardQuery(
@@ -62,9 +92,26 @@ class RankingServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Os listeners dos eventos de RAT e PAE sao ligados na Fase 4, e apenas
-        // quando config('ranking.habilitado') estiver ativo. Registrar listener
-        // com o modulo desligado faria o Ranking consumir evento e gravar livro
-        // sem que o placar exista.
+        // Modulo desligado nao escuta: sem isto o ranking consumiria evento e
+        // gravaria livro antes de existir placar. O proprio orquestrador tambem
+        // checa a flag, mas nem registrar o listener e mais barato e evita
+        // ocupar worker de fila a toa.
+        if (! config('ranking.habilitado', false)) {
+            return;
+        }
+
+        $eventos = [
+            RegistroCompletoV1::class,
+            RelatorioFinalizadoV1::class,
+            VistoriaValidadaV1::class,
+            ProtocoloEnviadoV1::class,
+            FormularioValidadoV1::class,
+            RevisaoAceitaV1::class,
+            ParecerConcluidoV1::class,
+        ];
+
+        foreach ($eventos as $evento) {
+            Event::listen($evento, [PontuarFatoDeNegocio::class, 'handle']);
+        }
     }
 }

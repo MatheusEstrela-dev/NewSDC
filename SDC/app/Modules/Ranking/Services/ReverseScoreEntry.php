@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ranking\Services;
 
+use App\Modules\Ranking\Enums\DecisaoPontuacao;
 use App\Modules\Ranking\Models\Lancamento;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -32,11 +33,29 @@ use RuntimeException;
  * estornos existentes: dois estornos concorrentes do mesmo lancamento seriam,
  * sem o lock, ambos aprovados contra o mesmo saldo lido.
  *
+ * A DECISAO DA TRANSACAO ACOMPANHA O ESTORNO INTEGRAL
+ * Quando o estorno zera o credito, ranking.transacoes.decisao passa a
+ * 'estornada'. Sem isso a transacao continuaria afirmando 'confirmada' com
+ * saldo ja retirado, e qualquer auditoria que leia a decisao - e nao a soma do
+ * livro - veria um premio que nao existe mais. Transacao NAO e RegistroImutavel
+ * justamente porque ela e a decisao corrente sobre o fato; o livro e que e
+ * append-only, e o estorno continua sendo um lancamento novo.
+ *
+ * ESTORNO PARCIAL NAO MEXE NA DECISAO: ainda ha credito de pe, a transacao
+ * continua 'confirmada' e a parcela retirada fica visivel no livro.
+ *
+ * O PLACAR NAO LE `decisao`. LeaderboardQuery consulta apenas ranking.saldos,
+ * ranking.participantes e ranking.periodos, entao esta mudanca nao altera
+ * nenhuma posicao: o saldo ja havia sido corrigido pelo lancamento negativo.
+ *
  * CUIDADO COM OCTANE: stateless, como todo service deste modulo. O contexto do
  * pedido chega por argumento, jamais de Auth dentro do service.
  */
 class ReverseScoreEntry
 {
+    /** Motivo gravado na transacao quando o credito e anulado por inteiro. */
+    public const MOTIVO_ESTORNO_INTEGRAL = 'estorno_integral';
+
     public function __construct(
         private readonly RecordScoreTransaction $livro,
     ) {}
@@ -138,6 +157,14 @@ class ReverseScoreEntry
                     $geracao,
                 );
 
+                // Nao sobrou credito: a decisao da transacao deixa de ser
+                // 'confirmada'. A comparacao e contra o RESTANTE, nao contra o
+                // valor original - o ultimo de varios estornos parciais tambem
+                // anula o credito e tambem tem de marcar a transacao.
+                if ($valor === $restante) {
+                    $this->marcarTransacaoEstornada((int) $original->transacao_id);
+                }
+
                 return Lancamento::query()->findOrFail($estornoId);
             }
         );
@@ -158,7 +185,7 @@ class ReverseScoreEntry
             'SELECT l.id, l.transacao_id, l.credited_user_id, l.orgao_id, l.municipio_id,
                     l.modulo, l.regra_id, l.regra_versao, l.pontos_base, l.pontos_bonus,
                     l.pontos, l.competencia_em, l.estorno_de_id,
-                    t.chave_canonica, t.familia
+                    t.chave_canonica, t.familia, t.decisao
                FROM ranking.lancamentos l
                JOIN ranking.transacoes t ON t.id = l.transacao_id
               WHERE l.id = ?
@@ -182,7 +209,46 @@ class ReverseScoreEntry
             );
         }
 
+        // Lancamento pendente existe no livro com pontos > 0, mas o saldo nunca
+        // foi movido - so ConfirmScoreTransaction o projeta. Estornar aqui
+        // subtrairia pontos que nunca foram somados e levaria o placar a
+        // negativo. Invalidar marco ainda nao confirmado e outro caso: ele se
+        // resolve na propria decisao da transacao, nao por estorno.
+        if ((string) $linha->decisao === DecisaoPontuacao::Pendente->value) {
+            throw new DomainException(
+                "Lancamento {$lancamentoId} pertence a transacao pendente; "
+                . 'confirme antes de estornar, ou decida a transacao como zero/apuracao.'
+            );
+        }
+
         return $linha;
+    }
+
+    /**
+     * Promove a decisao da transacao a 'estornada'.
+     *
+     * Roda DENTRO da transacao de banco do estorno: se o UPDATE falhar, o
+     * lancamento negativo e o saldo voltam atras junto, e nao fica transacao
+     * marcada como estornada sem estorno no livro.
+     *
+     * O WHERE repete a exclusao de 'estornada' para que a operacao seja
+     * repetivel sem efeito - o lock do credito original ja impede a corrida,
+     * e a condicao aqui e a segunda barreira.
+     */
+    private function marcarTransacaoEstornada(int $transacaoId): void
+    {
+        DB::connection(RecordScoreTransaction::CONEXAO)->update(
+            'UPDATE ranking.transacoes
+                SET decisao = ?, motivo = ?
+              WHERE id = ?
+                AND decisao <> ?',
+            [
+                DecisaoPontuacao::Estornada->value,
+                self::MOTIVO_ESTORNO_INTEGRAL,
+                $transacaoId,
+                DecisaoPontuacao::Estornada->value,
+            ],
+        );
     }
 
     /** Valor absoluto ja estornado deste credito. Os estornos sao negativos no livro. */

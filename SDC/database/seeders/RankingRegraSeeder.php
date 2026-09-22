@@ -81,6 +81,11 @@ final class RankingRegraSeeder extends Seeder
                 'versao' => 1,
                 'bonus_percentual' => 20,
                 'aceita_bonus' => false,
+                // Explicito, e nao herdado do default da coluna: decide se o
+                // marco entra Confirmado ou Pendente. Como nenhum aceite formal
+                // foi homologado ainda, todos nascem sem exigencia - ligar isto
+                // marco a marco e decisao institucional, igual ao aceita_bonus.
+                'exige_validacao' => false,
                 'habilitada' => false,
                 'motivo_desabilitada' => 'source_evidence_missing',
                 'vigente_de' => '2026-09-21 00:00:00+00:00',

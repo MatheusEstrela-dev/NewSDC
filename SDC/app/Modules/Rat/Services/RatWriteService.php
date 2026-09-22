@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
+use App\Core\Events\DomainEvent;
+use App\Core\Outbox\OutboxDispatcher;
+use App\Modules\Rat\Domain\Events\RegistroCompletoV1;
+use App\Modules\Rat\Domain\Events\RelatorioFinalizadoV1;
 use App\Modules\Rat\DTOs\RatDadosGeraisDTO;
 use App\Modules\Rat\DTOs\RatEnvolvidoDTO;
 use App\Modules\Rat\DTOs\RatHistoricoDTO;
@@ -23,6 +27,7 @@ class RatWriteService
 {
     public function __construct(
         private readonly RatProtocoloService $protocoloService,
+        private readonly OutboxDispatcher $outbox,
     ) {}
 
     public function create(): RatOcorrencia
@@ -121,11 +126,22 @@ class RatWriteService
                 $this->saveHistorico($id, RatHistoricoDTO::fromArray(['historico' => $data['historico']]));
             }
 
+            /*
+             * Registro completo = criacao que ja chega com conteudo. O
+             * esqueleto vazio de create() e o autosave de saveDraft() ficam de
+             * fora: rascunho nao e entrega.
+             */
+            if ($this->temConteudoDeRegistro($data)) {
+                $this->publicarRegistroCompleto($ocorrencia, $this->actorUserId());
+            }
+
             if (!empty($data['finalize'])) {
                 $ocorrencia->update([
                     'status'     => 1,
                     'updated_by' => $userId,
                 ]);
+
+                $this->publicarRelatorioFinalizado($ocorrencia, $this->actorUserId(), 'criacao');
             }
 
             return $ocorrencia->fresh();
@@ -156,12 +172,21 @@ class RatWriteService
         // fechamento automatico (rat:close-expired) — nao para impedir o
         // fechamento manual antecipado (com o bloqueio, ninguem finalizava:
         // antes das 48h a regra proibia e depois o cron ja tinha fechado).
-        $ocorrencia->update([
-            'status'     => 1,
-            'updated_by' => Auth::id(),
-        ]);
+        // Transacao: o RelatorioFinalizadoV1 tem de cair no outbox junto com a
+        // virada de status, senao o marco existe no banco e nunca no ranking
+        // (ou o contrario, se o outbox gravasse fora).
+        return DB::transaction(function () use ($ocorrencia): RatOcorrencia {
+            $userId = $this->actorUserId();
 
-        return $ocorrencia->fresh();
+            $ocorrencia->update([
+                'status'     => 1,
+                'updated_by' => $userId,
+            ]);
+
+            $this->publicarRelatorioFinalizado($ocorrencia, $userId, 'manual');
+
+            return $ocorrencia->fresh();
+        });
     }
 
     public function saveDraft(string $id, array $data): RatOcorrencia
@@ -341,6 +366,84 @@ class RatWriteService
             $this->ensureRelatoLink($ocorrenciaId, $vistoria);
             return $vistoria;
         });
+    }
+
+    /**
+     * Ha conteudo de RAT no payload, ou e so o esqueleto?
+     */
+    private function temConteudoDeRegistro(array $data): bool
+    {
+        foreach (['dadosGerais', 'comunicacao', 'local', 'endereco', 'recursos', 'envolvidos', 'vistoria', 'historico'] as $bloco) {
+            if (!empty($data[$bloco])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Autor da acao, capturado AQUI, onde a request ainda existe.
+     *
+     * As colunas de autoria do RAT nao reconstroem isso depois:
+     * `rat_ocorrencias.created_by`/`updated_by` sao string(191) e
+     * `rat_relato_recursos.created_by` e unsignedBigInteger, nenhuma das duas
+     * com FK para `users`. O evento carrega o id explicito ou o fato vai para
+     * apuracao no ranking — jamais se deduz autor do texto de created_by.
+     */
+    private function actorUserId(): ?int
+    {
+        $id = Auth::id();
+
+        return is_numeric($id) && (int) $id > 0 ? (int) $id : null;
+    }
+
+    private function publicarRegistroCompleto(RatOcorrencia $ocorrencia, ?int $userId): void
+    {
+        $registradoEm = $ocorrencia->created_at ?? now();
+
+        $this->outbox->persist(new RegistroCompletoV1(
+            eventId:       DomainEvent::newId(),
+            aggregateType: 'rat_ocorrencia',
+            aggregateId:   (string) $ocorrencia->id,
+            occurredAt:    new \DateTimeImmutable(),
+            metadata: [
+                'ocorrencia_id'  => (string) $ocorrencia->id,
+                'numero_bos'     => $ocorrencia->numero_bos,
+                'sequencial_ano' => $ocorrencia->sequencial_ano,
+                'status'         => (int) $ocorrencia->status,
+                'actor_user_id'  => $userId,
+                'prazo_edicao'   => $ocorrencia->prazo_edicao?->toIso8601String(),
+                'registrado_em'  => $registradoEm->toIso8601String(),
+            ],
+        ));
+    }
+
+    /**
+     * `origem` distingue o fechamento manual da finalizacao embutida na
+     * criacao. O fechamento automatico por prazo (rat:close-expired) NAO passa
+     * por aqui: ninguem entregou nada, a janela de 48h so venceu.
+     */
+    private function publicarRelatorioFinalizado(RatOcorrencia $ocorrencia, ?int $userId, string $origem): void
+    {
+        $finalizadoEm = new \DateTimeImmutable();
+
+        $this->outbox->persist(new RelatorioFinalizadoV1(
+            eventId:       DomainEvent::newId(),
+            aggregateType: 'rat_ocorrencia',
+            aggregateId:   (string) $ocorrencia->id,
+            occurredAt:    $finalizadoEm,
+            metadata: [
+                'ocorrencia_id'  => (string) $ocorrencia->id,
+                'numero_bos'     => $ocorrencia->numero_bos,
+                'sequencial_ano' => $ocorrencia->sequencial_ano,
+                'status'         => 1,
+                'actor_user_id'  => $userId,
+                'prazo_edicao'   => $ocorrencia->prazo_edicao?->toIso8601String(),
+                'finalizado_em'  => $finalizadoEm->format(\DATE_ATOM),
+                'origem'         => $origem,
+            ],
+        ));
     }
 
     private function ensureRelatoLink(string $ocorrenciaId, object $model): void

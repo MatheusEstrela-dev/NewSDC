@@ -71,6 +71,13 @@ return new class extends Migration
                 bonus_percentual    smallint     NOT NULL DEFAULT 20,
                 aceita_bonus        boolean      NOT NULL DEFAULT false,
 
+                -- Decide Confirmada vs Pendente no ScoreCalculator. Marco que
+                -- exige aceite formal entra como pendente, carregando os pontos
+                -- sem soma-los ao saldo, ate ConfirmScoreTransaction promove-lo.
+                -- Default true por ser o mais restritivo: na duvida o ponto
+                -- aguarda validacao em vez de entrar no placar sem aceite.
+                exige_validacao     boolean      NOT NULL DEFAULT true,
+
                 -- Nasce desabilitada de proposito. So habilita o marco que tem
                 -- fonte de evidencia comprovada; o motivo abaixo documenta por
                 -- que os demais continuam fora, em vez de sumirem do catalogo.
