@@ -14,8 +14,6 @@
             />
           </div>
 
-          <RankingWidget v-if="inertiaPage.props.rankingDisponivel" />
-
           <!-- Linha 1: KPIs (draggable isolado para servir de anchor estavel ao tour) -->
           <draggable
             v-model="kpiItems"
@@ -175,7 +173,6 @@
 
 <script setup>
 import HomeIcon from '@/Components/Icons/HomeIcon.vue';
-import RankingWidget from '@/Components/Ranking/RankingWidget.vue';
 import Modal from '@/Components/Modal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
@@ -217,6 +214,7 @@ const RadarChartWidget = defineAsyncComponent(() => import('@/Components/Dashboa
 const PlanConMunicipiosWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConMunicipiosWidget.vue'));
 const PlanConSituacaoWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConSituacaoWidget.vue'));
 const FrotaStatusWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/FrotaStatusWidget.vue'));
+const RankingWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/RankingWidget.vue'));
 
 // Ícones para Métricas (leves, podem ser eager)
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
@@ -241,6 +239,11 @@ const props = defineProps({
     // Slug plantao.viaturas.view: sem ele o widget mostra os numeros mas nao
     // oferece o link, que responderia 403.
     canVerFrota:        { type: Boolean, default: false },
+    // Resumo do placar do usuario da sessao ({ pontos, posicao, faixa,
+    // atualizado_em }). FORA do DTO cacheado pelo mesmo motivo do canVerFrota:
+    // o DTO vale para todo mundo e isto e por usuario. Nulo enquanto o
+    // DashboardController nao enviar o prop, e o widget trata esse caso.
+    rankingResumo:      { type: Object, default: null },
 });
 
 const currentYear = ref(new Date().getFullYear());
@@ -391,6 +394,18 @@ const widgetItems = ref([
         props: { stats: props.frotaStats, canVerFrota: props.canVerFrota }
     },
 ]);
+
+// Ranking so entra na grade para quem enxerga o modulo. A flag vem do share
+// por requisicao (HandleInertiaRequests -> RankingAccess::visivel), que ja e
+// por usuario -- nunca do DTO cacheado das estatisticas, que vale para todos.
+if (inertiaPage.props.rankingDisponivel) {
+    widgetItems.value.push({
+        id: 'ranking-resumo',
+        component: markRaw(RankingWidget),
+        colSpan: 'col-span-1 lg:col-span-4',
+        props: { resumo: props.rankingResumo }
+    });
+}
 
 </script>
 

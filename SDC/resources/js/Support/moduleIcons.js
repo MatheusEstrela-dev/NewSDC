@@ -40,6 +40,8 @@ export const MODULE_ICONS = {
   rat: file,
   inicio: house,
   dashboard: house,
+  // Sem arte de trofeu/medalha em resources/images/modulos: `chart` e o mais
+  // proximo (placar) ate que o icone proprio do modulo seja fornecido.
   ranking: chart,
   tdap: tankTruck,
   'plano-contingencia': shield,

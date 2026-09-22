@@ -301,10 +301,10 @@
         </NavItem>
 
         <NavItem
-          v-if="page.props.rankingDisponivel && route().has('ranking.index')"
+          v-if="page.props.rankingDisponivel && _routes.hasRanking"
           :href="route('ranking.index')"
-          :active="route().current('ranking.*')"
-          icon="checkbadge"
+          :active="isRouteActive('ranking.*')"
+          icon="trophy"
           :collapsed="isCollapsed"
         >
           Ranking
@@ -852,6 +852,7 @@ const _routes = {
   hasEstoqueKits: route().has('estoque.kits.index'),
   hasEstoqueMovimentacoes: route().has('estoque.movimentacoes.index'),
   hasTreinamentos: route().has('treinamentos.index'),
+  hasRanking: route().has('ranking.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
   hasSismos: route().has('sismos.index'),
@@ -913,6 +914,9 @@ const _activeRoutes = computed(() => {
     'estoque.movimentacoes.*': route().current('estoque.movimentacoes.*'),
     'treinamentos.*': route().current('treinamentos.*'),
     'plancon.*': route().current('plancon.*'),
+    // isRouteActive so consulta ESTE mapa: sem a linha abaixo o item de
+    // Ranking nasceria permanentemente apagado, mesmo dentro do modulo.
+    'ranking.*': route().current('ranking.*'),
     'inmet.*': route().current('inmet.*'),
     'sismos.*': route().current('sismos.*'),
     // isRouteActive so acende o item quando o padrao e chave DESTE mapa: sem a
