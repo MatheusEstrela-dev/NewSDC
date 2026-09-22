@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Services;
 
+use App\Core\Events\DomainEvent;
+use App\Core\Outbox\OutboxDispatcher;
 use App\Mail\PaeNotificacaoMail;
 use App\Models\User;
+use App\Modules\Pae\Domain\Events\RevisaoAceitaV1;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeAnalise;
 use App\Modules\Pae\Models\PaeNotificacao;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTimeline;
+use App\Modules\Pae\Support\CicloProtocolo;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
 use App\Modules\Notificacoes\Jobs\EntregarNotificacaoJob;
 use App\Modules\Shared\BaseService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
@@ -23,7 +28,8 @@ class PaeNotificacaoService extends BaseService
     public const MAX_CICLOS = 3;
 
     public function __construct(
-        private readonly PaeProtocoloService $protocoloService
+        private readonly PaeProtocoloService $protocoloService,
+        private readonly OutboxDispatcher $outbox,
     ) {}
 
     public function emitir(PaeProtocolo $protocolo, User $user, array $dados, bool $automatica = false): PaeNotificacao
@@ -129,20 +135,87 @@ class PaeNotificacaoService extends BaseService
             ]);
         }
 
-        $notificacao->update(['dt_devolutiva' => $dtDevolutiva]);
+        return DB::transaction(function () use ($notificacao, $user, $dtDevolutiva): PaeNotificacao {
+            $notificacao->update(['dt_devolutiva' => $dtDevolutiva]);
 
-        $protocolo = $notificacao->analise?->protocolo;
-        if ($protocolo) {
-            $this->registrarTimeline(
-                $protocolo,
-                'notificacao',
-                "Devolutiva registrada para a notificacao SEI {$notificacao->num_sei} em " .
-                    now()->parse($dtDevolutiva)->format('d/m/Y') . '.',
-                $user
-            );
+            $protocolo = $notificacao->analise?->protocolo;
+            if ($protocolo) {
+                $this->registrarTimeline(
+                    $protocolo,
+                    'notificacao',
+                    "Devolutiva registrada para a notificacao SEI {$notificacao->num_sei} em " .
+                        now()->parse($dtDevolutiva)->format('d/m/Y') . '.',
+                    $user
+                );
+            }
+
+            $this->publicarRevisaoAceita($notificacao, $protocolo, $user);
+
+            return $notificacao->fresh();
+        });
+    }
+
+    /**
+     * RevisaoAceitaV1 no outbox, na MESMA transacao do registro da devolutiva.
+     *
+     * A guarda de reentrada ja esta acima: devolutiva duas vezes no mesmo ciclo
+     * lanca ValidationException e nao chega aqui. Reprocessar o mesmo ciclo
+     * produz a mesma chave canonica no adaptador (notificacao + ciclo + marco).
+     *
+     * O creditado e o servidor que registrou o aceite. A revisao em si vem do
+     * empreendimento, que nao e usuario do sistema -- nao existe terceiro a
+     * creditar e por isso nao ha validador_user_id aqui.
+     *
+     * As duas datas sao colunas de marco, nunca updated_at: prazo e
+     * dt_notificacao + PRAZO_DIAS, entrega e dt_devolutiva.
+     */
+    private function publicarRevisaoAceita(
+        PaeNotificacao $notificacao,
+        ?PaeProtocolo $protocolo,
+        User $user,
+    ): void {
+        $prazo = $notificacao->dt_notificacao?->copy()->addDays(self::PRAZO_DIAS);
+
+        $this->outbox->persist(new RevisaoAceitaV1(
+            eventId:       DomainEvent::newId(),
+            aggregateType: 'pae_notificacao',
+            aggregateId:   (string) $notificacao->id,
+            occurredAt:    new \DateTimeImmutable(),
+            metadata: [
+                'notificacao_id'    => (int) $notificacao->id,
+                'analise_id'        => $notificacao->pae_analise_id === null ? null : (int) $notificacao->pae_analise_id,
+                'protocolo_id'      => $protocolo === null ? null : (int) $protocolo->id,
+                // Ciclo real da notificacao (1..MAX_CICLOS), nao o ciclo do
+                // protocolo: aqui o recurso premiado e o ciclo de notificacao.
+                'ciclo'             => $this->cicloDaNotificacao($notificacao),
+                'ciclo_protocolo'   => CicloProtocolo::de($protocolo?->num_protocolo),
+                'num_sei'           => $notificacao->num_sei,
+                'actor_user_id'     => (int) $user->id,
+                'credited_user_id'  => (int) $user->id,
+                'validador_user_id' => null,
+                'prazo_em'          => $prazo?->toDateString(),
+                'entregue_em'       => $notificacao->fresh()?->dt_devolutiva?->toDateString(),
+            ],
+        ));
+    }
+
+    /**
+     * Posicao da notificacao na fila da analise (1..MAX_CICLOS), a mesma
+     * contagem que listarPorProtocolo mostra na tela. Sem analise vinculada
+     * cai em 1 -- o ciclo compoe a chave canonica e nao pode ficar indefinido.
+     */
+    private function cicloDaNotificacao(PaeNotificacao $notificacao): int
+    {
+        $analise = $notificacao->analise;
+
+        if ($analise === null) {
+            return 1;
         }
 
-        return $notificacao->fresh();
+        $ids = array_map('intval', $analise->notificacoes()->pluck('id')->all());
+        $posicao = array_search((int) $notificacao->id, $ids, true);
+
+        return $posicao === false ? 1 : $posicao + 1;
     }
 
     public function processarVencimentos(): int

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Services;
 
+use App\Core\Events\DomainEvent;
+use App\Core\Outbox\OutboxDispatcher;
 use App\Models\User;
 use App\Modules\Pae\DTOs\PaeFormAnexoDTO;
 use App\Modules\Pae\DTOs\PaeFormInfoGeraisDTO;
 use App\Modules\Pae\DTOs\PaeFormObjetivoDTO;
+use App\Modules\Pae\Domain\Events\FormularioValidadoV1;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeForm;
 use App\Modules\Pae\Models\PaeFormAnexo;
@@ -16,7 +19,9 @@ use App\Modules\Pae\Models\PaeFormConclusaoItem;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTimeline;
 use App\Modules\Shared\BaseService;
+use App\Modules\Pae\Support\CicloProtocolo;
 use App\Support\Storage\AnexoPath;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -26,7 +31,8 @@ use Throwable;
 class PaeFormularioService extends BaseService
 {
     public function __construct(
-        private readonly PaeProtocoloService $protocoloService
+        private readonly PaeProtocoloService $protocoloService,
+        private readonly OutboxDispatcher $outbox,
     ) {}
 
     public function findById(int $id): ?PaeForm
@@ -169,36 +175,95 @@ class PaeFormularioService extends BaseService
         $this->assertAbasLiberadas($form);
 
         if ($form->pae_protocolo_id) {
-            $form->update([
-                'status'     => 'FINALIZADO',
-                'updated_by' => $user->id,
-            ]);
+            DB::transaction(function () use ($form, $user): void {
+                $form->update([
+                    'status'     => 'FINALIZADO',
+                    'updated_by' => $user->id,
+                ]);
+
+                $this->publicarFormularioValidado($form, $user);
+            });
+
             return;
         }
 
-        $protocolo = PaeProtocolo::create([
-            'num_protocolo'  => $this->protocoloService->gerarNumProtocolo(),
-            'status'         => PaeProtocoloStatus::NOVO->value,
-            'user_id'        => $user->id,
-            'created_by'     => $user->id,
-            'dt_entrada'     => now()->toDateString(),
-            'arquivado'      => false,
-            'empnto_search'  => $form->emp_responsavel_nome,
-            'pae_empnto_id'  => $form->pae_empnto_id,
-        ]);
+        // Fora da transacao: gerarNumProtocolo toma o advisory lock do
+        // sequencial na transacao dele (ver PaeProtocoloService::create).
+        $numProtocolo = $this->protocoloService->gerarNumProtocolo();
 
-        PaeTimeline::create([
-            'protocolo_id' => $protocolo->id,
-            'evento'       => 'criacao',
-            'descricao'    => 'Protocolo gerado a partir do formulário PAE.',
-            'user_id'      => $user->id,
-        ]);
+        DB::transaction(function () use ($form, $user, $numProtocolo): void {
+            $protocolo = PaeProtocolo::create([
+                'num_protocolo'  => $numProtocolo,
+                'status'         => PaeProtocoloStatus::NOVO->value,
+                'user_id'        => $user->id,
+                'created_by'     => $user->id,
+                'dt_entrada'     => now()->toDateString(),
+                'arquivado'      => false,
+                'empnto_search'  => $form->emp_responsavel_nome,
+                'pae_empnto_id'  => $form->pae_empnto_id,
+            ]);
 
-        $form->update([
-            'pae_protocolo_id' => $protocolo->id,
-            'status'           => 'FINALIZADO',
-            'updated_by'       => $user->id,
-        ]);
+            PaeTimeline::create([
+                'protocolo_id' => $protocolo->id,
+                'evento'       => 'criacao',
+                'descricao'    => 'Protocolo gerado a partir do formulário PAE.',
+                'user_id'      => $user->id,
+            ]);
+
+            $form->update([
+                'pae_protocolo_id' => $protocolo->id,
+                'status'           => 'FINALIZADO',
+                'updated_by'       => $user->id,
+            ]);
+
+            // Este ramo tambem e envio de protocolo: nasce um pae_protocolos
+            // com dt_entrada propria. Sem emitir aqui, todo PAE que entra pela
+            // ficha ficaria fora do marco de envio.
+            $this->protocoloService->publicarProtocoloEnviado($protocolo, $user, 'formulario');
+
+            $this->publicarFormularioValidado($form, $user);
+        });
+    }
+
+    /**
+     * FormularioValidadoV1 no outbox, na MESMA transacao da finalizacao.
+     *
+     * TRES PAPEIS SEPARADOS, e e por isso que este metodo existe:
+     *  - executor  o $user que operou a finalizacao;
+     *  - creditado o AUTOR da ficha (pae_forms.created_by);
+     *  - validador o analista delegado ao protocolo (analista_atual_id), sem o
+     *    qual assertAbasLiberadas nem deixa a ficha ser editada.
+     *
+     * O validador nao herda o premio: se created_by estiver vazio, o evento sai
+     * SEM creditado e o fato vai a apuracao. Cair no executor seria premiar o
+     * analista pelo trabalho do autor.
+     *
+     * entregue_em sai nulo por falta de coluna: pae_forms nao registra data de
+     * finalizacao, e updated_at nao e prova de entrega.
+     */
+    private function publicarFormularioValidado(PaeForm $form, User $user): void
+    {
+        $form->loadMissing('protocolo');
+        $protocolo = $form->protocolo;
+
+        $this->outbox->persist(new FormularioValidadoV1(
+            eventId:       DomainEvent::newId(),
+            aggregateType: 'pae_form',
+            aggregateId:   (string) $form->id,
+            occurredAt:    new \DateTimeImmutable(),
+            metadata: [
+                'formulario_id'     => (int) $form->id,
+                'protocolo_id'      => $protocolo === null ? null : (int) $protocolo->id,
+                'ciclo'             => CicloProtocolo::de($protocolo?->num_protocolo),
+                'actor_user_id'     => (int) $user->id,
+                'credited_user_id'  => $form->created_by === null ? null : (int) $form->created_by,
+                'validador_user_id' => $protocolo?->analista_atual_id === null
+                    ? null
+                    : (int) $protocolo->analista_atual_id,
+                'prazo_em'          => $protocolo?->limite_analise?->toDateString(),
+                'entregue_em'       => null,
+            ],
+        ));
     }
 
     public function formatForView(PaeForm $form): array
