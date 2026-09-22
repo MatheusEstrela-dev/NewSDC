@@ -82,8 +82,23 @@ class RankingServiceProvider extends ServiceProvider
         $this->app->singleton(RegraVigenteRepository::class);
         $this->app->singleton(ProcessarFatoDoRanking::class);
         $this->app->singleton(PeriodoService::class);
-        $this->app->singleton(ReconcileLeaderboard::class);
-        $this->app->singleton(RebuildLeaderboard::class);
+        // A conexao TEM de ser passada explicitamente. Registrados como
+        // singleton nu, o autowiring resolvia ConnectionInterface pelo alias de
+        // core do Laravel (Application.php: ConnectionInterface -> db.connection),
+        // que devolve a conexao DEFAULT - ou seja, a base operacional `sdc`. O
+        // fallback `?? DB::connection('ranking')` dentro dos services nunca
+        // chegava a executar, porque o parametro vinha preenchido com a conexao
+        // errada. `ranking:rebuild` sem --dry-run chegaria a ESCREVER placar
+        // dentro de `sdc`, que e exatamente o vazamento que a separacao existe
+        // para impedir.
+        $this->app->singleton(ReconcileLeaderboard::class, fn () => new ReconcileLeaderboard(
+            DB::connection((string) config('ranking.conexao', 'ranking')),
+        ));
+        $this->app->singleton(RebuildLeaderboard::class, fn ($app) => new RebuildLeaderboard(
+            $app->make(ReconcileLeaderboard::class),
+            $app->make(RecordScoreTransaction::class),
+            DB::connection((string) config('ranking.conexao', 'ranking')),
+        ));
         $this->app->singleton(SnapshotPlacar::class, fn () => new SnapshotPlacar(
             DB::connection((string) config('ranking.conexao', 'ranking')),
         ));
