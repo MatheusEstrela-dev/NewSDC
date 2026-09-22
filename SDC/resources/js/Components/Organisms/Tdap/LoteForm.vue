@@ -1,10 +1,5 @@
 <template>
   <form @submit.prevent="$emit('submit', form)" class="space-y-6">
-    <!--
-      Identificacao e vinculos eram dois cards. Sao o mesmo assunto do lote
-      (quem e e a que ata/territorio/prestador se liga) e o card extra so
-      dobrava a rolagem entre campos que se leem juntos.
-    -->
     <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
       <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Identificação e Vínculos</h3>
 
@@ -21,30 +16,6 @@
             required
           />
           <InputError :message="form.errors.numero" class="mt-2" />
-        </div>
-        <div>
-          <InputLabel for="nome" value="Nome (opcional)" />
-          <TextInput
-            id="nome"
-            v-model="form.nome"
-            type="text"
-            class="mt-1 block w-full"
-            maxlength="150"
-            placeholder="Ex: Lote Norte – Distrito 1"
-          />
-          <InputError :message="form.errors.nome" class="mt-2" />
-        </div>
-        <div>
-          <InputLabel for="contrato" value="Contrato (opcional)" />
-          <TextInput
-            id="contrato"
-            v-model="form.contrato"
-            type="text"
-            class="mt-1 block w-full"
-            maxlength="50"
-            placeholder="Ex: 123/2026"
-          />
-          <InputError :message="form.errors.contrato" class="mt-2" />
         </div>
       </div>
 

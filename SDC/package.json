@@ -18,7 +18,8 @@
         "docker:down": "docker compose -f docker/compose.dev.yml down",
         "docker:logs": "docker compose -f docker/compose.dev.yml logs -f app",
         "secrets:encrypt": "dotenvx encrypt -f docker/.env",
-        "secrets:decrypt": "dotenvx decrypt -f docker/.env"
+        "secrets:decrypt": "dotenvx decrypt -f docker/.env",
+        "watch": "vite build --watch"
     },
     "devDependencies": {
         "@dotenvx/dotenvx": "^1.57.2",
