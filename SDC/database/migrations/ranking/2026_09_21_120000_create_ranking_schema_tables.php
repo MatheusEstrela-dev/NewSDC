@@ -417,6 +417,14 @@ return new class extends Migration
      */
     private function validarDestino(): void
     {
+        // Em --pretend o Laravel nao executa query: selectOne() devolve null e
+        // a verificacao abaixo derrubaria a simulacao com "property on null".
+        // Simular nao escreve nada, entao nao ha o que proteger; o guard volta a
+        // valer na execucao real.
+        if ($this->conexao()->pretending()) {
+            return;
+        }
+
         $atual = (string) $this->conexao()->selectOne('SELECT current_database() AS db')->db;
 
         if (in_array($atual, self::DESTINOS_PROIBIDOS, true)) {
