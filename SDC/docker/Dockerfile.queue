@@ -85,6 +85,7 @@ COPY docker/supervisor/laravel-worker.conf /etc/supervisor/conf.d/laravel-worker
 COPY docker/supervisor/isolated-workers.conf /etc/supervisor/conf.d/isolated-workers.conf
 # Worker dedicado do pipeline medalhao (fila propria, timeout maior).
 COPY docker/supervisor/medalhao-worker.conf /etc/supervisor/conf.d/medalhao-worker.conf
+COPY docker/supervisor/ranking-worker.conf /etc/supervisor/conf.d/ranking-worker.conf
 
 # Entrypoint com a guarda de mount de anexos (mesma do app)
 COPY docker/queue/entrypoint.sh /entrypoint.sh

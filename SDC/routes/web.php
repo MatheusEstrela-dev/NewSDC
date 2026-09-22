@@ -47,6 +47,8 @@ Route::get('/treinamentos/{treinamento}/divulgacao.png', \App\Modules\Treinament
 
 Route::middleware('auth')->group(function () {
 
+    require __DIR__ . '/modules/ranking.php';
+
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
 

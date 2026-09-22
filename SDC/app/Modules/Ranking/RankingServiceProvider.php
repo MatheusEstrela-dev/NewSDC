@@ -8,24 +8,33 @@ use App\Modules\Pae\Domain\Events\FormularioValidadoV1;
 use App\Modules\Pae\Domain\Events\ParecerConcluidoV1;
 use App\Modules\Pae\Domain\Events\ProtocoloEnviadoV1;
 use App\Modules\Pae\Domain\Events\RevisaoAceitaV1;
+use App\Modules\Ranking\Adapters\PaeAdapter;
+use App\Modules\Ranking\Adapters\RatAdapter;
+use App\Modules\Ranking\Console\MaterializarPeriodosCommand;
+use App\Modules\Ranking\Console\RebuildCommand;
+use App\Modules\Ranking\Console\ReconcileCommand;
+use App\Modules\Ranking\Console\SnapshotCommand;
+use App\Modules\Ranking\Console\VerifyCatalogCommand;
+use App\Modules\Ranking\Listeners\PontuarFatoDeNegocio;
+use App\Modules\Ranking\Services\CompararSnapshots;
+use App\Modules\Ranking\Services\ConfirmScoreTransaction;
+use App\Modules\Ranking\Services\InstitutionalContextResolver;
+use App\Modules\Ranking\Services\LeaderboardQuery;
+use App\Modules\Ranking\Services\PeriodoService;
+use App\Modules\Ranking\Services\ProcessarFatoDoRanking;
+use App\Modules\Ranking\Services\RebuildLeaderboard;
+use App\Modules\Ranking\Services\ReconcileLeaderboard;
+use App\Modules\Ranking\Services\RecordScoreTransaction;
+use App\Modules\Ranking\Services\RegraVigenteRepository;
+use App\Modules\Ranking\Services\ReverseScoreEntry;
+use App\Modules\Ranking\Services\ScoreCalculator;
+use App\Modules\Ranking\Services\SnapshotPlacar;
 use App\Modules\Rat\Domain\Events\RegistroCompletoV1;
 use App\Modules\Rat\Domain\Events\RelatorioFinalizadoV1;
 use App\Modules\Rat\Domain\Events\VistoriaValidadaV1;
-use App\Modules\Ranking\Adapters\PaeAdapter;
-use App\Modules\Ranking\Adapters\RatAdapter;
-use App\Modules\Ranking\Contracts\ModuleAdapter;
-use App\Modules\Ranking\Listeners\PontuarFatoDeNegocio;
-use App\Modules\Ranking\Services\ConfirmScoreTransaction;
-use App\Modules\Ranking\Services\InstitutionalContextResolver;
-use App\Modules\Ranking\Services\ProcessarFatoDoRanking;
-use App\Modules\Ranking\Services\RegraVigenteRepository;
-use Illuminate\Support\Facades\Event;
-use App\Modules\Ranking\Services\LeaderboardQuery;
-use App\Modules\Ranking\Services\RecordScoreTransaction;
-use App\Modules\Ranking\Services\ReverseScoreEntry;
-use App\Modules\Ranking\Services\ScoreCalculator;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -34,10 +43,13 @@ use Illuminate\Support\ServiceProvider;
  * Plano: docs/superpowers/plans/2026-09-21-ranqueamento-ipcm.md
  *
  * Arquitetura:
- *   - Schema Postgres proprio (`ranking`), na mesma conexao do SDC.
+ *   - Database dedicada, acessada pelas conexoes `ranking` e `ranking_read`,
+ *     com objetos isolados no schema Postgres `ranking`.
  *   - Consome Domain Events dos modulos de origem via listeners idempotentes
  *     (App\Core\Events\IdempotentListener), nao por polling.
  *   - Livro de pontos append-only; placar e projecao de leitura reconstruivel.
+ *   - Comandos operacionais registrados mesmo com o consumo desligado, para
+ *     permitir auditoria, conciliacao e manutencao antes da ativacao.
  *
  * CUIDADO COM OCTANE: os singletons registrados aqui sobrevivem entre requests
  * do worker. Nenhum service deste modulo pode guardar estado de request -
@@ -69,6 +81,15 @@ class RankingServiceProvider extends ServiceProvider
         $this->app->singleton(ConfirmScoreTransaction::class);
         $this->app->singleton(RegraVigenteRepository::class);
         $this->app->singleton(ProcessarFatoDoRanking::class);
+        $this->app->singleton(PeriodoService::class);
+        $this->app->singleton(ReconcileLeaderboard::class);
+        $this->app->singleton(RebuildLeaderboard::class);
+        $this->app->singleton(SnapshotPlacar::class, fn () => new SnapshotPlacar(
+            DB::connection((string) config('ranking.conexao', 'ranking')),
+        ));
+        $this->app->singleton(CompararSnapshots::class, fn () => new CompararSnapshots(
+            DB::connection((string) config('ranking.conexao_leitura', 'ranking_read')),
+        ));
 
         // Um adaptador por dominio, resolvidos por tag: adicionar modulo novo
         // ao ranking passa a ser registrar o adaptador aqui, sem tocar no
@@ -92,6 +113,19 @@ class RankingServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands([\App\Modules\Ranking\Console\MetricsCommand::class]);
+        }
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                MaterializarPeriodosCommand::class,
+                RebuildCommand::class,
+                ReconcileCommand::class,
+                SnapshotCommand::class,
+                VerifyCatalogCommand::class,
+            ]);
+        }
+
         // Modulo desligado nao escuta: sem isto o ranking consumiria evento e
         // gravaria livro antes de existir placar. O proprio orquestrador tambem
         // checa a flag, mas nem registrar o listener e mais barato e evita

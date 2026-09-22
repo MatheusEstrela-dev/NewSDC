@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Modules\Ranking\Enums\FaixaRanking;
 
 return [
+    // Laboratorio de homologacao: somente catalogo e calculo puro, sem lancamentos.
+    'preview' => (bool) env('RANKING_PREVIEW', false),
     // Interruptor geral. Desligado, o modulo nao consome eventos e o placar
     // fica oculto; o livro e os saldos ja gravados permanecem intactos, que e
     // o comportamento esperado em rollback (suspender a vitrine, nao apagar a
@@ -28,7 +30,8 @@ return [
         // com notificacao ou webhook. Vide docker/supervisor/.
         'nome' => env('RANKING_FILA', 'ranking'),
         'tentativas' => (int) env('RANKING_FILA_TENTATIVAS', 3),
-        'timeout' => (int) env('RANKING_FILA_TIMEOUT', 120),
+        // Mesmo limite do listener e do supervisor; retry_after da conexao e maior.
+        'timeout' => 120,
         'backoff_segundos' => [10, 30, 60],
     ],
 

@@ -14,6 +14,8 @@
             />
           </div>
 
+          <RankingWidget v-if="inertiaPage.props.rankingDisponivel" />
+
           <!-- Linha 1: KPIs (draggable isolado para servir de anchor estavel ao tour) -->
           <draggable
             v-model="kpiItems"
@@ -173,6 +175,7 @@
 
 <script setup>
 import HomeIcon from '@/Components/Icons/HomeIcon.vue';
+import RankingWidget from '@/Components/Ranking/RankingWidget.vue';
 import Modal from '@/Components/Modal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';

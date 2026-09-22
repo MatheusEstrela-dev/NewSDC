@@ -4,6 +4,16 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
+// O rollout controla somente a agenda: comandos de diagnostico continuam disponiveis.
+if (config('ranking.habilitado', false)) {
+    Schedule::command('ranking:materializar-periodos')->dailyAt('00:05')
+        ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(30);
+    Schedule::command('ranking:reconcile')->hourly()
+        ->onOneServer()->withoutOverlapping(55);
+    Schedule::command('ranking:snapshot')->dailyAt('01:00')
+        ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(55);
+}
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes
