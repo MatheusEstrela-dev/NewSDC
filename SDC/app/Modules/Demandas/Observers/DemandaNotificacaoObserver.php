@@ -12,7 +12,7 @@ use App\Modules\Notificacoes\Jobs\EntregarNotificacaoJob;
 /**
  * Avisa quem tem interesse na demanda quando ela muda de mao ou de estado.
  *
- * Fica num observer, e nao dentro do DemandaService, para que a regra de negocio da
+ * Fica num observer, fora dos casos de uso, para que a regra de negocio da
  * demanda nao precise saber que notificacao existe. O observer apenas despacha um
  * job: nada de entrega acontece no ciclo da requisicao, entao o usuario que salvou
  * a demanda nao espera por isso.
@@ -23,7 +23,7 @@ use App\Modules\Notificacoes\Jobs\EntregarNotificacaoJob;
  */
 class DemandaNotificacaoObserver
 {
-    public function updated(Task $task): void
+    public function updated(Demanda $task): void
     {
         if ($task->wasChanged('atribuido_para_id')) {
             $this->avisarAtribuicao($task);
@@ -34,7 +34,7 @@ class DemandaNotificacaoObserver
         }
     }
 
-    private function avisarAtribuicao(Task $task): void
+    private function avisarAtribuicao(Demanda $task): void
     {
         $destinatario = $task->atribuido_para_id;
 
@@ -56,10 +56,10 @@ class DemandaNotificacaoObserver
                 acaoTexto: 'Abrir demanda',
             ),
             [$destinatario],
-        );
+        )->afterCommit();
     }
 
-    private function avisarMudancaDeStatus(Task $task): void
+    private function avisarMudancaDeStatus(Demanda $task): void
     {
         $destinatarios = array_values(array_unique(array_filter(
             [$task->solicitante_id, $task->atribuido_para_id],
@@ -83,7 +83,7 @@ class DemandaNotificacaoObserver
                 acaoTexto: 'Ver demanda',
             ),
             $destinatarios,
-        );
+        )->afterCommit();
     }
 
     /**

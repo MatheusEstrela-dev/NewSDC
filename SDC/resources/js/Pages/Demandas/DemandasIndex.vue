@@ -37,20 +37,16 @@
         @click="filterByStatus('aberta')" 
       />
       <StatCard 
-        title="Em Progresso" 
+        title="Em andamento"
         :value="statistics?.em_andamento || 0" 
         variant="success" 
         :icon="ClockIcon" 
-        clickable 
-        @click="filterByStatus('em_progresso')" 
       />
       <StatCard 
         title="Concluídas" 
         :value="statistics?.concluidas || 0" 
         variant="danger" 
         :icon="CheckCircleIcon" 
-        clickable 
-        @click="filterByStatus('resolvida')" 
       />
     </StatCardsGrid>
 
@@ -110,7 +106,7 @@
           <div class="text-sm text-slate-500 sm:text-right flex-shrink-0 flex sm:flex-col justify-between sm:justify-start">
             <div class="mb-1 font-medium">{{ formatDate(demanda.created_at) }}</div>
             <div class="flex items-center gap-1 sm:justify-end text-xs">
-               <span>👤</span> <span class="truncate max-w-[120px]">{{ demanda.solicitante?.name || 'Sistema' }}</span>
+               <span class="truncate max-w-[120px]">{{ demanda.solicitante?.name || 'Sistema' }}</span>
             </div>
           </div>
         </div>

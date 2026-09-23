@@ -29,9 +29,15 @@ final readonly class EloquentDemandaRepository implements DemandaRepository
             ->first();
     }
 
-    public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters, int $perPage, int $viewerId, bool $manage, ?int $page = null): LengthAwarePaginator
     {
         $query = Demanda::query()->with(['solicitante', 'atribuidoPara']);
+
+        if (! $manage) {
+            $query->where(function ($query) use ($viewerId): void {
+                $query->where('solicitante_id', $viewerId)->orWhere('atribuido_para_id', $viewerId);
+            });
+        }
 
         if (!empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
@@ -57,12 +63,19 @@ final readonly class EloquentDemandaRepository implements DemandaRepository
             $query->where('atribuido_para_id', $filters['responsavel_id']);
         }
 
-        return $query->orderBy('created_at', 'desc')->paginate($perPage);
+        return $query->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage, ['*'], 'page', $page);
     }
 
-    public function getStatistics(): array
+    public function getStatistics(int $viewerId, bool $manage): array
     {
-        $row = Demanda::query()
+        $query = Demanda::query();
+        if (! $manage) {
+            $query->where(function ($query) use ($viewerId): void {
+                $query->where('solicitante_id', $viewerId)->orWhere('atribuido_para_id', $viewerId);
+            });
+        }
+
+        $row = $query
             ->selectRaw("COUNT(*) as total")
             ->selectRaw("SUM(CASE WHEN status = 'aberta' THEN 1 ELSE 0 END) as abertas")
             ->selectRaw("SUM(CASE WHEN status IN ('em_progresso', 'em_analise', 'aguardando_terceiros') THEN 1 ELSE 0 END) as em_andamento")

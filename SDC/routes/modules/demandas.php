@@ -25,6 +25,14 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->name('demandas.comments.store')
         ->middleware('can:demandas.chamados.view');
 
+    Route::post('/demandas/{id}/anexos', [DemandaController::class, 'addAttachment'])
+        ->name('demandas.attachments.store')
+        ->middleware('can:demandas.chamados.view');
+
+    Route::get('/demandas/{id}/anexos/{anexo}', [DemandaController::class, 'downloadAttachment'])
+        ->name('demandas.attachments.download')
+        ->middleware('can:demandas.chamados.view');
+
     Route::prefix('admin/demandas')->name('admin.demandas.')->group(function () {
 
         Route::get('/export', [DemandaController::class, 'export'])

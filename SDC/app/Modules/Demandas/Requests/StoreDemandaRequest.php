@@ -9,6 +9,7 @@ use App\Modules\Demandas\Enums\TipoDemanda;
 use App\Modules\Demandas\Enums\Urgencia;
 use App\Modules\Demandas\Enums\Impacto;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rule;
 
 class StoreDemandaRequest extends FormRequest
 {
@@ -27,9 +28,7 @@ class StoreDemandaRequest extends FormRequest
             'subcategoria' => ['nullable', 'string', 'max:100'],
             'urgencia' => ['nullable', new Enum(Urgencia::class)],
             'impacto' => ['nullable', new Enum(Impacto::class)],
-            'responsavel_id' => ['nullable', 'integer', 'exists:users,id'],
-            'tags' => ['nullable', 'array'],
-            'tags.*' => ['string', 'max:50'],
+            'responsavel_id' => [Rule::prohibitedIf(! $this->user()->can('demandas.chamados.manage')), 'nullable', 'integer', 'exists:users,id'],
         ];
     }
 }

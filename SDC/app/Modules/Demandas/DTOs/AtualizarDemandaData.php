@@ -7,7 +7,7 @@ namespace App\Modules\Demandas\DTOs;
 use App\Modules\Demandas\Enums\Impacto;
 use App\Modules\Demandas\Enums\Urgencia;
 use App\Modules\Demandas\Enums\TipoDemanda;
-use Illuminate\Http\Request;
+use App\Modules\Demandas\Requests\UpdateDemandaRequest;
 
 final readonly class AtualizarDemandaData
 {
@@ -19,28 +19,27 @@ final readonly class AtualizarDemandaData
         public ?string $subcategoria,
         public ?Urgencia $urgencia,
         public ?Impacto $impacto,
-        public ?int $atribuidoParaId,
-        public ?array $tags,
+        public array $presentes,
     ) {}
 
-    public static function fromRequest(Request $request): self
+    public static function fromRequest(UpdateDemandaRequest $request): self
     {
+        $data = $request->validated();
         return new self(
-            tipo: $request->filled('tipo') ? TipoDemanda::from($request->string('tipo')->value()) : null,
-            titulo: $request->filled('titulo') ? $request->string('titulo')->value() : null,
-            descricao: $request->filled('descricao') ? $request->string('descricao')->value() : null,
-            categoria: $request->input('categoria'),
-            subcategoria: $request->input('subcategoria'),
-            urgencia: $request->filled('urgencia') ? Urgencia::from($request->string('urgencia')->value()) : null,
-            impacto: $request->filled('impacto') ? Impacto::from($request->string('impacto')->value()) : null,
-            atribuidoParaId: $request->filled('responsavel_id') ? (int) $request->input('responsavel_id') : null,
-            tags: $request->input('tags'),
+            tipo: isset($data['tipo']) ? TipoDemanda::from($data['tipo']) : null,
+            titulo: $data['titulo'] ?? null,
+            descricao: $data['descricao'] ?? null,
+            categoria: $data['categoria'] ?? null,
+            subcategoria: $data['subcategoria'] ?? null,
+            urgencia: isset($data['urgencia']) ? Urgencia::from($data['urgencia']) : null,
+            impacto: isset($data['impacto']) ? Impacto::from($data['impacto']) : null,
+            presentes: array_keys($data),
         );
     }
 
     public function toArray(): array
     {
-        return array_filter([
+        return array_intersect_key([
             'tipo' => $this->tipo,
             'titulo' => $this->titulo,
             'descricao' => $this->descricao,
@@ -48,7 +47,6 @@ final readonly class AtualizarDemandaData
             'subcategoria' => $this->subcategoria,
             'urgencia' => $this->urgencia,
             'impacto' => $this->impacto,
-            'atribuido_para_id' => $this->atribuidoParaId,
-        ], fn($value) => $value !== null);
+        ], array_flip($this->presentes));
     }
 }

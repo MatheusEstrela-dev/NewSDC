@@ -7,7 +7,7 @@ namespace App\Modules\Demandas\DTOs;
 use App\Modules\Demandas\Enums\Impacto;
 use App\Modules\Demandas\Enums\Urgencia;
 use App\Modules\Demandas\Enums\TipoDemanda;
-use Illuminate\Http\Request;
+use App\Modules\Demandas\Requests\StoreDemandaRequest;
 
 final readonly class CriarDemandaData
 {
@@ -24,19 +24,20 @@ final readonly class CriarDemandaData
         public array $tags = [],
     ) {}
 
-    public static function fromRequest(Request $request): self
+    public static function fromRequest(StoreDemandaRequest $request): self
     {
+        $data = $request->validated();
         return new self(
-            tipo: TipoDemanda::from($request->string('tipo')->value()),
-            titulo: $request->string('titulo')->value(),
-            descricao: $request->string('descricao')->value(),
-            categoria: $request->input('categoria'),
-            subcategoria: $request->input('subcategoria'),
-            urgencia: $request->filled('urgencia') ? Urgencia::from($request->string('urgencia')->value()) : null,
-            impacto: $request->filled('impacto') ? Impacto::from($request->string('impacto')->value()) : null,
+            tipo: TipoDemanda::from($data['tipo']),
+            titulo: $data['titulo'],
+            descricao: $data['descricao'],
+            categoria: $data['categoria'] ?? null,
+            subcategoria: $data['subcategoria'] ?? null,
+            urgencia: isset($data['urgencia']) ? Urgencia::from($data['urgencia']) : null,
+            impacto: isset($data['impacto']) ? Impacto::from($data['impacto']) : null,
             solicitanteId: (int) $request->user()->id,
-            atribuidoParaId: $request->filled('responsavel_id') ? (int) $request->input('responsavel_id') : null,
-            tags: $request->input('tags', []),
+            atribuidoParaId: isset($data['responsavel_id']) ? (int) $data['responsavel_id'] : null,
+            tags: [],
         );
     }
 

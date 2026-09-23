@@ -22,12 +22,12 @@ interface DemandaRepository
     /**
      * Lista demandas com filtros e paginação.
      */
-    public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator;
+    public function paginate(array $filters, int $perPage, int $viewerId, bool $manage, ?int $page = null): LengthAwarePaginator;
 
     /**
      * Retorna as estatísticas consolidadas (Total, Abertas, Em Andamento, Concluídas).
      */
-    public function getStatistics(): array;
+    public function getStatistics(int $viewerId, bool $manage): array;
 
     /**
      * Salva (cria ou atualiza) a demanda no banco.
