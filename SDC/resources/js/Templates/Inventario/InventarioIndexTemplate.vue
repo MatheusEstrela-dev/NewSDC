@@ -39,7 +39,7 @@
 
     <InventarioGrid
       v-if="viewMode === 'grid' || isMobile"
-      :equipamentos="equipamentosPaginados"
+      :equipamentos="equipamentos"
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
@@ -49,7 +49,7 @@
 
     <InventarioTable
       v-else
-      :equipamentos="equipamentosPaginados"
+      :equipamentos="equipamentos"
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
@@ -57,7 +57,7 @@
       @delete="emit('delete', $event)"
     />
 
-    <Pagination :pagination="pagination" @page-change="goToPage" />
+    <Pagination :pagination="pagination" @page-change="emit('page-change', $event)" />
   </div>
 </template>
 
@@ -71,15 +71,15 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import { useMobile } from '@/Composables/useMobile';
-import { usePagination } from '@/Composables/data/usePagination';
 import { ArchiveBoxIcon } from '@heroicons/vue/24/outline';
-import { ref, toRef, watch } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
   equipamentos: {
     type: Array,
     default: () => [],
   },
+  pagination: { type: Object, default: null },
   statistics: {
     type: Object,
     default: () => ({
@@ -116,17 +116,11 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['filter-change', 'clear-filters', 'create', 'edit', 'delete']);
+const emit = defineEmits(['filter-change', 'clear-filters', 'create', 'edit', 'delete', 'page-change']);
 
 const { isMobile } = useMobile();
 const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
-
-const {
-  pagination,
-  paginatedItems: equipamentosPaginados,
-  goToPage,
-} = usePagination(toRef(props, 'equipamentos'));
 
 watch(
   () => props.filters,

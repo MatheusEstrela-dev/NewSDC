@@ -23,6 +23,10 @@ const statusMap = {
     label: 'Emprestado',
     classes: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25',
   },
+  em_uso: {
+    label: 'Em uso',
+    classes: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25',
+  },
   manutencao: {
     label: 'Manutencao',
     classes: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/25',

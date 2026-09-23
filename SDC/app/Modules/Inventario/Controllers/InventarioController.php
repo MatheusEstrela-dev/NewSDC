@@ -5,106 +5,57 @@ declare(strict_types=1);
 namespace App\Modules\Inventario\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Inventario\Contracts\EquipamentoRepository;
+use App\Modules\Inventario\Enums\SituacaoEquipamento;
+use App\Modules\Inventario\Models\CategoriaInventario;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class InventarioController extends Controller
 {
+    public function __construct(private readonly EquipamentoRepository $equipamentos) {}
+
     public function index(Request $request): Response
     {
-        $filters = $request->only(['search', 'categoria', 'situacao', 'responsavel']);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:200'],
+            'categoria' => ['nullable', 'integer', 'exists:inventario_ti_categorias,id'],
+            'situacao' => ['nullable', Rule::enum(SituacaoEquipamento::class)],
+        ]);
+
+        $paginator = $this->equipamentos->paginate($filters);
+        $paginator->through(static fn ($equipamento) => [
+            'id' => $equipamento->id,
+            'nome' => $equipamento->nome,
+            'patrimonio' => $equipamento->patrimonio,
+            'numero_serie' => $equipamento->numero_serie,
+            'ramal' => $equipamento->ramal,
+            'categoria_id' => $equipamento->categoria_id,
+            'unidade' => $equipamento->unidade,
+            'emprestavel' => $equipamento->emprestavel,
+            'quantidade' => $equipamento->quantidade,
+            'observacao' => $equipamento->observacao,
+            'categoria' => $equipamento->categoria?->nome,
+            'situacao' => $equipamento->situacao->value,
+            'responsavel' => $equipamento->usuario?->name ?? $equipamento->estacao?->usuario?->name,
+            'diretoria' => $equipamento->diretoria,
+            'ultima_movimentacao' => $equipamento->movimentacoes_max_created_at,
+        ]);
 
         return Inertia::render('Inventario/InventarioIndex', [
-            'equipamentos' => $this->mockEquipamentos($filters),
-            'statistics' => [
-                'total' => 128,
-                'disponiveis' => 82,
-                'emprestados' => 31,
-                'manutencao' => 9,
-                'baixados' => 6,
-            ],
+            'equipamentos' => $paginator,
+            'statistics' => $this->equipamentos->statistics(),
             'filters' => $filters,
             'filterOptions' => [
-                'categorias' => [
-                    ['value' => 'notebook', 'label' => 'Notebook'],
-                    ['value' => 'radio', 'label' => 'Radio'],
-                    ['value' => 'drone', 'label' => 'Drone'],
-                    ['value' => 'kit', 'label' => 'Kit operacional'],
-                ],
-                'situacoes' => [
-                    ['value' => 'disponivel', 'label' => 'Disponivel'],
-                    ['value' => 'emprestado', 'label' => 'Emprestado'],
-                    ['value' => 'manutencao', 'label' => 'Manutencao'],
-                    ['value' => 'baixado', 'label' => 'Baixado'],
-                ],
+                'categorias' => CategoriaInventario::query()->where('ativo', true)->orderBy('nome')
+                    ->get(['id', 'nome'])->map(static fn ($categoria) => [
+                        'value' => $categoria->id,
+                        'label' => $categoria->nome,
+                    ]),
+                'situacoes' => SituacaoEquipamento::options(),
             ],
         ]);
-    }
-
-    private function mockEquipamentos(array $filters): array
-    {
-        $items = [
-            [
-                'id' => 1,
-                'nome' => 'Notebook Dell Latitude 5440',
-                'patrimonio' => 'SDC-NTB-0048',
-                'categoria' => 'Notebook',
-                'situacao' => 'disponivel',
-                'responsavel' => 'Deposito Central',
-                'diretoria' => 'COMPDEC',
-                'ultima_movimentacao' => '2026-05-08',
-            ],
-            [
-                'id' => 2,
-                'nome' => 'Radio comunicador VHF',
-                'patrimonio' => 'SDC-RAD-0122',
-                'categoria' => 'Radio',
-                'situacao' => 'emprestado',
-                'responsavel' => 'Plantao Diario',
-                'diretoria' => 'CEDEC',
-                'ultima_movimentacao' => '2026-05-06',
-            ],
-            [
-                'id' => 3,
-                'nome' => 'Drone DJI Mavic 3 Enterprise',
-                'patrimonio' => 'SDC-DRN-0007',
-                'categoria' => 'Drone',
-                'situacao' => 'manutencao',
-                'responsavel' => 'Equipe de Vistoria',
-                'diretoria' => 'Operacoes',
-                'ultima_movimentacao' => '2026-05-02',
-            ],
-            [
-                'id' => 4,
-                'nome' => 'Kit abrigo temporario',
-                'patrimonio' => 'SDC-KIT-0184',
-                'categoria' => 'Kit operacional',
-                'situacao' => 'disponivel',
-                'responsavel' => 'Deposito Regional',
-                'diretoria' => 'Ajuda Humanitaria',
-                'ultima_movimentacao' => '2026-04-29',
-            ],
-        ];
-
-        return array_values(array_filter($items, function (array $item) use ($filters): bool {
-            if (!empty($filters['search'])) {
-                $term = mb_strtolower((string) $filters['search']);
-                $haystack = mb_strtolower($item['nome'] . ' ' . $item['patrimonio'] . ' ' . $item['responsavel']);
-                if (!str_contains($haystack, $term)) {
-                    return false;
-                }
-            }
-
-            if (!empty($filters['categoria']) && mb_strtolower($item['categoria']) !== $filters['categoria']) {
-                return false;
-            }
-
-            if (!empty($filters['situacao']) && $item['situacao'] !== $filters['situacao']) {
-                return false;
-            }
-
-            return true;
-        }));
     }
 }

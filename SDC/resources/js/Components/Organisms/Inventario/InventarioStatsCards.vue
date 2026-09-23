@@ -2,7 +2,7 @@
   <StatCardsGrid>
     <StatCard title="Total" :value="statistics.total" variant="info" :icon="ArchiveBoxIcon" clickable @click="$emit('filter', '')" />
     <StatCard title="Disponiveis" :value="statistics.disponiveis" variant="success" :icon="CheckCircleIcon" clickable @click="$emit('filter', 'disponivel')" />
-    <StatCard title="Emprestados" :value="statistics.emprestados" variant="info" :icon="ArrowPathRoundedSquareIcon" clickable @click="$emit('filter', 'emprestado')" />
+    <StatCard title="Em uso" :value="statistics.emprestados" variant="info" :icon="ArrowPathRoundedSquareIcon" clickable @click="$emit('filter', 'em_uso')" />
     <StatCard title="Manutencao" :value="statistics.manutencao" variant="warning" :icon="WrenchScrewdriverIcon" clickable @click="$emit('filter', 'manutencao')" />
     <StatCard title="Baixados" :value="statistics.baixados" variant="danger" :icon="ArchiveBoxXMarkIcon" clickable @click="$emit('filter', 'baixado')" />
   </StatCardsGrid>
