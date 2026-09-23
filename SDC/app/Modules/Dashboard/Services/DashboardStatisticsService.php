@@ -10,7 +10,7 @@ use App\Modules\AjudaHumanitaria\Services\AjudaHumanitariaStatsService;
 use App\Modules\Dashboard\DTOs\DashboardStatsDTO;
 use App\Modules\Decretacoes\Models\Processo;
 use App\Modules\Decretacoes\Services\ProcessoStatsService;
-use App\Modules\Demandas\Models\Task;
+use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\PlanCon\Services\PlanoContingenciaService;
@@ -121,11 +121,11 @@ class DashboardStatisticsService
             'ratAbertas'         => $this->safeCount(RatOcorrencia::class),
             'paeEmAnalise'       => $this->safeCountWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value),
             'decretosAprovados'  => $processoStats['aprovados'],
-            'demandasConcluidas' => $this->safeCountWhere(Task::class, 'status', 'concluida'),
+            'demandasConcluidas' => $this->safeCountWhere(Demanda::class, 'status', 'resolvida'),
             'ratTrend'           => $this->calcTrend(RatOcorrencia::class),
             'paeTrend'           => $this->calcTrendWithWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value),
             'decretoTrend'       => $this->calcTrendWithLike(Processo::class, 'reconhecimento', 'Reconhecido%'),
-            'demandaTrend'       => $this->calcTrendWithWhere(Task::class, 'status', 'concluida'),
+            'demandaTrend'       => $this->calcTrendWithWhere(Demanda::class, 'status', 'resolvida'),
             'ahTotal'            => $this->ahStats->getTotal(),
         ];
     }
@@ -195,7 +195,7 @@ class DashboardStatisticsService
         $sources = [
             RatOcorrencia::class,
             PaeProtocolo::class,
-            Task::class,
+            Demanda::class,
             Auxilio::class,
             Processo::class,
         ];
@@ -239,7 +239,7 @@ class DashboardStatisticsService
             ['name' => 'RAT',             'model' => RatOcorrencia::class, 'variant' => 'info',    'where' => null],
             ['name' => 'PAE',             'model' => PaeProtocolo::class,  'variant' => 'warning', 'where' => null],
             ['name' => 'Decretacoes',     'model' => Processo::class,      'variant' => 'success', 'where' => null],
-            ['name' => 'Demandas',        'model' => Task::class,          'variant' => 'danger',  'where' => null],
+            ['name' => 'Demandas',        'model' => Demanda::class,          'variant' => 'danger',  'where' => null],
             ['name' => 'Aj. Humanitaria', 'model' => Auxilio::class,       'variant' => 'primary', 'where' => null],
         ];
 
@@ -361,7 +361,7 @@ class DashboardStatisticsService
         $ratAbertas         = $this->safeCount(RatOcorrencia::class);
         $paeEmAnalise       = $this->safeCountWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value);
         $decretosAprovados  = $this->safeCountLike(Processo::class, 'reconhecimento', 'Reconhecido%');
-        $demandasConcluidas = $this->safeCountWhere(Task::class, 'status', 'concluida');
+        $demandasConcluidas = $this->safeCountWhere(Demanda::class, 'status', 'resolvida');
         $ahTotal            = $this->safeCount(Auxilio::class);
 
         return new DashboardStatsDTO(
@@ -397,3 +397,4 @@ class DashboardStatisticsService
         return $data;
     }
 }
+
