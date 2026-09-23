@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Infrastructure\Persistence;
 
 use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
-use App\Modules\Demandas\Models\Task as Demanda;
+use App\Modules\Demandas\Models\Demanda;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 final readonly class EloquentDemandaRepository implements DemandaRepository
@@ -88,3 +88,4 @@ final readonly class EloquentDemandaRepository implements DemandaRepository
         return $demanda->delete();
     }
 }
+
