@@ -34,7 +34,7 @@ class DemandaController extends Controller
         $tasks = $this->repository->paginate($filters, 15);
         $statistics = $this->repository->getStatistics();
 
-                $categorias = DemandaCategoria::whereNull('parent_id')->with('subcategorias')->where('active', true)->get();
+                $categorias = DemandaCategoria::whereNull('parent_id')->with('subcategorias')->where('ativo', true)->get();
         $usuarios = User::select('id', 'name')->where('active', true)->get();
 
         return Inertia::render('Demandas/DemandasIndex', [
@@ -111,5 +111,6 @@ class DemandaController extends Controller
         return redirect()->back()->with('success', 'Demanda atualizada com sucesso!');
     }
 }
+
 
 
