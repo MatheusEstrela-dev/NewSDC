@@ -590,6 +590,15 @@ return [
                 'export'   => 'inventario.emprestimos.export',
             ],
         ],
+        'ACESSOS' => [
+            'Cadastros' => [
+                'view' => 'acessos.cadastros.view',
+                'create' => 'acessos.cadastros.create',
+                'edit' => 'acessos.cadastros.edit',
+                'approve' => 'acessos.cadastros.approve',
+                'directory' => 'acessos.diretorio.manage',
+            ],
+        ],
         'ESTOQUE' => [
             'Produtos' => [
                 'view'   => 'estoque.produtos.view',
@@ -654,6 +663,7 @@ return [
             'compdec.*',
             'cedec.*',
             'inventario.*',
+            'acessos.*',
             'estoque.*',
             'pmda.*',
             'plancon.*',
@@ -883,6 +893,10 @@ return [
             'inventario.emprestimos.approve',
             'inventario.emprestimos.return',
             'inventario.emprestimos.export',
+            'acessos.cadastros.view',
+            'acessos.cadastros.create',
+            'acessos.cadastros.edit',
+            'acessos.cadastros.approve',
             // Estoque - MVP completo exceto delete
             'estoque.produtos.view',
             'estoque.produtos.create',
@@ -1068,6 +1082,9 @@ return [
             'inventario.equipamentos.edit',
             'inventario.emprestimos.view',
             'inventario.emprestimos.create',
+            'acessos.cadastros.view',
+            'acessos.cadastros.create',
+            'acessos.cadastros.edit',
             // Estoque - operacao sem delete/aprovacao
             'estoque.produtos.view',
             'estoque.produtos.create',

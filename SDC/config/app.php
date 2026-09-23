@@ -227,6 +227,7 @@ return [
         App\Modules\Rat\RatServiceProvider::class,
         App\Modules\Demandas\DemandasServiceProvider::class,
         App\Modules\Inventario\InventarioServiceProvider::class,
+        App\Modules\Acessos\AcessosServiceProvider::class,
         App\Modules\Tdap\TdapServiceProvider::class,
         App\Modules\Decretacoes\DecretacoesServiceProvider::class,
         App\Modules\Pmda\PmdaServiceProvider::class,

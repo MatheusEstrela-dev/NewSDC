@@ -421,6 +421,33 @@
         >
           Inventario
         </NavItem>
+        <NavItem
+          v-if="canSeeInventario"
+          href="/inventario/estacoes"
+          :active="isRouteActive('inventario.estacoes.*')"
+          icon="inventory"
+          :collapsed="isCollapsed"
+        >
+          Estações de trabalho
+        </NavItem>
+        <NavItem
+          v-if="canSeeMovimentacoes"
+          href="/inventario/movimentacoes"
+          :active="isRouteActive('inventario.movimentacoes.*')"
+          icon="inventory"
+          :collapsed="isCollapsed"
+        >
+          Movimentações
+        </NavItem>
+        <NavItem
+          v-if="canSeeAcessos"
+          href="/acessos"
+          :active="isRouteActive('acessos.*')"
+          icon="lock"
+          :collapsed="isCollapsed"
+        >
+          Acessos
+        </NavItem>
 
         <NavItem
           v-if="canSeeLogs"
@@ -1045,6 +1072,9 @@ const canSeeInventario = computed(() => {
   return hasPermission(['inventario.equipamentos.view', 'inventario.emprestimos.view']);
 });
 
+const canSeeMovimentacoes = computed(() => hasPermission(['inventario.emprestimos.view']));
+const canSeeAcessos = computed(() => hasPermission(['acessos.cadastros.view']));
+
 const canSeeEstoque = computed(() => {
   return hasPermission([
     'estoque.produtos.view',
@@ -1102,7 +1132,7 @@ const canSeePermissionamento = computed(() => {
 });
 
 const canSeeAdminSection = computed(() => {
-  return canSeePermissionamento.value || canSeeInventario.value || canSeeLogs.value;
+  return canSeePermissionamento.value || canSeeInventario.value || canSeeAcessos.value || canSeeLogs.value;
 });
 
 const canSeeLogs = computed(() => {

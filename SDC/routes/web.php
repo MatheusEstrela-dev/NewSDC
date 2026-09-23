@@ -152,6 +152,7 @@ Route::middleware('auth')->group(function () {
 
     // Modulo: Inventario
     require __DIR__ . '/modules/inventario.php';
+    require __DIR__ . '/modules/acessos.php';
 
     // Modulo: Estoque
     require __DIR__ . '/modules/estoque.php';
