@@ -215,6 +215,7 @@ const PlanConMunicipiosWidget = defineAsyncComponent(() => import('@/Components/
 const PlanConSituacaoWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConSituacaoWidget.vue'));
 const FrotaStatusWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/FrotaStatusWidget.vue'));
 const RankingWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/RankingWidget.vue'));
+const DemandasWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DemandasWidget.vue'));
 
 // Ícones para Métricas (leves, podem ser eager)
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
@@ -406,6 +407,13 @@ if (inertiaPage.props.rankingDisponivel) {
         props: { resumo: props.rankingResumo }
     });
 }
+
+// Widget de Demandas adicionado via Plano de Ação
+widgetItems.value.push({
+    id: 'demandas-recentes',
+    component: markRaw(DemandasWidget),
+    colSpan: 'col-span-1 lg:col-span-4'
+});
 
 </script>
 
