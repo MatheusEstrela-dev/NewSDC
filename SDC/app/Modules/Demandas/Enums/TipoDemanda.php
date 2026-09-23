@@ -11,7 +11,7 @@ namespace App\Modules\Demandas\Enums;
  * Representa os tipos de tarefas conforme papiro (Incidente, Solicitação, Mudança)
  * Baseado em ITIL/ITSM best practices
  */
-enum TipoTask: string
+enum TipoDemanda: string
 {
     case INCIDENTE = 'incidente';
     case SOLICITACAO = 'solicitacao';

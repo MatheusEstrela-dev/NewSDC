@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas;
 
-use App\Modules\Demandas\Models\Task;
-use App\Modules\Demandas\Observers\TaskNotificacaoObserver;
+use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
+use App\Modules\Demandas\Infrastructure\Persistence\EloquentDemandaRepository;
+use App\Modules\Demandas\Models\Demanda;
+use App\Modules\Demandas\Observers\DemandaNotificacaoObserver;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -13,9 +15,13 @@ use Illuminate\Support\ServiceProvider;
  */
 class DemandasServiceProvider extends ServiceProvider
 {
+    public array $bindings = [
+        DemandaRepository::class => EloquentDemandaRepository::class,
+    ];
+
     public function register(): void
     {
-        // TaskService is auto-resolved by Laravel's container
+        // Outros bindings resolvidos pelo container
     }
 
     public function boot(): void
@@ -24,6 +30,6 @@ class DemandasServiceProvider extends ServiceProvider
 
         // Avisos de atribuicao e mudanca de status. O observer so despacha job,
         // entao nao entra no custo da requisicao que salvou a demanda.
-        Task::observe(TaskNotificacaoObserver::class);
+        Demanda::observe(DemandaNotificacaoObserver::class);
     }
 }

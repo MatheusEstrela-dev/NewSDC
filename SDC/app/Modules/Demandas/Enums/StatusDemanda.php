@@ -11,7 +11,7 @@ namespace App\Modules\Demandas\Enums;
  * Implementa State Machine para garantir transições válidas de status.
  * Baseado no padrão estabelecido em app/Modules/Rat/Domain/ValueObjects/Status.php
  */
-enum TaskStatus: string
+enum StatusDemanda: string
 {
     case ABERTA = 'aberta';
     case EM_ANALISE = 'em_analise';
@@ -88,10 +88,10 @@ enum TaskStatus: string
     /**
      * State Machine: Valida se a transição para um novo status é permitida
      *
-     * @param TaskStatus $newStatus
+     * @param StatusDemanda $newStatus
      * @return bool
      */
-    public function canTransitionTo(TaskStatus $newStatus): bool
+    public function canTransitionTo(StatusDemanda $newStatus): bool
     {
         return in_array($newStatus, $this->getAllowedTransitions(), true);
     }
@@ -99,7 +99,7 @@ enum TaskStatus: string
     /**
      * Retorna os status permitidos para transição a partir do status atual
      *
-     * @return array<TaskStatus>
+     * @return array<StatusDemanda>
      */
     public function getAllowedTransitions(): array
     {

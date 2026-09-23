@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Instância de SLA - Tempo correndo em um ticket
  */
-class TaskSlaInstance extends Model
+class SlaInstancia extends Model
 {
     protected $table = 'task_sla_instances';
 
@@ -59,7 +59,7 @@ class TaskSlaInstance extends Model
 
     public function slaDefinition(): BelongsTo
     {
-        return $this->belongsTo(TaskSlaDefinition::class, 'sla_definition_id');
+        return $this->belongsTo(SlaDefinicao::class, 'sla_definition_id');
     }
 
     /**

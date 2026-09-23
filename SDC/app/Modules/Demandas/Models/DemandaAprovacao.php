@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class TaskApproval extends Model
+class DemandaAprovacao extends Model
 {
     protected $table = 'task_approvals';
 

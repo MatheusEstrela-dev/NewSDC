@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas\Observers;
 
-use App\Modules\Demandas\Enums\TaskStatus;
-use App\Modules\Demandas\Models\Task;
+use App\Modules\Demandas\Enums\StatusDemanda;
+use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
 use App\Modules\Notificacoes\Jobs\EntregarNotificacaoJob;
 
 /**
  * Avisa quem tem interesse na demanda quando ela muda de mao ou de estado.
  *
- * Fica num observer, e nao dentro do TaskService, para que a regra de negocio da
+ * Fica num observer, e nao dentro do DemandaService, para que a regra de negocio da
  * demanda nao precise saber que notificacao existe. O observer apenas despacha um
  * job: nada de entrega acontece no ciclo da requisicao, entao o usuario que salvou
  * a demanda nao espera por isso.
@@ -21,7 +21,7 @@ use App\Modules\Notificacoes\Jobs\EntregarNotificacaoJob;
  * - atribuicao: o novo responsavel (nunca quem se atribuiu a si mesmo)
  * - mudanca de status: o solicitante e o responsavel, menos quem fez a mudanca
  */
-class TaskNotificacaoObserver
+class DemandaNotificacaoObserver
 {
     public function updated(Task $task): void
     {
@@ -75,7 +75,7 @@ class TaskNotificacaoObserver
                 modulo: 'demandas',
                 titulo: 'Demanda atualizada',
                 mensagem: sprintf('%s agora esta em "%s".', $task->protocolo, $task->status->getLabel()),
-                tipo: $task->status === TaskStatus::RESOLVIDA ? 'success' : 'info',
+                tipo: $task->status === StatusDemanda::RESOLVIDA ? 'success' : 'info',
                 // Varias trocas de status seguidas na mesma demanda viram um card
                 // com contador, em vez de empilhar avisos quase identicos.
                 groupKey: "demandas:{$task->getKey()}",

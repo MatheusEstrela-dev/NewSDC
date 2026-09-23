@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * Não possui updated_at nem deleted_at para garantir imutabilidade
  */
-class TaskAuditLog extends Model
+class DemandaAuditLog extends Model
 {
     protected $table = 'task_audit_logs';
 
@@ -39,7 +39,7 @@ class TaskAuditLog extends Model
     protected static function booted(): void
     {
         // Garantir que created_at seja sempre setado
-        static::creating(function (TaskAuditLog $log) {
+        static::creating(function (DemandaAuditLog $log) {
             if (! $log->created_at) {
                 $log->created_at = now();
             }

@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Demandas\Services\TaskService;
-use App\Modules\Demandas\Enums\TaskStatus;
+use App\Modules\Demandas\Services\DemandaService;
+use App\Modules\Demandas\Enums\StatusDemanda;
 use App\Modules\Demandas\Enums\Prioridade;
-use App\Modules\Demandas\Enums\TipoTask;
+use App\Modules\Demandas\Enums\TipoDemanda;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class TaskController extends Controller
+class DemandaController extends Controller
 {
     public function __construct(
-        private readonly TaskService $taskService
+        private readonly DemandaService $taskService
     ) {
     }
 
@@ -31,9 +31,9 @@ class TaskController extends Controller
             'statistics' => $statistics,
             'filters' => $filters,
             'filterOptions' => [
-                'status' => TaskStatus::toSelectArray(),
+                'status' => StatusDemanda::toSelectArray(),
                 'prioridades' => Prioridade::toSelectArray(),
-                'tipos' => TipoTask::toSelectArray(),
+                'tipos' => TipoDemanda::toSelectArray(),
             ],
         ]);
     }
@@ -49,9 +49,9 @@ class TaskController extends Controller
             'statistics' => $statistics,
             'filters' => $filters,
             'filterOptions' => [
-                'status' => TaskStatus::toSelectArray(),
+                'status' => StatusDemanda::toSelectArray(),
                 'prioridades' => Prioridade::toSelectArray(),
-                'tipos' => TipoTask::toSelectArray(),
+                'tipos' => TipoDemanda::toSelectArray(),
             ],
         ]);
     }
@@ -74,7 +74,7 @@ class TaskController extends Controller
         return Inertia::render('Demandas/DemandasCreate', [
             'filterOptions' => [
                 'prioridades' => Prioridade::toSelectArray(),
-                'tipos' => TipoTask::toSelectArray(),
+                'tipos' => TipoDemanda::toSelectArray(),
             ],
         ]);
     }

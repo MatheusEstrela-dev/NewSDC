@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Definição de SLA (Regras de Tempo)
  */
-class TaskSlaDefinition extends Model
+class SlaDefinicao extends Model
 {
     protected $table = 'task_sla_definitions';
 
@@ -41,7 +41,7 @@ class TaskSlaDefinition extends Model
 
     public function instances(): HasMany
     {
-        return $this->hasMany(TaskSlaInstance::class, 'sla_definition_id');
+        return $this->hasMany(SlaInstancia::class, 'sla_definition_id');
     }
 
     /**

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas\Services;
 
-use App\Modules\Demandas\Models\Task;
+use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Shared\BaseService;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class TaskService extends BaseService
+class DemandaService extends BaseService
 {
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {

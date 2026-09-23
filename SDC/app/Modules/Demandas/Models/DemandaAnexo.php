@@ -10,7 +10,7 @@ use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class TaskAttachment extends Model
+class DemandaAnexo extends Model
 {
     use TrilhaNoProtocoloPai;
 
