@@ -1,295 +1,190 @@
 <template>
+  <div class="pb-6">
+    <Head :title="`Demanda ${demanda.protocolo}`" />
+    
+    <PageHeader 
+      :title="`Demanda ${demanda.protocolo}`" 
+      :description="demanda.titulo" 
+      :icon-image="moduleIcon('demandas')" 
+    >
+      <template #actions>
+        <Button variant="default" @click="goBack" class="mr-2">Voltar</Button>
+        <Button v-if="canEdit" variant="primary" :icon="PencilIcon">Editar Demanda</Button>
+      </template>
+    </PageHeader>
 
-    <Head :title="`Demanda ${task.protocolo}`" />
-
-    <div class="py-12">
-      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="mb-8">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="flex items-center space-x-3">
-                <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
-                  {{ task.protocolo }}
-                </h2>
-                <span
-                  :class="task.status_color"
-                  class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
-                >
-                  {{ task.status_label }}
-                </span>
-                <span
-                  :class="task.prioridade_color"
-                  class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
-                >
-                  {{ task.prioridade_label }}
-                </span>
-              </div>
-              <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                {{ task.tipo_label }} aberto {{ task.criado_em_diff }}
-              </p>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Main Details -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div class="p-6">
+            <div class="flex flex-wrap items-center gap-3 mb-4">
+              <DemandaStatusBadge :status="demanda.status">{{ demanda.status_label || demanda.status }}</DemandaStatusBadge>
+              <DemandaPrioridadeBadge :prioridade="demanda.prioridade">{{ demanda.prioridade_label || 'Prioridade ' + demanda.prioridade }}</DemandaPrioridadeBadge>
             </div>
-
-            <Link
-              :href="route('demandas.index')"
-              class="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 border border-transparent rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-            >
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-              </svg>
-              Voltar
-            </Link>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-4 leading-snug">{{ demanda.titulo }}</h2>
+            <div class="prose dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
+              {{ demanda.descricao }}
+            </div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-800/50 p-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <div class="text-slate-500 mb-1">Solicitante</div>
+              <div class="font-medium truncate" :title="demanda.solicitante?.name">{{ demanda.solicitante?.name || 'Sistema' }}</div>
+            </div>
+            <div>
+              <div class="text-slate-500 mb-1">Responsável (TI)</div>
+              <div class="font-medium truncate" :title="demanda.atribuido_para?.name">{{ demanda.atribuido_para?.name || 'Não atribuído' }}</div>
+            </div>
+            <div>
+              <div class="text-slate-500 mb-1">Data Abertura</div>
+              <div class="font-medium">{{ formatDate(demanda.created_at) }}</div>
+            </div>
+            <div>
+              <div class="text-slate-500 mb-1">Tipo</div>
+              <div class="font-medium uppercase">{{ demanda.tipo }}</div>
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Coluna Principal - Detalhes e Timeline -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Detalhes da Demanda -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-              <div class="p-6">
-                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {{ task.titulo }}
-                </h3>
-
-                <div class="prose dark:prose-invert max-w-none">
-                  <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line">
-                    {{ task.descricao || 'Sem descrição detalhada.' }}
-                  </p>
+        <!-- Comments and Timeline -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+          <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+            Acompanhamento
+          </h3>
+          <div class="space-y-4 mb-6 max-h-[500px] overflow-y-auto pr-2">
+            <div v-for="comentario in demanda.comments" :key="comentario.id" class="flex gap-4">
+              <div class="flex-shrink-0 mt-1">
+                <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-xs">
+                  {{ comentario.user?.name?.charAt(0) || 'S' }}
                 </div>
+              </div>
+              <div class="flex-1 bg-slate-50 dark:bg-slate-800/70 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                <div class="flex justify-between items-start mb-1.5">
+                  <div class="font-semibold text-sm text-slate-800 dark:text-slate-200">{{ comentario.user?.name || 'Sistema' }}</div>
+                  <div class="text-xs text-slate-500">{{ formatDateTime(comentario.created_at) }}</div>
+                </div>
+                <div class="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{{ comentario.conteudo }}</div>
               </div>
             </div>
-
-            <!-- Timeline de Comentários -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-              <div class="p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Atividades
-                </h3>
-
-                <!-- Lista de Comentários -->
-                <div v-if="task.comentarios && task.comentarios.length > 0" class="space-y-4">
-                  <div
-                    v-for="comentario in task.comentarios"
-                    :key="comentario.id"
-                    class="flex space-x-3"
-                  >
-                    <div class="flex-shrink-0">
-                      <div class="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">
-                          {{ comentario.autor_iniciais }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="flex-1">
-                      <div class="flex items-center space-x-2">
-                        <span class="font-medium text-gray-900 dark:text-white">
-                          {{ comentario.autor_nome }}
-                        </span>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">
-                          {{ comentario.criado_em_diff }}
-                        </span>
-                      </div>
-                      <p class="mt-1 text-gray-700 dark:text-gray-300 whitespace-pre-line">
-                        {{ comentario.comentario }}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400">
-                  Nenhum comentário ainda
-                </div>
-
-                <!-- Formulário de Novo Comentário -->
-                <div v-if="canComment" class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <form @submit.prevent="submitComment">
-                    <textarea
-                      v-model="commentForm.comentario"
-                      rows="3"
-                      class="block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      placeholder="Adicione um comentário..."
-                      required
-                    ></textarea>
-
-                    <div class="mt-3 flex justify-end">
-                      <button
-                        type="submit"
-                        class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 disabled:opacity-25 transition"
-                        :disabled="commentForm.processing"
-                      >
-                        {{ commentForm.processing ? 'Enviando...' : 'Comentar' }}
-                      </button>
-                    </div>
-
-                    <div v-if="commentForm.errors.comentario" class="mt-2 text-sm text-red-600">
-                      {{ commentForm.errors.comentario }}
-                    </div>
-                  </form>
-                </div>
-              </div>
+            <div v-if="!demanda.comments?.length" class="text-center text-slate-500 py-6 text-sm bg-slate-50 dark:bg-slate-800/30 rounded-lg border border-dashed border-slate-200 dark:border-slate-700">
+              Nenhuma interação registrada nesta demanda até o momento.
             </div>
           </div>
 
-          <!-- Sidebar - Informações Adicionais -->
-          <div class="space-y-6">
-            <!-- Informações -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-              <div class="p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Informações
-                </h3>
+          <!-- Add Comment Form -->
+          <form @submit.prevent="submitComment" class="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+            <textarea v-model="commentForm.conteudo" rows="3" class="form-textarea w-full rounded-md text-sm mb-3 border-slate-300 dark:border-slate-700 dark:bg-slate-800" placeholder="Escreva uma resposta ou atualização..." required></textarea>
+            <div class="flex justify-between items-center">
+              <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+                <input type="checkbox" v-model="commentForm.interno" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                <span>Nota Interna (Visível apenas para equipe TI)</span>
+              </label>
+              <Button type="submit" variant="primary" :disabled="commentForm.processing">Enviar Resposta</Button>
+            </div>
+          </form>
+        </div>
+      </div>
 
-                <dl class="space-y-3">
-                  <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Solicitante
-                    </dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                      {{ task.solicitante_nome }}
-                    </dd>
-                  </div>
-
-                  <div v-if="task.atribuido_para_nome">
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Atribuído para
-                    </dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                      {{ task.atribuido_para_nome }}
-                    </dd>
-                  </div>
-
-                  <div v-if="task.categoria">
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Categoria
-                    </dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                      {{ task.categoria }}
-                      <span v-if="task.subcategoria" class="text-gray-500">
-                        / {{ task.subcategoria }}
-                      </span>
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Urgência
-                    </dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                      {{ task.urgencia_label }}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Impacto
-                    </dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                      {{ task.impacto_label }}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Criado em
-                    </dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                      {{ task.criado_em_formatado }}
-                    </dd>
-                  </div>
-
-                  <div v-if="task.atualizado_em_formatado">
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Última atualização
-                    </dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                      {{ task.atualizado_em_formatado }}
-                    </dd>
-                  </div>
-                </dl>
+      <div class="space-y-6">
+        <!-- SLA Panel -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="text-md font-bold text-slate-800 dark:text-slate-200">Painel de SLA</h3>
+          </div>
+          <div class="p-5 space-y-4 text-sm">
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-slate-500">Primeira Resposta</span>
+                <span class="font-medium" :class="demanda.sla_primeira_resposta_violado ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'">
+                  {{ demanda.primeira_resposta_em ? formatDateTime(demanda.primeira_resposta_em) : 'Pendente' }}
+                </span>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2">
+                <div class="bg-green-500 h-1.5 rounded-full" :style="{ width: demanda.primeira_resposta_em ? '100%' : '20%' }"></div>
               </div>
             </div>
-
-            <!-- SLA -->
-            <div v-if="task.prazo_resolucao" class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-              <div class="p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Prazo (SLA)
-                </h3>
-
-                <dl class="space-y-3">
-                  <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Prazo de Resolução
-                    </dt>
-                    <dd class="mt-1 text-sm font-medium" :class="task.sla_resolucao_violado ? 'text-red-600' : 'text-gray-900 dark:text-white'">
-                      {{ task.prazo_resolucao_formatado }}
-                      <span v-if="task.sla_resolucao_violado" class="text-xs">
-                        (Violado)
-                      </span>
-                    </dd>
-                  </div>
-                </dl>
+            
+            <div class="pt-2">
+              <div class="flex justify-between mb-1">
+                <span class="text-slate-500">Resolução Final</span>
+                <span class="font-medium" :class="demanda.sla_resolucao_violado ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'">
+                  {{ demanda.resolvido_em ? formatDateTime(demanda.resolvido_em) : 'No Prazo' }}
+                </span>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2">
+                <div class="bg-indigo-500 h-1.5 rounded-full" :style="{ width: demanda.resolvido_em ? '100%' : '50%' }"></div>
               </div>
             </div>
-
-            <!-- Anexos -->
-            <div v-if="task.anexos && task.anexos.length > 0" class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-              <div class="p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Anexos
-                </h3>
-
-                <ul class="space-y-2">
-                  <li
-                    v-for="anexo in task.anexos"
-                    :key="anexo.id"
-                    class="flex items-center text-sm"
-                  >
-                    <svg class="h-5 w-5 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd"/>
-                    </svg>
-                    <a :href="anexo.url" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
-                      {{ anexo.nome_arquivo }}
-                    </a>
-                  </li>
-                </ul>
-              </div>
+          </div>
+        </div>
+        
+        <!-- Attachments -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+          <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+            <h3 class="text-md font-bold text-slate-800 dark:text-slate-200">Anexos</h3>
+            <button class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Adicionar</button>
+          </div>
+          <div class="p-5">
+            <ul v-if="demanda.attachments?.length" class="space-y-3 text-sm">
+              <li v-for="anexo in demanda.attachments" :key="anexo.id" class="flex items-start gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition group">
+                <div class="mt-0.5 opacity-60">📎</div>
+                <div class="flex-1 overflow-hidden">
+                  <a href="#" class="block text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium truncate">{{ anexo.nome_original }}</a>
+                  <div class="text-xs text-slate-400 mt-0.5">{{ anexo.tamanho_formatado || '1.2 MB' }} • {{ formatDateTime(anexo.created_at) }}</div>
+                </div>
+              </li>
+            </ul>
+            <div v-else class="text-sm text-slate-500 text-center py-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+              Nenhum anexo disponível
             </div>
           </div>
         </div>
       </div>
     </div>
-
+  </div>
 </template>
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-
 defineOptions({ layout: AuthenticatedLayout });
-import { Head, Link, useForm } from '@inertiajs/vue3';
+
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { usePermissions } from '@/Composables/usePermissions';
+import { moduleIcon } from '@/Support/moduleIcons';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import DemandaStatusBadge from '@/Components/Atoms/Demandas/DemandaStatusBadge.vue';
+import DemandaPrioridadeBadge from '@/Components/Atoms/Demandas/DemandaPrioridadeBadge.vue';
+import { PencilIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
-  task: {
-    type: Object,
-    required: true
-  },
-  canComment: {
-    type: Boolean,
-    default: false
-  }
+  demanda: { type: Object, required: true },
 });
+
+const { can } = usePermissions();
+const canEdit = can('demandas.chamados.edit');
 
 const commentForm = useForm({
-  comentario: ''
+  conteudo: '',
+  interno: false
 });
 
+const goBack = () => {
+  window.history.back();
+};
+
 const submitComment = () => {
-  commentForm.post(route('demandas.comments.store', props.task.id), {
+  commentForm.post(route('demandas.comments.store', props.demanda.id), {
     preserveScroll: true,
-    onSuccess: () => {
-      commentForm.reset();
-    }
+    onSuccess: () => commentForm.reset('conteudo'),
   });
+};
+
+const formatDate = (date) => date ? new Date(date).toLocaleDateString('pt-BR') : '--';
+const formatDateTime = (date) => {
+  if (!date) return '--';
+  const d = new Date(date);
+  return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' })}`;
 };
 </script>

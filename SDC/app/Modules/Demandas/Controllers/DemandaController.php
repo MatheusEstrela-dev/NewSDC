@@ -5,26 +5,32 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Demandas\Services\DemandaService;
+use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
+use App\Modules\Demandas\DTOs\CriarDemandaData;
+use App\Modules\Demandas\DTOs\AtualizarDemandaData;
 use App\Modules\Demandas\Enums\StatusDemanda;
-use App\Modules\Demandas\Enums\Prioridade;
 use App\Modules\Demandas\Enums\TipoDemanda;
+use App\Modules\Demandas\Enums\Prioridade;
+use App\Modules\Demandas\Requests\StoreDemandaRequest;
+use App\Modules\Demandas\Requests\UpdateDemandaRequest;
+use App\Modules\Demandas\Domain\Events\DemandaCriadaV1;
+use App\Modules\Demandas\Models\Demanda;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class DemandaController extends Controller
 {
     public function __construct(
-        private readonly DemandaService $taskService
-    ) {
-    }
+        private readonly DemandaRepository $repository
+    ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
-        $filters = $request->only(['search', 'status', 'prioridade', 'tipo']);
-        $tasks = $this->taskService->list($filters, 15);
-        $statistics = $this->taskService->getStatistics();
+        $filters = $request->only(['search', 'status', 'tipo', 'responsavel_id']);
+        
+        $tasks = $this->repository->paginate($filters, 15);
+        $statistics = $this->repository->getStatistics();
 
         return Inertia::render('Demandas/DemandasIndex', [
             'tasks' => $tasks,
@@ -32,134 +38,69 @@ class DemandaController extends Controller
             'filters' => $filters,
             'filterOptions' => [
                 'status' => StatusDemanda::toSelectArray(),
-                'prioridades' => Prioridade::toSelectArray(),
                 'tipos' => TipoDemanda::toSelectArray(),
-            ],
+                'prioridades' => Prioridade::toSelectArray(),
+            ]
         ]);
     }
 
-    public function adminIndex(Request $request): Response
+    public function create()
     {
-        $filters = $request->only(['search', 'status', 'prioridade', 'tipo']);
-        $tasks = $this->taskService->list($filters, 15);
-        $statistics = $this->taskService->getStatistics();
-
-        return Inertia::render('Demandas/DemandasIndex', [
-            'tasks' => $tasks,
-            'statistics' => $statistics,
-            'filters' => $filters,
+        // Agora usamos o modal NovaDemandaModal na index, mas mantemos a rota de fallback
+        return Inertia::render('Demandas/DemandasCreate', [
             'filterOptions' => [
-                'status' => StatusDemanda::toSelectArray(),
-                'prioridades' => Prioridade::toSelectArray(),
                 'tipos' => TipoDemanda::toSelectArray(),
-            ],
+            ]
         ]);
     }
 
-    public function show(int $id): Response
+    public function store(StoreDemandaRequest $request)
     {
-        $task = $this->taskService->findById($id);
+        $dto = CriarDemandaData::fromRequest($request);
 
-        if (!$task) {
-            abort(404, 'Tarefa nao encontrada');
+        DB::transaction(function () use ($dto) {
+            $demanda = new Demanda($dto->toArray());
+            $demanda->status = StatusDemanda::ABERTA;
+            
+            $this->repository->save($demanda);
+
+            event(DemandaCriadaV1::create(
+                $demanda->id,
+                $demanda->protocolo,
+                $demanda->tipo->value,
+                $demanda->prioridade?->value ?? '3',
+                $demanda->solicitante_id
+            ));
+        });
+
+        return redirect()->route('demandas.index')->with('success', 'Demanda criada com sucesso!');
+    }
+
+    public function show(int $id)
+    {
+        $demanda = $this->repository->findById($id);
+        
+        if (!$demanda) {
+            abort(404, 'Demanda não encontrada.');
         }
 
         return Inertia::render('Demandas/DemandasShow', [
-            'task' => $task,
+            'demanda' => $demanda,
         ]);
     }
 
-    public function create(): Response
+    public function update(int $id, UpdateDemandaRequest $request)
     {
-        return Inertia::render('Demandas/DemandasCreate', [
-            'filterOptions' => [
-                'prioridades' => Prioridade::toSelectArray(),
-                'tipos' => TipoDemanda::toSelectArray(),
-            ],
-        ]);
-    }
+        $demanda = $this->repository->findById($id);
+        if (!$demanda) abort(404);
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'titulo' => 'required|string|max:255',
-            'descricao' => 'required|string',
-            'prioridade' => 'required|string',
-            'tipo' => 'required|string',
-        ]);
+        $dto = AtualizarDemandaData::fromRequest($request);
 
-        $task = $this->taskService->create($validated);
-
-        return redirect()->route('demandas.show', $task->id)
-            ->with('success', 'Demanda cadastrada com sucesso!');
-    }
-
-    public function update(Request $request, int $id)
-    {
-        $validated = $request->validate([
-            'titulo' => 'sometimes|string|max:255',
-            'descricao' => 'sometimes|string',
-            'status' => 'sometimes|string',
-        ]);
-
-        $this->taskService->update($id, $validated);
+        DB::transaction(function () use ($demanda, $dto) {
+            $demanda->fill($dto->toArray());
+            $this->repository->save($demanda);
+        });
 
         return redirect()->back()->with('success', 'Demanda atualizada com sucesso!');
-    }
-
-    public function destroy(int $id)
-    {
-        $this->taskService->delete($id);
-
-        return redirect()->route('demandas.index')
-            ->with('success', 'Demanda removida com sucesso!');
-    }
-
-    public function assign(Request $request, int $id)
-    {
-        $validated = $request->validate([
-            'user_id' => 'required|integer|exists:users,id',
-        ]);
-
-        $this->taskService->assign($id, $validated['user_id']);
-
-        return redirect()->back()->with('success', 'Demanda atribuida com sucesso!');
-    }
-
-    public function changeStatus(Request $request, int $id)
-    {
-        $validated = $request->validate([
-            'status' => 'required|string',
-        ]);
-
-        $this->taskService->changeStatus($id, $validated['status']);
-
-        return redirect()->back()->with('success', 'Status atualizado com sucesso!');
-    }
-
-    public function addComment(Request $request, int $id)
-    {
-        $validated = $request->validate([
-            'conteudo' => 'required|string',
-        ]);
-
-        $task = $this->taskService->findById($id);
-        if (!$task) {
-            abort(404, 'Tarefa nao encontrada');
-        }
-
-        $task->comments()->create([
-            'conteudo' => $validated['conteudo'],
-            'user_id' => auth()->id(),
-        ]);
-
-        return redirect()->back()->with('success', 'Comentario adicionado com sucesso!');
-    }
-
-    public function export(Request $request)
-    {
-        $filters = $request->only(['search', 'status', 'prioridade', 'tipo']);
-        // Export logic here
-        return response()->json(['message' => 'Export not implemented yet']);
     }
 }
