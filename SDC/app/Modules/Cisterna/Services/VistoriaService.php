@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Services;
 
+use App\Core\Events\DomainEvent;
+use App\Core\Outbox\OutboxDispatcher;
+use App\Modules\Cisterna\Domain\Events\VistoriaConcluidaV1;
 use App\Modules\Cisterna\DTOs\VistoriaDTO;
 use App\Modules\Cisterna\Enums\EtapaVistoria;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
@@ -36,6 +39,7 @@ class VistoriaService
 
     public function __construct(
         private readonly NumeracaoInstalacaoService $numeracao,
+        private readonly OutboxDispatcher $outbox,
     ) {}
 
     /**
@@ -202,6 +206,15 @@ class VistoriaService
      */
     public function concluir(CisternaVistoria $vistoria): CisternaVistoria
     {
+        return DB::transaction(function () use ($vistoria): CisternaVistoria {
+            $atual = CisternaVistoria::query()->lockForUpdate()->findOrFail($vistoria->getKey());
+
+            return $this->concluirNaTransacao($atual);
+        });
+    }
+
+    private function concluirNaTransacao(CisternaVistoria $vistoria): CisternaVistoria
+    {
         if ($vistoria->estaConcluida()) {
             return $vistoria;
         }
@@ -234,6 +247,20 @@ class VistoriaService
         }
 
         $vistoria->update(['concluida_em' => now()]);
+
+        $this->outbox->persist(new VistoriaConcluidaV1(
+            eventId: DomainEvent::newId(),
+            aggregateType: 'cisterna_vistoria',
+            aggregateId: (string) $vistoria->id,
+            occurredAt: $vistoria->concluida_em->toDateTimeImmutable(),
+            metadata: [
+                'vistoria_id' => $vistoria->id,
+                'beneficiario_id' => $vistoria->beneficiario_id,
+                'etapa' => $vistoria->etapa->value,
+                'actor_user_id' => \Illuminate\Support\Facades\Auth::id(),
+                'concluida_em' => $vistoria->concluida_em->toIso8601String(),
+            ],
+        ));
 
         return $vistoria->fresh();
     }

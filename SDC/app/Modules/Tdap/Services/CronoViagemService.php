@@ -365,6 +365,10 @@ class CronoViagemService
                 'cronograma_id'     => $contexto?->cronograma_id,
                 'capacidade_m3'     => (float) ($contexto?->caminhao?->capacidade_m3 ?? 0),
                 'user_id'           => Auth::id(),
+                'actor_user_id'     => $viagem->user_validacao_id,
+                'validador_user_id' => $viagem->user_validacao_id,
+                'validada_em'       => $viagem->data_aprovacao?->toIso8601String(),
+                'credited_user_id'  => null,
             ],
         ));
     }

@@ -6,7 +6,7 @@ namespace App\Modules\Dashboard\Services;
 
 use App\Models\AuditLog;
 use App\Models\UserNotificationPreference;
-use App\Modules\Demandas\Models\Task;
+use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Pae\Models\PaeProtocolo;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -196,3 +196,4 @@ class ActivityFeedService
         return "{$dias}d";
     }
 }
+

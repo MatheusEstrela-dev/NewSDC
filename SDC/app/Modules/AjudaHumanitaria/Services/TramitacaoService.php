@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\AjudaHumanitaria\Services;
 
+use App\Core\Events\DomainEvent;
+use App\Core\Outbox\OutboxDispatcher;
+use App\Modules\AjudaHumanitaria\Domain\Events\PedidoEnviadoV1;
+use App\Modules\AjudaHumanitaria\Domain\Events\PedidoCanceladoV1;
 use App\Modules\AjudaHumanitaria\Domain\Contracts\ContextoTransicao;
 use App\Modules\AjudaHumanitaria\Domain\PedidoAhWorkflow;
 use App\Modules\AjudaHumanitaria\Domain\Repositories\PedidoAhRepositoryInterface;
@@ -34,6 +38,7 @@ final class TramitacaoService
         private readonly PrestacaoContaRepositoryInterface $prestacoes,
         private readonly PrazoPrestacaoContas $prazo,
         private readonly AjudaHumanitariaNotificacaoService $notificacoes,
+        private readonly OutboxDispatcher $outbox,
     ) {}
 
     /**
@@ -103,8 +108,46 @@ final class TramitacaoService
         }
 
         DB::transaction(function () use ($pedido, $pedidoId, $origem, $alvo, $observacao, $usuarioId): void {
+            $atual = PedidoAh::query()->lockForUpdate()->findOrFail($pedidoId);
+            if ($atual->status !== $origem) {
+                throw new \DomainException('O pedido mudou de etapa. Atualize antes de tramitar novamente.');
+            }
+
             $this->pedidos->atualizarStatus($pedidoId, $alvo);
             $this->pedidos->registrarTramite($pedidoId, $origem, $alvo, $observacao, $usuarioId);
+
+            if ($origem === StatusPedidoAh::EdicaoCompdec && $alvo === StatusPedidoAh::AnaliseDlog) {
+                $instante = now();
+                $pedido->forceFill(['data_hora_envio' => $instante])->save();
+                $this->outbox->persist(new PedidoEnviadoV1(
+                    eventId: DomainEvent::newId(),
+                    aggregateType: 'pedido_ah',
+                    aggregateId: (string) $pedidoId,
+                    occurredAt: $instante->toDateTimeImmutable(),
+                    metadata: [
+                        'pedido_id' => $pedidoId,
+                        'actor_user_id' => $usuarioId,
+                        'enviado_em' => $instante->toIso8601String(),
+                    ],
+                ));
+            }
+
+            if (in_array($alvo, [StatusPedidoAh::Cancelado, StatusPedidoAh::Reprovado], true)) {
+                $instante = now();
+                $this->outbox->persist(new PedidoCanceladoV1(
+                    eventId: DomainEvent::newId(),
+                    aggregateType: 'pedido_ah',
+                    aggregateId: (string) $pedidoId,
+                    occurredAt: $instante->toDateTimeImmutable(),
+                    metadata: [
+                        'pedido_id' => $pedidoId,
+                        'actor_user_id' => $usuarioId,
+                        'cancelado_em' => $instante->toIso8601String(),
+                        'status' => $alvo->value,
+                        'chaves_canonicas' => ['ajuda_humanitaria:pedido:'.$pedidoId.':c1:pedido_completo'],
+                    ],
+                ));
+            }
 
             if ($alvo === StatusPedidoAh::Aprovado && $pedido->data_aprovacao === null) {
                 $pedido->forceFill(['data_aprovacao' => now()])->save();

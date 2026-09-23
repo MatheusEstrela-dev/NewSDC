@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas\Domain\Contracts;
 
-use App\Modules\Demandas\Models\Task as Demanda;
+use App\Modules\Demandas\Models\Demanda;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 interface DemandaRepository
@@ -39,3 +39,4 @@ interface DemandaRepository
      */
     public function delete(Demanda $demanda): bool;
 }
+

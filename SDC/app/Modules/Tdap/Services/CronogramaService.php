@@ -341,7 +341,8 @@ class CronogramaService
                     'numero'        => $fresh->numero,
                     'prestador_id'  => $fresh->prestador_id,
                     'municipio_id'  => $fresh->municipio_id,
-                    'ativado_em'    => $fresh->ativado_em?->toIso8601String(),
+                      'ativado_em'    => $fresh->ativado_em?->toIso8601String(),
+                      'actor_user_id' => \Illuminate\Support\Facades\Auth::id(),
                 ],
             ));
 

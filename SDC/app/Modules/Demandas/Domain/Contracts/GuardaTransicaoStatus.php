@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas\Domain\Contracts;
 
-use App\Modules\Demandas\Models\Task as Demanda;
+use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Demandas\Enums\StatusDemanda;
 
 interface GuardaTransicaoStatus
@@ -17,3 +17,4 @@ interface GuardaTransicaoStatus
      */
     public function check(Demanda $demanda, StatusDemanda $novoStatus): bool;
 }
+

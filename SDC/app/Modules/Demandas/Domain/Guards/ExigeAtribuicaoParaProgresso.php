@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Domain\Guards;
 
 use App\Modules\Demandas\Domain\Contracts\GuardaTransicaoStatus;
-use App\Modules\Demandas\Models\Task as Demanda;
+use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Demandas\Enums\StatusDemanda;
 
 final readonly class ExigeAtribuicaoParaProgresso implements GuardaTransicaoStatus
@@ -19,3 +19,4 @@ final readonly class ExigeAtribuicaoParaProgresso implements GuardaTransicaoStat
         return true;
     }
 }
+

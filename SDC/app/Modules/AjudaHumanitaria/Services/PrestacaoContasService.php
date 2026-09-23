@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\AjudaHumanitaria\Services;
 
+use App\Core\Events\DomainEvent;
+use App\Core\Outbox\OutboxDispatcher;
+use App\Modules\AjudaHumanitaria\Domain\Events\ContasHomologadasV1;
 use App\Modules\AjudaHumanitaria\Domain\Repositories\PrestacaoContaRepositoryInterface;
 use App\Modules\AjudaHumanitaria\Domain\Specifications\PrazoPrestacaoContas;
 use App\Modules\AjudaHumanitaria\Domain\Specifications\SaldoEntregaBeneficiarios;
@@ -28,6 +31,7 @@ final class PrestacaoContasService
         private readonly SaldoEntregaBeneficiarios $saldo,
         private readonly PrazoPrestacaoContas $prazo,
         private readonly TramitacaoService $tramitacao,
+        private readonly OutboxDispatcher $outbox,
     ) {}
 
     /**
@@ -84,7 +88,16 @@ final class PrestacaoContasService
      */
     public function homologar(int $prestacaoId, ?int $usuarioId): array
     {
-        $prestacao = PrestacaoConta::with('itens')->findOrFail($prestacaoId);
+        return DB::transaction(fn (): array => $this->homologarNaTransacao($prestacaoId, $usuarioId));
+    }
+
+    private function homologarNaTransacao(int $prestacaoId, ?int $usuarioId): array
+    {
+        $prestacao = PrestacaoConta::with('itens')->lockForUpdate()->findOrFail($prestacaoId);
+
+        if ($prestacao->status === StatusPrestacaoConta::Homologada) {
+            return [true, null];
+        }
 
         foreach ($prestacao->itens as $item) {
             if ($this->saldoDoItem($item->id) > 0) {
@@ -102,6 +115,22 @@ final class PrestacaoContasService
         }
 
         $this->prestacoes->homologar($prestacaoId, $usuarioId);
+
+        $prestacao->refresh();
+        $this->outbox->persist(new ContasHomologadasV1(
+            eventId: DomainEvent::newId(),
+            aggregateType: 'prestacao_conta_ah',
+            aggregateId: (string) $prestacaoId,
+            occurredAt: $prestacao->homologado_em->toDateTimeImmutable(),
+            metadata: [
+                'prestacao_id' => $prestacaoId,
+                'pedido_id' => $prestacao->pedido_ah_id,
+                'actor_user_id' => $usuarioId,
+                'validador_user_id' => $prestacao->homologado_por,
+                'credited_user_id' => null,
+                'homologado_em' => $prestacao->homologado_em->toIso8601String(),
+            ],
+        ));
 
         return [true, null];
     }

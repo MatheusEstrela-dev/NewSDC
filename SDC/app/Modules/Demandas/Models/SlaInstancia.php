@@ -54,7 +54,7 @@ class SlaInstancia extends Model
 
     public function task(): BelongsTo
     {
-        return $this->belongsTo(Task::class);
+        return $this->belongsTo(Demanda::class);
     }
 
     public function slaDefinition(): BelongsTo
@@ -98,3 +98,4 @@ class SlaInstancia extends Model
         return $this;
     }
 }
+

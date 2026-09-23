@@ -34,7 +34,7 @@ class DemandaComentario extends Model
 
     public function task(): BelongsTo
     {
-        return $this->belongsTo(Task::class);
+        return $this->belongsTo(Demanda::class);
     }
 
     public function user(): BelongsTo
@@ -46,7 +46,7 @@ class DemandaComentario extends Model
 
     public function protocoloDaTrilhaClasse(): string
     {
-        return Task::class;
+        return Demanda::class;
     }
 
     /**
@@ -69,3 +69,4 @@ class DemandaComentario extends Model
         return 'um comentario';
     }
 }
+

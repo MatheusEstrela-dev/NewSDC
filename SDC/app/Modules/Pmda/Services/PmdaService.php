@@ -248,6 +248,8 @@ class PmdaPlanoService extends BaseService
         ?string $motivo = null,
         ?string $responsavel = null,
     ): PmdaPlano {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($plano, $destino, $tipo, $userId, $atributos, $motivo, $responsavel): PmdaPlano {
+        $plano = PmdaPlano::query()->lockForUpdate()->findOrFail($plano->id);
         $origem = $plano->status;
 
         if (! $origem->podeTransicionarPara($destino)) {
@@ -268,6 +270,15 @@ class PmdaPlanoService extends BaseService
 
         PmdaPlanoEvento::registrar($plano, $tipo, $origem, $destino, $userId, $motivo, $nome);
 
+        if ($tipo === PmdaEventoTipo::ENVIO) {
+            $evento = new \App\Modules\Pmda\Domain\Events\PlanoEnviadoV1(
+                eventId: \App\Core\Events\DomainEvent::newId(), aggregateType: 'pmda_plano',
+                aggregateId: (string) $plano->id, occurredAt: new \DateTimeImmutable(),
+                metadata: ['actor_user_id' => $userId, 'envio_comprovado' => true],
+            );
+            app(\App\Core\Outbox\OutboxDispatcher::class)->persist($evento);
+        }
+
         // Avisa a Central de Analises da CEDEC, escopada pelo municipio DO PLANO
         // -- nao pelo do usuario. Quem analisa e a CEDEC, que nao tem municipio;
         // tirar o escopo do ator daria null e o evento nem seria construivel.
@@ -278,6 +289,7 @@ class PmdaPlanoService extends BaseService
         RecursoAtualizado::dispatch('pmda-analises', (int) $plano->municipio_id);
 
         return $plano->refresh();
+        });
     }
 
     /**

@@ -32,7 +32,7 @@ class DemandaAnexo extends Model
 
     public function task(): BelongsTo
     {
-        return $this->belongsTo(Task::class);
+        return $this->belongsTo(Demanda::class);
     }
 
     public function user(): BelongsTo
@@ -66,7 +66,7 @@ class DemandaAnexo extends Model
 
     public function protocoloDaTrilhaClasse(): string
     {
-        return Task::class;
+        return Demanda::class;
     }
 
     public function protocoloDaTrilhaChave(): int|string|null
@@ -84,3 +84,4 @@ class DemandaAnexo extends Model
         return 'um novo anexo';
     }
 }
+

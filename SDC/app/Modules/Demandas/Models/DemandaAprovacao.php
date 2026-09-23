@@ -30,7 +30,7 @@ class DemandaAprovacao extends Model
 
     public function task(): BelongsTo
     {
-        return $this->belongsTo(Task::class);
+        return $this->belongsTo(Demanda::class);
     }
 
     public function aprovador(): BelongsTo
@@ -64,3 +64,4 @@ class DemandaAprovacao extends Model
         return $this;
     }
 }
+

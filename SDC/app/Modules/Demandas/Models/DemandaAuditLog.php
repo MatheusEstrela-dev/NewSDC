@@ -53,7 +53,7 @@ class DemandaAuditLog extends Model
 
     public function task(): BelongsTo
     {
-        return $this->belongsTo(Task::class);
+        return $this->belongsTo(Demanda::class);
     }
 
     public function user(): BelongsTo
@@ -61,3 +61,4 @@ class DemandaAuditLog extends Model
         return $this->belongsTo(User::class);
     }
 }
+
