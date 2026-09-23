@@ -15,14 +15,20 @@
     >
       <template #actions>
         <div class="flex w-full flex-wrap items-center justify-end gap-2">
-          <ActionButton
-            action="history"
-            :allowed="true"
-            variant="secondary"
-            label="Atualizar"
-            tooltip-text="Recarregar o recorte atual do placar"
-            @click="atualizar"
-          />
+          <Button
+            v-if="regras.length && !indisponivel"
+            variant="outline"
+            :icon="BookOpenIcon"
+            aria-haspopup="dialog"
+            :aria-expanded="regrasAbertas"
+            @click="regrasAbertas = true"
+          >
+            <span class="text-left">
+              <span class="block">Regras do placar</span>
+              <span class="block text-xs font-normal opacity-75">{{ numero(regras.length) }} regras · pontos e bônus</span>
+            </span>
+          </Button>
+
         </div>
       </template>
     </PageHeader>
@@ -340,35 +346,9 @@
         <Pagination :pagination="paginacaoExtrato" @page-change="irParaPaginaExtrato" />
       </section>
 
-      <details
-        v-if="regras.length"
-        class="mb-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-900/60"
-      >
-        <summary class="cursor-pointer text-sm font-bold text-slate-900 dark:text-slate-100">
-          Regras publicadas
-          <span class="font-normal text-slate-500 dark:text-slate-400">({{ numero(regras.length) }})</span>
-        </summary>
-
-        <ul class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <li
-            v-for="regra in regras"
-            :key="`${regra.rule_key}-${regra.versao}`"
-            class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700/50 dark:bg-slate-800/60"
-          >
-            <p class="break-words font-semibold text-slate-900 dark:text-slate-100">
-              {{ String(regra.modulo).toUpperCase() }} · {{ regra.familia }} · v{{ regra.versao }}
-            </p>
-            <p class="mt-1 text-slate-600 dark:text-slate-300">
-              {{ numero(regra.pontos_base) }} pontos de base ·
-              {{ regra.aceita_bonus ? `${numero(regra.bonus_percentual)}% de bônus quando elegível` : 'Sem bônus' }}
-            </p>
-            <p class="mt-1 text-slate-600 dark:text-slate-300">
-              {{ regra.habilitada ? 'Habilitada' : `Desabilitada: ${regra.motivo_desabilitada ?? 'aguardando homologação'}` }}
-            </p>
-          </li>
-        </ul>
-      </details>
     </template>
+
+    <RankingRegrasModal :show="regrasAbertas" :regras="regras" @close="regrasAbertas = false" />
 
     <footer class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-300">
       <p>{{ cobertura }}</p>
@@ -378,11 +358,13 @@
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { BookOpenIcon } from '@heroicons/vue/24/outline';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
@@ -393,6 +375,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import RankingFaixaBadge from '@/Components/Atoms/Ranking/RankingFaixaBadge.vue';
 import RankingPosicaoCell from '@/Components/Molecules/Ranking/RankingPosicaoCell.vue';
 import RankingPodio from '@/Components/Molecules/Ranking/RankingPodio.vue';
+import RankingRegrasModal from '@/Components/Organisms/Ranking/RankingRegrasModal.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
@@ -419,6 +402,7 @@ const props = defineProps({
 });
 
 const POR_PAGINA_PLACAR = 25;
+const regrasAbertas = ref(false);
 
 const DECISOES = {
   confirmada: 'Confirmada',
@@ -628,9 +612,6 @@ function limpar() {
   navegar({ pagina: 1, extrato_pagina: 1 });
 }
 
-function atualizar() {
-  navegar();
-}
 
 function trocarTipoPeriodo(tipo) {
   local.tipoPeriodo = tipo;
