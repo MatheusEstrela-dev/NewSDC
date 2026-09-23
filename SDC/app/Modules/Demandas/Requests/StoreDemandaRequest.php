@@ -26,6 +26,7 @@ class StoreDemandaRequest extends FormRequest
             'descricao' => ['required', 'string'],
             'categoria' => ['nullable', 'string', 'max:100'],
             'subcategoria' => ['nullable', 'string', 'max:100'],
+            'assunto_id' => ['nullable', 'integer', Rule::exists('demanda_assuntos', 'id')->where('ativo', true)],
             'urgencia' => ['nullable', new Enum(Urgencia::class)],
             'impacto' => ['nullable', new Enum(Impacto::class)],
             'responsavel_id' => [Rule::prohibitedIf(! $this->user()->can('demandas.chamados.manage')), 'nullable', 'integer', 'exists:users,id'],

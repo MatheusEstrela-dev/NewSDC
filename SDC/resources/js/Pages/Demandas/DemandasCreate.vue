@@ -83,6 +83,15 @@
             </div>
 
             <!-- Urgencia e Impacto -->
+            <FormSelect
+              v-model="form.assunto_id"
+              label="Assunto"
+              :options="assuntosOptions"
+              placeholder="Selecione um assunto"
+              :error="form.errors.assunto_id"
+            />
+
+            <!-- Urgencia e Impacto -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormSelect
                 v-model="form.urgencia"
@@ -166,7 +175,8 @@ const props = defineProps({
   tipos: {
     type: Object,
     required: true
-  }
+  },
+  assuntos: { type: Array, default: () => [] }
 });
 
 const form = useForm({
@@ -175,6 +185,7 @@ const form = useForm({
   descricao: '',
   categoria: '',
   subcategoria: '',
+  assunto_id: '',
   urgencia: '',
   impacto: ''
 });
@@ -191,6 +202,8 @@ const subcategoriasOptions = computed(() => {
   if (!form.categoria || !props.categorias[form.categoria]) return [];
   return props.categorias[form.categoria].map(sub => ({ value: sub, label: sub }));
 });
+
+const assuntosOptions = computed(() => props.assuntos.map(assunto => ({ value: assunto.id, label: assunto.nome })));
 
 const urgenciaOptions = [
   { value: '', label: 'Deixar TI avaliar' },

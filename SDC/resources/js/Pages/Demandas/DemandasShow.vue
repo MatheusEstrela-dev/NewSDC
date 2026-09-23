@@ -30,6 +30,7 @@
               <DemandaPrioridadeBadge :prioridade="demanda.prioridade">{{ demanda.prioridade_label || 'Prioridade ' + demanda.prioridade }}</DemandaPrioridadeBadge>
             </div>
             <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-4 leading-snug">{{ demanda.titulo }}</h2>
+            <p v-if="assunto" class="mb-3 text-sm text-slate-500">Assunto: {{ assunto }}</p>
             <div class="prose dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
               {{ demanda.descricao }}
             </div>
@@ -185,6 +186,7 @@ import DemandaPrioridadeBadge from '@/Components/Atoms/Demandas/DemandaPrioridad
 import { PencilIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
+  assunto: { type: String, default: null },
   demanda: { type: Object, required: true },
   statusOptions: { type: Array, default: () => [] },
   usuarios: { type: Array, default: () => [] },

@@ -17,6 +17,7 @@ final readonly class AtualizarDemandaData
         public ?string $descricao,
         public ?string $categoria,
         public ?string $subcategoria,
+        public ?int $assuntoId,
         public ?Urgencia $urgencia,
         public ?Impacto $impacto,
         public array $presentes,
@@ -31,6 +32,7 @@ final readonly class AtualizarDemandaData
             descricao: $data['descricao'] ?? null,
             categoria: $data['categoria'] ?? null,
             subcategoria: $data['subcategoria'] ?? null,
+            assuntoId: isset($data['assunto_id']) ? (int) $data['assunto_id'] : null,
             urgencia: isset($data['urgencia']) ? Urgencia::from($data['urgencia']) : null,
             impacto: isset($data['impacto']) ? Impacto::from($data['impacto']) : null,
             presentes: array_keys($data),
@@ -45,6 +47,7 @@ final readonly class AtualizarDemandaData
             'descricao' => $this->descricao,
             'categoria' => $this->categoria,
             'subcategoria' => $this->subcategoria,
+            'assunto_id' => $this->assuntoId,
             'urgencia' => $this->urgencia,
             'impacto' => $this->impacto,
         ], array_flip($this->presentes));

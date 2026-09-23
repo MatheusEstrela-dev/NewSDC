@@ -41,6 +41,7 @@ class Demanda extends Model implements Rastreavel
         'grupo_id',
         'categoria',
         'subcategoria',
+        'assunto_id',
         'campos_customizados',
         'prazo_primeira_resposta',
         'primeira_resposta_em',
@@ -95,6 +96,11 @@ class Demanda extends Model implements Rastreavel
     public function atribuidoPara(): BelongsTo
     {
         return $this->belongsTo(User::class, 'atribuido_para_id');
+    }
+
+    public function assunto(): BelongsTo
+    {
+        return $this->belongsTo(DemandaAssunto::class, 'assunto_id');
     }
 
     public function comments(): HasMany

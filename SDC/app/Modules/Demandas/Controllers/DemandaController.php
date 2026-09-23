@@ -18,6 +18,7 @@ use App\Modules\Demandas\Requests\UpdateDemandaRequest;
 use App\Modules\Demandas\Domain\Events\DemandaCriadaV1;
 use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Demandas\Models\DemandaCategoria;
+use App\Modules\Demandas\Models\DemandaAssunto;
 use App\Modules\Demandas\Services\DemandaInteractionService;
 use App\Modules\Demandas\Services\DemandaCsvExporter;
 use App\Modules\Demandas\Models\DemandaAnexo;
@@ -72,6 +73,7 @@ class DemandaController extends Controller
                 ->with('subcategorias')->get()->mapWithKeys(fn (DemandaCategoria $categoria) => [
                     $categoria->nome => $categoria->subcategorias->pluck('nome')->values(),
                 ]),
+            'assuntos' => DemandaAssunto::query()->where('ativo', true)->orderBy('nome')->get(['id', 'nome', 'categoria_id']),
         ]);
     }
 
@@ -114,6 +116,7 @@ class DemandaController extends Controller
 
         return Inertia::render('Demandas/DemandasShow', [
             'demanda' => $demanda,
+            'assunto' => $demanda->assunto?->nome,
             'statusOptions' => collect($demanda->status->getAllowedTransitions())
                 ->map(fn (StatusDemanda $status) => ['value' => $status->value, 'label' => $status->label()]),
             'usuarios' => request()->user()->can('demandas.chamados.manage')

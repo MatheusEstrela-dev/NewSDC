@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Demandas\Controllers\DemandaController;
+use App\Modules\Demandas\Controllers\CatalogoDemandaController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth'])->group(function () {
@@ -34,6 +35,12 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->middleware('can:demandas.chamados.view');
 
     Route::prefix('admin/demandas')->name('admin.demandas.')->group(function () {
+
+        Route::get('/catalogo', [CatalogoDemandaController::class, 'index'])->name('catalogo.index')->middleware('can:demandas.chamados.manage');
+        Route::post('/categorias', [CatalogoDemandaController::class, 'storeCategoria'])->name('categorias.store')->middleware('can:demandas.chamados.manage');
+        Route::put('/categorias/{categoria}', [CatalogoDemandaController::class, 'updateCategoria'])->name('categorias.update')->middleware('can:demandas.chamados.manage');
+        Route::post('/assuntos', [CatalogoDemandaController::class, 'storeAssunto'])->name('assuntos.store')->middleware('can:demandas.chamados.manage');
+        Route::put('/assuntos/{assunto}', [CatalogoDemandaController::class, 'updateAssunto'])->name('assuntos.update')->middleware('can:demandas.chamados.manage');
 
         Route::get('/export', [DemandaController::class, 'export'])
             ->name('export')

@@ -9,6 +9,7 @@ use App\Modules\Demandas\Enums\TipoDemanda;
 use App\Modules\Demandas\Enums\Urgencia;
 use App\Modules\Demandas\Enums\Impacto;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rule;
 
 class UpdateDemandaRequest extends FormRequest
 {
@@ -28,6 +29,7 @@ class UpdateDemandaRequest extends FormRequest
             'descricao' => ['sometimes', 'string'],
             'categoria' => ['sometimes', 'nullable', 'string', 'max:100'],
             'subcategoria' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'assunto_id' => ['sometimes', 'nullable', 'integer', Rule::exists('demanda_assuntos', 'id')->where('ativo', true)],
         ];
     }
 }

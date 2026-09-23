@@ -134,6 +134,15 @@
           DEMANDAS
         </NavItem>
         <NavItem
+          v-if="hasPermission(['demandas.chamados.manage'])"
+          href="/admin/demandas/catalogo"
+          :active="isRouteActive('admin.demandas.catalogo.*')"
+          icon="checkbadge"
+          :collapsed="isCollapsed"
+        >
+          Catálogo de demandas
+        </NavItem>
+        <NavItem
           v-if="canSeeRat && _routes.hasRat"
           :href="ratHref"
           :active="isRouteActive('rat.*')"
