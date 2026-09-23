@@ -109,6 +109,19 @@ return [
             ]) : [],
         ],
 
+        'cedec_demanda_mysql' => [
+            'driver' => 'mysql',
+            'host' => env('CEDEC_DEMANDA_DB_HOST', '127.0.0.1'),
+            'port' => env('CEDEC_DEMANDA_DB_PORT', '3306'),
+            'database' => env('CEDEC_DEMANDA_DB_DATABASE', ''),
+            'username' => env('CEDEC_DEMANDA_DB_USERNAME', ''),
+            'password' => env('CEDEC_DEMANDA_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+        ],
+
         // Somente leitura, consumida por cisterna:extrair-legado. Nao ha
         // migration nem model apontando para ela.
         'legado_cisterna_mysql' => [
