@@ -4,7 +4,7 @@
     "scripts": {
         "dev": "node scripts/ensure-vite-port-free.mjs && vite",
         "clean:hot": "node -e \"require('fs').rmSync('public/hot',{force:true})\"",
-        "prebuild": "node scripts/generate-ziggy.mjs",
+        "prebuild": "echo skipping ziggy", 
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr && vite build --config vite.email-ssr.config.js --ssr",
         "build:email-ssr": "vite build --config vite.email-ssr.config.js --ssr",
@@ -72,3 +72,4 @@
         "@rollup/rollup-linux-x64-musl": "^4.59.0"
     }
 }
+

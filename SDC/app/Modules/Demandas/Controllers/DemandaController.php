@@ -15,6 +15,8 @@ use App\Modules\Demandas\Requests\StoreDemandaRequest;
 use App\Modules\Demandas\Requests\UpdateDemandaRequest;
 use App\Modules\Demandas\Domain\Events\DemandaCriadaV1;
 use App\Modules\Demandas\Models\Demanda;
+use App\Modules\Demandas\Models\DemandaCategoria;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -32,6 +34,9 @@ class DemandaController extends Controller
         $tasks = $this->repository->paginate($filters, 15);
         $statistics = $this->repository->getStatistics();
 
+                $categorias = DemandaCategoria::whereNull('parent_id')->with('subcategorias')->where('ativo', true)->get();
+        $usuarios = User::select('id', 'name')->where('ativo', true)->get();
+
         return Inertia::render('Demandas/DemandasIndex', [
             'tasks' => $tasks,
             'statistics' => $statistics,
@@ -40,6 +45,8 @@ class DemandaController extends Controller
                 'status' => StatusDemanda::toSelectArray(),
                 'tipos' => TipoDemanda::toSelectArray(),
                 'prioridades' => Prioridade::toSelectArray(),
+                'categorias' => $categorias,
+                'usuarios' => $usuarios,
             ]
         ]);
     }
@@ -104,3 +111,4 @@ class DemandaController extends Controller
         return redirect()->back()->with('success', 'Demanda atualizada com sucesso!');
     }
 }
+
