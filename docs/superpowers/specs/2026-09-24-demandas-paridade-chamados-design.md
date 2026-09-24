@@ -48,7 +48,7 @@ Novo enum `App\Modules\Demandas\Enums\EtapaDemanda`, derivado de `StatusDemanda`
 |---|---|
 | R1 Primeiro comentario inicia atendimento (D5). | `DemandaInteractionService::comentar`; transicao via `DemandaWorkflow::transitar`. Comentario do proprio solicitante nao muda status. |
 | R2 Resolver exige `resolvido_em`; abertura pode ser ajustada. Abertura <= fechamento, nenhuma no futuro. | `ResolucaoDemandaData` + `ResolverDemandaRequest`; ajuste de abertura registrado na trilha com valor anterior. |
-| R3 Reabrir: de `resolvida`/`fechada` para `em_progresso`, limpa `resolvido_em` e `tempo_total_resolucao`. | `DemandaWorkflow`; historico "Chamado REABERTO". |
+| R3 Reabrir: de `resolvida` para `em_progresso`, limpa `resolvido_em` e `tempo_total_resolucao`. `fechada` permanece final (maquina de estados atual). | `DemandaWorkflow`; historico "Chamado REABERTO". |
 | R4 Transferir responsavel. | `DemandaInteractionService::atribuir`; historico "Transferencia". |
 | R5 Visibilidade: nao-gestor ve apenas demandas em que e solicitante, responsavel ou criador. | `EloquentDemandaRepository` + `DemandaPolicy`. |
 | R6 Edicao: gestor, solicitante ou responsavel. | `DemandaPolicy::update`. |
@@ -94,27 +94,28 @@ Padrao: FormRequest -> Controller fino -> DTO `fromRequest()` -> Service/Workflo
 
 ### 4.2 Rotas (`routes/modules/demandas.php`)
 
-Todas em `web` + `auth`, cada uma com `can:`.
+Nomes existentes sao mantidos (o frontend e o Ziggy ja dependem deles). Todas em `web` + `auth`, cada uma com `can:`; autorizacao por registro sempre via `DemandaPolicy`.
 
-| Metodo | URI | Nome | Permissao |
-|---|---|---|---|
-| GET | `/demandas/dashboard` | `demandas.dashboard` | `demandas.dashboard.view` |
-| GET | `/demandas/dashboard/export` | `demandas.dashboard.export` | `demandas.chamados.export` |
-| GET | `/demandas` | `demandas.index` | `demandas.chamados.view` |
-| GET | `/demandas/nova` | `demandas.create` | `demandas.chamados.create` |
-| POST | `/demandas` | `demandas.store` | `demandas.chamados.create` |
-| GET | `/demandas/{demanda}` | `demandas.show` | `demandas.chamados.view` |
-| PATCH | `/demandas/{demanda}` | `demandas.update` | `demandas.chamados.edit` |
-| POST | `/demandas/{demanda}/comentarios` | `demandas.comentarios.store` | `demandas.chamados.view` |
-| POST | `/demandas/{demanda}/anexos` | `demandas.anexos.store` | `demandas.chamados.edit` |
-| GET | `/demandas/{demanda}/anexos/{anexo}` | `demandas.anexos.download` | `demandas.chamados.view` |
-| POST | `/demandas/{demanda}/atribuir` | `demandas.atribuir` | `demandas.chamados.manage` |
-| POST | `/demandas/{demanda}/status` | `demandas.status` | `demandas.chamados.edit` |
-| POST | `/demandas/{demanda}/resolver` | `demandas.resolver` | `demandas.chamados.resolver` |
-| POST | `/demandas/{demanda}/automacao` | `demandas.automacao` | `demandas.chamados.automatizar` |
-| GET | `/demandas/export` | `demandas.export` | `demandas.chamados.export` |
+| Metodo | URI | Nome | Permissao | Situacao |
+|---|---|---|---|---|
+| GET | `/demandas/dashboard` | `demandas.dashboard` | `demandas.dashboard.view` | nova |
+| GET | `/demandas/dashboard/export` | `demandas.dashboard.export` | `demandas.chamados.export` | nova |
+| GET | `/demandas` | `demandas.index` | `demandas.chamados.view` | existente |
+| GET | `/demandas/nova` | `demandas.create` | `demandas.chamados.create` | existente |
+| POST | `/demandas` | `demandas.store` | `demandas.chamados.create` | existente |
+| GET | `/demandas/{id}` | `demandas.show` | `demandas.chamados.view` | existente |
+| POST | `/demandas/{id}/comentarios` | `demandas.comments.store` | `demandas.chamados.view` | existente |
+| POST | `/demandas/{id}/anexos` | `demandas.attachments.store` | `demandas.chamados.view` | existente |
+| GET | `/demandas/{id}/anexos/{anexo}` | `demandas.attachments.download` | `demandas.chamados.view` | existente |
+| POST | `/demandas/{id}/resolver` | `demandas.resolver` | `demandas.chamados.resolver` | nova |
+| POST | `/demandas/{id}/reabrir` | `demandas.reabrir` | `demandas.chamados.resolver` | nova |
+| POST | `/demandas/{id}/automacao` | `demandas.automacao` | `demandas.chamados.automatizar` | nova |
+| PUT | `/admin/demandas/{id}` | `admin.demandas.update` | `demandas.chamados.edit` | existente (autosave) |
+| POST | `/admin/demandas/{id}/atribuir` | `admin.demandas.assign` | `demandas.chamados.manage` | existente |
+| POST | `/admin/demandas/{id}/status` | `admin.demandas.change-status` | `demandas.chamados.edit` | existente |
+| GET | `/admin/demandas/export` | `admin.demandas.export` | `demandas.chamados.export` | existente |
 
-Autorizacao por registro sempre via `DemandaPolicy` alem do slug. Rotas `admin/demandas/*` do catalogo permanecem; validacao inline de `CatalogoDemandaController` passa para FormRequests e o assunto ganha edicao de `form_automacao`.
+A rota `/demandas/dashboard` e registrada antes de `/demandas/{id}`. Rotas `admin/demandas/*` do catalogo permanecem; validacao inline de `CatalogoDemandaController` passa para FormRequests e o assunto ganha edicao de `campos_dinamicos` e `form_automacao`.
 
 ### 4.3 Permissoes novas (`config/permissions.php`)
 
@@ -123,7 +124,7 @@ Autorizacao por registro sempre via `DemandaPolicy` alem do slug. Rotas `admin/d
 ### 4.4 Eventos e integracoes
 
 - `DemandaCriadaV1`, `StatusAlteradoV1`, `DemandaResolvidaV1`, `ComentarioAdicionadoV1` despachados apos commit (existentes).
-- `App\Modules\Ranking\Adapters\DemandaAdapter` (implementa `ModuleAdapter`), marco `demandas.entrega_aceita`, base 10, creditado ao `atribuido_para_id` no momento da resolucao; chave canonica `demanda:{id}:entrega_aceita` (reabrir + resolver nao gera segundo premio; reabertura estorna). Registrado em `RankingServiceProvider` atras de `ranking.habilitado`; regra entra em `RankingRegraSeeder`.
+- `App\Modules\Ranking\Adapters\DemandaAdapter` (implementa `ModuleAdapter`), marco `demandas.entrega_aceita`, base 10, creditado ao `atribuido_para_id` no momento da resolucao; chave canonica `demanda:{id}:entrega_aceita` (reabrir + resolver nao gera segundo premio). Reabertura nao estorna nesta fatia: o pipeline por evento nao tem estorno e `ReverseScoreEntry` e operacao manual. Registrado em `RankingServiceProvider` atras de `ranking.habilitado`; a regra `demandas.entrega_aceita` (10) ja existe em `Ranking/Support/CatalogoRegras.php`.
 - `DemandaNotificacaoObserver` mantido; silenciado durante importacao (secao 6).
 - Broadcast `RecursoAtualizado` no canal `listagem.demandas` para tempo real.
 
@@ -199,7 +200,8 @@ Corte: carga completa em homolog -> validacao -> carga completa em producao -> n
 
 ## 7. Automacao AD
 
-- `demanda_assuntos.form_automacao`: `{ "acao": "desbloquear" | "ativar" | "resetar", "campo_login": "<chave em campos_dinamicos>" }`.
+- `demanda_assuntos.form_automacao`: `{ "acao": "desbloquear" | "ativar" | "resetar", "campo_login": "<label de um campo dinamico do tipo text>" }`. O `User` do NewSDC nao tem coluna de login AD, entao o login vem do valor preenchido na demanda.
+- Pendente de confirmacao: o contrato HTTP de `HttpDiretorioCorporativo` (`/accounts/{login}/...`) nao coincide com a API usada pelo legado (`POST :8001/ad/desbloquear`). A implementacao segue o contrato e o fake; o endpoint real e alinhado na spec de Acessos.
 - `App\Modules\Acessos\Contracts\DiretorioCorporativo` ganha `solicitarAtivacao(string $login, string $operationId): array`; `HttpDiretorioCorporativo` implementa usando `services.corporate_directory.{url,token}`.
 - `ExecutarAutomacaoDemanda`: autoriza (`demandas.chamados.automatizar` + policy), le o login de `campos_customizados[campo_login]`, valida formato sAMAccountName, registra "Automacao solicitada" e despacha `ExecutarAutomacaoDemandaJob`.
 - Job: timeout 15 s, 2 tentativas com backoff, idempotente por `operationId = demanda:{id}:{acao}:{sequencia}`. Resultado no historico ("confirmada" / "falhou: motivo"); nenhuma senha em log ou historico. Falha nao altera status da demanda.
@@ -231,7 +233,7 @@ Executados no host conforme ambiente do projeto; arquivos de teste nao entram em
 - Feature: fluxos por papel (gestor, solicitante, terceiro), autosave, anexos, resolucao com datas, visibilidade, export, dashboard, permissoes.
 - Automacao com fake de `DiretorioCorporativo`: sucesso, timeout, retry, idempotencia.
 - Importacao contra fixture MySQL: duas execucoes = mesmo estado; usuario nao mapeado -> rejeitado; nenhuma notificacao/SLA/ponto gerado.
-- Ranking: `DemandaResolvidaV1` gera um lancamento de 10 para quem resolveu; reabrir + resolver nao duplica; reabertura estorna.
+- Ranking: `DemandaResolvidaV1` gera fato `demandas.entrega_aceita` creditado a quem resolveu; reabrir + resolver produz a mesma chave canonica.
 - Frontend: `npm run build` limpo; Playwright 375/840 px sem overflow em Dashboard, Index, Create e Show.
 
 ## 11. Fora do escopo
