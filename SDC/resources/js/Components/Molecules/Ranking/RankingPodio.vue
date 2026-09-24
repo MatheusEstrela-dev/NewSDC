@@ -13,13 +13,8 @@
       </span>
     </header>
 
-    <p v-if="!colocados.length" class="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
-      Ainda não há colocados neste recorte.
-    </p>
-
-    <template v-else>
       <ol class="podio__degraus" aria-label="Primeiras posições">
-        <li v-for="grupo in grupos" :key="grupo.posicao" class="podio__degrau" :class="`podio__degrau--${grupo.posicao}`">
+        <li v-for="grupo in grupos" :key="grupo.posicao" class="podio__degrau" :class="[`podio__degrau--${grupo.posicao}`, { 'podio__degrau--vazio': !grupo.linhas.length }]">
           <div class="podio__medalha"><RankingMedalha :posicao="grupo.posicao" /></div>
           <div class="podio__plataforma">
             <div class="mb-4 flex flex-wrap items-center justify-center gap-2">
@@ -43,6 +38,9 @@
                 </button>
               </li>
             </ul>
+            <p v-if="!grupo.linhas.length" class="podio__vazio rounded-xl border border-dashed border-slate-400/50 p-4 text-center text-xs text-slate-500 dark:text-slate-400">
+              Aguardando pontuação
+            </p>
           </div>
         </li>
       </ol>
@@ -62,7 +60,6 @@
         </div>
         <p class="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">A medalha indica a posição. A faixa de atividade reflete o saldo de pontos.</p>
       </div>
-    </template>
   </section>
 </template>
 
@@ -82,11 +79,10 @@ const rotuloDoEscopo = computed(() => ROTULOS_DE_ESCOPO[props.escopo] ?? 'partic
 // A posição vem do backend. Agrupar por posição mantém todos os empates.
 const colocados = computed(() => props.linhas
   .map((linha) => ({ ...linha, posicao: Number(linha?.posicao) }))
-  .filter((linha) => Number.isInteger(linha.posicao) && linha.posicao >= 1 && linha.posicao <= 3)
+  .filter((linha) => Number.isInteger(linha.posicao) && linha.posicao >= 1 && linha.posicao <= 3 && Number(linha.pontos ?? 0) > 0)
   .sort((a, b) => a.posicao - b.posicao || Number(b.pontos ?? 0) - Number(a.pontos ?? 0)));
 const grupos = computed(() => [1, 2, 3]
-  .map((posicao) => ({ posicao, linhas: colocados.value.filter((linha) => linha.posicao === posicao) }))
-  .filter((grupo) => grupo.linhas.length));
+  .map((posicao) => ({ posicao, linhas: colocados.value.filter((linha) => linha.posicao === posicao) })));
 const selecionado = computed(() => colocados.value.find((linha) => linha.entidade_id === selecionadoId.value) ?? colocados.value[0]);
 const pontosDaLideranca = computed(() => Number(colocados.value[0]?.pontos ?? 0));
 const distanciaDaLideranca = computed(() => Math.max(0, pontosDaLideranca.value - Number(selecionado.value?.pontos ?? 0)));
@@ -105,9 +101,11 @@ const identificacao = (colocado) => colocado.rotulo || `#${colocado.entidade_id}
 .podio__degrau { --degrau-cor: 245 158 11; min-width: 0; }
 .podio__degrau--2 { --degrau-cor: 148 163 184; }
 .podio__degrau--3 { --degrau-cor: 194 120 67; }
+.podio__degrau--vazio .podio__medalha { opacity: .45; }
 .podio__medalha { position: relative; z-index: 1; display: flex; justify-content: center; margin-bottom: -15px; transition: transform .25s ease; }
 .podio__degrau:focus-within .podio__medalha { transform: translateY(-5px) rotate(-3deg); }
 .podio__plataforma { padding: 30px 12px 14px; border: 1px solid rgb(var(--degrau-cor) / 35%); border-top: 3px solid rgb(var(--degrau-cor) / 65%); border-radius: 18px; background: linear-gradient(180deg, rgb(var(--degrau-cor) / 12%), rgb(var(--degrau-cor) / 3%)); }
+.podio__vazio { min-height: 116px; display: grid; place-items: center; }
 .podio__participante { border-color: transparent; background: rgb(255 255 255 / 55%); transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
 .dark .podio__participante { background: rgb(15 23 42 / 25%); }
 .podio__participante--ativo { border-color: rgb(var(--degrau-cor) / 60%); box-shadow: 0 4px 18px rgb(var(--degrau-cor) / 10%); }

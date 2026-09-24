@@ -30,7 +30,7 @@
           <button v-if="temFiltros" type="button" class="rounded text-xs font-semibold text-blue-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 dark:text-blue-300" @click="limpar">Limpar filtros</button>
         </div>
         <div v-if="filtradas.length" class="grid items-start gap-3 sm:grid-cols-2">
-          <RankingRegraCard v-for="regra in filtradas" :key="`${regra.rule_key}-${regra.versao}`" :regra="regra" />
+          <RankingRegraCard v-for="regra in filtradas" :key="`${regra.rule_key}-${regra.versao}`" :regra="regra" :pode-gerenciar="podeGerenciar" :salvando="salvando === `${regra.rule_key}-${regra.versao}`" @alternar="$emit('alternar', $event)" />
         </div>
         <div v-else class="py-10 text-center">
           <MagnifyingGlassIcon class="mx-auto h-9 w-9 text-slate-400" aria-hidden="true" />
@@ -57,8 +57,8 @@ import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
 import RankingRegraCard from '@/Components/Molecules/Ranking/RankingRegraCard.vue';
 import { nomeModuloRanking, tituloRegraRanking, regraDemonstracao, normalizarBusca } from '@/Support/rankingRegras';
 
-const props = defineProps({ show: { type: Boolean, default: false }, regras: { type: Array, default: () => [] } });
-defineEmits(['close']);
+const props = defineProps({ show: { type: Boolean, default: false }, regras: { type: Array, default: () => [] }, podeGerenciar: { type: Boolean, default: false }, salvando: { type: String, default: '' } });
+defineEmits(['close', 'alternar']);
 const painel = ref(null);
 const conteudo = ref(null);
 const busca = ref('');

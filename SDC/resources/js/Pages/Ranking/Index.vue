@@ -156,7 +156,7 @@
       </FilterSection>
 
       <RankingPodio
-        v-if="podioLinhas.length"
+        v-if="placar"
         class="mb-6"
         :linhas="podioLinhas"
         :escopo="filtros.escopo"
@@ -348,7 +348,7 @@
 
     </template>
 
-    <RankingRegrasModal :show="regrasAbertas" :regras="regras" @close="regrasAbertas = false" />
+    <RankingRegrasModal :show="regrasAbertas" :regras="regras" :pode-gerenciar="podeGerenciarRegras" :salvando="regraSalvando" @alternar="alternarRegra" @close="regrasAbertas = false" />
 
     <footer class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-300">
       <p>{{ cobertura }}</p>
@@ -388,6 +388,7 @@ defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
   resumo: { type: Object, default: null },
   placar: { type: Object, default: null },
+  podio: { type: Array, default: () => [] },
   extrato: { type: Object, default: null },
   regras: { type: Array, default: () => [] },
   filtros: { type: Object, required: true },
@@ -399,10 +400,25 @@ const props = defineProps({
   // Catalogo em homologacao (RankingAccess::preview): o controller responde sem
   // resumo, placar nem extrato.
   preview: { type: Boolean, default: false },
+  podeGerenciarRegras: { type: Boolean, default: false },
 });
 
 const POR_PAGINA_PLACAR = 25;
 const regrasAbertas = ref(false);
+const regraSalvando = ref('');
+
+function alternarRegra(regra) {
+  if (regraSalvando.value || !props.podeGerenciarRegras) return;
+  regraSalvando.value = `${regra.rule_key}-${regra.versao}`;
+  router.patch(`${route('ranking.index')}/regras/${encodeURIComponent(regra.rule_key)}/${regra.versao}`, {
+    habilitada: !regra.habilitada,
+  }, {
+    preserveState: true,
+    preserveScroll: true,
+    only: ['regras'],
+    onFinish: () => { regraSalvando.value = ''; },
+  });
+}
 
 const DECISOES = {
   confirmada: 'Confirmada',
@@ -545,13 +561,10 @@ const faixaTexto = computed(() => FAIXAS[props.resumo?.faixa] ?? 'Em apuração'
 const placarLinhas = computed(() => props.placar?.linhas ?? []);
 const extratoLinhas = computed(() => props.extrato?.data ?? []);
 
-// Podio so na primeira pagina: fora dela nao existe top 3 na tela.
-const podioLinhas = computed(() => {
-  if ((props.placar?.pagina ?? 1) !== 1) return [];
-  return placarLinhas.value
-    .filter((linha) => linha.posicao <= 3)
-    .map((linha) => ({ ...linha, rotulo: rotuloParticipante(linha) }));
-});
+const podioLinhas = computed(() => props.podio.map((linha) => ({
+  ...linha,
+  rotulo: rotuloParticipante(linha),
+})));
 
 const paginacaoPlacar = computed(() => {
   if (!props.placar) return null;

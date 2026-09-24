@@ -12,6 +12,8 @@ use App\Modules\Ranking\Services\LeaderboardQuery;
 use App\Modules\Ranking\Services\RankingReadService;
 use DateTimeImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,6 +30,7 @@ final class RankingController extends Controller
                 'preview' => true,
                 'filtros' => ['escopo' => 'usuario', 'periodo' => TipoPeriodo::Mes->chave(new DateTimeImmutable()), 'modulo' => 'all', 'pagina' => 1],
                 'regras' => CatalogoRegras::todos(),
+                'podeGerenciarRegras' => false,
                 'cobertura' => 'Catálogo proposto para homologação. A simulação não grava pontos nem altera regras.',
             ]);
         }
@@ -62,7 +65,7 @@ final class RankingController extends Controller
             'pagina' => (int) ($dados['pagina'] ?? 1),
         ];
 
-        $payload = ['resumo' => null, 'placar' => null, 'extrato' => null, 'regras' => [], 'indisponivel' => false];
+        $payload = ['resumo' => null, 'placar' => null, 'podio' => [], 'extrato' => null, 'regras' => [], 'indisponivel' => false];
         try {
             $filtro = new FiltroPlacar($escopo, $filtros['periodo'], $filtros['modulo'], $filtros['pagina'], 25, $leitura->geracao());
             $placar = app(LeaderboardQuery::class);
@@ -71,6 +74,11 @@ final class RankingController extends Controller
             }
             if ($estadual) {
                 $payload['placar'] = $placar->pagina($filtro);
+                $primeiraPagina = $filtro->pagina === 1 ? $payload['placar'] : $placar->pagina($filtro->naPagina(1));
+                $payload['podio'] = array_values(array_filter(
+                    $primeiraPagina['linhas'],
+                    static fn (array $linha): bool => $linha['posicao'] <= 3 && $linha['pontos'] > 0,
+                ));
             }
             if ($user->can('ranking.extrato.view')) {
                 $payload['extrato'] = $leitura->extrato((int) $user->id, $filtros['periodo'], (int) ($dados['extrato_pagina'] ?? 1));
@@ -81,7 +89,7 @@ final class RankingController extends Controller
             $this->rotular($payload, $escopo, $entidadeId, $nomes);
         } catch (\PDOException $e) {
             report($e);
-            $payload = ['resumo' => null, 'placar' => null, 'extrato' => null, 'regras' => [], 'indisponivel' => true];
+            $payload = ['resumo' => null, 'placar' => null, 'podio' => [], 'extrato' => null, 'regras' => [], 'indisponivel' => true];
         }
 
         return Inertia::render('Ranking/Index', $payload + [
@@ -90,7 +98,26 @@ final class RankingController extends Controller
             'podeVerInstitucional' => $user->can('ranking.placar.orgao') || $estadual,
             'estadual' => $estadual,
             'cobertura' => 'Piloto RAT/PAE. Cobertura parcial; IPCM em apuracao.',
+            'podeGerenciarRegras' => $user->can('is-admin'),
         ]);
+    }
+
+    public function atualizarRegra(Request $request, string $ruleKey, int $versao): RedirectResponse
+    {
+        abort_unless(config('ranking.habilitado') && ! config('ranking.modo_sombra'), 404);
+        abort_unless($request->user()?->can('is-admin'), 403);
+
+        $dados = $request->validate(['habilitada' => ['required', 'boolean']]);
+        $habilitada = (bool) $dados['habilitada'];
+        $alteradas = DB::connection('ranking')->table('ranking.regras')
+            ->where('rule_key', $ruleKey)->where('versao', $versao)
+            ->update([
+                'habilitada' => $habilitada,
+                'motivo_desabilitada' => $habilitada ? null : 'manual_disable',
+            ]);
+        abort_if($alteradas === 0, 404);
+
+        return back();
     }
 
     /**
@@ -101,7 +128,7 @@ final class RankingController extends Controller
     private function rotular(array &$payload, EscopoPlacar $escopo, ?int $entidadeId, NomesDeParticipantes $nomes): void
     {
         $linhas = $payload['placar']['linhas'] ?? [];
-        $ids = array_column($linhas, 'entidade_id');
+        $ids = array_merge(array_column($linhas, 'entidade_id'), array_column($payload['podio'], 'entidade_id'));
         if ($payload['resumo'] !== null && $entidadeId !== null) {
             $ids[] = $entidadeId;
         }
@@ -113,6 +140,9 @@ final class RankingController extends Controller
 
         foreach ($linhas as $i => $linha) {
             $payload['placar']['linhas'][$i]['rotulo'] = $mapa[$linha['entidade_id']] ?? null;
+        }
+        foreach ($payload['podio'] as $i => $linha) {
+            $payload['podio'][$i]['rotulo'] = $mapa[$linha['entidade_id']] ?? null;
         }
         if ($payload['resumo'] !== null && $entidadeId !== null) {
             $payload['resumo']['rotulo'] = $mapa[$entidadeId] ?? null;

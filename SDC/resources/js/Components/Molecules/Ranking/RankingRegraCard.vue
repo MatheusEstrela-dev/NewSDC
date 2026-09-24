@@ -28,6 +28,9 @@
         </dl>
       </div>
     </details>
+    <button v-if="podeGerenciar" type="button" :disabled="salvando" class="mt-3 self-end rounded-lg border border-blue-500 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 disabled:cursor-wait disabled:opacity-50 dark:text-blue-300 dark:hover:bg-blue-500/10" :aria-label="`${regra.habilitada ? 'Desativar' : 'Habilitar'} regra ${tituloRegraRanking(regra)}`" @click="$emit('alternar', regra)">
+      {{ salvando ? 'Salvando...' : regra.habilitada ? 'Desativar' : 'Habilitar' }}
+    </button>
   </article>
 </template>
 
@@ -35,7 +38,8 @@
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import { nomeModuloRanking, tituloRegraRanking, regraDemonstracao, disponibilidadeRegraRanking } from '@/Support/rankingRegras';
 
-defineProps({ regra: { type: Object, required: true } });
+defineProps({ regra: { type: Object, required: true }, podeGerenciar: { type: Boolean, default: false }, salvando: { type: Boolean, default: false } });
+defineEmits(['alternar']);
 const formatador = new Intl.NumberFormat('pt-BR');
 const numero = (valor) => formatador.format(Number(valor ?? 0));
 const data = (valor) => {
