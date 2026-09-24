@@ -8,8 +8,12 @@ use App\Modules\Pae\Domain\Events\FormularioValidadoV1;
 use App\Modules\Pae\Domain\Events\ParecerConcluidoV1;
 use App\Modules\Pae\Domain\Events\ProtocoloEnviadoV1;
 use App\Modules\Pae\Domain\Events\RevisaoAceitaV1;
+use App\Modules\Ranking\Adapters\AjudaHumanitariaAdapter;
+use App\Modules\Ranking\Adapters\CisternaAdapter;
 use App\Modules\Ranking\Adapters\PaeAdapter;
+use App\Modules\Ranking\Adapters\PmdaAdapter;
 use App\Modules\Ranking\Adapters\RatAdapter;
+use App\Modules\Ranking\Adapters\TdapAdapter;
 use App\Modules\Ranking\Console\MaterializarPeriodosCommand;
 use App\Modules\Ranking\Console\RebuildCommand;
 use App\Modules\Ranking\Console\ReconcileCommand;
@@ -109,9 +113,26 @@ class RankingServiceProvider extends ServiceProvider
         // Um adaptador por dominio, resolvidos por tag: adicionar modulo novo
         // ao ranking passa a ser registrar o adaptador aqui, sem tocar no
         // listener nem no orquestrador.
-        $this->app->singleton(RatAdapter::class);
-        $this->app->singleton(PaeAdapter::class);
-        $this->app->tag([RatAdapter::class, PaeAdapter::class], 'ranking.adaptadores');
+        // CUIDADO: arquivo de adaptador no disco nao basta. O listener so
+        // enxerga o que estiver NESTA tag - um adaptador nao registrado e
+        // codigo morto, e os eventos do modulo dele sao ignorados em silencio,
+        // sem erro nenhum. Foi o que aconteceu com os quatro abaixo, escritos e
+        // nunca ligados. ranking:verify-catalog conta adaptador pela tag, entao
+        // e ele quem denuncia a diferenca entre disco e registro.
+        $adaptadores = [
+            RatAdapter::class,
+            PaeAdapter::class,
+            AjudaHumanitariaAdapter::class,
+            CisternaAdapter::class,
+            PmdaAdapter::class,
+            TdapAdapter::class,
+        ];
+
+        foreach ($adaptadores as $adaptador) {
+            $this->app->singleton($adaptador);
+        }
+
+        $this->app->tag($adaptadores, 'ranking.adaptadores');
 
         $this->app->bind(PontuarFatoDeNegocio::class, fn ($app) => new PontuarFatoDeNegocio(
             $app->tagged('ranking.adaptadores'),

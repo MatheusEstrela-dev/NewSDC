@@ -244,18 +244,44 @@ class VerifyCatalogCommand extends Command
         $familias = $this->analisarFamilias($catalogo);
         $faixasDivergentes = $this->compararFaixas($faixasConfig);
 
-        $totalErros = count($adaptadorSemRegra)
-            + count($habilitadaSemFonte)
-            + count($faixasDivergentes)
-            + count($modulosSemCobertura);
-
         $familiasDivergentes = array_values(array_filter(
             $familias,
             static fn (array $familia): bool => $familia['compartilhada'] && $familia['pontos_divergentes'],
         ));
 
+        // Familia compartilhada com pontos divergentes e CORRIDA, nao empate: a
+        // unicidade de negocio e (chave_canonica, familia), entao o primeiro
+        // evento a chegar fixa o premio e o segundo e recusado. O mesmo fato
+        // passa a valer 20 ou 5 conforme qual modulo emitiu primeiro.
+        //
+        // So que isso e inofensivo enquanto apenas UM dos modulos da familia
+        // tiver adaptador: sem a segunda porta de entrada, nao ha corrida. Por
+        // isso a divergencia e pendencia ate o momento em que o segundo
+        // adaptador aparece - e vira ERRO exatamente ai, travando o CI de quem
+        // abriu a segunda porta, que e quem tem contexto para decidir se os
+        // valores se igualam ou se as familias se separam.
+        $familiasEmCorrida = array_values(array_filter(
+            $familiasDivergentes,
+            static function (array $familia) use ($modulosComAdaptador): bool {
+                $comAdaptador = array_intersect($familia['modulos'], $modulosComAdaptador);
+
+                return count($comAdaptador) > 1;
+            },
+        ));
+
+        $familiasDivergentesLatentes = array_values(array_filter(
+            $familiasDivergentes,
+            static fn (array $familia): bool => ! in_array($familia, $familiasEmCorrida, true),
+        ));
+
+        $totalErros = count($adaptadorSemRegra)
+            + count($habilitadaSemFonte)
+            + count($faixasDivergentes)
+            + count($modulosSemCobertura)
+            + count($familiasEmCorrida);
+
         $totalPendencias = count($marcosSemAdaptador)
-            + count($familiasDivergentes)
+            + count($familiasDivergentesLatentes)
             + count($cobertosSemModulo);
 
         return [
@@ -280,6 +306,8 @@ class VerifyCatalogCommand extends Command
                 static fn (array $familia): bool => $familia['compartilhada'],
             )),
             'familias_divergentes' => $familiasDivergentes,
+            'familias_em_corrida' => $familiasEmCorrida,
+            'familias_divergentes_latentes' => $familiasDivergentesLatentes,
             'total_erros' => $totalErros,
             'total_pendencias' => $totalPendencias,
         ];
@@ -600,6 +628,27 @@ class VerifyCatalogCommand extends Command
             array_map(static fn (string $m): array => ['modulo' => $m], $relatorio['modulos_sem_cobertura']),
             ['Modulo'],
             static fn (array $l): array => [$l['modulo']],
+        );
+
+        // Erro so quando a corrida existe de fato: dois adaptadores emitindo
+        // para a mesma familia com pontos diferentes.
+        $this->secaoErro(
+            'Familia compartilhada em CORRIDA: dois adaptadores, pontos divergentes',
+            array_map(static function (array $familia): array {
+                $pontos = [];
+
+                foreach ($familia['pontos'] as $origem => $valor) {
+                    $pontos[] = $origem.'='.$valor;
+                }
+
+                return [
+                    'familia' => $familia['familia'],
+                    'modulos' => implode(' + ', $familia['modulos']),
+                    'pontos' => implode(' | ', $pontos),
+                ];
+            }, $relatorio['familias_em_corrida']),
+            ['Familia', 'Modulos', 'pontos_base'],
+            static fn (array $l): array => [$l['familia'], $l['modulos'], $l['pontos']],
         );
 
         $this->secaoPendencia(
