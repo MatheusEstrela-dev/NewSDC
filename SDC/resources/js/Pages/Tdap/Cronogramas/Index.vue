@@ -72,6 +72,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Município / Prestador</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Volume (m³)</th>
                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Caminhões</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Viagens</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Estado</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
                   </tr>
@@ -97,6 +98,9 @@
                       </span>
                     </td>
                     <td class="px-4 py-3 text-sm text-center">{{ c.caminhoes_count }}</td>
+                    <td class="px-4 py-3 text-sm">
+                      <CronogramaViagensBar :previstas="c.viagens_previstas" :realizadas="c.viagens_realizadas" />
+                    </td>
                     <td class="px-4 py-3 text-sm">
                       <EstadoBadge :estado="c.estado" />
                     </td>
@@ -154,7 +158,7 @@
                     </td>
                   </tr>
                   <tr v-if="cronogramas.data.length === 0">
-                    <td colspan="8" class="px-4 py-12 text-center text-slate-400">Nenhum cronograma cadastrado.</td>
+                    <td colspan="9" class="px-4 py-12 text-center text-slate-400">Nenhum cronograma cadastrado.</td>
                   </tr>
                 </tbody>
               </table>
@@ -174,6 +178,10 @@
         <span v-if="(c.volume_contratado_m3 ?? 0) > 0" class="block text-xs text-slate-500">
         {{ Number(c.execucao_percentual ?? 0).toFixed(1) }}% entregue
         </span>
+      </template>
+
+      <template #mobile-viagens="{ item: c }">
+        <CronogramaViagensBar :previstas="c.viagens_previstas" :realizadas="c.viagens_realizadas" />
       </template>
 
       <template #mobile-c6="{ item: c }">
@@ -292,6 +300,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHistoricoModal.vue';
+import CronogramaViagensBar from '@/Components/Organisms/Tdap/CronogramaViagensBar.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import { useExport } from '@/Composables/data/useExport';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
@@ -497,6 +506,7 @@ const CAMPOS_MOBILE = [
   { key: 'c1', label: 'Vigência' },
   { key: 'c3', label: 'Município / Prestador' },
   { key: 'c4', label: 'Volume (m³)' },
+  { key: 'viagens', label: 'Viagens' },
   { key: 'c6', label: 'Estado' },
 ];
 </script>

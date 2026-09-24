@@ -6,6 +6,7 @@ namespace App\Modules\Tdap\Models;
 
 use App\Models\Municipio;
 use App\Models\User;
+use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Support\VigenciaAta;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -279,6 +280,48 @@ class Cronograma extends Model
         $previsto = $this->volume_contratado;
 
         return $previsto > 0 ? round(($this->volume_entregue / $previsto) * 100, 2) : 0.0;
+    }
+
+    /**
+     * Viagens previstas: soma de `num_viagens` dos caminhoes alocados.
+     *
+     * Mesmo contrato de somaDosCaminhoes -- withSum -> relacao carregada ->
+     * agregacao propria -- para a listagem nao pagar um SELECT por linha.
+     */
+    public function getViagensPrevistasAttribute(): int
+    {
+        return (int) $this->somaDosCaminhoes('num_viagens');
+    }
+
+    /**
+     * Viagens realizadas: contagem de CronoViagem APROVADA atraves dos
+     * caminhoes alocados (`viagens()`, hasManyThrough).
+     *
+     * Ordem de preferencia igual a somaDosCaminhoes: `withCount` -> relacao ja
+     * carregada -> agregacao propria. So conta APROVADA -- pendente e
+     * rejeitada nao viraram entrega, mesmo criterio de
+     * CronoCaminhaoService::recalcularEntregas.
+     */
+    public function getViagensRealizadasAttribute(): int
+    {
+        $comWithCount = $this->getAttributes()['viagens_realizadas_count'] ?? null;
+        if ($comWithCount !== null) {
+            return (int) $comWithCount;
+        }
+
+        if ($this->relationLoaded('viagens')) {
+            return $this->viagens->where('validado', CronoViagem::STATUS_APROVADA)->count();
+        }
+
+        return (int) $this->viagens()->where('validado', CronoViagem::STATUS_APROVADA)->count();
+    }
+
+    /** Percentual de viagens realizadas sobre as previstas; 0 quando nao ha nada previsto. */
+    public function getPercentualViagensAttribute(): float
+    {
+        $previsto = $this->viagens_previstas;
+
+        return $previsto > 0 ? round(($this->viagens_realizadas / $previsto) * 100, 2) : 0.0;
     }
 
     private function somaDosCaminhoes(string $coluna): float

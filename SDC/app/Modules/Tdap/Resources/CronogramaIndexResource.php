@@ -38,6 +38,9 @@ class CronogramaIndexResource extends JsonResource
             'volume_contratado_m3' => $this->volume_contratado,
             'volume_entregue_m3'   => $this->volume_entregue,
             'execucao_percentual'  => $this->percentual_entregue,
+            'viagens_previstas'    => $this->viagens_previstas,
+            'viagens_realizadas'   => $this->viagens_realizadas,
+            'viagens_percentual'   => $this->percentual_viagens,
         ];
     }
 }
