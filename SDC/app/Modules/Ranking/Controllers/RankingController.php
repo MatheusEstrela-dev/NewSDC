@@ -16,11 +16,12 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Modules\Ranking\Support\CatalogoRegras;
+use App\Modules\Ranking\Support\NomesDeParticipantes;
 use App\Modules\Ranking\Support\RankingAccess;
 
 final class RankingController extends Controller
 {
-    public function index(Request $request, RankingReadService $leitura): Response
+    public function index(Request $request, RankingReadService $leitura, NomesDeParticipantes $nomes): Response
     {
         if (RankingAccess::preview($request->user())) {
             return Inertia::render('Ranking/Index', [
@@ -77,6 +78,7 @@ final class RankingController extends Controller
             if ($user->can('ranking.regras.view')) {
                 $payload['regras'] = $leitura->regras();
             }
+            $this->rotular($payload, $escopo, $entidadeId, $nomes);
         } catch (\PDOException $e) {
             report($e);
             $payload = ['resumo' => null, 'placar' => null, 'extrato' => null, 'regras' => [], 'indisponivel' => true];
@@ -89,5 +91,31 @@ final class RankingController extends Controller
             'estadual' => $estadual,
             'cobertura' => 'Piloto RAT/PAE. Cobertura parcial; IPCM em apuracao.',
         ]);
+    }
+
+    /**
+     * Preenche `rotulo` depois da consulta, so para os ids que vao para a tela
+     * (pagina atual - que contem o podio - e a propria entidade do resumo), numa
+     * unica ida a origem. Id sem nome fica sem rotulo e a tela cai no codigo.
+     */
+    private function rotular(array &$payload, EscopoPlacar $escopo, ?int $entidadeId, NomesDeParticipantes $nomes): void
+    {
+        $linhas = $payload['placar']['linhas'] ?? [];
+        $ids = array_column($linhas, 'entidade_id');
+        if ($payload['resumo'] !== null && $entidadeId !== null) {
+            $ids[] = $entidadeId;
+        }
+
+        $mapa = $nomes->para($escopo, $ids);
+        if ($mapa === []) {
+            return;
+        }
+
+        foreach ($linhas as $i => $linha) {
+            $payload['placar']['linhas'][$i]['rotulo'] = $mapa[$linha['entidade_id']] ?? null;
+        }
+        if ($payload['resumo'] !== null && $entidadeId !== null) {
+            $payload['resumo']['rotulo'] = $mapa[$entidadeId] ?? null;
+        }
     }
 }

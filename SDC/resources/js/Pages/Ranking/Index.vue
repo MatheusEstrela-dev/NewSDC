@@ -166,7 +166,7 @@
         <ListContainer
           class="hidden md:block"
           title="Classificação estadual"
-          subtitle="Empates compartilham a posição. Participantes são identificados pelo código nesta versão do piloto."
+          subtitle="Empates compartilham a posição. Quando o nome não puder ser consultado, o participante aparece pelo código."
           :count="placar.total ?? 0"
           :icon="ClipboardDocumentListIcon"
         >
