@@ -20,6 +20,7 @@ final readonly class AtualizarDemandaData
         public ?int $assuntoId,
         public ?Urgencia $urgencia,
         public ?Impacto $impacto,
+        public ?array $camposCustomizados,
         public array $presentes,
     ) {}
 
@@ -35,6 +36,7 @@ final readonly class AtualizarDemandaData
             assuntoId: isset($data['assunto_id']) ? (int) $data['assunto_id'] : null,
             urgencia: isset($data['urgencia']) ? Urgencia::from($data['urgencia']) : null,
             impacto: isset($data['impacto']) ? Impacto::from($data['impacto']) : null,
+            camposCustomizados: $data['campos_customizados'] ?? null,
             presentes: array_keys($data),
         );
     }

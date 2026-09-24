@@ -30,6 +30,7 @@ class UpdateDemandaRequest extends FormRequest
             'categoria' => ['sometimes', 'nullable', 'string', 'max:100'],
             'subcategoria' => ['sometimes', 'nullable', 'string', 'max:100'],
             'assunto_id' => ['sometimes', 'nullable', 'integer', Rule::exists('demanda_assuntos', 'id')->where('ativo', true)],
+            'campos_customizados' => ['sometimes', 'nullable', 'array'],
         ];
     }
 }
