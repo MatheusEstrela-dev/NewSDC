@@ -9,6 +9,7 @@ use App\Core\Outbox\OutboxDispatcher;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
 use App\Modules\Tdap\Models\Cronograma;
+use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Vistoria;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -40,6 +41,10 @@ class CronogramaService
             // alocados; sem o withSum o accessor faria um SELECT por linha.
             ->withSum('caminhoes', 'agua_prevista')
             ->withSum('caminhoes', 'agua_entregue')
+            // viagens_previstas/viagens_realizadas, mesmo motivo: sem os
+            // aggregates os accessors fariam 2 SELECTs extras por linha.
+            ->withSum('caminhoes', 'num_viagens')
+            ->withCount(['viagens as viagens_realizadas_count' => fn ($q) => $q->where('validado', CronoViagem::STATUS_APROVADA)])
             ->when(
                 ($filtros['estado'] ?? null) === 'arquivado',
                 fn ($q) => $q->arquivado(),
@@ -82,6 +87,10 @@ class CronogramaService
             // alocados; sem o withSum o accessor faria um SELECT por linha.
             ->withSum('caminhoes', 'agua_prevista')
             ->withSum('caminhoes', 'agua_entregue')
+            // viagens_previstas/viagens_realizadas, mesmo motivo: sem os
+            // aggregates os accessors fariam 2 SELECTs extras por linha.
+            ->withSum('caminhoes', 'num_viagens')
+            ->withCount(['viagens as viagens_realizadas_count' => fn ($q) => $q->where('validado', CronoViagem::STATUS_APROVADA)])
             ->when(
                 ($filtros['estado'] ?? null) === 'arquivado',
                 fn ($q) => $q->arquivado(),
@@ -121,6 +130,9 @@ class CronogramaService
             'Volume Contratado (m3)' => number_format($c->volume_contratado, 2, ',', '.'),
             'Volume Entregue (m3)'   => number_format($c->volume_entregue, 2, ',', '.'),
             'Execucao (%)'           => number_format($c->percentual_entregue, 2, ',', '.'),
+            'Viagens Previstas'      => $c->viagens_previstas,
+            'Viagens Realizadas'     => $c->viagens_realizadas,
+            'Execucao Viagens (%)'   => number_format($c->percentual_viagens, 2, ',', '.'),
             'Caminhoes'              => (int) $c->caminhoes_count,
             'Consumo Diario'         => number_format((float) $c->consumo_diario, 2, ',', '.'),
             'Dias'                   => (int) $c->dias,

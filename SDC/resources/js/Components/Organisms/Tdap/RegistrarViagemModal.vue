@@ -10,6 +10,9 @@
         <div>
           <InputLabel for="data_registro" value="Data e hora da viagem *" />
           <DatePicker id="data_registro" v-model="form.data_registro" type="datetime" :required="true" extra-class="mt-1" />
+          <p v-if="dataLimite" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Limite do cronograma: {{ fmtData(dataLimite) }}
+          </p>
           <InputError :message="form.errors.data_registro" class="mt-2" />
         </div>
 
@@ -51,7 +54,14 @@ const props = defineProps({
   show:            { type: Boolean, default: false },
   cronoCaminhaoId: { type: [Number, String], required: true },
   placa:           { type: String, default: '' },
+  /** YYYY-MM-DD: fim efetivo do cronograma (ja com prorrogacao). */
+  dataLimite:      { type: String, default: null },
 });
+
+function fmtData(iso) {
+  const [ano, mes, dia] = String(iso).slice(0, 10).split('-');
+  return `${dia}/${mes}/${ano}`;
+}
 
 const emit = defineEmits(['close', 'success']);
 
@@ -71,6 +81,15 @@ watch(() => props.cronoCaminhaoId, (v) => { form.crono_caminhao_id = v; });
 watch(() => props.show, (v) => { if (v) { form.data_registro = nowLocal(); form.obs = ''; } });
 
 function submit() {
+  form.clearErrors('data_registro');
+
+  // Comparacao por dia, como em LimiteDoCronograma: 23:59 do ultimo dia vale.
+  // Conforto visual; o servidor recusa de qualquer forma.
+  if (props.dataLimite && String(form.data_registro).slice(0, 10) > props.dataLimite) {
+    form.setError('data_registro', `A data da viagem ultrapassa a vigência do cronograma (encerra em ${fmtData(props.dataLimite)}).`);
+    return;
+  }
+
   form.post(route('tdap.viagens.store'), {
     preserveScroll: true,
     onSuccess: () => {

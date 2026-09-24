@@ -1,16 +1,5 @@
 <template>
-  <div class="w-full max-w-[160px]" :title="titulo">
-    <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-      <div
-        class="h-full rounded-full transition-all"
-        :class="corDaBarra"
-        :style="{ width: `${percentual}%` }"
-      ></div>
-    </div>
-    <p class="mt-1 text-[11px] font-medium leading-none" :class="corDoTexto">
-      {{ rotulo }}
-    </p>
-  </div>
+  <ProgressoBar :percentual="percentual" :rotulo="rotulo" :variant="variant" :title="titulo" />
 </template>
 
 <script setup>
@@ -26,6 +15,7 @@
  * de 1 dia bissexto nao muda um pixel.
  */
 import { computed } from 'vue';
+import ProgressoBar from '@/Components/Atoms/Progress/ProgressoBar.vue';
 
 const VIGENCIA_DIAS = 365;
 
@@ -46,20 +36,12 @@ const percentual = computed(() => {
   return Math.round(Math.min(Math.max(decorridos, 0), VIGENCIA_DIAS) / VIGENCIA_DIAS * 100);
 });
 
-const corDaBarra = computed(() => {
-  if (semDados.value) return 'bg-slate-300 dark:bg-slate-600';
-  if (props.diasRestantes < 0) return 'bg-red-500';
-  if (props.diasRestantes <= 30) return 'bg-amber-500';
+const variant = computed(() => {
+  if (semDados.value) return 'neutral';
+  if (props.diasRestantes < 0) return 'danger';
+  if (props.diasRestantes <= 30) return 'warning';
 
-  return 'bg-emerald-500';
-});
-
-const corDoTexto = computed(() => {
-  if (semDados.value) return 'text-slate-400 dark:text-slate-500';
-  if (props.diasRestantes < 0) return 'text-red-600 dark:text-red-400';
-  if (props.diasRestantes <= 30) return 'text-amber-600 dark:text-amber-400';
-
-  return 'text-emerald-600 dark:text-emerald-400';
+  return 'success';
 });
 
 const rotulo = computed(() => {

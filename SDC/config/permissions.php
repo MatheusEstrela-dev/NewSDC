@@ -248,6 +248,8 @@ return [
                 // aceita para pagamento) sao atos distintos, de responsaveis
                 // distintos -- por isso dois slugs, e nao um so.
                 'confirmar' => 'tdap.viagens.confirmar',
+                // Resposta negativa do mesmo ato municipal: a agua nao chegou.
+                'reprovar' => 'tdap.viagens.reprovar',
                 'validar' => 'tdap.viagens.validar',
             ],
             'Vistorias' => [
@@ -1304,6 +1306,7 @@ return [
             // Permissao diz O QUE pode fazer; escopo diz SOBRE O QUE.
             'tdap.viagens.view',
             'tdap.viagens.confirmar',
+            'tdap.viagens.reprovar',
             'tdap.cronogramas.view',
         ],
     ],

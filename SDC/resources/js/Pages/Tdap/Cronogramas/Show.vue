@@ -214,6 +214,7 @@
       :show="showViagem"
       :crono-caminhao-id="cronoCaminhaoSelecionado?.id ?? 0"
       :placa="cronoCaminhaoSelecionado?.placa ?? ''"
+      :data-limite="c.dt_final_efetiva ?? null"
       @close="showViagem = false"
     />
 

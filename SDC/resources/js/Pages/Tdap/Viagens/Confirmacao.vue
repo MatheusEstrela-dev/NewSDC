@@ -2,8 +2,8 @@
   <Head title="TDAP — Confirmar Viagens" />
   <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
-      title="Confirmar viagens recebidas"
-      :description="municipio ? `Viagens entregues em ${municipio} aguardando sua confirmação` : 'Viagens aguardando confirmação do município'"
+      title="Confirmar ou reprovar viagens"
+      :description="municipio ? `Viagens entregues em ${municipio} aguardando sua decisão` : 'Viagens aguardando decisão do município'"
       :icon="ClockIcon"
     />
 
@@ -27,12 +27,25 @@
           :indeterminate.prop="algumasMarcadas && !todasSelecionaveisMarcadas"
           @change="alternarTodas"
         />
-        Selecionar todas as confirmáveis ({{ selecionaveis.length }})
+        Selecionar todas dentro do limite ({{ selecionaveis.length }})
       </label>
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <span class="text-sm text-slate-500">{{ selecionadas.length }} selecionada(s)</span>
         <Button
+          v-if="canReprovar"
+          variant="danger"
+          size="md"
+          type="button"
+          :icon="XMarkIcon"
+          icon-position="left"
+          :disabled="selecionadas.length === 0"
+          @click="abrirReprovacao"
+        >
+          Reprovar
+        </Button>
+        <Button
+          v-if="canConfirmar"
           variant="primary"
           size="md"
           type="button"
@@ -82,7 +95,7 @@
                     :value="v.id"
                     v-model="selecionadas"
                     :disabled="bloqueada(v)"
-                    :title="bloqueada(v) ? 'Fora do limite do cronograma' : ''"
+                    :title="bloqueada(v) ? 'Fora do limite do cronograma — não é possível confirmar nem reprovar' : ''"
                   />
                 </td>
 
@@ -109,7 +122,7 @@
                 <td class="px-4 py-3">
                   <PrazoBadge :dias-restantes="v.dias_restantes" :proxima-vencer="v.proxima_vencer" />
                   <div v-if="bloqueada(v)" class="text-xs text-red-600 mt-1">
-                    prazo encerrado — não é mais possível confirmar
+                    fora do limite do cronograma — não é possível confirmar nem reprovar
                   </div>
                 </td>
               </tr>
@@ -145,7 +158,7 @@
 
         <template #mobile-c3="{ item: v }">
           <PrazoBadge :dias-restantes="v.dias_restantes" :proxima-vencer="v.proxima_vencer" />
-          <span v-if="bloqueada(v)" class="block text-xs text-red-600 mt-1">prazo encerrado</span>
+          <span v-if="bloqueada(v)" class="block text-xs text-red-600 mt-1">fora do limite do cronograma</span>
         </template>
       </ResponsiveTable>
     </div>
@@ -173,6 +186,29 @@
         />
       </div>
     </ConfirmDialog>
+
+    <ConfirmDialog
+      :is-open="reprovacao.aberto"
+      title="Reprovar viagens"
+      :message="`Você atesta que ${selecionadas.length} viagem(ns), totalizando ${fmtNum(totalM3Selecionado)} m³, NÃO foram recebidas?`"
+      description="A reprovação impede que a CEDEC aprove essas viagens para pagamento."
+      variant="danger"
+      confirm-text="Reprovar"
+      :loading="reprovacao.enviando"
+      @confirm="enviarReprovacao"
+      @cancel="reprovacao.aberto = false"
+    >
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Motivo da reprovação *</label>
+        <textarea
+          v-model="reprovacao.motivo"
+          rows="3"
+          maxlength="500"
+          class="block w-full text-sm rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-red-500 focus:ring-red-500"
+        />
+        <p v-if="reprovacao.erro" class="mt-1 text-xs text-red-600">{{ reprovacao.erro }}</p>
+      </div>
+    </ConfirmDialog>
   </div>
 </template>
 
@@ -190,6 +226,7 @@ import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
 import PrazoBadge from '@/Components/Organisms/Tdap/PrazoBadge.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -199,21 +236,22 @@ const props = defineProps({
   municipio:    { type: String, default: null },
   semMunicipio: { type: Boolean, default: false },
   canConfirmar: { type: Boolean, default: false },
+  canReprovar:  { type: Boolean, default: false },
 });
 
 const selecionadas = ref([]);
 
-const podeAgir = computed(() => props.canConfirmar && !props.semMunicipio);
+const podeAgir = computed(() => (props.canConfirmar || props.canReprovar) && !props.semMunicipio);
 
 /**
- * Viagem cujo cronograma ja passou da data final.
+ * Viagem fora do limite do cronograma: nem confirma, nem reprova.
  *
- * Aqui isso e conforto visual -- a recusa de verdade acontece no
- * confirmarEmLote, no backend. Esconder o checkbox sem barrar no servidor
- * deixaria a regra a um F12 de distancia.
+ * `pode_decidir_confirmacao` vem do backend (LimiteDoCronograma), a mesma
+ * regra que o service aplica -- aqui e conforto visual; a recusa de verdade
+ * acontece no servidor, senao a regra ficaria a um F12 de distancia.
  */
 function bloqueada(v) {
-  return v.dias_restantes !== null && v.dias_restantes < 0;
+  return v.pode_decidir_confirmacao === false;
 }
 
 const selecionaveis = computed(() => props.viagens.data.filter((v) => !bloqueada(v)));
@@ -249,6 +287,40 @@ function enviarConfirmacao() {
       onFinish: () => {
         dialogo.value.enviando = false;
         dialogo.value.aberto = false;
+      },
+    },
+  );
+}
+
+const reprovacao = ref({ aberto: false, motivo: '', enviando: false, erro: '' });
+
+function abrirReprovacao() {
+  reprovacao.value = { aberto: true, motivo: '', enviando: false, erro: '' };
+}
+
+function enviarReprovacao() {
+  if (reprovacao.value.motivo.trim().length < 5) {
+    reprovacao.value.erro = 'Descreva o motivo com ao menos 5 caracteres.';
+    return;
+  }
+
+  reprovacao.value.enviando = true;
+  reprovacao.value.erro = '';
+
+  router.post(
+    route('tdap.viagens.reprovar-lote'),
+    { ids: selecionadas.value, motivo: reprovacao.value.motivo },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        selecionadas.value = [];
+        reprovacao.value.aberto = false;
+      },
+      onError: (erros) => {
+        reprovacao.value.erro = erros.motivo ?? erros.ids ?? 'Não foi possível reprovar.';
+      },
+      onFinish: () => {
+        reprovacao.value.enviando = false;
       },
     },
   );
