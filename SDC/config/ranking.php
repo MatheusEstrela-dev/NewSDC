@@ -92,5 +92,9 @@ return [
         'Dashboard' => 'apenas_consome_placar',
         'Shared' => 'infraestrutura_transversal',
         'Ranking' => 'nao_pontua_o_proprio_processamento',
+        // Cadastro de acesso e diretorio corporativo: provisionamento de conta,
+        // nao entrega operacional. Solicitar ou conceder acesso nao e trabalho
+        // de defesa civil reconhecivel em placar.
+        'Acessos' => 'administracao_de_identidade',
     ],
 ];
