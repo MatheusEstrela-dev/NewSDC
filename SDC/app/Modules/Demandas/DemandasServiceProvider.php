@@ -8,6 +8,7 @@ use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
 use App\Modules\Demandas\Infrastructure\Persistence\EloquentDemandaRepository;
 use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Demandas\Observers\DemandaNotificacaoObserver;
+use App\Modules\Demandas\Support\ContextoImportacao;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -21,7 +22,7 @@ class DemandasServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        // Outros bindings resolvidos pelo container
+        $this->app->scoped(ContextoImportacao::class);
     }
 
     public function boot(): void
