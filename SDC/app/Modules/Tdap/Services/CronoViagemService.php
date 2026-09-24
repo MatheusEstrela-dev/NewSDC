@@ -12,7 +12,8 @@ use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
 use App\Modules\Tdap\DTOs\CronoViagemDTO;
 use App\Modules\Tdap\Models\CronoCaminhao;
 use App\Modules\Tdap\Models\CronoViagem;
-use Carbon\Carbon;
+use App\Modules\Tdap\Domain\Exceptions\ViagemForaDoLimiteException;
+use App\Modules\Tdap\Support\LimiteDoCronograma;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -175,47 +176,80 @@ class CronoViagemService
      */
     public function confirmarEmLote(User $usuario, array $ids, ?string $observacao = null): array
     {
+        $resultado = $this->decidirEmLote($usuario, $ids, CronoViagem::CONFIRMACAO_CONFIRMADA, $observacao);
+
+        return ['confirmadas' => $resultado['decididas'], 'recusadas' => $resultado['recusadas']];
+    }
+
+    /**
+     * Reprova em lote: o municipio atesta que a agua NAO chegou.
+     *
+     * Mesmas travas da confirmacao -- municipio do usuario e limite do
+     * cronograma. Reprovar tambem nao mexe em `validado`; o que muda e que a
+     * CEDEC deixa de poder aprovar a viagem para pagamento (ver validar()).
+     *
+     * @param  list<int>  $ids
+     * @return array{reprovadas: int, recusadas: list<array{id: int, motivo: string}>}
+     */
+    public function reprovarEmLote(User $usuario, array $ids, string $motivo): array
+    {
+        $resultado = $this->decidirEmLote($usuario, $ids, CronoViagem::CONFIRMACAO_REPROVADA, $motivo);
+
+        return ['reprovadas' => $resultado['decididas'], 'recusadas' => $resultado['recusadas']];
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return array{decididas: int, recusadas: list<array{id: int, motivo: string}>}
+     */
+    private function decidirEmLote(User $usuario, array $ids, int $decisao, ?string $observacao): array
+    {
         $municipioId = $this->municipioDoUsuario($usuario);
 
         if ($municipioId === null || $ids === []) {
-            return ['confirmadas' => 0, 'recusadas' => []];
+            return ['decididas' => 0, 'recusadas' => []];
         }
 
-        $viagens = CronoViagem::query()
-            ->whereIn('id', $ids)
-            ->doMunicipio($municipioId)
-            ->naoConfirmada()
-            ->with('cronoCaminhao.cronograma')
-            ->get();
-
         $recusadas = [];
-        $confirmadas = 0;
-        $hoje = now()->startOfDay();
+        $decididas = 0;
+        $hoje = now();
 
-        DB::transaction(function () use ($viagens, $usuario, $observacao, $hoje, &$recusadas, &$confirmadas): void {
+        DB::transaction(function () use ($ids, $municipioId, $usuario, $decisao, $observacao, $hoje, &$recusadas, &$decididas): void {
+            // lockForUpdate: dois cliques (ou duas abas) nao decidem a mesma
+            // viagem duas vezes -- a segunda transacao ja a encontra decidida.
+            $viagens = CronoViagem::query()
+                ->whereIn('id', $ids)
+                ->doMunicipio($municipioId)
+                ->naoConfirmada()
+                ->with('cronoCaminhao.cronograma')
+                ->lockForUpdate()
+                ->get();
+
             foreach ($viagens as $viagem) {
-                $limite = $viagem->cronoCaminhao?->cronograma?->dt_final_efetiva;
+                $cronograma = $viagem->cronoCaminhao?->cronograma;
 
-                if ($limite !== null && $hoje->greaterThan($limite->copy()->startOfDay())) {
+                if (! LimiteDoCronograma::permiteDecisao($cronograma, $viagem->data_registro, $hoje)) {
                     $recusadas[] = [
-                        'id' => (int) $viagem->id,
-                        'motivo' => 'Fora do limite do cronograma (encerrado em '.$limite->format('d/m/Y').').',
+                        'id'     => (int) $viagem->id,
+                        'motivo' => 'Fora do limite do cronograma (encerra em '
+                            .LimiteDoCronograma::limite($cronograma)?->format('d/m/Y').').',
                     ];
 
                     continue;
                 }
 
                 $viagem->forceFill([
+                    'confirmado'      => $decisao,
                     'confirmado_em'   => now(),
                     'confirmado_por'  => $usuario->id,
                     'obs_confirmacao' => $observacao,
                 ])->save();
 
-                $confirmadas++;
+                $decididas++;
             }
         });
 
-        return ['confirmadas' => $confirmadas, 'recusadas' => $recusadas];
+        return ['decididas' => $decididas, 'recusadas' => $recusadas];
     }
 
     /**
@@ -274,11 +308,10 @@ class CronoViagemService
             // So o limite FINAL e barrado: 31% do acervo tem data anterior ao
             // dt_inicio e o significado disso segue em aberto com a area.
             // Depois do fim efetivo (ja com prorrogacao) nao ha contrato.
-            $limite = $cronograma->dt_final_efetiva?->copy()->startOfDay();
-
-            if ($limite !== null && Carbon::parse($dto->data_registro)->startOfDay()->greaterThan($limite)) {
-                throw new \DomainException(
-                    'A data da viagem ultrapassa a vigencia do cronograma (encerra em '.$limite->format('d/m/Y').').'
+            if (LimiteDoCronograma::ultrapassa($cronograma, $dto->data_registro)) {
+                throw new ViagemForaDoLimiteException(
+                    'A data da viagem ultrapassa a vigencia do cronograma (encerra em '
+                    .LimiteDoCronograma::limite($cronograma)?->format('d/m/Y').').'
                 );
             }
             return CronoViagem::create([
@@ -306,6 +339,12 @@ class CronoViagemService
 
             if ($viagem->validado !== null) {
                 throw new \DomainException('Viagem ja foi validada anteriormente.');
+            }
+
+            // O municipio atestou que a agua nao chegou: aprovar para pagamento
+            // pagaria entrega que nao houve. Rejeitar continua permitido.
+            if ($aprovada && $viagem->confirmado === CronoViagem::CONFIRMACAO_REPROVADA) {
+                throw new \DomainException('O municipio reprovou esta viagem; ela nao pode ser aprovada para pagamento.');
             }
 
             $viagem->update([

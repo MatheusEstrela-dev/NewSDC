@@ -6,9 +6,11 @@ namespace App\Modules\Tdap\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Municipio;
+use App\Modules\Tdap\Domain\Exceptions\ViagemForaDoLimiteException;
 use App\Modules\Tdap\DTOs\CronoViagemDTO;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Requests\ConfirmarViagensRequest;
+use App\Modules\Tdap\Requests\ReprovarViagensRequest;
 use App\Modules\Tdap\Requests\StoreCronoViagemRequest;
 use App\Modules\Tdap\Requests\ValidarCronoViagemRequest;
 use App\Modules\Tdap\Resources\CronoViagemResource;
@@ -16,6 +18,7 @@ use App\Modules\Tdap\Services\CronoViagemService;
 use App\Support\Perfil\OrgaoDeLotacao;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -87,7 +90,29 @@ class CronoViagemController extends Controller
             'municipio'    => OrgaoDeLotacao::resolver($usuario)?->municipio?->nome,
             'semMunicipio' => OrgaoDeLotacao::municipioId($usuario) === null,
             'canConfirmar' => $usuario?->can('tdap.viagens.confirmar') ?? false,
+            'canReprovar'  => $usuario?->can('tdap.viagens.reprovar') ?? false,
         ]);
+    }
+
+    public function reprovarLote(ReprovarViagensRequest $request): RedirectResponse
+    {
+        $resultado = $this->service->reprovarEmLote(
+            $request->user(),
+            $request->validated('ids'),
+            $request->validated('motivo'),
+        );
+
+        $mensagem = $resultado['reprovadas'] === 1
+            ? '1 viagem reprovada.'
+            : "{$resultado['reprovadas']} viagens reprovadas.";
+
+        if ($resultado['recusadas'] !== []) {
+            $mensagem .= ' '.count($resultado['recusadas']).' recusada(s) por estarem fora do limite do cronograma.';
+
+            return back()->with('warning', $mensagem);
+        }
+
+        return back()->with('success', $mensagem);
     }
 
     public function confirmarLote(ConfirmarViagensRequest $request): RedirectResponse
@@ -122,6 +147,10 @@ class CronoViagemController extends Controller
                 : back();
 
             return $redirect->with('success', 'Viagem registrada. Aguardando validacao.');
+        } catch (ViagemForaDoLimiteException $e) {
+            // Erro no campo, e nao flash: o modal de registro so fecha em
+            // sucesso, e o aviso solto sumia junto com ele.
+            throw ValidationException::withMessages(['data_registro' => $e->getMessage()]);
         } catch (\DomainException $e) {
             return back()->with('error', $e->getMessage());
         }

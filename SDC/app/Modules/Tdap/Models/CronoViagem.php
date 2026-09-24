@@ -30,6 +30,11 @@ class CronoViagem extends Model
     public const STATUS_APROVADA = 1;
     public const STATUS_REJEITADA = 0;
 
+    /* Decisao do municipio (coluna `confirmado`), no mesmo contrato de `validado`. */
+    public const CONFIRMACAO_PENDENTE = null;
+    public const CONFIRMACAO_CONFIRMADA = 1;
+    public const CONFIRMACAO_REPROVADA = 0;
+
     protected $fillable = [
         'crono_caminhao_id',
         'data_registro',
@@ -40,6 +45,7 @@ class CronoViagem extends Model
         'user_validacao_id',
         'confirmado_em',
         'confirmado_por',
+        'confirmado',
         'obs_confirmacao',
     ];
 
@@ -51,6 +57,7 @@ class CronoViagem extends Model
         'user_validacao_id' => 'integer',
         'confirmado_em'     => 'datetime',
         'confirmado_por'    => 'integer',
+        'confirmado'        => 'integer',
     ];
 
     public function cronoCaminhao(): BelongsTo
@@ -98,15 +105,34 @@ class CronoViagem extends Model
         return $query->where('crono_caminhao_id', $cronoCaminhaoId);
     }
 
-    /** Ainda sem o aceite do municipio. */
+    /** `pendente` | `confirmada` | `reprovada` -- a decisao do municipio. */
+    public function getStatusConfirmacaoAttribute(): string
+    {
+        return match (true) {
+            $this->confirmado === self::CONFIRMACAO_CONFIRMADA => 'confirmada',
+            $this->confirmado === self::CONFIRMACAO_REPROVADA  => 'reprovada',
+            default                                            => 'pendente',
+        };
+    }
+
+    /** Ainda sem decisao do municipio (nem confirmada, nem reprovada). */
     public function scopeNaoConfirmada(Builder $query): Builder
     {
         return $query->whereNull('confirmado_em');
     }
 
+    /**
+     * Confirmada pelo municipio. Le `confirmado`, e nao `confirmado_em`: com a
+     * reprovacao, `confirmado_em` preenchido deixou de significar "confirmada".
+     */
     public function scopeConfirmada(Builder $query): Builder
     {
-        return $query->whereNotNull('confirmado_em');
+        return $query->where('confirmado', self::CONFIRMACAO_CONFIRMADA);
+    }
+
+    public function scopeReprovadaPeloMunicipio(Builder $query): Builder
+    {
+        return $query->where('confirmado', self::CONFIRMACAO_REPROVADA);
     }
 
     /**

@@ -1057,7 +1057,7 @@ const canSeeCedecPrefeituras = computed(() => {
 
 // A confirmacao e do municipio: quem nao tem o slug nao ve o item, mesmo
 // enxergando o resto do TDAP.
-const podeConfirmarViagens = computed(() => hasPermission(['tdap.viagens.confirmar']));
+const podeConfirmarViagens = computed(() => hasPermission(['tdap.viagens.confirmar', 'tdap.viagens.reprovar']));
 
 const canSeeTdap = computed(() => {
   return hasPermission([

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Resources;
 
+use App\Modules\Tdap\Support\LimiteDoCronograma;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -84,6 +85,15 @@ class CronoViagemResource extends JsonResource
             /* Sinais de risco, para a tela destacar sem recalcular nada */
             'dias_aguardando'  => $this->diasAguardando(),
             'fora_da_vigencia' => $this->foraDaVigencia(),
+
+            /* Decisao do municipio (COMPDEC) */
+            'status_confirmacao' => $this->status_confirmacao,
+            'confirmado_em'      => $this->confirmado_em?->toIso8601String(),
+            'obs_confirmacao'    => $this->obs_confirmacao,
+            // Mesma regra que o service aplica ao decidir: a tela desabilita
+            // exatamente o que o servidor recusaria.
+            'pode_decidir_confirmacao' => $this->status_confirmacao === 'pendente'
+                && LimiteDoCronograma::permiteDecisao($cronograma, $this->data_registro),
         ];
     }
 

@@ -125,10 +125,11 @@
                 <td class="px-4 py-3">
                   <PrazoBadge :dias-restantes="v.dias_restantes" :proxima-vencer="v.proxima_vencer" />
                   <div v-if="v.fora_da_vigencia" class="text-xs text-amber-600 mt-1">fora da vigência</div>
+                  <DecisaoMunicipioBadge :status="v.status_confirmacao" :motivo="v.obs_confirmacao" class="mt-1" />
                 </td>
 
                 <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                  <button v-if="canValidar" @click="abrirDecisao(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700">
+                  <button v-if="canValidar" :disabled="reprovadaPeloMunicipio(v)" :title="reprovadaPeloMunicipio(v) ? 'O município reprovou esta viagem' : ''" @click="abrirDecisao(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">
                     Aprovar
                   </button>
                   <button v-if="canValidar" @click="abrirDecisao(v, false)" class="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700">
@@ -166,10 +167,11 @@
         <template #mobile-c4="{ item: v }">
           <PrazoBadge :dias-restantes="v.dias_restantes" :proxima-vencer="v.proxima_vencer" />
           <span v-if="v.fora_da_vigencia" class="block text-xs text-amber-600 mt-1">fora da vigência</span>
+          <DecisaoMunicipioBadge :status="v.status_confirmacao" :motivo="v.obs_confirmacao" class="mt-1" />
         </template>
 
         <template #mobile-actions="{ item: v }">
-          <button v-if="canValidar" @click="abrirDecisao(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700">
+          <button v-if="canValidar" :disabled="reprovadaPeloMunicipio(v)" :title="reprovadaPeloMunicipio(v) ? 'O município reprovou esta viagem' : ''" @click="abrirDecisao(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">
             Aprovar
           </button>
           <button v-if="canValidar" @click="abrirDecisao(v, false)" class="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700">
@@ -226,6 +228,7 @@ import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
 import PrazoBadge from '@/Components/Organisms/Tdap/PrazoBadge.vue';
+import DecisaoMunicipioBadge from '@/Components/Organisms/Tdap/DecisaoMunicipioBadge.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -237,6 +240,12 @@ const props = defineProps({
   filtros:      { type: Object, default: () => ({}) },
   canValidar:   { type: Boolean, default: false },
 });
+
+// Espelha a trava de CronoViagemService::validar -- o servidor recusa de
+// qualquer forma; aqui so evita o clique inutil.
+function reprovadaPeloMunicipio(v) {
+  return v.status_confirmacao === 'reprovada';
+}
 
 const form = reactive({
   search: props.filtros.search ?? '',
