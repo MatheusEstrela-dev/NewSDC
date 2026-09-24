@@ -180,16 +180,19 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-              <tr
-                v-for="linha in placarLinhas"
-                :key="linha.entidade_id"
-                class="table-row-solid transition"
-              >
+              <template v-for="linha in placarLinhas" :key="linha.entidade_id">
+              <tr v-if="linha.corteFaixa" class="bg-slate-50 dark:bg-slate-800/60" data-corte-faixa>
+                <td colspan="4" class="px-4 py-2">
+                  <RankingFaixaCorte :faixa="linha.faixa" :limiares="faixas" />
+                </td>
+              </tr>
+              <tr class="table-row-solid transition">
                 <td class="px-4 py-4">
-                  <RankingPosicaoCell :posicao="linha.posicao" destacar-topo />
+                  <RankingPosicaoCell :posicao="linha.posicao" :medalha="linha.medalha" destacar-topo />
                 </td>
                 <td class="px-4 py-4 text-slate-700 dark:text-slate-300">
                   {{ rotuloParticipante(linha) }}
+                  <span v-if="linha.dias_ativos != null" class="block text-xs text-slate-500 dark:text-slate-400">{{ rotuloDiasAtivos(linha.dias_ativos) }}</span>
                 </td>
                 <td class="whitespace-nowrap px-4 py-4 text-right font-semibold text-slate-900 dark:text-slate-100">
                   {{ numero(linha.pontos) }}
@@ -198,6 +201,7 @@
                   <RankingFaixaBadge :faixa="linha.faixa" />
                 </td>
               </tr>
+              </template>
 
               <tr v-if="placarLinhas.length === 0">
                 <td colspan="4" class="px-4 py-12 text-center">
@@ -217,15 +221,18 @@
             <span class="font-normal text-slate-500 dark:text-slate-400">({{ numero(placar.total ?? 0) }})</span>
           </h3>
 
+          <template v-for="linha in placarLinhas" :key="`card-${linha.entidade_id}`">
+          <div v-if="linha.corteFaixa" class="border-b border-slate-200 pb-2 pt-2 dark:border-slate-700/50" data-corte-faixa>
+            <RankingFaixaCorte :faixa="linha.faixa" :limiares="faixas" />
+          </div>
           <article
-            v-for="linha in placarLinhas"
-            :key="`card-${linha.entidade_id}`"
             class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-900/60"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <RankingPosicaoCell :posicao="linha.posicao" destacar-topo />
+                <RankingPosicaoCell :posicao="linha.posicao" :medalha="linha.medalha" destacar-topo />
                 <p class="mt-2 truncate text-sm text-slate-700 dark:text-slate-300">{{ rotuloParticipante(linha) }}</p>
+                <p v-if="linha.dias_ativos != null" class="text-xs text-slate-500 dark:text-slate-400">{{ rotuloDiasAtivos(linha.dias_ativos) }}</p>
               </div>
               <div class="shrink-0 text-right">
                 <p class="text-lg font-bold text-slate-900 dark:text-slate-100">{{ numero(linha.pontos) }}</p>
@@ -236,6 +243,7 @@
               <RankingFaixaBadge :faixa="linha.faixa" />
             </div>
           </article>
+          </template>
 
           <p
             v-if="placarLinhas.length === 0"
@@ -375,6 +383,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import RankingFaixaBadge from '@/Components/Atoms/Ranking/RankingFaixaBadge.vue';
 import RankingPosicaoCell from '@/Components/Molecules/Ranking/RankingPosicaoCell.vue';
 import RankingPodio from '@/Components/Molecules/Ranking/RankingPodio.vue';
+import RankingFaixaCorte from '@/Components/Molecules/Ranking/RankingFaixaCorte.vue';
 import RankingRegrasModal from '@/Components/Organisms/Ranking/RankingRegrasModal.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -400,6 +409,8 @@ const props = defineProps({
   // Catalogo em homologacao (RankingAccess::preview): o controller responde sem
   // resumo, placar nem extrato.
   preview: { type: Boolean, default: false },
+  // Limiares de config('ranking.faixas'); sem ela o corte usa o fallback local.
+  faixas: { type: Object, default: null },
   podeGerenciarRegras: { type: Boolean, default: false },
 });
 
@@ -558,7 +569,21 @@ const anoOpcoes = computed(() => {
 const posicaoTexto = computed(() => (props.resumo?.posicao ? `${numero(props.resumo.posicao)}º` : '—'));
 const faixaTexto = computed(() => FAIXAS[props.resumo?.faixa] ?? 'Em apuração');
 
-const placarLinhas = computed(() => props.placar?.linhas ?? []);
+// corteFaixa marca a primeira linha de cada faixa na pagina: a tela desenha o
+// cabecalho do grupo (Diamante > Ouro > Prata > Bronze) antes dela.
+const placarLinhas = computed(() => (props.placar?.linhas ?? []).map((linha, indice, linhas) => ({
+  ...linha,
+  corteFaixa: indice === 0 || linhas[indice - 1]?.faixa !== linha.faixa,
+  // Medalha so para os tres primeiros exibidos E com pontos: mesma regra do
+  // podio. Sem o corte em pontos, participante com zero herdaria prata ou
+  // bronze so por ordem de desempate.
+  medalha: (props.placar?.pagina ?? 1) === 1 && indice < 3 && Number(linha.pontos) > 0 ? indice + 1 : null,
+})));
+
+function rotuloDiasAtivos(dias) {
+  const total = Number(dias ?? 0);
+  return `${numero(total)} ${total === 1 ? 'dia ativo' : 'dias ativos'}`;
+}
 const extratoLinhas = computed(() => props.extrato?.data ?? []);
 
 const podioLinhas = computed(() => props.podio.map((linha) => ({

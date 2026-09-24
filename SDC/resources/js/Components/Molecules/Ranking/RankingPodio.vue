@@ -14,15 +14,15 @@
     </header>
 
       <ol class="podio__degraus" aria-label="Primeiras posições">
-        <li v-for="grupo in grupos" :key="grupo.posicao" class="podio__degrau" :class="[`podio__degrau--${grupo.posicao}`, { 'podio__degrau--vazio': !grupo.linhas.length }]">
+        <li v-for="grupo in grupos" :key="grupo.posicao" class="podio__degrau" :class="[`podio__degrau--${grupo.posicao}`, { 'podio__degrau--vazio': !grupo.total }]">
           <div class="podio__medalha"><RankingMedalha :posicao="grupo.posicao" /></div>
           <div class="podio__plataforma">
             <div class="mb-4 flex flex-wrap items-center justify-center gap-2">
               <h3 class="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">{{ grupo.posicao }}º lugar</h3>
-              <span v-if="grupo.linhas.length > 1" class="rounded-full bg-white/70 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">Empate</span>
+              <span v-if="grupo.total > 1" class="rounded-full bg-white/70 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">Empate</span>
             </div>
             <ul class="space-y-2">
-              <li v-for="colocado in grupo.linhas" :key="colocado.entidade_id">
+              <li v-for="colocado in grupo.visiveis" :key="colocado.entidade_id">
                 <button
                   type="button"
                   class="podio__participante w-full rounded-xl border p-4 text-center"
@@ -38,8 +38,11 @@
                 </button>
               </li>
             </ul>
-            <p v-if="!grupo.linhas.length" class="podio__vazio rounded-xl border border-dashed border-slate-400/50 p-4 text-center text-xs text-slate-500 dark:text-slate-400">
+            <p v-if="!grupo.total" class="podio__vazio rounded-xl border border-dashed border-slate-400/50 p-4 text-center text-xs text-slate-500 dark:text-slate-400">
               Aguardando pontuação
+            </p>
+            <p v-if="grupo.ocultos > 0" class="mt-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400" data-podio-ocultos>
+              +{{ pontos(grupo.ocultos) }} empatados
             </p>
           </div>
         </li>
@@ -76,13 +79,18 @@ const props = defineProps({
 
 const selecionadoId = ref(null);
 const rotuloDoEscopo = computed(() => ROTULOS_DE_ESCOPO[props.escopo] ?? 'participante');
-// A posição vem do backend. Agrupar por posição mantém todos os empates.
+// Teto por degrau: empate grande vira "+N empatados", nunca lista.
+const MAX_POR_DEGRAU = 3;
+// A posição vem do backend. So classificados (pontos > 0) sobem ao podio.
 const colocados = computed(() => props.linhas
   .map((linha) => ({ ...linha, posicao: Number(linha?.posicao) }))
   .filter((linha) => Number.isInteger(linha.posicao) && linha.posicao >= 1 && linha.posicao <= 3 && Number(linha.pontos ?? 0) > 0)
   .sort((a, b) => a.posicao - b.posicao || Number(b.pontos ?? 0) - Number(a.pontos ?? 0)));
 const grupos = computed(() => [1, 2, 3]
-  .map((posicao) => ({ posicao, linhas: colocados.value.filter((linha) => linha.posicao === posicao) })));
+  .map((posicao) => {
+    const linhas = colocados.value.filter((linha) => linha.posicao === posicao);
+    return { posicao, total: linhas.length, visiveis: linhas.slice(0, MAX_POR_DEGRAU), ocultos: Math.max(0, linhas.length - MAX_POR_DEGRAU) };
+  }));
 const selecionado = computed(() => colocados.value.find((linha) => linha.entidade_id === selecionadoId.value) ?? colocados.value[0]);
 const pontosDaLideranca = computed(() => Number(colocados.value[0]?.pontos ?? 0));
 const distanciaDaLideranca = computed(() => Math.max(0, pontosDaLideranca.value - Number(selecionado.value?.pontos ?? 0)));
@@ -105,8 +113,8 @@ const identificacao = (colocado) => colocado.rotulo || `#${colocado.entidade_id}
 .podio__medalha { position: relative; z-index: 1; display: flex; justify-content: center; margin-bottom: -15px; transition: transform .25s ease; }
 .podio__degrau:focus-within .podio__medalha { transform: translateY(-5px) rotate(-3deg); }
 .podio__plataforma { padding: 30px 12px 14px; border: 1px solid rgb(var(--degrau-cor) / 35%); border-top: 3px solid rgb(var(--degrau-cor) / 65%); border-radius: 18px; background: linear-gradient(180deg, rgb(var(--degrau-cor) / 12%), rgb(var(--degrau-cor) / 3%)); }
-.podio__vazio { min-height: 116px; display: grid; place-items: center; }
 .podio__participante { border-color: transparent; background: rgb(255 255 255 / 55%); transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+.podio__vazio { min-height: 116px; display: grid; place-items: center; }
 .dark .podio__participante { background: rgb(15 23 42 / 25%); }
 .podio__participante--ativo { border-color: rgb(var(--degrau-cor) / 60%); box-shadow: 0 4px 18px rgb(var(--degrau-cor) / 10%); }
 .podio__participante:focus-visible { outline: 3px solid #3b82f6; outline-offset: 3px; }

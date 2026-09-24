@@ -5,7 +5,7 @@
       <span class="sr-only">sem classificação</span>
     </template>
 
-    <RankingMedalha v-else-if="destacarTopo && posicao >= 1 && posicao <= 3" :posicao="posicao" compacta />
+    <RankingMedalha v-else-if="destacarTopo && medalha !== null" :posicao="medalha" compacta />
 
     <span v-else class="tabular-nums font-medium text-slate-600 dark:text-slate-300">
       {{ posicao }}º
@@ -22,13 +22,19 @@
  * e duas linhas seguidas podem trazer "1" -- recalcular aqui (indice da lista,
  * contador local) quebraria o empate e mentiria sobre o resultado.
  *
- * O destaque dos tres primeiros reutiliza a mesma medalha vetorial do podio.
+ * A medalha vem da ordem exibida na primeira pagina, separada da posicao
+ * compartilhada por participantes empatados.
  */
 import RankingMedalha from '@/Components/Atoms/Ranking/RankingMedalha.vue';
 
 defineProps({
   /** Posicao ja apurada pelo backend. Nulo = participante sem classificacao no recorte. */
   posicao: {
+    type: Number,
+    default: null,
+  },
+
+  medalha: {
     type: Number,
     default: null,
   },
