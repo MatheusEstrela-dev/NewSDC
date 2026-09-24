@@ -12,6 +12,7 @@ use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
 use App\Modules\Tdap\DTOs\CronoViagemDTO;
 use App\Modules\Tdap\Models\CronoCaminhao;
 use App\Modules\Tdap\Models\CronoViagem;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -258,7 +259,7 @@ class CronoViagemService
     {
         return DB::transaction(function () use ($dto): CronoViagem {
             $cc = CronoCaminhao::query()
-                ->with('cronograma:id,ativo,encerrado_em')
+                ->with('cronograma:id,ativo,encerrado_em,dt_final,dt_final_prorrogacao')
                 ->findOrFail($dto->crono_caminhao_id);
 
             $cronograma = $cc->cronograma;
@@ -270,15 +271,16 @@ class CronoViagemService
                 throw new \DomainException('Cronograma encerrado nao aceita novas viagens.');
             }
 
-            /*
-             * NAO ha checagem de `data_registro` dentro da vigencia do
-             * cronograma, e isso e deliberado: 1.165 das 3.808 viagens da base
-             * (31%) tem data anterior ao dt_inicio do proprio cronograma. Ou o
-             * acervo legado esta errado, ou `data_registro` nao significa "dia
-             * da viagem" nesta operacao. Ligar a regra aqui, com esse numero,
-             * quebraria o registro de viagem em producao -- decisao de negocio,
-             * nao de implementacao.
-             */
+            // So o limite FINAL e barrado: 31% do acervo tem data anterior ao
+            // dt_inicio e o significado disso segue em aberto com a area.
+            // Depois do fim efetivo (ja com prorrogacao) nao ha contrato.
+            $limite = $cronograma->dt_final_efetiva?->copy()->startOfDay();
+
+            if ($limite !== null && Carbon::parse($dto->data_registro)->startOfDay()->greaterThan($limite)) {
+                throw new \DomainException(
+                    'A data da viagem ultrapassa a vigencia do cronograma (encerra em '.$limite->format('d/m/Y').').'
+                );
+            }
             return CronoViagem::create([
                 'crono_caminhao_id' => $dto->crono_caminhao_id,
                 'data_registro'     => $dto->data_registro,
