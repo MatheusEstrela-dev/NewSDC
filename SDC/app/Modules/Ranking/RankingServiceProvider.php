@@ -15,6 +15,7 @@ use App\Modules\Ranking\Adapters\PmdaAdapter;
 use App\Modules\Ranking\Adapters\RatAdapter;
 use App\Modules\Ranking\Adapters\TdapAdapter;
 use App\Modules\Ranking\Console\MaterializarPeriodosCommand;
+use App\Modules\Ranking\Console\MaterializarAtividadeCommand;
 use App\Modules\Ranking\Console\SincronizarVinculosCommand;
 use App\Modules\Ranking\Console\RebuildCommand;
 use App\Modules\Ranking\Console\ReconcileCommand;
@@ -33,6 +34,7 @@ use App\Modules\Ranking\Services\RecordScoreTransaction;
 use App\Modules\Ranking\Services\RegraVigenteRepository;
 use App\Modules\Ranking\Services\ReverseScoreEntry;
 use App\Modules\Ranking\Services\ScoreCalculator;
+use App\Modules\Ranking\Services\MaterializarAtividade;
 use App\Modules\Ranking\Services\SincronizarVinculos;
 use App\Modules\Ranking\Services\SnapshotPlacar;
 use App\Modules\Rat\Domain\Events\RegistroCompletoV1;
@@ -91,6 +93,11 @@ class RankingServiceProvider extends ServiceProvider
 
         // Nomes de conexao por construtor, nunca ConnectionInterface por
         // autowiring: o alias de core resolveria para a base operacional.
+        $this->app->singleton(MaterializarAtividade::class, fn ($app) => new MaterializarAtividade(
+            $app->make(PeriodoService::class),
+            (string) config('ranking.conexao', 'ranking'),
+            (string) config('ranking.conexao_origem', 'ranking_source_ro'),
+        ));
         $this->app->singleton(SincronizarVinculos::class, fn ($app) => new SincronizarVinculos(
             $app->make(PeriodoService::class),
             (string) config('ranking.conexao', 'ranking'),
@@ -166,6 +173,7 @@ class RankingServiceProvider extends ServiceProvider
             $this->commands([
                 MaterializarPeriodosCommand::class,
                 SincronizarVinculosCommand::class,
+                MaterializarAtividadeCommand::class,
                 RebuildCommand::class,
                 ReconcileCommand::class,
                 SnapshotCommand::class,

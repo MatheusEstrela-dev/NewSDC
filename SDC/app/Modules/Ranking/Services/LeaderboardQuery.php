@@ -13,8 +13,9 @@ use Illuminate\Database\ConnectionInterface;
  * Consulta paginada do placar. CAMINHO DE LEITURA, somente leitura.
  *
  * LE EXCLUSIVAMENTE A PROJECAO
- * A consulta toca apenas ranking.saldos, ranking.participantes e
- * ranking.periodos, todas na database independente sdc_ranking. Nao ha JOIN
+ * A consulta toca apenas ranking.saldos, ranking.participantes,
+ * ranking.atividade e ranking.periodos, todas na database independente
+ * sdc_ranking. Nao ha JOIN
  * nem subconsulta contra a base operacional `sdc` - nem para buscar nome de
  * usuario. O placar precisa responder com o coletor de eventos parado e com a
  * base operacional indisponivel; nome e demais rotulos sao hidratados depois,
@@ -25,8 +26,16 @@ use Illuminate\Database\ConnectionInterface;
  * Com RANK() sairia 1, 2, 2, 4, que e o comportamento errado - dois empatados
  * em segundo nao consomem o terceiro lugar.
  *
+ * DESEMPATE POR USO
+ * Com pontos iguais fica a frente quem mais usou o sistema no periodo, medido
+ * em DIAS DISTINTOS com login (ranking.atividade), nunca em numero de logins -
+ * login cru deixaria o empate ser comprado entrando e saindo. A janela e
+ * DENSE_RANK() OVER (ORDER BY pontos DESC, dias_ativos DESC): pontos continuam
+ * mandando (menos dias com mais pontos fica a frente) e pontos E dias iguais
+ * continuam na mesma posicao.
+ *
  * ESTABILIDADE DE PAGINACAO x POSICAO
- * A ordenacao final e (pontos DESC, entidade_id ASC). O entidade_id entra
+ * A ordenacao final e (pontos DESC, dias_ativos DESC, entidade_id ASC). O entidade_id entra
  * SOMENTE como desempate deterministico de ordenacao: sem ele o Postgres pode
  * devolver empatados em ordem diferente a cada pagina e a mesma linha
  * apareceria em duas paginas enquanto outra sumiria. Ele NAO participa do
@@ -69,7 +78,7 @@ class LeaderboardQuery
      * Uma pagina do placar, ja com posicao densa e faixa.
      *
      * @return array{
-     *     linhas: array<int, array{entidade_id:int, pontos:int, posicao:int, faixa:string, faixa_label:string}>,
+     *     linhas: array<int, array{entidade_id:int, pontos:int, dias_ativos:int, posicao:int, faixa:string, faixa_label:string}>,
      *     pagina: int, por_pagina: int, total: int, total_paginas: int
      * }
      */
@@ -132,7 +141,7 @@ class LeaderboardQuery
 
     /**
      * @return array{
-     *     linhas: array<int, array{entidade_id:int, pontos:int, posicao:int, faixa:string, faixa_label:string}>,
+     *     linhas: array<int, array{entidade_id:int, pontos:int, dias_ativos:int, posicao:int, faixa:string, faixa_label:string}>,
      *     pagina: int, por_pagina: int, total: int, total_paginas: int
      * }
      */
@@ -144,10 +153,11 @@ class LeaderboardQuery
         $sql = $this->sqlBase() . "\n" . <<<'SQL'
             SELECT entidade_id,
                    pontos,
+                   dias_ativos,
                    posicao,
                    COUNT(*) OVER () AS total_recorte
               FROM placar
-             ORDER BY pontos DESC, entidade_id ASC
+             ORDER BY pontos DESC, dias_ativos DESC, entidade_id ASC
              LIMIT :limite OFFSET :deslocamento
             SQL;
 
@@ -170,6 +180,7 @@ class LeaderboardQuery
                     return [
                         'entidade_id' => (int) $registro->entidade_id,
                         'pontos' => $pontos,
+                        'dias_ativos' => (int) $registro->dias_ativos,
                         'posicao' => (int) $registro->posicao,
                         'faixa' => $faixa->value,
                         'faixa_label' => $faixa->label(),
@@ -260,16 +271,36 @@ class LeaderboardQuery
                  )
             ),
 
+            -- Uso do sistema no periodo (dias distintos com login), copia
+            -- materializada por ranking:materializar-atividade. Nao depende de
+            -- geracao nem de modulo: uso nao e ponto, e o mesmo para todo
+            -- recorte do periodo/escopo.
+            atividade_periodo AS (
+                SELECT a.entidade_id,
+                       a.dias_ativos
+                  FROM ranking.atividade a
+                  CROSS JOIN parametros pa
+                  JOIN periodo pe ON pe.id = a.periodo_id
+                 WHERE a.escopo = pa.escopo
+            ),
+
             -- COALESCE(pontos, 0): ausencia de saldo e zero, nao exclusao.
-            -- A janela do DENSE_RANK ordena SO por pontos - por isso empatados
-            -- compartilham posicao e o desempate por entidade_id, aplicado
-            -- apenas no ORDER BY externo, nao contamina a classificacao.
+            -- COALESCE(dias_ativos, 0): sem atividade materializada e zero dias.
+            -- A janela do DENSE_RANK ordena por pontos e, no empate, por dias
+            -- ativos: quem mais usou o sistema fica a frente. Pontos e dias
+            -- iguais continuam compartilhando posicao. O entidade_id entra
+            -- apenas no ORDER BY externo e nao contamina a classificacao.
             placar AS (
                 SELECT u.entidade_id,
                        COALESCE(sp.pontos, 0) AS pontos,
-                       DENSE_RANK() OVER (ORDER BY COALESCE(sp.pontos, 0) DESC) AS posicao
+                       COALESCE(ap.dias_ativos, 0) AS dias_ativos,
+                       DENSE_RANK() OVER (
+                           ORDER BY COALESCE(sp.pontos, 0) DESC,
+                                    COALESCE(ap.dias_ativos, 0) DESC
+                       ) AS posicao
                   FROM universo u
                   LEFT JOIN saldos_periodo sp ON sp.entidade_id = u.entidade_id
+                  LEFT JOIN atividade_periodo ap ON ap.entidade_id = u.entidade_id
             )
             SQL;
     }

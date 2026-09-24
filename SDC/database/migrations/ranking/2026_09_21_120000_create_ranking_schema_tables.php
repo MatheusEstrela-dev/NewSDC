@@ -382,6 +382,30 @@ return new class extends Migration
         SQL);
 
         $this->exec('CREATE INDEX IF NOT EXISTS ix_ranking_ajuste_pendentes ON ranking.pedidos_ajuste (decisao, criado_em)');
+
+        // Uso do sistema por periodo, criterio de DESEMPATE do placar. Copia
+        // materializada a partir de audit_logs (base operacional) porque o
+        // placar le so esta database e nao pode fazer JOIN na operacional.
+        // Medida em dias distintos com login, nunca em numero de logins: login
+        // cru deixaria o empate ser comprado entrando e saindo. Nao entra em
+        // pontos - so ordena quem ja empatou em pontos.
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS ranking.atividade (
+                id            bigserial PRIMARY KEY,
+                periodo_id    bigint      NOT NULL REFERENCES ranking.periodos (id) ON DELETE CASCADE,
+                escopo        varchar(12) NOT NULL,
+                entidade_id   bigint      NOT NULL,
+
+                -- Usuario: dias distintos com login. Orgao/municipio: soma dos
+                -- dias ativos dos usuarios com vinculo aberto na entidade.
+                dias_ativos   integer     NOT NULL DEFAULT 0,
+                atualizado_em timestamptz NOT NULL DEFAULT now(),
+
+                CONSTRAINT ck_ranking_atividade_escopo CHECK (escopo IN ('usuario', 'orgao', 'municipio')),
+                CONSTRAINT ck_ranking_atividade_dias   CHECK (dias_ativos >= 0),
+                CONSTRAINT uq_ranking_atividade UNIQUE (periodo_id, escopo, entidade_id)
+            )
+        SQL);
     }
 
     public function down(): void

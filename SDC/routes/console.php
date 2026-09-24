@@ -32,6 +32,10 @@ if (config('ranking.habilitado', false)) {
     // barato: ~1 mil linhas de origem, quase tudo inalterado ou ignorado.
     Schedule::command('ranking:sincronizar-vinculos')->hourlyAt(50)
         ->onOneServer()->withoutOverlapping(30);
+    // Dias ativos para o desempate. De hora em hora basta: a unidade e o dia.
+    // Aos :55, depois da sincronizacao de vinculos (:50), da qual depende.
+    Schedule::command('ranking:materializar-atividade')->hourlyAt(55)
+        ->onOneServer()->withoutOverlapping(30);
     Schedule::command('ranking:reconcile')->hourly()
         ->onOneServer()->withoutOverlapping(55);
     // 01:15 e nao 01:00: as 01:00 ja rodam o reconcile da hora cheia e o
