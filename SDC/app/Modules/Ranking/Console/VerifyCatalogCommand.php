@@ -72,6 +72,12 @@ class VerifyCatalogCommand extends Command
     private iterable $adaptadores;
 
     /**
+     * Mensagem da excecao que impediu resolver a tag de adaptadores, ou null.
+     * Preenchida so em falha; vira ERRO na auditoria.
+     */
+    private ?string $falhaAoResolverAdaptadores = null;
+
+    /**
      * @param  iterable<ModuleAdapter>  $adaptadores
      */
     public function __construct(iterable $adaptadores = [])
@@ -274,11 +280,16 @@ class VerifyCatalogCommand extends Command
             static fn (array $familia): bool => ! in_array($familia, $familiasEmCorrida, true),
         ));
 
+        $falhaAdaptadores = $this->falhaAoResolverAdaptadores === null
+            ? []
+            : [['erro' => $this->falhaAoResolverAdaptadores]];
+
         $totalErros = count($adaptadorSemRegra)
             + count($habilitadaSemFonte)
             + count($faixasDivergentes)
             + count($modulosSemCobertura)
-            + count($familiasEmCorrida);
+            + count($familiasEmCorrida)
+            + count($falhaAdaptadores);
 
         $totalPendencias = count($marcosSemAdaptador)
             + count($familiasDivergentesLatentes)
@@ -306,6 +317,7 @@ class VerifyCatalogCommand extends Command
                 static fn (array $familia): bool => $familia['compartilhada'],
             )),
             'familias_divergentes' => $familiasDivergentes,
+            'falha_adaptadores' => $falhaAdaptadores,
             'familias_em_corrida' => $familiasEmCorrida,
             'familias_divergentes_latentes' => $familiasDivergentesLatentes,
             'total_erros' => $totalErros,
@@ -554,7 +566,15 @@ class VerifyCatalogCommand extends Command
 
         try {
             return array_values(iterator_to_array($this->getLaravel()->tagged('ranking.adaptadores')));
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // NAO engolir. Um adaptador que nao instancia derruba a resolucao
+            // inteira da tag, e devolver lista vazia em silencio faria a
+            // auditoria concluir "catalogo coerente" exatamente quando ela esta
+            // cega: sem adaptador nenhum, nada contradiz o catalogo e todo
+            // marco vira "pendencia de cobertura". O sintoma que se ve e o
+            // contador cair para zero, sem uma linha de erro explicando.
+            $this->falhaAoResolverAdaptadores = $e->getMessage();
+
             return [];
         }
     }
@@ -628,6 +648,15 @@ class VerifyCatalogCommand extends Command
             array_map(static fn (string $m): array => ['modulo' => $m], $relatorio['modulos_sem_cobertura']),
             ['Modulo'],
             static fn (array $l): array => [$l['modulo']],
+        );
+
+        // Primeiro de todos: se a tag nao resolveu, tudo abaixo esta olhando
+        // para uma lista vazia de adaptadores e nao vale nada.
+        $this->secaoErro(
+            'Falha ao resolver a tag ranking.adaptadores (auditoria cega)',
+            $relatorio['falha_adaptadores'],
+            ['Excecao'],
+            static fn (array $l): array => [$l['erro']],
         );
 
         // Erro so quando a corrida existe de fato: dois adaptadores emitindo
