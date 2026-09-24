@@ -4,13 +4,41 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
+// Despacho do Transactional Outbox. Sem isto nenhum Domain Event sai de
+// outbox_events e nenhum listener roda - o placar congela na ultima projecao.
+//
+// A cada 30s e nao em loop continuo: um processo residente a mais disputaria
+// memoria com as replicas, e o plano admite ate 60s de atraso na atualizacao do
+// placar. --once processa um lote e sai; withoutOverlapping impede duas
+// execucoes simultaneas se um lote demorar mais que o intervalo, e onOneServer
+// garante um unico despachante mesmo com varios schedulers.
+if (config('outbox.agendar_despacho', false)) {
+    Schedule::command('outbox:dispatch --once --batch='.max(1, (int) config('outbox.lote', 100)))
+        // Prazo explicito de 2 min na trava: o padrao do Laravel e 24h. Um
+        // despacho morto por SIGKILL (ja aconteceu, por falta de memoria) pode
+        // nao liberar a trava, e sem prazo o placar congelaria por um dia.
+        ->everyThirtySeconds()->onOneServer()->withoutOverlapping(2);
+}
+
 // O rollout controla somente a agenda: comandos de diagnostico continuam disponiveis.
 if (config('ranking.habilitado', false)) {
     Schedule::command('ranking:materializar-periodos')->dailyAt('00:05')
         ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(30);
+    // De hora em hora, aos :50. O vinculo so vale a partir da sincronizacao que
+    // o abre - nunca se retroage -, entao o intervalo entre rodadas e o tempo
+    // em que usuario recem-lotado pontua em apuracao, ou em que quem trocou de
+    // orgao ainda credita o antigo. Aos :50 para cair antes do reconcile de
+    // hora cheia e, as 00:50, antes do snapshot das 01:00. O trabalho e
+    // barato: ~1 mil linhas de origem, quase tudo inalterado ou ignorado.
+    Schedule::command('ranking:sincronizar-vinculos')->hourlyAt(50)
+        ->onOneServer()->withoutOverlapping(30);
     Schedule::command('ranking:reconcile')->hourly()
         ->onOneServer()->withoutOverlapping(55);
-    Schedule::command('ranking:snapshot')->dailyAt('01:00')
+    // 01:15 e nao 01:00: as 01:00 ja rodam o reconcile da hora cheia e o
+    // despacho do outbox. Um terceiro Laravel filho no mesmo instante e o que
+    // estoura a memoria do scheduler. Continua depois da sincronizacao das
+    // 00:50 e do reconcile das 01:00, que e a ordem que o snapshot exige.
+    Schedule::command('ranking:snapshot')->dailyAt('01:15')
         ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(55);
 }
 

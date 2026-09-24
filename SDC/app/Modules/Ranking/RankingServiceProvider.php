@@ -15,6 +15,7 @@ use App\Modules\Ranking\Adapters\PmdaAdapter;
 use App\Modules\Ranking\Adapters\RatAdapter;
 use App\Modules\Ranking\Adapters\TdapAdapter;
 use App\Modules\Ranking\Console\MaterializarPeriodosCommand;
+use App\Modules\Ranking\Console\SincronizarVinculosCommand;
 use App\Modules\Ranking\Console\RebuildCommand;
 use App\Modules\Ranking\Console\ReconcileCommand;
 use App\Modules\Ranking\Console\SnapshotCommand;
@@ -32,6 +33,7 @@ use App\Modules\Ranking\Services\RecordScoreTransaction;
 use App\Modules\Ranking\Services\RegraVigenteRepository;
 use App\Modules\Ranking\Services\ReverseScoreEntry;
 use App\Modules\Ranking\Services\ScoreCalculator;
+use App\Modules\Ranking\Services\SincronizarVinculos;
 use App\Modules\Ranking\Services\SnapshotPlacar;
 use App\Modules\Rat\Domain\Events\RegistroCompletoV1;
 use App\Modules\Rat\Domain\Events\RelatorioFinalizadoV1;
@@ -86,6 +88,14 @@ class RankingServiceProvider extends ServiceProvider
         $this->app->singleton(RegraVigenteRepository::class);
         $this->app->singleton(ProcessarFatoDoRanking::class);
         $this->app->singleton(PeriodoService::class);
+
+        // Nomes de conexao por construtor, nunca ConnectionInterface por
+        // autowiring: o alias de core resolveria para a base operacional.
+        $this->app->singleton(SincronizarVinculos::class, fn ($app) => new SincronizarVinculos(
+            $app->make(PeriodoService::class),
+            (string) config('ranking.conexao', 'ranking'),
+            (string) config('ranking.conexao_origem', 'ranking_source_ro'),
+        ));
         // A conexao TEM de ser passada explicitamente. Registrados como
         // singleton nu, o autowiring resolvia ConnectionInterface pelo alias de
         // core do Laravel (Application.php: ConnectionInterface -> db.connection),
@@ -155,6 +165,7 @@ class RankingServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 MaterializarPeriodosCommand::class,
+                SincronizarVinculosCommand::class,
                 RebuildCommand::class,
                 ReconcileCommand::class,
                 SnapshotCommand::class,
