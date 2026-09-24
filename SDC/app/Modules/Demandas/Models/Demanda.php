@@ -38,6 +38,7 @@ class Demanda extends Model implements Rastreavel
         'prioridade',
         'solicitante_id',
         'atribuido_para_id',
+        'criado_por_id',
         'grupo_id',
         'categoria',
         'subcategoria',
@@ -96,6 +97,11 @@ class Demanda extends Model implements Rastreavel
     public function atribuidoPara(): BelongsTo
     {
         return $this->belongsTo(User::class, 'atribuido_para_id');
+    }
+
+    public function criadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'criado_por_id');
     }
 
     public function assunto(): BelongsTo
