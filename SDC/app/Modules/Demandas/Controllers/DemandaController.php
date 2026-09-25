@@ -28,6 +28,7 @@ use App\Modules\Demandas\Services\DemandaCsvExporter;
 use App\Modules\Demandas\Services\DemandaInteractionService;
 use App\Modules\Demandas\Services\DemandaStatusService;
 use App\Modules\Demandas\Services\DemandaWriteService;
+use App\Modules\Demandas\Services\ExecutarAutomacaoDemanda;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class DemandaController extends Controller
         private readonly DemandaInteractionService $interactions,
         private readonly DemandaAnexoService $anexos,
         private readonly DemandaCsvExporter $csvExporter,
+        private readonly ExecutarAutomacaoDemanda $automacao,
     ) {}
 
     public function index(Request $request): Response
@@ -227,6 +229,24 @@ class DemandaController extends Controller
         }
 
         return redirect()->back()->with('success', 'Chamado reaberto.');
+    }
+
+    public function automatizar(int $id, Request $request): RedirectResponse
+    {
+        $demanda = $this->repository->findById($id) ?? abort(404);
+        $this->authorize('automatizar', $demanda);
+
+        try {
+            $this->automacao->solicitar($demanda, (int) $request->user()->id);
+        } catch (DomainException $e) {
+            return redirect()->back()->withErrors(['automacao' => $e->getMessage()]);
+        } catch (\Throwable) {
+            // Fila sincrona (dev/teste) propaga a falha do AD; o historico ja
+            // registrou a solicitacao e o estado da demanda nao muda.
+            return redirect()->back()->withErrors(['automacao' => 'O diretório corporativo não respondeu. Tente novamente.']);
+        }
+
+        return redirect()->back()->with('success', 'Automação solicitada. Acompanhe no histórico.');
     }
 
     public function addAttachment(int $id, AnexoDemandaRequest $request): RedirectResponse

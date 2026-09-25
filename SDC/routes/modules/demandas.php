@@ -37,6 +37,11 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->whereNumber('id')
         ->middleware('can:demandas.chamados.resolver');
 
+    Route::post('/demandas/{id}/automacao', [DemandaController::class, 'automatizar'])
+        ->name('demandas.automacao')
+        ->whereNumber('id')
+        ->middleware('can:demandas.chamados.automatizar');
+
     Route::get('/demandas/{id}', [DemandaController::class, 'show'])
         ->name('demandas.show')
         ->whereNumber('id')
