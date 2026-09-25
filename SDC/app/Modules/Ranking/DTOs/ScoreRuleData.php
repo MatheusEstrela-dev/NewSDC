@@ -17,9 +17,19 @@ final readonly class ScoreRuleData
         public bool $exigeValidacao = true,
         public ?DateTimeImmutable $vigenteDesde = null,
         public ?DateTimeImmutable $vigenteAte = null,
+
+        // Percentual de bonus DESTA versao da regra. Nulo cai no padrao do
+        // calculador (config), para regra montada fora do catalogo. Sem este
+        // campo o percentual ajustado no modal era ignorado e o placar
+        // creditava o global de 20%, divergindo do que a tela prometia.
+        public ?int $bonusPercentual = null,
     ) {
         if ($pontosBase < 0) {
             throw new InvalidArgumentException('A pontuacao base nao pode ser negativa.');
+        }
+
+        if ($bonusPercentual !== null && ($bonusPercentual < 0 || $bonusPercentual > 100)) {
+            throw new InvalidArgumentException('O percentual de bonus deve estar entre 0 e 100.');
         }
 
         if ($vigenteDesde !== null && $vigenteAte !== null && $vigenteAte <= $vigenteDesde) {

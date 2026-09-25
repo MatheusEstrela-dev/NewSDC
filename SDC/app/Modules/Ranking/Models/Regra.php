@@ -22,6 +22,7 @@ final class Regra extends RegistroImutavel
         'motivo_desabilitada',
         'vigente_de',
         'vigente_ate',
+        'publicado_por',
         'criado_em',
     ];
 
@@ -35,6 +36,7 @@ final class Regra extends RegistroImutavel
             'habilitada' => 'boolean',
             'vigente_de' => 'immutable_datetime',
             'vigente_ate' => 'immutable_datetime',
+            'publicado_por' => 'integer',
             'criado_em' => 'immutable_datetime',
         ];
     }

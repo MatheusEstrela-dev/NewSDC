@@ -357,7 +357,7 @@ final class SincronizarVinculos
     }
 
     /**
-     * Garante as entidades nos periodos correntes (mes, ano e acumulado).
+     * Garante as entidades nos periodos correntes (mes, trimestre, ano e acumulado).
      *
      * Insercao set-based com insertOrIgnore contra uq_ranking_participantes:
      * participante existente nao e tocado, entao regiao/tipo gravados no
@@ -375,7 +375,7 @@ final class SincronizarVinculos
     {
         $resultado = [];
 
-        // janela(agora, agora) devolve exatamente mes, ano e acumulado do
+        // janela(agora, agora) devolve exatamente mes, trimestre, ano e acumulado do
         // instante: a regra de chave e limites continua so no PeriodoService.
         foreach ($this->periodos->janela($agora, $agora) as $descricao) {
             $periodoId = $seco

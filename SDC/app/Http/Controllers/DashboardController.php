@@ -65,7 +65,7 @@ class DashboardController extends Controller
         try {
             $filtro = new FiltroPlacar(
                 escopo: EscopoPlacar::Usuario,
-                periodoChave: TipoPeriodo::Mes->chave(new DateTimeImmutable()),
+                periodoChave: TipoPeriodo::Trimestre->chave(new DateTimeImmutable()),
                 modulo: 'all',
                 geracao: app(RankingReadService::class)->geracao(),
             );

@@ -71,8 +71,11 @@ class RegraVigenteRepository
         // Instante normalizado em UTC com offset explicito. As colunas sao
         // timestamptz; texto sem fuso deixaria a comparacao a cargo do TimeZone
         // da sessao do Postgres e a fronteira exata da vigencia - justamente o
-        // caso critico - dependeria de configuracao de servidor.
-        $momento = $competencia->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:sP');
+        // caso critico - dependeria de configuracao de servidor. Microssegundos
+        // preservados: a publicacao grava a virada com clock_timestamp(), e
+        // truncar ao segundo faria o fato logo apos a virada cair na versao
+        // ja fechada.
+        $momento = $competencia->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s.uP');
 
         // SELECT * e deliberado: permite ler `exige_validacao` assim que a
         // coluna for adicionada, sem alterar esta consulta.
@@ -101,6 +104,7 @@ class RegraVigenteRepository
                 exigeValidacao: $this->booleano($linha->exige_validacao ?? null, $this->exigeValidacaoPadrao),
                 vigenteDesde: $this->instante($linha->vigente_de ?? null),
                 vigenteAte: $this->instante($linha->vigente_ate ?? null),
+                bonusPercentual: isset($linha->bonus_percentual) ? (int) $linha->bonus_percentual : null,
             ),
         );
     }

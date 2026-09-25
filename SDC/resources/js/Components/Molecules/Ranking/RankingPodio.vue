@@ -13,8 +13,11 @@
       </span>
     </header>
 
-      <ol class="podio__degraus" aria-label="Primeiras posições">
+      <ol class="podio__degraus" :class="{ 'podio__degraus--diamante': liderDiamante }" aria-label="Primeiras posições">
         <li v-for="grupo in grupos" :key="grupo.posicao" class="podio__degrau" :class="[`podio__degrau--${grupo.posicao}`, { 'podio__degrau--vazio': !grupo.total }]">
+          <button v-if="grupo.posicao === 1 && liderDiamante" type="button" class="podio__diamante" title="Rever a conquista Diamante" aria-label="Rever a conquista Diamante" data-podio-diamante @click="$emit('celebrar')">
+            <RankingDiamanteIcone girando :tamanho="64" rotulo="Líder na faixa Diamante" />
+          </button>
           <div class="podio__medalha"><RankingMedalha :posicao="grupo.posicao" /></div>
           <div class="podio__plataforma">
             <div class="mb-4 flex flex-wrap items-center justify-center gap-2">
@@ -70,6 +73,7 @@
 import { computed, ref } from 'vue';
 import RankingFaixaBadge from '@/Components/Atoms/Ranking/RankingFaixaBadge.vue';
 import RankingMedalha from '@/Components/Atoms/Ranking/RankingMedalha.vue';
+import RankingDiamanteIcone from '@/Components/Atoms/Ranking/RankingDiamanteIcone.vue';
 
 const ROTULOS_DE_ESCOPO = { usuario: 'participante', orgao: 'órgão', municipio: 'município' };
 const props = defineProps({
@@ -77,6 +81,7 @@ const props = defineProps({
   escopo: { type: String, default: 'usuario' },
 });
 
+defineEmits(['celebrar']);
 const selecionadoId = ref(null);
 const rotuloDoEscopo = computed(() => ROTULOS_DE_ESCOPO[props.escopo] ?? 'participante');
 // Teto por degrau: empate grande vira "+N empatados", nunca lista.
@@ -91,6 +96,8 @@ const grupos = computed(() => [1, 2, 3]
     const linhas = colocados.value.filter((linha) => linha.posicao === posicao);
     return { posicao, total: linhas.length, visiveis: linhas.slice(0, MAX_POR_DEGRAU), ocultos: Math.max(0, linhas.length - MAX_POR_DEGRAU) };
   }));
+// Diamante e patamar raro: so aparece sobre o ouro quando um lider o alcancou.
+const liderDiamante = computed(() => grupos.value[0].visiveis.some((linha) => linha.faixa === 'diamante'));
 const selecionado = computed(() => colocados.value.find((linha) => linha.entidade_id === selecionadoId.value) ?? colocados.value[0]);
 const pontosDaLideranca = computed(() => Number(colocados.value[0]?.pontos ?? 0));
 const distanciaDaLideranca = computed(() => Math.max(0, pontosDaLideranca.value - Number(selecionado.value?.pontos ?? 0)));
@@ -106,10 +113,17 @@ const identificacao = (colocado) => colocado.rotulo || `#${colocado.entidade_id}
 .podio { position: relative; isolation: isolate; overflow: hidden; }
 .podio::before { content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 0, rgb(245 158 11 / 12%), transparent 65%); }
 .podio__degraus { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin: 28px 0 0; padding: 0; list-style: none; }
-.podio__degrau { --degrau-cor: 245 158 11; min-width: 0; }
+.podio__degrau { --degrau-cor: 245 158 11; position: relative; min-width: 0; }
 .podio__degrau--2 { --degrau-cor: 148 163 184; }
 .podio__degrau--3 { --degrau-cor: 194 120 67; }
 .podio__degrau--vazio .podio__medalha { opacity: .45; }
+/* O diamante fica POR CIMA da medalha, fora do fluxo: no fluxo ele empurrava a
+   plataforma do ouro para baixo da prata, e o 1o lugar deixava de ser o degrau
+   mais alto. O espaco que ele ocupa sai da margem superior do podio. */
+.podio__degraus--diamante { margin-top: 76px; }
+.podio__diamante { position: absolute; z-index: 2; top: -60px; left: 50%; display: flex; transform: translateX(-50%); border-radius: 9999px; cursor: pointer; transition: transform .2s ease; }
+.podio__diamante:hover { transform: translateX(-50%) scale(1.08); }
+.podio__diamante:focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
 .podio__medalha { position: relative; z-index: 1; display: flex; justify-content: center; margin-bottom: -15px; transition: transform .25s ease; }
 .podio__degrau:focus-within .podio__medalha { transform: translateY(-5px) rotate(-3deg); }
 .podio__plataforma { padding: 30px 12px 14px; border: 1px solid rgb(var(--degrau-cor) / 35%); border-top: 3px solid rgb(var(--degrau-cor) / 65%); border-radius: 18px; background: linear-gradient(180deg, rgb(var(--degrau-cor) / 12%), rgb(var(--degrau-cor) / 3%)); }

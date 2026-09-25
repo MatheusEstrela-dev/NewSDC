@@ -12,10 +12,16 @@ use DateTimeZone;
  *
  * Instantes sao persistidos em UTC, mas os limites de calendario sao
  * delimitados em America/Sao_Paulo. Intervalos sao sempre [inicio, fim).
+ *
+ * TRIMESTRE E A TEMPORADA
+ * A competicao corre em temporadas de ~90 dias fixas no calendario (jan-mar,
+ * abr-jun, jul-set, out-dez): tempo para um municipio chegar ao Diamante e
+ * recomeco para todos na virada. Mes e ano seguem como recortes de consulta.
  */
 enum TipoPeriodo: string
 {
     case Mes = 'mes';
+    case Trimestre = 'trimestre';
     case Ano = 'ano';
     case Acumulado = 'acumulado';
 
@@ -23,6 +29,7 @@ enum TipoPeriodo: string
     {
         return match ($this) {
             self::Mes       => 'Mes atual',
+            self::Trimestre => 'Temporada atual',
             self::Ano       => 'Ano atual',
             self::Acumulado => 'Acumulado',
         };
@@ -32,7 +39,7 @@ enum TipoPeriodo: string
 
     /**
      * Chave estavel do periodo, usada em cache e em snapshot.
-     * Ex.: 'mes:2026-09', 'ano:2026', 'acumulado'.
+     * Ex.: 'mes:2026-09', 'trimestre:2026-T3', 'ano:2026', 'acumulado'.
      */
     public function chave(DateTimeImmutable $referencia): string
     {
@@ -40,6 +47,7 @@ enum TipoPeriodo: string
 
         return match ($this) {
             self::Mes       => 'mes:' . $local->format('Y-m'),
+            self::Trimestre => 'trimestre:' . $local->format('Y') . '-T' . self::trimestreDe($local),
             self::Ano       => 'ano:' . $local->format('Y'),
             self::Acumulado => 'acumulado',
         };
@@ -62,12 +70,28 @@ enum TipoPeriodo: string
                 $local->modify('first day of this month')->setTime(0, 0)->setTimezone($utc),
                 $local->modify('first day of next month')->setTime(0, 0)->setTimezone($utc),
             ],
+            self::Trimestre => [
+                $local->setDate((int) $local->format('Y'), self::primeiroMesDoTrimestre($local), 1)->setTime(0, 0)->setTimezone($utc),
+                $local->setDate((int) $local->format('Y'), self::primeiroMesDoTrimestre($local) + 3, 1)->setTime(0, 0)->setTimezone($utc),
+            ],
             self::Ano => [
                 $local->setDate((int) $local->format('Y'), 1, 1)->setTime(0, 0)->setTimezone($utc),
                 $local->setDate((int) $local->format('Y') + 1, 1, 1)->setTime(0, 0)->setTimezone($utc),
             ],
             self::Acumulado => [null, null],
         };
+    }
+
+    /** Trimestre civil (1 a 4) do instante, ja no fuso de calendario. */
+    private static function trimestreDe(DateTimeImmutable $local): int
+    {
+        return intdiv((int) $local->format('n') - 1, 3) + 1;
+    }
+
+    /** Mes (1, 4, 7 ou 10) em que comeca o trimestre do instante. */
+    private static function primeiroMesDoTrimestre(DateTimeImmutable $local): int
+    {
+        return (self::trimestreDe($local) - 1) * 3 + 1;
     }
 
     /**

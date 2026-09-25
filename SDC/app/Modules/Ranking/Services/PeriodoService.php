@@ -198,7 +198,7 @@ final class PeriodoService
                 ));
             }
 
-            foreach ([TipoPeriodo::Mes, TipoPeriodo::Ano] as $tipo) {
+            foreach ([TipoPeriodo::Mes, TipoPeriodo::Trimestre, TipoPeriodo::Ano] as $tipo) {
                 $this->acumularDescricao($descricoes, $tipo, $cursor);
             }
 

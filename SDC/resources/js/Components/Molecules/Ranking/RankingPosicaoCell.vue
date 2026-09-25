@@ -22,8 +22,8 @@
  * e duas linhas seguidas podem trazer "1" -- recalcular aqui (indice da lista,
  * contador local) quebraria o empate e mentiria sobre o resultado.
  *
- * A medalha vem da ordem exibida na primeira pagina, separada da posicao
- * compartilhada por participantes empatados.
+ * A medalha vem da pagina (1, 2 ou 3 conforme a posicao, limitada por degrau);
+ * nula mostra o numero.
  */
 import RankingMedalha from '@/Components/Atoms/Ranking/RankingMedalha.vue';
 

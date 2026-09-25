@@ -39,7 +39,7 @@ class MaterializarPeriodosCommand extends Command
                             {--ate= : ultimo mes da janela (YYYY-MM ou data completa); padrao: mes corrente}
                             {--dry-run : mostra o que seria criado, sem escrever}';
 
-    protected $description = 'Materializa os periodos (mes, ano e acumulado) do ranking para a janela indicada';
+    protected $description = 'Materializa os periodos (mes, trimestre, ano e acumulado) do ranking para a janela indicada';
 
     public function __construct(private readonly PeriodoService $periodos)
     {

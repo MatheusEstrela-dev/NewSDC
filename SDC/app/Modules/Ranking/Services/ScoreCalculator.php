@@ -126,7 +126,9 @@ class ScoreCalculator
             return 0;
         }
 
-        return intdiv($regra->pontosBase * $this->bonusPercentual, 100);
+        // O percentual e da versao da regra vigente na competencia do fato; o
+        // padrao do config so vale para regra sem percentual proprio.
+        return intdiv($regra->pontosBase * ($regra->bonusPercentual ?? $this->bonusPercentual), 100);
     }
 
     private function zero(string $motivo): ScoreDecisionData

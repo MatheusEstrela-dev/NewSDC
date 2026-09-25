@@ -1,5 +1,10 @@
+<script>
+// Estado de modulo: compartilhado por todas as instancias de Modal.
+const pilhaDeModais = [];
+</script>
+
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import { useBloqueioDeRolagem } from '@/Composables/ui/useBloqueioDeRolagem';
 
 const props = defineProps({
@@ -15,6 +20,13 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    // Centraliza na vertical. Padrao false: o alinhamento ao topo, abaixo da
+    // TopBar, e o comportamento de todos os modais existentes. Serve a modal
+    // pequeno aberto por cima de outro, onde colar no topo desalinha.
+    centralizado: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits(['close']);
@@ -29,8 +41,19 @@ const close = () => {
     }
 };
 
+// Pilha dos modais abertos, compartilhada entre instancias. Todos escutam o
+// Escape no document, entao com um modal aberto por cima de outro (ex.: editor
+// de bonus sobre o modal de regras) um unico Escape fechava os dois. Agora so
+// o do topo reage.
+const minhaVez = Symbol('modal');
+watch(() => props.show, (aberto) => {
+    const i = pilhaDeModais.indexOf(minhaVez);
+    if (aberto && i === -1) pilhaDeModais.push(minhaVez);
+    if (!aberto && i !== -1) pilhaDeModais.splice(i, 1);
+}, { immediate: true });
+
 const closeOnEscape = (e) => {
-    if (e.key === 'Escape' && props.show) {
+    if (e.key === 'Escape' && props.show && pilhaDeModais[pilhaDeModais.length - 1] === minhaVez) {
         close();
     }
 };
@@ -39,6 +62,8 @@ onMounted(() => document.addEventListener('keydown', closeOnEscape));
 
 onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape);
+    const i = pilhaDeModais.indexOf(minhaVez);
+    if (i !== -1) pilhaDeModais.splice(i, 1);
 });
 
 const maxWidthClass = computed(() => {
@@ -73,7 +98,8 @@ const maxWidthClass = computed(() => {
             -->
             <div 
                 v-show="show" 
-                class="fixed inset-0 overflow-y-auto overscroll-contain scrollbar-hide px-3 py-4 pt-16 sm:px-0 sm:pt-20" 
+                class="fixed inset-0 overflow-y-auto overscroll-contain scrollbar-hide px-3 py-4 sm:px-0"
+                :class="centralizado ? 'flex items-center justify-center' : 'pt-16 sm:pt-20'"
                 style="z-index: 9999 !important; position: fixed !important; isolation: isolate !important;" 
                 scroll-region
             >

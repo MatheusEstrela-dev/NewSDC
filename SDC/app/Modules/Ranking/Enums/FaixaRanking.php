@@ -39,7 +39,9 @@ enum FaixaRanking: string
             self::Bronze   => 0,
             self::Prata    => 300,
             self::Ouro     => 700,
-            self::Diamante => 1500,
+            // Corte alto de proposito: o placar central e o do municipio, que
+            // soma as entregas de todos os seus usuarios.
+            self::Diamante => 7000,
         };
     }
 
@@ -51,7 +53,7 @@ enum FaixaRanking: string
         return match ($this) {
             self::Bronze   => 299,
             self::Prata    => 699,
-            self::Ouro     => 1499,
+            self::Ouro     => 6999,
             self::Diamante => null,
         };
     }

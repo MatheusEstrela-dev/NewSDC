@@ -126,7 +126,15 @@
 
         <!-- Select de valor no lugar do campo de texto com regex (mes:2026-09). -->
         <FilterField
-          v-if="local.tipoPeriodo === 'mes'"
+          v-if="local.tipoPeriodo === 'trimestre'"
+          label="Temporada"
+          type="select"
+          :model-value="local.trimestre"
+          :options="trimestreOpcoes"
+          @update:model-value="local.trimestre = $event"
+        />
+        <FilterField
+          v-else-if="local.tipoPeriodo === 'mes'"
           label="Mês de competência"
           type="select"
           :model-value="local.mes"
@@ -155,11 +163,24 @@
         </div>
       </FilterSection>
 
+      <!-- Virada de temporada: bandeirada de largada, depois o aviso. -->
+      <RankingBandeirada :show="bandeiradaAberta" :subtitulo="temporada ? rotuloTrimestre(temporada.chave, { comMeses: true }) : ''" @fim="bandeiradaAberta = false" />
+      <RankingNovaTemporada v-if="temporadaExibida" :show="novaTemporadaAberta && !bandeiradaAberta" :temporada="temporadaExibida" :comecou-agora="estreiaTemporada" @fechar="novaTemporadaAberta = false" />
+      <!-- A celebracao de faixa espera o aviso de temporada fechar: um por vez. -->
+      <RankingConquistaFaixa :show="conquistaFaixa !== null && !novaTemporadaAberta && !bandeiradaAberta" :faixa="conquistaFaixa ?? 'diamante'" @fechar="fecharConquistaFaixa" />
+
+      <p v-if="temporada" class="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400" data-temporada-selo>
+        <span class="rounded-full bg-amber-100 px-2.5 py-1 font-bold uppercase tracking-wider text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">Temporada</span>
+        <span class="font-semibold text-slate-700 dark:text-slate-200">{{ rotuloTrimestre(temporada.chave, { comMeses: true }) }}</span>
+        <span>· {{ diaMes(temporada.inicio) }} a {{ diaMes(temporada.fim) }} · faltam {{ numero(temporada.dias_restantes) }} dias</span>
+      </p>
+
       <RankingPodio
         v-if="placar"
         class="mb-6"
         :linhas="podioLinhas"
         :escopo="filtros.escopo"
+        @celebrar="conquistaFaixa = 'diamante'"
       />
 
       <section v-if="placar" class="mb-6" aria-label="Classificação estadual">
@@ -175,6 +196,7 @@
               <tr>
                 <th class="w-24 px-4 py-3 text-left">Posição</th>
                 <th class="px-4 py-3 text-left">Participante</th>
+                <th v-for="kpi in KPIS_PLACAR" :key="kpi.chave" class="whitespace-nowrap px-4 py-3" :class="kpi.alinhar" :title="kpi.ajuda">{{ kpi.titulo }}</th>
                 <th class="px-4 py-3 text-right">Pontos</th>
                 <th class="px-4 py-3 text-left">Faixa</th>
               </tr>
@@ -182,17 +204,19 @@
             <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
               <template v-for="linha in placarLinhas" :key="linha.entidade_id">
               <tr v-if="linha.corteFaixa" class="bg-slate-50 dark:bg-slate-800/60" data-corte-faixa>
-                <td colspan="4" class="px-4 py-2">
-                  <RankingFaixaCorte :faixa="linha.faixa" :limiares="faixas" />
+                <td :colspan="COLUNAS_PLACAR" class="px-4 py-2">
+                  <RankingFaixaCorte :faixa="linha.faixa" :limiares="faixas" alinhar-colunas />
                 </td>
               </tr>
               <tr class="table-row-solid transition">
                 <td class="px-4 py-4">
                   <RankingPosicaoCell :posicao="linha.posicao" :medalha="linha.medalha" destacar-topo />
                 </td>
-                <td class="px-4 py-4 text-slate-700 dark:text-slate-300">
+                <td class="px-4 py-4" :class="corDoNome(linha)">
                   {{ rotuloParticipante(linha) }}
-                  <span v-if="linha.dias_ativos != null" class="block text-xs text-slate-500 dark:text-slate-400">{{ rotuloDiasAtivos(linha.dias_ativos) }}</span>
+                </td>
+                <td v-for="kpi in KPIS_PLACAR" :key="kpi.chave" class="whitespace-nowrap px-4 py-4 tabular-nums text-slate-600 dark:text-slate-300" :class="kpi.alinhar">
+                  {{ kpi.valor(linha) }}
                 </td>
                 <td class="whitespace-nowrap px-4 py-4 text-right font-semibold text-slate-900 dark:text-slate-100">
                   {{ numero(linha.pontos) }}
@@ -201,10 +225,19 @@
                   <RankingFaixaBadge :faixa="linha.faixa" />
                 </td>
               </tr>
+              <tr v-if="linha.fimDoPodio" aria-hidden="true" data-fim-podio>
+                <td :colspan="COLUNAS_PLACAR" class="px-4 py-1.5">
+                  <div class="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    <span class="h-px flex-1 bg-gradient-to-r from-transparent to-slate-300 dark:to-slate-600" />
+                    Demais colocados
+                    <span class="h-px flex-1 bg-gradient-to-l from-transparent to-slate-300 dark:to-slate-600" />
+                  </div>
+                </td>
+              </tr>
               </template>
 
               <tr v-if="placarLinhas.length === 0">
-                <td colspan="4" class="px-4 py-12 text-center">
+                <td :colspan="COLUNAS_PLACAR" class="px-4 py-12 text-center">
                   <ClipboardDocumentListIcon class="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
                   <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum participante neste recorte</p>
                   <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste a visão, o período ou o módulo.</p>
@@ -231,14 +264,19 @@
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <RankingPosicaoCell :posicao="linha.posicao" :medalha="linha.medalha" destacar-topo />
-                <p class="mt-2 truncate text-sm text-slate-700 dark:text-slate-300">{{ rotuloParticipante(linha) }}</p>
-                <p v-if="linha.dias_ativos != null" class="text-xs text-slate-500 dark:text-slate-400">{{ rotuloDiasAtivos(linha.dias_ativos) }}</p>
+                <p class="mt-2 truncate text-sm" :class="corDoNome(linha)">{{ rotuloParticipante(linha) }}</p>
               </div>
               <div class="shrink-0 text-right">
                 <p class="text-lg font-bold text-slate-900 dark:text-slate-100">{{ numero(linha.pontos) }}</p>
                 <p class="text-xs text-slate-500 dark:text-slate-400">pontos</p>
               </div>
             </div>
+            <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div v-for="kpi in KPIS_PLACAR" :key="kpi.chave">
+                <dt class="text-slate-500 dark:text-slate-400">{{ kpi.titulo }}</dt>
+                <dd class="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{{ kpi.valor(linha) }}</dd>
+              </div>
+            </dl>
             <div class="mt-3">
               <RankingFaixaBadge :faixa="linha.faixa" />
             </div>
@@ -356,7 +394,7 @@
 
     </template>
 
-    <RankingRegrasModal :show="regrasAbertas" :regras="regras" :pode-gerenciar="podeGerenciarRegras" :salvando="regraSalvando" @alternar="alternarRegra" @close="regrasAbertas = false" />
+    <RankingRegrasModal :show="regrasAbertas" :regras="regras" :pode-gerenciar="podeGerenciarRegras" :salvando="regraSalvando" :erros="regraErros" :teto="tetoLancamento" @alternar="alternarRegra" @salvar-regra="atualizarRegra" @close="regrasAbertas = false" />
 
     <footer class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-300">
       <p>{{ cobertura }}</p>
@@ -368,7 +406,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { BookOpenIcon } from '@heroicons/vue/24/outline';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -385,6 +423,10 @@ import RankingPosicaoCell from '@/Components/Molecules/Ranking/RankingPosicaoCel
 import RankingPodio from '@/Components/Molecules/Ranking/RankingPodio.vue';
 import RankingFaixaCorte from '@/Components/Molecules/Ranking/RankingFaixaCorte.vue';
 import RankingRegrasModal from '@/Components/Organisms/Ranking/RankingRegrasModal.vue';
+import RankingConquistaFaixa from '@/Components/Organisms/Ranking/RankingConquistaFaixa.vue';
+import RankingNovaTemporada from '@/Components/Organisms/Ranking/RankingNovaTemporada.vue';
+import RankingBandeirada from '@/Components/Organisms/Ranking/RankingBandeirada.vue';
+import { chaveTrimestre, diaMes, partesTrimestre, rotuloTrimestre, trimestresRecentes } from '@/Support/rankingTemporada';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
@@ -411,24 +453,35 @@ const props = defineProps({
   preview: { type: Boolean, default: false },
   // Limiares de config('ranking.faixas'); sem ela o corte usa o fallback local.
   faixas: { type: Object, default: null },
+  // Temporada corrente (trimestre) e o resultado do usuario na anterior.
+  temporada: { type: Object, default: null },
+  tetoLancamento: { type: Number, default: 500 },
   podeGerenciarRegras: { type: Boolean, default: false },
 });
 
 const POR_PAGINA_PLACAR = 25;
 const regrasAbertas = ref(false);
 const regraSalvando = ref('');
+// Erros de validacao por rule_key: cada card mostra so os seus.
+const regraErros = ref({});
 
-function alternarRegra(regra) {
+// Sempre a versao vigente: o backend publica a nova versao a cada alteracao.
+function atualizarRegra(regra, corpo, aoConcluir = null) {
   if (regraSalvando.value || !props.podeGerenciarRegras) return;
-  regraSalvando.value = `${regra.rule_key}-${regra.versao}`;
-  router.patch(`${route('ranking.index')}/regras/${encodeURIComponent(regra.rule_key)}/${regra.versao}`, {
-    habilitada: !regra.habilitada,
-  }, {
+  regraSalvando.value = regra.rule_key;
+  regraErros.value = { ...regraErros.value, [regra.rule_key]: {} };
+  router.patch(route('ranking.regras.atualizar', regra.rule_key), corpo, {
     preserveState: true,
     preserveScroll: true,
     only: ['regras'],
+    onSuccess: () => { aoConcluir?.(); },
+    onError: (erros) => { regraErros.value = { ...regraErros.value, [regra.rule_key]: erros }; },
     onFinish: () => { regraSalvando.value = ''; },
   });
+}
+
+function alternarRegra(regra) {
+  atualizarRegra(regra, { habilitada: !regra.habilitada });
 }
 
 const DECISOES = {
@@ -469,6 +522,16 @@ function rotuloDecisao(decisao) {
   return DECISOES[decisao] ?? decisao ?? '—';
 }
 
+// Nome do medalhista na cor do metal da medalha; demais no tom neutro.
+const CORES_DO_NOME = {
+  1: 'font-semibold text-amber-600 dark:text-amber-400',
+  2: 'font-semibold text-slate-500 dark:text-slate-300',
+  3: 'font-semibold text-orange-700 dark:text-orange-400',
+};
+function corDoNome(linha) {
+  return CORES_DO_NOME[linha?.medalha] ?? 'text-slate-700 dark:text-slate-300';
+}
+
 function rotuloParticipante(linha) {
   if (linha?.rotulo) return linha.rotulo;
   const prefixo = ESCOPO_SINGULAR[props.filtros?.escopo] ?? 'Participante';
@@ -479,12 +542,14 @@ function rotuloParticipante(linha) {
 // 'ano:2026'). Na tela ela vira dois selects e volta a ser string no envio.
 function separarPeriodo(chave) {
   const valor = String(chave ?? '');
+  if (partesTrimestre(valor)) return { tipo: 'trimestre', trimestre: valor, mes: '', ano: valor.slice(10, 14) };
   if (valor.startsWith('mes:')) return { tipo: 'mes', mes: valor.slice(4), ano: valor.slice(4, 8) };
   if (valor.startsWith('ano:')) return { tipo: 'ano', mes: '', ano: valor.slice(4) };
   return { tipo: 'acumulado', mes: '', ano: '' };
 }
 
 function juntarPeriodo(estado) {
+  if (estado.tipoPeriodo === 'trimestre' && estado.trimestre) return estado.trimestre;
   if (estado.tipoPeriodo === 'mes' && estado.mes) return `mes:${estado.mes}`;
   if (estado.tipoPeriodo === 'ano' && estado.ano) return `ano:${estado.ano}`;
   return 'acumulado';
@@ -508,6 +573,7 @@ const local = reactive({
   tipoPeriodo: inicial.tipo,
   mes: inicial.mes || mesCorrente,
   ano: inicial.ano || String(agora.getFullYear()),
+  trimestre: inicial.trimestre || chaveTrimestre(agora),
 });
 
 // Volta do servidor com preserveState: o estado local precisa refletir o recorte
@@ -522,6 +588,7 @@ watch(
     local.tipoPeriodo = partes.tipo;
     if (partes.mes) local.mes = partes.mes;
     if (partes.ano) local.ano = partes.ano;
+    if (partes.trimestre) local.trimestre = partes.trimestre;
   },
   { deep: true },
 );
@@ -536,6 +603,7 @@ const escopoOpcoes = computed(() => {
 });
 
 const tipoPeriodoOpcoes = [
+  { value: 'trimestre', label: 'Temporada (trimestre)' },
   { value: 'mes', label: 'Mês' },
   { value: 'ano', label: 'Ano' },
   { value: 'acumulado', label: 'Acumulado' },
@@ -559,6 +627,13 @@ const mesOpcoes = computed(() => {
   return chaves.map((chave) => ({ value: chave, label: rotuloMes(chave) }));
 });
 
+// 8 temporadas para tras; a que veio do servidor entra mesmo fora da janela.
+const trimestreOpcoes = computed(() => {
+  const chaves = trimestresRecentes(8, agora);
+  if (local.trimestre && !chaves.includes(local.trimestre)) chaves.unshift(local.trimestre);
+  return chaves.map((chave) => ({ value: chave, label: rotuloTrimestre(chave, { comMeses: true }) }));
+});
+
 const anoOpcoes = computed(() => {
   const anos = [];
   for (let i = 0; i < 6; i += 1) anos.push(String(agora.getFullYear() - i));
@@ -571,25 +646,143 @@ const faixaTexto = computed(() => FAIXAS[props.resumo?.faixa] ?? 'Em apuração'
 
 // corteFaixa marca a primeira linha de cada faixa na pagina: a tela desenha o
 // cabecalho do grupo (Diamante > Ouro > Prata > Bronze) antes dela.
-const placarLinhas = computed(() => (props.placar?.linhas ?? []).map((linha, indice, linhas) => ({
-  ...linha,
-  corteFaixa: indice === 0 || linhas[indice - 1]?.faixa !== linha.faixa,
-  // Medalha so para os tres primeiros exibidos E com pontos: mesma regra do
-  // podio. Sem o corte em pontos, participante com zero herdaria prata ou
-  // bronze so por ordem de desempate.
-  medalha: (props.placar?.pagina ?? 1) === 1 && indice < 3 && Number(linha.pontos) > 0 ? indice + 1 : null,
-})));
+// fimDoPodio marca a ultima linha medalhada seguida de nao medalhada na mesma
+// faixa: a tela separa os medalhistas dos demais colocados.
+const placarLinhas = computed(() => {
+  const linhas = props.placar?.linhas ?? [];
+  const medalhas = linhas.map((linha, indice) => medalhaDaLinha(linha, indice, linhas));
+  return linhas.map((linha, indice) => ({
+    ...linha,
+    corteFaixa: (indice === 0 || linhas[indice - 1]?.faixa !== linha.faixa) && String(linha.faixa || '').toLowerCase() !== 'bronze',
+    medalha: medalhas[indice],
+    fimDoPodio: medalhas[indice] !== null && indice + 1 < linhas.length
+      && medalhas[indice + 1] === null && linhas[indice + 1].faixa === linha.faixa,
+  }));
+});
 
-function rotuloDiasAtivos(dias) {
-  const total = Number(dias ?? 0);
-  return `${numero(total)} ${total === 1 ? 'dia ativo' : 'dias ativos'}`;
+// Medalha pela POSICAO (1, 2 e 3), nao pela ordem da linha: empatado divide a
+// medalha em vez de um 2o levar bronze. Mesmo limite do podio - no maximo tres
+// por degrau - para um empate largo nao encher a tabela de medalhas.
+const MEDALHAS_POR_DEGRAU = 3;
+function medalhaDaLinha(linha, indice, linhas) {
+  const posicao = Number(linha.posicao);
+  if ((props.placar?.pagina ?? 1) !== 1 || posicao < 1 || posicao > 3) return null;
+  const anteriores = linhas.slice(0, indice).filter((outra) => Number(outra.posicao) === posicao).length;
+  return anteriores < MEDALHAS_POR_DEGRAU ? posicao : null;
+}
+
+// Colunas de indicadores da classificacao: uma definicao para tabela e card.
+const formatadorData = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
+const KPIS_PLACAR = [
+  { chave: 'dias', titulo: 'Dias ativos', alinhar: 'text-right', ajuda: 'Dias distintos com acesso ao sistema no período; desempata pontos iguais.', valor: (l) => numero(l.dias_ativos) },
+  { chave: 'entregas', titulo: 'Entregas', alinhar: 'text-right', ajuda: 'Entregas pontuadas no período.', valor: (l) => numero(l.entregas) },
+  { chave: 'prazo', titulo: 'No prazo', alinhar: 'text-right', ajuda: 'Parcela das entregas feitas dentro do prazo (com bônus).', valor: (l) => (Number(l.entregas) > 0 ? `${Math.round((Number(l.entregas_no_prazo) / Number(l.entregas)) * 100)}%` : '—') },
+  { chave: 'ultima', titulo: 'Última entrega', alinhar: 'text-left', ajuda: 'Data da entrega pontuada mais recente no período.', valor: (l) => dataCurta(l.ultima_entrega_em) },
+];
+// Posicao + participante + indicadores + pontos + faixa.
+const COLUNAS_PLACAR = KPIS_PLACAR.length + 4;
+
+function dataCurta(valor) {
+  if (!valor) return '—';
+  const data = new Date(valor);
+  return Number.isNaN(data.getTime()) ? '—' : formatadorData.format(data);
 }
 const extratoLinhas = computed(() => props.extrato?.data ?? []);
 
-const podioLinhas = computed(() => props.podio.map((linha) => ({
+// PREVIA TEMPORARIA (remover apos validacao do design): ?previa=<faixa>, so
+// para admin, encena a celebracao da faixa (bronze|prata|ouro|diamante); com
+// diamante poe tambem o lider do podio na faixa Diamante.
+const ORDEM_FAIXAS = ['bronze', 'prata', 'ouro', 'diamante'];
+const previaFaixa = (() => {
+  if (typeof window === 'undefined' || !props.podeGerenciarRegras) return null;
+  const pedida = new URLSearchParams(window.location.search).get('previa');
+  return ORDEM_FAIXAS.includes(pedida) ? pedida : null;
+})();
+const previaTemporada = typeof window !== 'undefined' && props.podeGerenciarRegras
+  && new URLSearchParams(window.location.search).get('previa') === 'temporada';
+
+// Aviso de nova temporada: uma vez por usuario e temporada, marcado ao
+// aparecer. So quando ha o que contar - resultado na anterior - ou nas duas
+// primeiras semanas da rodada; fora disso seria um pop-up sem novidade.
+const DIAS_DE_ESTREIA = 15;
+const novaTemporadaAberta = ref(false);
+const bandeiradaAberta = ref(false);
+// Estreia = primeiras duas semanas da rodada. A previa simula a virada.
+const estreiaTemporada = (() => {
+  if (previaTemporada) return true;
+  const inicio = new Date(`${props.temporada?.inicio}T00:00:00`);
+  return !Number.isNaN(inicio.getTime()) && (Date.now() - inicio.getTime()) / 86400000 <= DIAS_DE_ESTREIA;
+})();
+// Na previa, sem resultado real anterior, usa o resumo atual como exemplo.
+const temporadaExibida = computed(() => {
+  if (!props.temporada) return null;
+  if (!previaTemporada || props.temporada.anterior) return props.temporada;
+  return { ...props.temporada, anterior: { chave: 'trimestre:2026-T2', pontos: props.resumo?.pontos ?? 1789, posicao: props.resumo?.posicao ?? 10, faixa: props.resumo?.faixa ?? 'ouro' } };
+});
+(() => {
+  const temporada = props.temporada;
+  if (!temporada) return;
+  if (previaTemporada) {
+    bandeiradaAberta.value = true;
+    novaTemporadaAberta.value = true;
+    return;
+  }
+  const chave = `ranking:temporada-vista:${usePage().props.auth?.user?.id ?? 'anon'}:${temporada.chave}`;
+  if (!temporada.anterior && !estreiaTemporada) return;
+  try {
+    if (window.localStorage.getItem(chave) === '1') return;
+    window.localStorage.setItem(chave, '1');
+  } catch { /* sem storage: repete na proxima visita */ }
+  // A bandeirada so larga na estreia; no meio da rodada vai direto ao aviso.
+  bandeiradaAberta.value = estreiaTemporada;
+  novaTemporadaAberta.value = true;
+})();
+
+const podioLinhas = computed(() => props.podio.map((linha, indice) => ({
   ...linha,
   rotulo: rotuloParticipante(linha),
+  ...(previaFaixa === 'diamante' && indice === 0 ? { faixa: 'diamante' } : {}),
 })));
+
+// Celebracao de subida de faixa: so quando o PROPRIO usuario sobe (visao "Meu
+// placar"; em orgao/municipio a faixa e da entidade, nao dele), uma vez por
+// faixa e periodo. Bronze so conta com pontos: saldo zero tambem e "bronze" e
+// nao e conquista. Quem ja chega numa faixa alta ve so ela, e as de baixo ficam
+// marcadas: subir de Prata para Ouro nao reapresenta a Prata.
+//
+// Marcada como vista ao APARECER, nao ao fechar: recarregar no meio da animacao
+// nao a repete. Lembrada neste navegador; storage indisponivel (aba anonima,
+// bloqueio) apenas faz repetir - nunca quebra a pagina.
+const conquistaFaixa = ref(null);
+const prefixoConquista = computed(() => `ranking:faixa-vista:${usePage().props.auth?.user?.id ?? 'anon'}:${props.filtros?.periodo}`);
+function conquistaJaVista(faixa) {
+  try {
+    if (window.localStorage.getItem(`${prefixoConquista.value}:${faixa}`) === '1') return true;
+    // Chave da versao so-Diamante: quem ja viu nao ve de novo.
+    return faixa === 'diamante'
+      && window.localStorage.getItem(`ranking:diamante-visto:${usePage().props.auth?.user?.id ?? 'anon'}:${props.filtros?.periodo}`) === '1';
+  } catch { return false; }
+}
+function marcarAte(faixa) {
+  try {
+    ORDEM_FAIXAS.slice(0, ORDEM_FAIXAS.indexOf(faixa) + 1)
+      .forEach((f) => window.localStorage.setItem(`${prefixoConquista.value}:${f}`, '1'));
+  } catch { /* sem storage: repete na proxima visita */ }
+}
+function fecharConquistaFaixa() {
+  conquistaFaixa.value = null;
+}
+watch(() => [props.resumo?.faixa, props.resumo?.pontos, props.filtros?.escopo, prefixoConquista.value], ([faixa, pontos, escopo]) => {
+  if (previaFaixa) {
+    conquistaFaixa.value = previaFaixa;
+    return;
+  }
+  if (escopo !== 'usuario' || !ORDEM_FAIXAS.includes(faixa)) return;
+  if (faixa === 'bronze' && Number(pontos ?? 0) <= 0) return;
+  if (conquistaJaVista(faixa)) return;
+  marcarAte(faixa);
+  conquistaFaixa.value = faixa;
+}, { immediate: true });
 
 const paginacaoPlacar = computed(() => {
   if (!props.placar) return null;
@@ -644,7 +837,8 @@ function aplicar() {
 function limpar() {
   local.escopo = 'usuario';
   local.modulo = 'all';
-  local.tipoPeriodo = 'mes';
+  local.tipoPeriodo = 'trimestre';
+  local.trimestre = chaveTrimestre(agora);
   local.mes = mesCorrente;
   local.ano = String(agora.getFullYear());
   navegar({ pagina: 1, extrato_pagina: 1 });

@@ -1,5 +1,5 @@
 <template>
-  <span class="medalha" :class="[`medalha--${posicao}`, { 'medalha--compacta': compacta }]" role="img" :aria-label="`${posicao}º lugar — medalha de ${metais[posicao] ?? 'participação'}`">
+  <span class="medalha" :class="[`medalha--${posicao}`, { 'medalha--compacta': compacta }]" role="img" :aria-label="semNumero ? `Medalha de ${metais[posicao] ?? 'participação'}` : `${posicao}º lugar — medalha de ${metais[posicao] ?? 'participação'}`">
     <span class="medalha__fita" aria-hidden="true" />
     <span class="medalha__disco" aria-hidden="true">
       <svg class="medalha__coroa" viewBox="0 0 40 24" fill="currentColor">
@@ -9,7 +9,8 @@
       <svg class="medalha__louros" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M37 81C17 70 13 49 24 30M25 67l-10-4m8-7-10-7m10-5-7-9m12 38-1-11m-5-7 6-8m-5-5 7-8M63 81c20-11 24-32 13-51M75 67l10-4m-8-7 10-7m-10-5 7-9m-12 38 1-11m5-7-6-8m5-5-7-8" />
       </svg>
-      <span class="medalha__numero">{{ posicao }}</span>
+      <svg v-if="semNumero" class="medalha__simbolo" viewBox="0 0 20 20" fill="currentColor"><path d="m10 1 2.6 5.6 6.1.7-4.5 4.2 1.2 6L10 14.6l-5.4 2.9 1.2-6L1.3 7.3l6.1-.7Z" /></svg>
+      <span v-else class="medalha__numero">{{ posicao }}</span>
       <svg class="medalha__estrela" viewBox="0 0 20 20" fill="currentColor"><path d="m10 1 2.5 6.5L19 10l-6.5 2.5L10 19l-2.5-6.5L1 10l6.5-2.5Z" /></svg>
     </span>
   </span>
@@ -19,6 +20,9 @@
 defineProps({
   posicao: { type: Number, required: true },
   compacta: { type: Boolean, default: false },
+  // Medalha de FAIXA (celebracao de conquista): estrela no lugar do numero,
+  // que na tabela e no podio indica posicao.
+  semNumero: { type: Boolean, default: false },
 });
 const metais = { 1: 'ouro', 2: 'prata', 3: 'bronze' };
 </script>
@@ -46,6 +50,7 @@ const metais = { 1: 'ouro', 2: 'prata', 3: 'bronze' };
 .medalha__louros { position: absolute; inset: 0; width: 100%; opacity: .7; }
 .medalha__numero { margin-top: 9%; font-size: 40px; font-weight: 900; line-height: 1; text-shadow: 0 1px var(--metal-claro); }
 .medalha__estrela { position: absolute; bottom: 10%; width: 12px; }
+.medalha__simbolo { width: 42px; margin-top: 9%; filter: drop-shadow(0 1px var(--metal-claro)); }
 .medalha--compacta { width: 34px; height: 40px; filter: none; }
 .medalha--compacta .medalha__disco { border-width: 1px; box-shadow: inset 0 0 0 1px var(--metal-claro), inset 0 0 0 3px var(--metal); }
 .medalha--compacta .medalha__numero { margin-top: 0; font-size: 17px; }

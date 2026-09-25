@@ -64,12 +64,20 @@ final class RankingReadService
             ], 'extrato_pagina', $pagina)->toArray();
     }
 
+    /**
+     * So a versao vigente de cada rule_key: versoes fechadas sao historico de
+     * auditoria e, listadas juntas, apareciam como regras duplicadas no modal.
+     * `bonus_pontos` e o que o bonus rende quando aceito, com a mesma divisao
+     * truncada do ScoreCalculator.
+     */
     public function regras(): array
     {
-        return $this->conexao()->table('ranking.regras')->orderBy('modulo')->orderBy('rule_key')
-            ->orderByDesc('versao')->limit(500)->get([
+        return $this->conexao()->table('ranking.regras')->whereNull('vigente_ate')
+            ->orderBy('modulo')->orderBy('rule_key')->limit(500)->get([
                 'rule_key', 'versao', 'modulo', 'familia', 'pontos_base', 'bonus_percentual',
                 'aceita_bonus', 'habilitada', 'motivo_desabilitada', 'vigente_de', 'vigente_ate',
-            ])->map(static fn (object $regra): array => (array) $regra)->all();
+            ])->map(static fn (object $regra): array => (array) $regra + [
+                'bonus_pontos' => intdiv((int) $regra->pontos_base * (int) $regra->bonus_percentual, 100),
+            ])->all();
     }
 }

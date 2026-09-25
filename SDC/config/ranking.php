@@ -54,8 +54,8 @@ return [
     'faixas' => [
         FaixaRanking::Bronze->value => ['min' => 0, 'max' => 299],
         FaixaRanking::Prata->value => ['min' => 300, 'max' => 699],
-        FaixaRanking::Ouro->value => ['min' => 700, 'max' => 1499],
-        FaixaRanking::Diamante->value => ['min' => 1500, 'max' => null],
+        FaixaRanking::Ouro->value => ['min' => 700, 'max' => 6999],
+        FaixaRanking::Diamante->value => ['min' => 7000, 'max' => null],
     ],
 
     'placar' => [

@@ -86,6 +86,11 @@ return new class extends Migration
 
                 vigente_de          timestamptz  NOT NULL,
                 vigente_ate         timestamptz  NULL,
+
+                -- Autor da publicacao (users.id da base operacional, sem FK
+                -- pelo mesmo motivo do cabecalho). Nulo na carga inicial do
+                -- catalogo, que nao tem autor humano.
+                publicado_por       bigint       NULL,
                 criado_em           timestamptz  NOT NULL DEFAULT now(),
 
                 CONSTRAINT ck_ranking_regras_pontos CHECK (pontos_base >= 0),
@@ -229,7 +234,7 @@ return new class extends Migration
                 inicia_em   timestamptz NULL,
                 termina_em  timestamptz NULL,
 
-                CONSTRAINT ck_ranking_periodos_tipo CHECK (tipo IN ('mes', 'ano', 'acumulado')),
+                CONSTRAINT ck_ranking_periodos_tipo CHECK (tipo IN ('mes', 'trimestre', 'ano', 'acumulado')),
                 CONSTRAINT uq_ranking_periodos_chave UNIQUE (chave)
             )
         SQL);
