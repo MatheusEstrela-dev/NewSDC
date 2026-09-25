@@ -332,6 +332,33 @@ export function useBreadcrumb() {
      * Fica fora do `breadcrumbMap` pelo mesmo motivo do Cisterna: os rotulos
      * dependem das PROPS da pagina, e o mapa e estatico.
      */
+    // Resgate vive dentro do Ranking (/ranking/resgate/...): sem trilha propria
+    // o fallback derivava "Resgate > Unidade Nova" do nome do componente,
+    // pulando o placar e o catalogo e sem link de volta correto.
+    const trilhaResgate = (componentName, props) => {
+        if (!componentName.startsWith('Resgate/')) {
+            return null;
+        }
+
+        const inicio = { label: 'Início', route: 'dashboard' };
+        const ranking = { label: 'Ranking', route: 'ranking.index' };
+        const catalogo = { label: 'Catálogo de prêmios', route: 'resgate.catalogo' };
+        const propostas = { label: 'Propostas', route: 'resgate.catalogo.propostas' };
+        const aqui = (label) => ({ label, route: null });
+        const item = props?.item ?? null;
+
+        const trilhas = {
+            'Resgate/Carteira': [inicio, ranking, aqui('Carteira de resgate')],
+            'Resgate/Catalogo': [inicio, ranking, aqui('Catálogo de prêmios')],
+            'Resgate/Propostas': [inicio, ranking, catalogo, aqui('Propostas')],
+            'Resgate/PropostaNova': [inicio, ranking, catalogo, propostas, aqui(item ? `Mudança em ${item.titulo}` : 'Novo item')],
+            // O item nao tem pagina propria: aparece como degrau sem link.
+            'Resgate/UnidadeNova': [inicio, ranking, catalogo, ...(item ? [aqui(item.titulo)] : []), aqui('Cadastrar unidade')],
+        };
+
+        return trilhas[componentName] ?? null;
+    };
+
     const trilhaTdap = (componentName, props) => {
         if (!componentName.startsWith('Tdap/')) {
             return null;
@@ -451,6 +478,12 @@ export function useBreadcrumb() {
 
         if (doTdap) {
             return doTdap;
+        }
+
+        const doResgate = trilhaResgate(componentName, propsDaPagina);
+
+        if (doResgate) {
+            return doResgate;
         }
 
         if (breadcrumbMap[componentName]) {

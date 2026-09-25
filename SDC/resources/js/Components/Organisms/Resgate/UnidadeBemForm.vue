@@ -1,10 +1,6 @@
 <template>
   <section class="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
     <form class="space-y-4 p-6" data-unidade-bem @submit.prevent="enviar">
-      <header>
-        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Cadastrar unidade · {{ item?.titulo }}</h2>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Cada unidade é um bem físico com patrimônio próprio. Não pode ser apagada; sai do catálogo por baixa.</p>
-      </header>
       <div class="grid gap-4 sm:grid-cols-2">
         <FormField v-model="form.patrimonio" label="Patrimônio" required :error="form.errors.patrimonio" />
         <FormField v-model="form.numero_serie" label="Número de série" :error="form.errors.numero_serie" />

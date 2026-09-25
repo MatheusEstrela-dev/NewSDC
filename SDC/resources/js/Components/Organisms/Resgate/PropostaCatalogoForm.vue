@@ -1,12 +1,6 @@
 <template>
   <section class="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
     <form class="space-y-4 p-6" data-proposta-catalogo @submit.prevent="enviar">
-      <header>
-        <h2 class="text-lg font-bold text-slate-900 dark:text-white">{{ item ? `Propor mudança em ${item.codigo}` : 'Propor novo item' }}</h2>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          A proposta só entra no catálogo depois de aprovada por <strong>outra pessoa</strong>. Tudo fica registrado com autor, data e IP.
-        </p>
-      </header>
 
       <div class="grid gap-4 sm:grid-cols-2">
         <FormSelect v-if="item" v-model="form.acao" label="O que fazer" :options="acoesDoItem" required :error="form.errors.acao" />
