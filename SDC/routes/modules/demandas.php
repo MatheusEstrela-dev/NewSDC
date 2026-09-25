@@ -18,8 +18,19 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->name('demandas.store')
         ->middleware('can:demandas.chamados.create');
 
+    Route::post('/demandas/{id}/resolver', [DemandaController::class, 'resolver'])
+        ->name('demandas.resolver')
+        ->whereNumber('id')
+        ->middleware('can:demandas.chamados.resolver');
+
+    Route::post('/demandas/{id}/reabrir', [DemandaController::class, 'reabrir'])
+        ->name('demandas.reabrir')
+        ->whereNumber('id')
+        ->middleware('can:demandas.chamados.resolver');
+
     Route::get('/demandas/{id}', [DemandaController::class, 'show'])
         ->name('demandas.show')
+        ->whereNumber('id')
         ->middleware('can:demandas.chamados.view');
 
     Route::post('/demandas/{id}/comentarios', [DemandaController::class, 'addComment'])
@@ -30,8 +41,9 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->name('demandas.attachments.store')
         ->middleware('can:demandas.chamados.view');
 
-    Route::get('/demandas/{id}/anexos/{anexo}', [DemandaController::class, 'downloadAttachment'])
+    Route::get('/demandas/{id}/anexos/{anexoId}', [DemandaController::class, 'downloadAttachment'])
         ->name('demandas.attachments.download')
+        ->whereNumber('anexoId')
         ->middleware('can:demandas.chamados.view');
 
     Route::prefix('admin/demandas')->name('admin.demandas.')->group(function () {

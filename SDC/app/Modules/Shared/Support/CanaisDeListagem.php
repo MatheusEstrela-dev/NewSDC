@@ -45,6 +45,10 @@ final class CanaisDeListagem
 
         // routes/modules/pmda.php -> can:pmda.analise.view
         'pmda-analises' => 'pmda.analise.view',
+
+        // routes/modules/demandas.php -> can:demandas.chamados.view. A listagem
+        // recorta por envolvido no servidor; o canal so diz "recarregue".
+        'demandas' => 'demandas.chamados.view',
     ];
 
     /**

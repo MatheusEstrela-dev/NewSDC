@@ -84,6 +84,11 @@ final class DemandaWriteService
                     $assunto,
                     $dados->camposCustomizados ?? ($trocouAssunto ? [] : ($demanda->campos_customizados ?? [])),
                 );
+
+                $legado = $demanda->getOriginal('campos_customizados')['_legado'] ?? null;
+                if ($legado !== null) {
+                    $demanda->campos_customizados = [...$demanda->campos_customizados, '_legado' => $legado];
+                }
             }
 
             $this->repository->save($demanda);

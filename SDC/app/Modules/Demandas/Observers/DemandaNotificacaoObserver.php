@@ -25,6 +25,10 @@ class DemandaNotificacaoObserver
 {
     public function updated(Demanda $task): void
     {
+        if (app(\App\Modules\Demandas\Support\ContextoImportacao::class)->ativo()) {
+            return;
+        }
+
         if ($task->wasChanged('atribuido_para_id')) {
             $this->avisarAtribuicao($task);
         }
