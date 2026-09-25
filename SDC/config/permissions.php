@@ -530,6 +530,7 @@ return [
                 'solicitar' => 'resgate.solicitar',
                 'aprovar'   => 'resgate.aprovar',
                 'entregar'  => 'resgate.entregar',
+                'bloquear'  => 'resgate.bloquear',
             ],
             // Quatro olhos: quem propoe nao aprova a propria proposta.
             'Catalogo' => [

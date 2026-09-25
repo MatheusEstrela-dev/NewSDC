@@ -26,11 +26,18 @@
           <div v-if="pedido.processo_sei"><dt class="text-xs text-slate-500 dark:text-slate-400">Processo SEI</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ pedido.processo_sei }} · termo {{ pedido.termo_documento_sei }}</dd></div>
           <div v-if="pedido.entregue_em"><dt class="text-xs text-slate-500 dark:text-slate-400">Entregue em</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ dataHora(pedido.entregue_em) }}</dd></div>
           <div v-if="pedido.concluido_em"><dt class="text-xs text-slate-500 dark:text-slate-400">Concluído em</dt><dd class="font-semibold text-emerald-700 dark:text-emerald-300">{{ dataHora(pedido.concluido_em) }}</dd></div>
+          <div v-if="pedido.pendencia_debito > 0"><dt class="text-xs text-red-600 dark:text-red-400">Pendência de débito</dt><dd class="font-semibold text-red-700 dark:text-red-300">{{ numero(pedido.pendencia_debito) }} pontos sem crédito de origem elegível</dd></div>
         </dl>
+        <a :href="route('resgate.pedidos.dossie', pedido.id)" class="block rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700" data-link-dossie>Baixar dossiê (JSON com hash)</a>
         <DecisaoPedido :pedido="pedido" :pode-aprovar="podeAprovar" :usuario-id="usuarioId" />
       </section>
 
       <div class="space-y-6 lg:col-span-2">
+        <section v-if="alertas.length" role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-100" data-alertas-anomalia>
+          <p class="font-bold">Alertas antes de decidir</p>
+          <ul class="mt-1 list-inside list-disc text-xs"><li v-for="alerta in alertas" :key="alerta.codigo">{{ alerta.mensagem }}</li></ul>
+        </section>
+        <BloqueiosPedido :pedido="pedido" :bloqueios="bloqueios" :pode-bloquear="podeBloquear" :usuarios="usuarios" />
         <ExecucaoPedido :pedido="pedido" :pode-aprovar="podeAprovar" :pode-entregar="podeEntregar" :age-pelo-ente="agePeloEnte" :usuario-id="usuarioId" />
         <LinhaDoTempoPedido :eventos="eventos" :usuarios="usuarios" :adulterado-em="adulterado_em" />
         <DocumentosPedido :documentos="documentos" :pedido-id="pedido.id" :usuarios="usuarios" />
@@ -53,6 +60,7 @@ import LinhaDoTempoPedido from '@/Components/Organisms/Resgate/LinhaDoTempoPedid
 import ExecucaoPedido from '@/Components/Organisms/Resgate/ExecucaoPedido.vue';
 import DocumentosPedido from '@/Components/Organisms/Resgate/DocumentosPedido.vue';
 import ConsumoPedido from '@/Components/Organisms/Resgate/ConsumoPedido.vue';
+import BloqueiosPedido from '@/Components/Organisms/Resgate/BloqueiosPedido.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
@@ -69,6 +77,9 @@ defineProps({
   agePeloEnte: { type: Boolean, default: false },
   documentos: { type: Array, default: () => [] },
   consumos: { type: Array, default: () => [] },
+  bloqueios: { type: Array, default: () => [] },
+  alertas: { type: Array, default: () => [] },
+  podeBloquear: { type: Boolean, default: false },
   usuarioId: { type: Number, default: 0 },
 });
 

@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Modules\Resgate\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Resgate\Enums\EscopoCarteira;
 use App\Modules\Resgate\Exceptions\RegraDoResgate;
+use App\Modules\Resgate\Services\BloqueiosDoResgate;
+use App\Modules\Resgate\Services\DossieDoPedido;
 use App\Modules\Resgate\Services\DocumentosDoPedido;
 use App\Modules\Resgate\Services\ExecucaoDoResgate;
 use App\Modules\Resgate\Services\PedidoResgate;
 use App\Modules\Resgate\Support\Rastro;
 use App\Modules\Resgate\Support\VisaoDoPedido;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,9 +33,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final class ExecucaoController extends Controller
 {
-    /** Processo SEI de MG: 1234.01.0012345/2026-12. */
-    private const PROCESSO_SEI = '/^\d{4}\.\d{2}\.\d{7}\/\d{4}-\d{2}$/';
-
     /** Numero do documento no SEI. */
     private const DOCUMENTO_SEI = '/^\d{6,12}$/';
 
@@ -39,12 +40,11 @@ final class ExecucaoController extends Controller
     {
         abort_unless($request->user()?->can('resgate.aprovar'), 403);
         $dados = $request->validate([
-            'processo_sei' => ['required', 'string', 'regex:' . self::PROCESSO_SEI],
             'documento_sei' => ['required', 'string', 'regex:' . self::DOCUMENTO_SEI],
             'termo' => ['required', 'file', 'mimes:pdf', 'max:' . (int) config('resgate.anexo_max_kb')],
-        ], ['processo_sei.regex' => 'Use o formato do SEI: 1234.01.0012345/2026-12.']);
+        ]);
 
-        $this->traduzir(fn () => $execucao->emitirTermo($pedido, $dados['processo_sei'], $dados['documento_sei'], $request->file('termo'), (int) $request->user()->id, Rastro::daRequisicao($request)));
+        $this->traduzir(fn () => $execucao->emitirTermo($pedido, $dados['documento_sei'], $request->file('termo'), (int) $request->user()->id, Rastro::daRequisicao($request)));
 
         return back()->with('success', 'Termo registrado. Aguarda a assinatura das duas partes no SEI.');
     }
@@ -103,6 +103,65 @@ final class ExecucaoController extends Controller
         $this->traduzir(fn () => $execucao->contestar($pedido, (string) $request->input('motivo'), $request->file('anexos', []), (int) $request->user()->id, Rastro::daRequisicao($request)));
 
         return back()->with('success', 'Contestação registrada. A unidade responsável precisa refazer a entrega.');
+    }
+
+    /** Saida administrativa antes da conclusao, com documento de origem. */
+    public function anular(Request $request, int $pedido, ExecucaoDoResgate $execucao): RedirectResponse
+    {
+        abort_unless($request->user()?->can('resgate.aprovar'), 403);
+        $dados = $request->validate([
+            'documento_origem' => ['required', 'string', 'max:120'],
+            'motivo' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        $this->traduzir(fn () => $execucao->anular($pedido, $dados['documento_origem'], $dados['motivo'], (int) $request->user()->id, Rastro::daRequisicao($request)));
+
+        return back()->with('success', 'Pedido anulado; pontos e unidade liberados.');
+    }
+
+    /** Bloqueio judicial/administrativo do pedido ou do ente inteiro (P7). */
+    public function bloquear(Request $request, int $pedido, BloqueiosDoResgate $bloqueios, PedidoResgate $pedidos): RedirectResponse
+    {
+        abort_unless($request->user()?->can('resgate.bloquear'), 403);
+        $dados = $request->validate([
+            'alvo' => ['required', Rule::in(['pedido', 'ente'])],
+            'tipo' => ['required', Rule::in(['judicial', 'administrativo'])],
+            'documento_origem' => ['required', 'string', 'max:120'],
+            'motivo' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+        $detalhe = $pedidos->detalhe($pedido);
+        abort_if($detalhe === null, 404);
+        $autor = (int) $request->user()->id;
+        $rastro = Rastro::daRequisicao($request);
+
+        $dados['alvo'] === 'pedido'
+            ? $bloqueios->bloquearPedido($pedido, $dados['tipo'], $dados['documento_origem'], $dados['motivo'], $autor, $rastro)
+            : $bloqueios->bloquearEnte(EscopoCarteira::from($detalhe['pedido']['ente_escopo']), $detalhe['pedido']['ente_id'], $dados['tipo'], $dados['documento_origem'], $dados['motivo'], $autor, $rastro);
+
+        return back()->with('success', 'Bloqueio registrado. Nenhuma etapa avança até o encerramento.');
+    }
+
+    public function encerrarBloqueio(Request $request, int $pedido, int $bloqueio, BloqueiosDoResgate $bloqueios): RedirectResponse
+    {
+        abort_unless($request->user()?->can('resgate.bloquear'), 403);
+        $dados = $request->validate(['motivo' => ['required', 'string', 'min:10', 'max:2000']]);
+
+        $this->traduzir(fn () => $bloqueios->encerrar($bloqueio, $dados['motivo'], (int) $request->user()->id));
+
+        return back()->with('success', 'Bloqueio encerrado.');
+    }
+
+    /** Dossie do pedido em JSON, com o SHA-256 do proprio conteudo. */
+    public function dossie(Request $request, int $pedido, DossieDoPedido $dossies, PedidoResgate $pedidos, VisaoDoPedido $visao): JsonResponse
+    {
+        $detalhe = $pedidos->detalhe($pedido);
+        abort_if($detalhe === null, 404);
+        abort_unless($visao->podeVer($request->user(), $detalhe['pedido']), 403);
+        $dossie = $dossies->montar($pedido);
+
+        return response()->json($dossie, 200, [
+            'Content-Disposition' => 'attachment; filename="dossie-' . $detalhe['pedido']['protocolo'] . '.json"',
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
     /** Download do anexo com o hash conferido; arquivo adulterado nao e servido. */

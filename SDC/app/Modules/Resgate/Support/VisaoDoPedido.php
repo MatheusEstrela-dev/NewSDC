@@ -28,8 +28,13 @@ final class VisaoDoPedido
         if ($user->can('resgate.aprovar') || $user->can('resgate.entregar') || $user->can('resgate.carteira.estado')) {
             return true;
         }
+        // Quem pediu sempre ve o proprio pedido, mesmo so com a permissao
+        // especial de solicitar (concedida pessoa a pessoa).
+        if ((int) ($pedido['solicitado_por'] ?? 0) === (int) $user->id) {
+            return true;
+        }
 
-        return $user->can('resgate.carteira.view') && $this->doProprioEnte($user, $pedido);
+        return ($user->can('resgate.carteira.view') || $user->can('resgate.solicitar')) && $this->doProprioEnte($user, $pedido);
     }
 
     /** @param array<string, mixed> $pedido */

@@ -5,10 +5,8 @@
 
     <!-- Termo: CEDEC registra o processo SEI e anexa o PDF do termo. -->
     <form v-if="pedido.status === 'aprovado' && podeAprovar && !autor" class="mt-4 space-y-3" data-form-termo @submit.prevent="enviar('termo')">
-      <div class="grid gap-3 sm:grid-cols-2">
-        <FormField v-model="termo.processo_sei" label="Processo SEI" placeholder="1234.01.0012345/2026-12" required :error="termo.errors.processo_sei" />
-        <FormField v-model="termo.documento_sei" label="Nº do documento do termo no SEI" required :error="termo.errors.documento_sei" />
-      </div>
+      <p class="text-xs text-slate-600 dark:text-slate-300">Processo SEI {{ pedido.processo_sei }} (informado na aprovação).</p>
+      <FormField v-model="termo.documento_sei" label="Nº do documento do termo no SEI" required :error="termo.errors.documento_sei" />
       <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
         Termo em PDF
         <input type="file" accept="application/pdf" class="mt-1 block w-full text-sm text-slate-600 dark:text-slate-300" @change="termo.termo = $event.target.files[0] ?? null" />
@@ -38,7 +36,7 @@
         Evidências (termo de recebimento, fotos) · PDF, JPG ou PNG
         <input type="file" multiple accept="application/pdf,image/jpeg,image/png" class="mt-1 block w-full text-sm text-slate-600 dark:text-slate-300" @change="entrega.evidencias = Array.from($event.target.files)" />
       </label>
-      <p v-if="entrega.errors.evidencias" class="text-xs text-red-600 dark:text-red-400">{{ entrega.errors.evidencias }}</p>
+      <p v-for="erro in errosDeArquivo(entrega, 'evidencias')" :key="erro" class="text-xs text-red-600 dark:text-red-400">{{ erro }}</p>
       <Erro :form="entrega" />
       <div class="flex justify-end"><Button type="submit" variant="primary" :loading="entrega.processing">Registrar entrega</Button></div>
     </form>
@@ -55,6 +53,7 @@
         <form class="mt-3 space-y-3" data-form-contestacao @submit.prevent="enviar('contestar')">
           <FormTextarea v-model="contestacao.motivo" label="Motivo" :rows="2" required :error="contestacao.errors.motivo" />
           <input type="file" multiple accept="application/pdf,image/jpeg,image/png" class="block w-full text-sm text-slate-600 dark:text-slate-300" @change="contestacao.anexos = Array.from($event.target.files)" />
+          <p v-for="erro in errosDeArquivo(contestacao, 'anexos')" :key="erro" class="text-xs text-red-600 dark:text-red-400">{{ erro }}</p>
           <Erro :form="contestacao" />
           <div class="flex justify-end"><Button type="submit" variant="danger" :loading="contestacao.processing">Contestar entrega</Button></div>
         </form>
@@ -64,6 +63,17 @@
     <p v-else class="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-900/60 dark:text-slate-300" data-execucao-aguardando>
       {{ AGUARDANDO[pedido.status] }}
     </p>
+
+    <!-- Saida administrativa antes da conclusao (decisao com documento). -->
+    <details v-if="podeAprovar" class="mt-4 rounded-lg border border-red-200 p-3 dark:border-red-500/30">
+      <summary class="cursor-pointer text-sm font-semibold text-red-700 dark:text-red-300">Anular pedido (decisão administrativa ou judicial)</summary>
+      <form class="mt-3 space-y-3" data-form-anulacao @submit.prevent="enviar('anular')">
+        <FormField v-model="anulacao.documento_origem" label="Documento de origem (processo, decisão)" required :error="anulacao.errors.documento_origem" />
+        <FormTextarea v-model="anulacao.motivo" label="Motivo" :rows="2" required :error="anulacao.errors.motivo" />
+        <Erro :form="anulacao" />
+        <div class="flex justify-end"><Button type="submit" variant="danger" :loading="anulacao.processing">Anular e liberar pontos</Button></div>
+      </form>
+    </details>
   </section>
 </template>
 
@@ -118,11 +128,17 @@ const parteQueAssina = computed(() => {
   return null;
 });
 
-const termo = useForm({ processo_sei: '', documento_sei: '', termo: null });
+const termo = useForm({ documento_sei: '', termo: null });
 const assinatura = useForm({ parte: 'estado', documento_sei: '' });
 const entrega = useForm({ observacao: '', evidencias: [] });
 const confirmacao = useForm({ observacao: '' });
 const contestacao = useForm({ motivo: '', anexos: [] });
+const anulacao = useForm({ documento_origem: '', motivo: '' });
+
+// Erros do campo de arquivos: o geral e os de cada arquivo (campo.0, campo.1...).
+function errosDeArquivo(form, campo) {
+  return Object.entries(form.errors).filter(([chave]) => chave === campo || chave.startsWith(`${campo}.`)).map(([, mensagem]) => mensagem);
+}
 
 const ROTAS = {
   termo: [termo, 'resgate.pedidos.termo'],
@@ -130,6 +146,7 @@ const ROTAS = {
   entregar: [entrega, 'resgate.pedidos.entregar'],
   confirmar: [confirmacao, 'resgate.pedidos.confirmar'],
   contestar: [contestacao, 'resgate.pedidos.contestar'],
+  anular: [anulacao, 'resgate.pedidos.anular'],
 };
 
 function enviar(acao) {

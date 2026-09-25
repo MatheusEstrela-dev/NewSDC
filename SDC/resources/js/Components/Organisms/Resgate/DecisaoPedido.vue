@@ -1,17 +1,16 @@
 <template>
   <div data-decisao-pedido>
-    <div v-if="!acao" class="flex flex-wrap justify-end gap-2">
+    <div v-if="!acao" class="flex flex-wrap items-center justify-end gap-2">
       <p v-if="bloqueio" class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ bloqueio }}</p>
-      <template v-else>
-        <Button v-if="podeCancelar" variant="outline" size="sm" data-pedido-cancelar @click="abrir('cancelar')">Cancelar pedido</Button>
-        <Button v-if="podeDecidir" variant="outline" size="sm" data-pedido-recusar @click="abrir('recusar')">Recusar</Button>
-        <Button v-if="podeDecidir" variant="primary" size="sm" data-pedido-aprovar @click="abrir('aprovar')">Aprovar</Button>
-      </template>
+      <Button v-if="podeCancelar" variant="outline" size="sm" data-pedido-cancelar @click="abrir('cancelar')">Cancelar pedido</Button>
+      <Button v-if="podeDecidir" variant="outline" size="sm" data-pedido-recusar @click="abrir('recusar')">Recusar</Button>
+      <Button v-if="podeDecidir" variant="primary" size="sm" data-pedido-aprovar @click="abrir('aprovar')">Aprovar</Button>
     </div>
 
     <!-- Decisao no proprio card, sem modal. -->
     <form v-else class="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700" @submit.prevent="enviar">
       <p class="text-xs font-semibold" :class="acao === 'aprovar' ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'">{{ AVISOS[acao] }}</p>
+      <FormField v-if="acao === 'aprovar'" v-model="form.processo_sei" label="Processo SEI" placeholder="1234.01.0012345/2026-12" required hint="Nenhuma transferência sem processo SEI." :error="form.errors.processo_sei" />
       <FormTextarea v-model="form.justificativa" label="Justificativa" :rows="3" required :error="form.errors.justificativa" />
       <p v-if="form.errors.pedido || form.errors.item" role="alert" class="text-sm font-semibold text-red-600 dark:text-red-400">{{ form.errors.pedido || form.errors.item }}</p>
       <div class="flex justify-end gap-2">
@@ -31,6 +30,7 @@
 import { computed, ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 
 const props = defineProps({
@@ -53,7 +53,7 @@ const podeCancelar = computed(() => reservado.value && autor.value);
 const bloqueio = computed(() => (reservado.value && props.podeAprovar && autor.value ? 'Seu pedido: outra pessoa da CEDEC decide' : ''));
 
 const acao = ref(null);
-const form = useForm({ aprovar: true, justificativa: '' });
+const form = useForm({ aprovar: true, justificativa: '', processo_sei: '' });
 
 function abrir(qual) {
   form.reset();

@@ -162,6 +162,9 @@ final class CatalogoResgate
                 throw new RegraDoResgate('Unidades só se cadastram em bem permanente vigente.', 'codigo');
             }
             $patrimonio = trim((string) ($dados['patrimonio'] ?? ''));
+            // Serializa cadastros do mesmo patrimonio: sem isso, dois envios
+            // simultaneos passam na checagem e um estoura a unique (erro 500).
+            $db->statement('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', ['resgate.patrimonio', $patrimonio]);
             if ($db->selectOne('SELECT 1 FROM resgate.unidades WHERE patrimonio = ?', [$patrimonio]) !== null) {
                 throw new RegraDoResgate("O patrimônio {$patrimonio} já está cadastrado.", 'patrimonio');
             }

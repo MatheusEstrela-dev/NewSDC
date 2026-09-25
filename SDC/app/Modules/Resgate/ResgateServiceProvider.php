@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Resgate;
 
 use App\Modules\Resgate\Console\ExpirarReservasCommand;
+use App\Modules\Resgate\Console\VerificarTrilhasCommand;
 use App\Modules\Resgate\Contracts\SaldoResgatavel;
 use App\Modules\Resgate\Services\CalcularCarteira;
 use Illuminate\Support\ServiceProvider;
@@ -26,7 +27,7 @@ final class ResgateServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
-            $this->commands([ExpirarReservasCommand::class]);
+            $this->commands([ExpirarReservasCommand::class, VerificarTrilhasCommand::class]);
         }
     }
 }

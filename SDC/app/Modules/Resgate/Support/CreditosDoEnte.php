@@ -18,6 +18,11 @@ use App\Modules\Resgate\Enums\EscopoCarteira;
  *   em_ajuste     = ha pedido de ajuste pendente sobre ele.
  *
  * O ente vem do vinculo HISTORICO gravado no lancamento, nunca do atual.
+ *
+ * DONO UNICO: o mesmo lancamento carrega municipio_id E orgao_id. Sem regra,
+ * o mesmo ponto entraria na carteira do municipio e na do orgao e seria
+ * resgatado duas vezes. O dono e o MUNICIPIO; o orgao so e dono do lancamento
+ * sem municipio (orgao estadual, CEDEC regional).
  */
 final class CreditosDoEnte
 {
@@ -26,6 +31,7 @@ final class CreditosDoEnte
     {
         // Coluna vinda do enum, nunca da requisicao: segura para interpolar.
         $coluna = $escopo->colunaDoLancamento();
+        $donoUnico = $escopo === EscopoCarteira::Orgao ? 'AND l.municipio_id IS NULL' : '';
 
         return "creditos AS (
             SELECT l.id,
@@ -46,6 +52,7 @@ final class CreditosDoEnte
                    SELECT SUM(c.pontos) AS total FROM resgate.consumos c WHERE c.lancamento_id = l.id
               ) con ON true
              WHERE l.{$coluna} = ?
+               {$donoUnico}
                AND l.estorno_de_id IS NULL
                AND l.pontos > 0
                AND t.decisao = 'confirmada'

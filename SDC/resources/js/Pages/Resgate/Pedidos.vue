@@ -83,6 +83,7 @@ const FILTROS = [
   { valor: 'recusado', rotulo: 'Recusados' },
   { valor: 'cancelado', rotulo: 'Cancelados' },
   { valor: 'expirado', rotulo: 'Expirados' },
+  { valor: 'anulado', rotulo: 'Anulados' },
 ];
 
 const formatador = new Intl.NumberFormat('pt-BR');

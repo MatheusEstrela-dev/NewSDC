@@ -51,4 +51,10 @@ Route::prefix('/ranking/resgate/pedidos/{pedido}')->whereNumber('pedido')->group
     Route::post('/contestacao', [ExecucaoController::class, 'contestar'])->middleware('throttle:10,1')->name('resgate.pedidos.contestar');
     Route::get('/documentos/{documento}', [ExecucaoController::class, 'documento'])->whereNumber('documento')
         ->middleware('throttle:60,1')->name('resgate.pedidos.documento');
+    // Fase 5: anulacao, bloqueios e dossie.
+    Route::post('/anulacao', [ExecucaoController::class, 'anular'])->middleware('throttle:10,1')->name('resgate.pedidos.anular');
+    Route::post('/bloqueios', [ExecucaoController::class, 'bloquear'])->middleware('throttle:10,1')->name('resgate.pedidos.bloquear');
+    Route::post('/bloqueios/{bloqueio}/encerramento', [ExecucaoController::class, 'encerrarBloqueio'])->whereNumber('bloqueio')
+        ->middleware('throttle:10,1')->name('resgate.pedidos.bloqueios.encerrar');
+    Route::get('/dossie', [ExecucaoController::class, 'dossie'])->middleware('throttle:20,1')->name('resgate.pedidos.dossie');
 });

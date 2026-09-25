@@ -26,13 +26,18 @@ final class DocumentosDoPedido
             throw new RegraDoResgate('Arquivo inválido.', 'arquivo');
         }
         $sha = hash_file('sha256', $caminhoTemp);
-        $extensao = strtolower($arquivo->getClientOriginalExtension() ?: $arquivo->guessExtension() ?: 'bin');
+        // Extensao pelo CONTEUDO (mime detectado), nunca pelo nome enviado.
+        $extensao = strtolower($arquivo->guessExtension() ?: 'bin');
         $caminho = "resgate/pedidos/{$pedidoId}/{$sha}.{$extensao}";
 
-        $disco = Storage::disk((string) config('resgate.disco'));
-        if (! $disco->exists($caminho)) {
-            $disco->putFileAs(dirname($caminho), $arquivo, basename($caminho));
-        }
+        // Disco so depois do COMMIT: etapa recusada (segregacao, bloqueio) nao
+        // deixa arquivo orfao. O nome e o hash: gravar de novo e inofensivo.
+        $db->afterCommit(function () use ($caminho, $arquivo): void {
+            $disco = Storage::disk((string) config('resgate.disco'));
+            if (! $disco->exists($caminho)) {
+                $disco->putFileAs(dirname($caminho), $arquivo, basename($caminho));
+            }
+        });
 
         return (int) $db->selectOne(
             'INSERT INTO resgate.documentos (pedido_id, tipo, nome_original, caminho, sha256, tamanho, mime, enviado_por, ip_address, user_agent)

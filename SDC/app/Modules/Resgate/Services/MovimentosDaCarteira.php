@@ -85,9 +85,12 @@ final class MovimentosDaCarteira
         }
 
         if ($restante > 0) {
-            // A reserva garantia o saldo; faltar credito aqui e sinal de
-            // estorno no meio do caminho. Aborta a transacao inteira.
-            throw new RegraDoResgate("Não há créditos elegíveis suficientes para debitar {$custo} pontos; faltam {$restante}.", 'pedido');
+            // Credito que ficou inelegivel entre a reserva e a confirmacao
+            // (estorno, ajuste aberto). O bem ja foi entregue: travar o pedido
+            // nao desfaz nada. O debito vale inteiro - a carteira fica devendo
+            // (plano, secao 2.2) - e a parte sem origem fica registrada como
+            // pendencia, visivel no pedido e no dossie.
+            $db->update('UPDATE resgate.pedidos SET pendencia_debito = ? WHERE id = ?', [$restante, (int) $pedido->id]);
         }
     }
 

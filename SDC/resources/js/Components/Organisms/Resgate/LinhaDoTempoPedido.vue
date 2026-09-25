@@ -41,11 +41,12 @@ const ETAPA = {
   cancelar: 'Cancelado pelo solicitante', expirar: 'Expirado por prazo', termo: 'Termo registrado (SEI)',
   assinar_estado: 'Assinado pelo Estado', assinar_municipio: 'Assinado pelo município', entregar: 'Entregue',
   contestar: 'Entrega contestada', confirmar: 'Recebimento confirmado · pontos debitados',
+  anular: 'Anulado por decisão administrativa ou judicial',
 };
 const COR = {
   solicitar: 'bg-amber-400', aprovar: 'bg-sky-500', recusar: 'bg-red-500', cancelar: 'bg-slate-400', expirar: 'bg-slate-400',
   termo: 'bg-sky-500', assinar_estado: 'bg-violet-500', assinar_municipio: 'bg-violet-500', entregar: 'bg-violet-500',
-  contestar: 'bg-orange-500', confirmar: 'bg-emerald-500',
+  contestar: 'bg-orange-500', confirmar: 'bg-emerald-500', anular: 'bg-red-600',
 };
 const dataHora = (valor) => (valor ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(valor.replace(' ', 'T').replace(/\+00$/, 'Z'))) : '');
 </script>

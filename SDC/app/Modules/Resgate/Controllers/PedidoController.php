@@ -11,6 +11,8 @@ use App\Modules\Ranking\Support\NomesDeParticipantes;
 use App\Modules\Resgate\Enums\EscopoCarteira;
 use App\Modules\Resgate\Exceptions\RegraDoResgate;
 use App\Modules\Resgate\Services\CatalogoResgate;
+use App\Modules\Resgate\Services\AnomaliasDoEnte;
+use App\Modules\Resgate\Services\BloqueiosDoResgate;
 use App\Modules\Resgate\Services\PedidoResgate;
 use App\Modules\Resgate\Support\EnteDoUsuario;
 use App\Modules\Resgate\Support\Rastro;
@@ -37,17 +39,24 @@ final class PedidoController extends Controller
     public function index(Request $request, PedidoResgate $pedidos, NomesDeParticipantes $nomes): Response
     {
         $user = $request->user();
-        abort_unless($user?->can('resgate.carteira.view') || $user?->can('resgate.aprovar'), 403);
+        abort_unless($user !== null && collect(['resgate.carteira.view', 'resgate.solicitar', 'resgate.aprovar', 'resgate.entregar'])->contains(fn ($p) => $user->can($p)), 403);
 
-        $dados = $request->validate(['status' => ['sometimes', 'nullable', Rule::in(['reservado', 'aprovado', 'termo_emitido', 'termo_assinado', 'entregue', 'contestado', 'concluido', 'recusado', 'cancelado', 'expirado'])]]);
+        $dados = $request->validate(['status' => ['sometimes', 'nullable', Rule::in(['reservado', 'aprovado', 'termo_emitido', 'termo_assinado', 'entregue', 'contestado', 'concluido', 'recusado', 'cancelado', 'expirado', 'anulado'])]]);
         $status = $dados['status'] ?? null;
-        $global = $user->can('resgate.aprovar') || $user->can('resgate.carteira.estado');
+        $global = $user->can('resgate.aprovar') || $user->can('resgate.entregar') || $user->can('resgate.carteira.estado');
 
         if ($global) {
             $lista = $pedidos->listar(null, null, $status);
         } else {
-            $municipio = app(EnteDoUsuario::class)->resolver($user, EscopoCarteira::Municipio, null);
-            $lista = $municipio !== null ? $pedidos->listar(EscopoCarteira::Municipio, $municipio, $status) : [];
+            // Pedidos do municipio E do orgao do usuario, os dois escopos.
+            $lista = [];
+            foreach (EscopoCarteira::cases() as $escopo) {
+                $enteId = app(EnteDoUsuario::class)->resolver($user, $escopo, null);
+                if ($enteId !== null) {
+                    $lista = array_merge($lista, $pedidos->listar($escopo, $enteId, $status));
+                }
+            }
+            usort($lista, static fn (array $a, array $b): int => strcmp((string) $b['solicitado_em'], (string) $a['solicitado_em']));
         }
 
         return Inertia::render('Resgate/Pedidos', [
@@ -131,7 +140,12 @@ final class PedidoController extends Controller
             )),
             'podeAprovar' => $user->can('resgate.aprovar'),
             'podeEntregar' => $user->can('resgate.entregar'),
+            'podeBloquear' => $user->can('resgate.bloquear'),
             'agePeloEnte' => $visao->agePeloEnte($user, $detalhe['pedido']),
+            'bloqueios' => app(BloqueiosDoResgate::class)->listar($pedido, EscopoCarteira::from($detalhe['pedido']['ente_escopo']), $detalhe['pedido']['ente_id']),
+            'alertas' => $user->can('resgate.aprovar') && $detalhe['pedido']['status'] === 'reservado'
+                ? app(AnomaliasDoEnte::class)->avaliar(EscopoCarteira::from($detalhe['pedido']['ente_escopo']), $detalhe['pedido']['ente_id'], new \DateTimeImmutable())
+                : [],
             'usuarioId' => (int) $user->id,
         ]);
     }
@@ -142,10 +156,12 @@ final class PedidoController extends Controller
         $dados = $request->validate([
             'aprovar' => ['required', 'boolean'],
             'justificativa' => ['required', 'string', 'min:10', 'max:2000'],
-        ]);
+            // Aprovar exige processo SEI (P3); recusar nao.
+            'processo_sei' => ['exclude_unless:aprovar,true,1', 'required', 'string', 'regex:/^\d{4}\.\d{2}\.\d{7}\/\d{4}-\d{2}$/'],
+        ], ['processo_sei.regex' => 'Use o formato do SEI: 1234.01.0012345/2026-12.']);
         $aprovar = filter_var($dados['aprovar'], FILTER_VALIDATE_BOOLEAN);
 
-        $this->traduzirRegra(fn () => $pedidos->decidir($pedido, $aprovar, $dados['justificativa'], (int) $request->user()->id, Rastro::daRequisicao($request)));
+        $this->traduzirRegra(fn () => $pedidos->decidir($pedido, $aprovar, $dados['justificativa'], (int) $request->user()->id, Rastro::daRequisicao($request), $dados['processo_sei'] ?? null));
 
         return back()->with('success', $aprovar ? 'Pedido aprovado. A reserva segue até a entrega.' : 'Pedido recusado; pontos e unidade liberados.');
     }

@@ -90,6 +90,70 @@ return new class extends Migration
         $this->criarCatalogo();
         $this->criarPedidos();
         $this->criarExecucao();
+        $this->criarBloqueios();
+    }
+
+    /**
+     * Fase 5 - bloqueio judicial ou administrativo (premissa P7).
+     *
+     * Suspende na hora um ENTE inteiro ou um PEDIDO, com o documento de origem
+     * (processo, decisao). Enquanto vigente, nenhuma transicao avanca. O
+     * bloqueio nunca e apagado: encerrar e gravar quando e por que, uma vez so.
+     */
+    private function criarBloqueios(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS resgate.bloqueios (
+                id                   bigserial PRIMARY KEY,
+                alvo                 varchar(10)  NOT NULL,
+                ente_escopo          varchar(12)  NULL,
+                ente_id              bigint       NULL,
+                pedido_id            bigint       NULL REFERENCES resgate.pedidos (id) ON DELETE RESTRICT,
+                tipo                 varchar(15)  NOT NULL,
+                documento_origem     varchar(120) NOT NULL,
+                motivo               text         NOT NULL,
+                registrado_por       bigint       NOT NULL,
+                registrado_em        timestamptz  NOT NULL DEFAULT now(),
+                registrado_ip        varchar(45)  NULL,
+                encerrado_por        bigint       NULL,
+                encerrado_em         timestamptz  NULL,
+                encerramento_motivo  text         NULL,
+
+                CONSTRAINT ck_resgate_bloqueios_alvo CHECK (
+                    (alvo = 'ente' AND ente_escopo IN ('municipio', 'orgao') AND ente_id IS NOT NULL AND pedido_id IS NULL)
+                    OR (alvo = 'pedido' AND pedido_id IS NOT NULL AND ente_id IS NULL)
+                ),
+                CONSTRAINT ck_resgate_bloqueios_tipo CHECK (tipo IN ('judicial', 'administrativo')),
+                CONSTRAINT ck_resgate_bloqueios_encerramento CHECK (
+                    (encerrado_em IS NULL AND encerrado_por IS NULL AND encerramento_motivo IS NULL)
+                    OR (encerrado_em IS NOT NULL AND encerrado_por IS NOT NULL AND encerramento_motivo IS NOT NULL)
+                )
+            )
+        SQL);
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_resgate_bloqueios_ente ON resgate.bloqueios (ente_escopo, ente_id) WHERE encerrado_em IS NULL');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_resgate_bloqueios_pedido ON resgate.bloqueios (pedido_id) WHERE encerrado_em IS NULL');
+
+        // So o encerramento pode ser gravado, uma vez; o registro original
+        // (alvo, tipo, documento, motivo, autor) nunca muda. DELETE nunca.
+        $this->exec(<<<'SQL'
+            CREATE OR REPLACE FUNCTION resgate.guardar_bloqueio() RETURNS trigger
+            LANGUAGE plpgsql AS $$
+            BEGIN
+                IF TG_OP = 'DELETE' THEN
+                    RAISE EXCEPTION 'resgate.bloqueios: DELETE recusado' USING ERRCODE = 'insufficient_privilege';
+                END IF;
+                IF OLD.encerrado_em IS NOT NULL
+                   OR (to_jsonb(NEW) - 'encerrado_por' - 'encerrado_em' - 'encerramento_motivo')
+                      IS DISTINCT FROM (to_jsonb(OLD) - 'encerrado_por' - 'encerrado_em' - 'encerramento_motivo') THEN
+                    RAISE EXCEPTION 'resgate.bloqueios: so o encerramento de um bloqueio vigente pode ser gravado'
+                        USING ERRCODE = 'insufficient_privilege';
+                END IF;
+                RETURN NEW;
+            END;
+            $$
+        SQL);
+        $this->exec('DROP TRIGGER IF EXISTS tg_resgate_bloqueios_guarda ON resgate.bloqueios');
+        $this->exec('CREATE TRIGGER tg_resgate_bloqueios_guarda BEFORE UPDATE OR DELETE ON resgate.bloqueios FOR EACH ROW EXECUTE FUNCTION resgate.guardar_bloqueio()');
     }
 
     /**
@@ -106,7 +170,7 @@ return new class extends Migration
         $this->exec('ALTER TABLE resgate.pedidos ALTER COLUMN status TYPE varchar(20)');
         $this->exec('ALTER TABLE resgate.pedido_eventos ALTER COLUMN etapa TYPE varchar(20), ALTER COLUMN de_status TYPE varchar(20), ALTER COLUMN para_status TYPE varchar(20)');
 
-        $status = "'reservado', 'aprovado', 'termo_emitido', 'termo_assinado', 'entregue', 'contestado', 'concluido', 'recusado', 'cancelado', 'expirado'";
+        $status = "'reservado', 'aprovado', 'termo_emitido', 'termo_assinado', 'entregue', 'contestado', 'concluido', 'recusado', 'cancelado', 'expirado', 'anulado'";
         $this->exec('ALTER TABLE resgate.pedidos DROP CONSTRAINT IF EXISTS ck_resgate_pedidos_status');
         $this->exec("ALTER TABLE resgate.pedidos ADD CONSTRAINT ck_resgate_pedidos_status CHECK (status IN ({$status}))");
 
@@ -119,6 +183,10 @@ return new class extends Migration
             'assinado_municipio_em timestamptz NULL',
             'entregue_em timestamptz NULL',
             'concluido_em timestamptz NULL',
+            // Pontos debitados sem credito elegivel de origem (estorno ou ajuste
+            // entre a reserva e a confirmacao): a carteira fica devendo e o
+            // dossie mostra a pendencia, em vez de travar o pedido entregue.
+            'pendencia_debito integer NOT NULL DEFAULT 0',
         ] as $coluna) {
             $this->exec("ALTER TABLE resgate.pedidos ADD COLUMN IF NOT EXISTS {$coluna}");
         }
@@ -126,39 +194,10 @@ return new class extends Migration
         // Unidade presa a pedido que ainda nao terminou mal: inclui o
         // concluido, porque a unidade foi entregue e nao volta ao catalogo.
         $this->exec('DROP INDEX IF EXISTS resgate.uq_resgate_pedidos_unidade_ativa');
-        $this->exec("CREATE UNIQUE INDEX uq_resgate_pedidos_unidade_ativa ON resgate.pedidos (unidade_id) WHERE status NOT IN ('recusado', 'cancelado', 'expirado') AND unidade_id IS NOT NULL");
+        $this->exec("CREATE UNIQUE INDEX uq_resgate_pedidos_unidade_ativa ON resgate.pedidos (unidade_id) WHERE status NOT IN ('recusado', 'cancelado', 'expirado', 'anulado') AND unidade_id IS NOT NULL");
 
         $this->exec('ALTER TABLE resgate.pedido_eventos DROP CONSTRAINT IF EXISTS ck_resgate_eventos_etapa');
-        $this->exec("ALTER TABLE resgate.pedido_eventos ADD CONSTRAINT ck_resgate_eventos_etapa CHECK (etapa IN ('solicitar', 'aprovar', 'recusar', 'cancelar', 'expirar', 'termo', 'assinar_estado', 'assinar_municipio', 'entregar', 'contestar', 'confirmar'))");
-
-        // Segregacao de funcoes (P4), no banco:
-        //  - quem solicitou nao decide, nao emite termo nem entrega;
-        //  - quem aprovou nao entrega;
-        //  - quem entregou nao confirma o recebimento.
-        $this->exec(<<<'SQL'
-            CREATE OR REPLACE FUNCTION resgate.segregar_funcoes() RETURNS trigger
-            LANGUAGE plpgsql AS $$
-            DECLARE
-                conflito text;
-            BEGIN
-                conflito := CASE
-                    WHEN NEW.etapa IN ('aprovar', 'recusar', 'termo', 'assinar_estado') THEN
-                        CASE WHEN EXISTS (SELECT 1 FROM resgate.pedido_eventos e WHERE e.pedido_id = NEW.pedido_id AND e.etapa = 'solicitar' AND e.ator_user_id = NEW.ator_user_id)
-                             THEN 'quem solicitou nao decide nem assina pelo Estado' END
-                    WHEN NEW.etapa = 'entregar' THEN
-                        CASE WHEN EXISTS (SELECT 1 FROM resgate.pedido_eventos e WHERE e.pedido_id = NEW.pedido_id AND e.etapa IN ('solicitar', 'aprovar') AND e.ator_user_id = NEW.ator_user_id)
-                             THEN 'quem solicitou ou aprovou nao entrega' END
-                    WHEN NEW.etapa = 'confirmar' THEN
-                        CASE WHEN EXISTS (SELECT 1 FROM resgate.pedido_eventos e WHERE e.pedido_id = NEW.pedido_id AND e.etapa = 'entregar' AND e.ator_user_id = NEW.ator_user_id)
-                             THEN 'quem entregou nao confirma o recebimento' END
-                END;
-                IF conflito IS NOT NULL THEN
-                    RAISE EXCEPTION 'resgate.pedido_eventos: %', conflito USING ERRCODE = 'check_violation';
-                END IF;
-                RETURN NEW;
-            END;
-            $$
-        SQL);
+        $this->exec("ALTER TABLE resgate.pedido_eventos ADD CONSTRAINT ck_resgate_eventos_etapa CHECK (etapa IN ('solicitar', 'aprovar', 'recusar', 'cancelar', 'expirar', 'termo', 'assinar_estado', 'assinar_municipio', 'entregar', 'contestar', 'confirmar', 'anular'))");
 
         // Anexos do pedido: termo assinado, evidencias de entrega. O arquivo
         // fica no disco com o hash no nome; a linha guarda o SHA-256, e a
@@ -203,6 +242,67 @@ return new class extends Migration
         $this->exec('CREATE INDEX IF NOT EXISTS ix_resgate_consumos_lancamento ON resgate.consumos (lancamento_id)');
         $this->exec('DROP TRIGGER IF EXISTS tg_resgate_consumos_append_only ON resgate.consumos');
         $this->exec('CREATE TRIGGER tg_resgate_consumos_append_only BEFORE UPDATE OR DELETE ON resgate.consumos FOR EACH ROW EXECUTE FUNCTION resgate.recusar_alteracao()');
+
+        // Nenhum lancamento e consumido alem do seu valor liquido, nem sob
+        // concorrencia: a linha do lancamento fica travada durante a checagem.
+        $this->exec(<<<'SQL'
+            CREATE OR REPLACE FUNCTION resgate.limitar_consumo() RETURNS trigger
+            LANGUAGE plpgsql AS $$
+            DECLARE
+                liquido integer;
+                ja integer;
+            BEGIN
+                SELECT l.pontos INTO liquido FROM ranking.lancamentos l WHERE l.id = NEW.lancamento_id FOR UPDATE;
+                IF liquido IS NULL THEN
+                    RAISE EXCEPTION 'resgate.consumos: lancamento % inexistente', NEW.lancamento_id USING ERRCODE = 'foreign_key_violation';
+                END IF;
+                liquido := liquido + COALESCE((SELECT SUM(e.pontos) FROM ranking.lancamentos e WHERE e.estorno_de_id = NEW.lancamento_id), 0);
+                SELECT COALESCE(SUM(c.pontos), 0) INTO ja FROM resgate.consumos c WHERE c.lancamento_id = NEW.lancamento_id;
+                IF ja + NEW.pontos > liquido THEN
+                    RAISE EXCEPTION 'resgate.consumos: lancamento % ja consumido (% de %)', NEW.lancamento_id, ja, liquido
+                        USING ERRCODE = 'check_violation';
+                END IF;
+                RETURN NEW;
+            END;
+            $$
+        SQL);
+        $this->exec('DROP TRIGGER IF EXISTS tg_resgate_consumos_limite ON resgate.consumos');
+        $this->exec('CREATE TRIGGER tg_resgate_consumos_limite BEFORE INSERT ON resgate.consumos FOR EACH ROW EXECUTE FUNCTION resgate.limitar_consumo()');
+
+        // Pedido: os dados da solicitacao nunca mudam, e o status so segue as
+        // transicoes do fluxo. Escrita direta que pule etapa ou troque ente,
+        // item, custo ou unidade e recusada.
+        $this->exec(<<<'SQL'
+            CREATE OR REPLACE FUNCTION resgate.guardar_pedido() RETURNS trigger
+            LANGUAGE plpgsql AS $$
+            DECLARE
+                mutaveis text[] := ARRAY['status', 'atualizado_em', 'processo_sei', 'termo_documento_sei',
+                    'assinado_estado_por', 'assinado_estado_em', 'assinado_municipio_por', 'assinado_municipio_em',
+                    'entregue_em', 'concluido_em', 'pendencia_debito'];
+                permitido boolean;
+            BEGIN
+                IF (to_jsonb(NEW) - mutaveis) IS DISTINCT FROM (to_jsonb(OLD) - mutaveis) THEN
+                    RAISE EXCEPTION 'resgate.pedidos: dados da solicitacao sao imutaveis' USING ERRCODE = 'insufficient_privilege';
+                END IF;
+                permitido := CASE OLD.status
+                    WHEN 'reservado' THEN NEW.status IN ('aprovado', 'recusado', 'cancelado', 'expirado')
+                    WHEN 'aprovado' THEN NEW.status IN ('termo_emitido', 'anulado')
+                    WHEN 'termo_emitido' THEN NEW.status IN ('termo_emitido', 'termo_assinado', 'anulado')
+                    WHEN 'termo_assinado' THEN NEW.status IN ('entregue', 'anulado')
+                    WHEN 'entregue' THEN NEW.status IN ('concluido', 'contestado', 'anulado')
+                    WHEN 'contestado' THEN NEW.status IN ('entregue', 'anulado')
+                    ELSE false
+                END;
+                IF NOT permitido THEN
+                    RAISE EXCEPTION 'resgate.pedidos: transicao % -> % nao existe no fluxo', OLD.status, NEW.status
+                        USING ERRCODE = 'insufficient_privilege';
+                END IF;
+                RETURN NEW;
+            END;
+            $$
+        SQL);
+        $this->exec('DROP TRIGGER IF EXISTS tg_resgate_pedidos_guarda ON resgate.pedidos');
+        $this->exec('CREATE TRIGGER tg_resgate_pedidos_guarda BEFORE UPDATE ON resgate.pedidos FOR EACH ROW EXECUTE FUNCTION resgate.guardar_pedido()');
     }
 
     /**
@@ -279,17 +379,40 @@ return new class extends Migration
         $this->exec('DROP TRIGGER IF EXISTS tg_resgate_eventos_append_only ON resgate.pedido_eventos');
         $this->exec('CREATE TRIGGER tg_resgate_eventos_append_only BEFORE UPDATE OR DELETE ON resgate.pedido_eventos FOR EACH ROW EXECUTE FUNCTION resgate.recusar_alteracao()');
 
-        // Segregacao de funcoes NO BANCO: quem solicitou nao decide. So o
-        // proprio solicitante pode CANCELAR o que pediu.
+        // Segregacao de funcoes NO BANCO (P4): cada pessoa ocupa UM papel por
+        // pedido. Repetir a propria etapa pode (reentrega apos contestacao,
+        // cancelar o que pediu); acumular papeis nao. Ato de sistema nao conta.
+        $this->exec(<<<'SQL'
+            CREATE OR REPLACE FUNCTION resgate.papel_da_etapa(etapa text) RETURNS text
+            LANGUAGE sql IMMUTABLE AS $$
+                SELECT CASE etapa
+                    WHEN 'solicitar' THEN 'solicitante' WHEN 'cancelar' THEN 'solicitante'
+                    WHEN 'aprovar' THEN 'decisor' WHEN 'recusar' THEN 'decisor' WHEN 'anular' THEN 'decisor'
+                    WHEN 'termo' THEN 'formalizador' WHEN 'assinar_estado' THEN 'formalizador'
+                    WHEN 'assinar_municipio' THEN 'assinante_municipio'
+                    WHEN 'entregar' THEN 'entregador'
+                    WHEN 'confirmar' THEN 'recebedor' WHEN 'contestar' THEN 'recebedor'
+                END
+            $$
+        SQL);
         $this->exec(<<<'SQL'
             CREATE OR REPLACE FUNCTION resgate.segregar_funcoes() RETURNS trigger
             LANGUAGE plpgsql AS $$
+            DECLARE
+                anterior text;
             BEGIN
-                IF NEW.etapa IN ('aprovar', 'recusar') AND EXISTS (
-                    SELECT 1 FROM resgate.pedido_eventos e
-                     WHERE e.pedido_id = NEW.pedido_id AND e.ator_user_id = NEW.ator_user_id
-                ) THEN
-                    RAISE EXCEPTION 'resgate.pedido_eventos: quem ja atuou no pedido nao pode decidi-lo'
+                IF NEW.ator_user_id IS NULL OR resgate.papel_da_etapa(NEW.etapa) IS NULL THEN
+                    RETURN NEW;
+                END IF;
+                SELECT resgate.papel_da_etapa(e.etapa) INTO anterior
+                  FROM resgate.pedido_eventos e
+                 WHERE e.pedido_id = NEW.pedido_id
+                   AND e.ator_user_id = NEW.ator_user_id
+                   AND resgate.papel_da_etapa(e.etapa) IS NOT NULL
+                   AND resgate.papel_da_etapa(e.etapa) <> resgate.papel_da_etapa(NEW.etapa)
+                 LIMIT 1;
+                IF anterior IS NOT NULL THEN
+                    RAISE EXCEPTION 'resgate.pedido_eventos: quem atuou como % nao atua como % no mesmo pedido', anterior, resgate.papel_da_etapa(NEW.etapa)
                         USING ERRCODE = 'check_violation';
                 END IF;
                 RETURN NEW;

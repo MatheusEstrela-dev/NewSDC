@@ -342,6 +342,13 @@ Cada etapa só começa com a anterior verificada, e cada uma tem o seu commit at
 
 **Implementado (25/09/2026), primeira fatia do fluxo:** o pedido nasce **reservado** (pontos e unidade presos) e fica assim até a CEDEC **aprovar** (a reserva segue até a entrega) ou **recusar** (libera). O solicitante pode **cancelar**; a reserva vencida **expira** pelo comando `resgate:expirar-reservas`, que roda aos :40 de cada hora. Aceite municipal separado, análise técnica e jurídica entram como estados na Fase 4. Homologação usa um **modo demonstração** (`RESGATE_PERMITIR_DEMONSTRACAO`, ignorado à força em `production`): o pedido de demonstração só usa itens e pontos de demonstração, e os dois saldos nunca se misturam.
 
+**Revisão de segurança (25/09/2026), aplicada:**
+- **Dono único de cada ponto.** O lançamento carrega município **e** órgão, e 48.823 de 50.888 créditos entravam nas duas carteiras. Agora o dono é o município, e o órgão só é dono do lançamento sem município. Uma trava no banco impede consumir um lançamento além do seu valor.
+- **Segregação por papel.** Cada pessoa ocupa um papel por pedido: solicitante, decisor, formalizador do Estado, assinante do município, entregador e recebedor. O fluxo completo exige 6 pessoas; o normativo pode flexibilizar para municípios pequenos.
+- **Aprovação.** Exige processo SEI e recusa reserva vencida. Quem decide não pode ser vinculado ao ente beneficiado.
+- **Pedido blindado no banco.** Os dados da solicitação são imutáveis, e o status só segue as transições do fluxo. O hash cobre o retrato do pedido e o instante em UTC canônico, e o corte do fim da cadeia é detectado.
+- **Crédito que ficou inelegível até a confirmação.** Vira pendência de débito (carteira negativa), em vez de travar o pedido já entregue.
+
 ### Fase 4 — Documentos, SEI, termo, entrega e confirmação
 
 - Checklist documental, hash de arquivos, número SEI obrigatório, termo assinado pelas duas partes, entrega com evidência, confirmação e contestação pelo município, débito com consumo FIFO.

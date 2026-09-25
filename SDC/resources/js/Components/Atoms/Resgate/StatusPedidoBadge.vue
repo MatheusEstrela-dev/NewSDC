@@ -21,5 +21,6 @@ const STATUS = {
   recusado: { rotulo: 'Recusado', cor: 'red' },
   cancelado: { rotulo: 'Cancelado', cor: 'slate' },
   expirado: { rotulo: 'Expirado', cor: 'slate' },
+  anulado: { rotulo: 'Anulado', cor: 'red' },
 };
 </script>

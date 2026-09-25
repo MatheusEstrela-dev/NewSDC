@@ -48,6 +48,10 @@ if (config('ranking.habilitado', false)) {
     // Aos :40, longe dos jobs de :50, :55 e hora cheia.
     Schedule::command('resgate:expirar-reservas')->hourlyAt(40)
         ->onOneServer()->withoutOverlapping(30);
+    // Recalcula a cadeia de hash de todos os pedidos e o hash dos anexos:
+    // adulteracao direta no banco ou no disco aparece mesmo sem ninguem abrir.
+    Schedule::command('resgate:verificar-trilhas')->dailyAt('02:30')
+        ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(60);
 }
 
 /*

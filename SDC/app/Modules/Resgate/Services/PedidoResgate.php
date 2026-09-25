@@ -14,6 +14,8 @@ use App\Modules\Resgate\Support\HashEvento;
 use App\Modules\Resgate\Support\ModoDemonstracao;
 use App\Modules\Resgate\Support\Rastro;
 use App\Modules\Resgate\Support\TrilhaDoPedido;
+use App\Modules\Resgate\Support\EnteDoUsuario;
+use App\Models\User;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +57,8 @@ final class PedidoResgate
         private readonly ModoDemonstracao $modoDemonstracao,
         private readonly TrilhaDoPedido $trilha,
         private readonly MovimentosDaCarteira $movimentos,
+        private readonly BloqueiosDoResgate $bloqueios,
+        private readonly EnteDoUsuario $entes,
     ) {}
 
     public function solicitar(EscopoCarteira $escopo, int $enteId, string $codigo, string $chaveIdempotencia, int $autorId, Rastro $rastro): int
@@ -103,16 +107,27 @@ final class PedidoResgate
         });
     }
 
-    public function decidir(int $pedidoId, bool $aprovar, string $justificativa, int $decisorId, Rastro $rastro): void
+    /**
+     * Decisao da CEDEC. Aprovar exige o numero do processo SEI (P3): nenhuma
+     * transferencia sem processo. Reserva vencida nao se aprova, mesmo antes da
+     * varredura de expiracao; quem decide nao pode ser do ente beneficiado.
+     */
+    public function decidir(int $pedidoId, bool $aprovar, string $justificativa, int $decisorId, Rastro $rastro, ?string $processoSei = null): void
     {
-        $this->conexao()->transaction(function (Connection $db) use ($pedidoId, $aprovar, $justificativa, $decisorId, $rastro): void {
+        $this->conexao()->transaction(function (Connection $db) use ($pedidoId, $aprovar, $justificativa, $decisorId, $rastro, $processoSei): void {
             $pedido = $this->trilha->travar($db, $pedidoId, ['reservado']);
-            if ((int) $pedido->solicitado_por === $decisorId) {
-                throw new RegraDoResgate('Quem solicitou não pode decidir o próprio pedido.', 'pedido');
+            $this->trilha->exigirPapelLivre($db, $pedidoId, $aprovar ? 'aprovar' : 'recusar', $decisorId);
+            $this->bloqueios->exigirLiberado($db, $pedido);
+            $this->exigirSemConflito($pedido, $decisorId);
+            if ($aprovar && ($processoSei === null || trim($processoSei) === '')) {
+                throw new RegraDoResgate('Aprovar exige o número do processo SEI.', 'processo_sei');
+            }
+            if ($aprovar && (bool) $db->selectOne('SELECT expira_em < now() AS vencida FROM resgate.pedidos WHERE id = ?', [$pedidoId])->vencida) {
+                throw new RegraDoResgate('A reserva deste pedido já venceu; ele não pode mais ser aprovado.', 'pedido');
             }
 
             $novo = $aprovar ? 'aprovado' : 'recusado';
-            $this->trilha->mudarStatus($db, $pedidoId, $novo);
+            $this->trilha->mudarStatus($db, $pedidoId, $novo, $aprovar ? ['processo_sei' => trim((string) $processoSei)] : []);
             if (! $aprovar) {
                 $this->movimentos->liberar($db, $pedido);
             }
@@ -127,6 +142,7 @@ final class PedidoResgate
             if ((int) $pedido->solicitado_por !== $autorId) {
                 throw new RegraDoResgate('Só quem solicitou pode cancelar o pedido.', 'pedido');
             }
+            $this->bloqueios->exigirLiberado($db, $pedido);
 
             $this->trilha->mudarStatus($db, $pedidoId, 'cancelado');
             $this->movimentos->liberar($db, $pedido);
@@ -204,12 +220,7 @@ final class PedidoResgate
             return null;
         }
 
-        $eventos = array_map(static fn (object $e): array => (array) $e, $this->conexao()->select(
-            'SELECT pedido_id, sequencia, etapa, de_status, para_status, ator_user_id, permissao, justificativa,
-                    ip_address, user_agent, ocorrido_em::text AS ocorrido_em, hash, hash_anterior
-               FROM resgate.pedido_eventos WHERE pedido_id = ? ORDER BY sequencia',
-            [$pedidoId],
-        ));
+        $eventos = $this->trilha->eventos($this->conexao(), $pedidoId);
 
         // De onde sairam os pontos (plano, secao 2.3): lancamentos consumidos.
         $consumos = array_map(static fn (object $c): array => (array) $c, $this->conexao()->select(
@@ -224,7 +235,7 @@ final class PedidoResgate
         return [
             'pedido' => $this->pedido($linha),
             'eventos' => $eventos,
-            'adulterado_em' => HashEvento::verificar($eventos),
+            'adulterado_em' => HashEvento::verificar($eventos, $linha),
             'documentos' => app(DocumentosDoPedido::class)->listar($this->conexao(), $pedidoId),
             'consumos' => $consumos,
         ];
@@ -262,9 +273,19 @@ final class PedidoResgate
     private function checar(Connection $db, EscopoCarteira $escopo, int $enteId, string $codigo, ?array $faixaFechada, string $temporada, DateTimeImmutable $agora, bool $travar): array
     {
         $impedimentos = [];
+        if ($travar) {
+            // Depois da trava do ente, sempre nesta ordem (sem ciclo): serializa
+            // pedidos de entes DIFERENTES sobre o mesmo item, senao dois contam
+            // 0 ativos e estouram a quantidade.
+            $db->statement('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', ['resgate.item', strtoupper($codigo)]);
+        }
+        $bloqueio = $this->bloqueios->vigenteParaEnte($db, $escopo, $enteId);
+        if ($bloqueio !== null) {
+            $impedimentos[] = "Ente com bloqueio {$bloqueio->tipo} vigente ({$bloqueio->documento_origem}).";
+        }
         $item = $db->selectOne('SELECT * FROM resgate.catalogo_itens WHERE codigo = ? AND vigente_ate IS NULL' . ($travar ? ' FOR SHARE' : ''), [strtoupper($codigo)]);
         if ($item === null) {
-            return ['impedimentos' => ['Item não está vigente no catálogo.'], 'item' => null, 'unidade_id' => null, 'demonstracao' => false, 'saldo' => 0];
+            return ['impedimentos' => [...$impedimentos, 'Item não está vigente no catálogo.'], 'item' => null, 'unidade_id' => null, 'demonstracao' => false, 'saldo' => 0];
         }
 
         $demonstracao = $this->booleano($item->demonstracao);
@@ -353,7 +374,18 @@ final class PedidoResgate
             'assinado_municipio_por' => isset($l->assinado_municipio_por) ? (int) $l->assinado_municipio_por : null,
             'entregue_em' => $l->entregue_em ?? null,
             'concluido_em' => $l->concluido_em ?? null,
+            'pendencia_debito' => (int) ($l->pendencia_debito ?? 0),
         ];
+    }
+
+    /** Quem decide nao pode estar vinculado ao ente beneficiado (plano, secao 5). */
+    private function exigirSemConflito(object $pedido, int $decisorId): void
+    {
+        $decisor = User::query()->find($decisorId);
+        $enteDoDecisor = $decisor !== null ? $this->entes->resolver($decisor, EscopoCarteira::from((string) $pedido->ente_escopo), null) : null;
+        if ($enteDoDecisor !== null && $enteDoDecisor === (int) $pedido->ente_id) {
+            throw new RegraDoResgate('Conflito de interesse: quem decide está vinculado ao ente beneficiado.', 'pedido');
+        }
     }
 
     private function booleano(mixed $valor): bool

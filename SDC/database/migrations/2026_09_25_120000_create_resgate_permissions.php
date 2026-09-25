@@ -22,6 +22,7 @@ use Spatie\Permission\PermissionRegistrar;
  * - resgate.aprovar         : CEDEC aprova ou recusa pedido, emite o termo e
  *                             assina pelo Estado.
  * - resgate.entregar        : unidade responsavel registra a entrega.
+ * - resgate.bloquear        : registra/encerra bloqueio judicial ou administrativo.
  *
  * `solicitar`, `propor`, `aprovar`, `entregar` e `catalogo.aprovar` NAO vao para role nenhuma: sao
  * permissoes especiais, concedidas pessoa a pessoa no Permissionamento, onde
@@ -42,11 +43,12 @@ return new class extends Migration
         'resgate.catalogo.aprovar' => ['Resgate - Catalogo - Aprovar proposta de outra pessoa', 'catalogo'],
         'resgate.aprovar'         => ['Resgate - Pedidos - Aprovar ou recusar (CEDEC)', 'pedidos'],
         'resgate.entregar'        => ['Resgate - Pedidos - Registrar entrega', 'pedidos'],
+        'resgate.bloquear'        => ['Resgate - Pedidos - Bloqueio judicial ou administrativo', 'pedidos'],
     ];
 
     /** Permissao concedida => roles que ja tem a de referencia. */
     private const HERANCA = [
-        'resgate.carteira.view'   => 'ranking.placar.estado',
+        'resgate.carteira.view'   => 'ranking.placar.view',
         'resgate.carteira.estado' => 'ranking.placar.estado',
         'resgate.catalogo.ver'    => 'ranking.placar.view',
     ];
