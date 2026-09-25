@@ -355,9 +355,11 @@ export function useBreadcrumb() {
             'Resgate/PropostaNova': [inicio, ranking, catalogo, propostas, aqui(item ? `Mudança em ${item.titulo}` : 'Novo item')],
             // O item nao tem pagina propria: aparece como degrau sem link.
             'Resgate/UnidadeNova': [inicio, ranking, catalogo, ...(item ? [aqui(item.titulo)] : []), aqui('Cadastrar unidade')],
-            'Resgate/Pedidos': [inicio, ranking, aqui('Pedidos de resgate')],
+            // O Catalogo e a porta de entrada do Resgate: pedidos ficam abaixo
+            // dele, e o Voltar leva de volta para onde o usuario veio.
+            'Resgate/Pedidos': [inicio, ranking, catalogo, aqui('Pedidos de resgate')],
             'Resgate/PedidoNovo': [inicio, ranking, catalogo, aqui(item ? `Resgatar ${item.titulo}` : 'Resgatar')],
-            'Resgate/PedidoShow': [inicio, ranking, pedidos, aqui(props?.pedido?.protocolo ?? 'Pedido')],
+            'Resgate/PedidoShow': [inicio, ranking, catalogo, pedidos, aqui(props?.pedido?.protocolo ?? 'Pedido')],
         };
 
         return trilhas[componentName] ?? null;
