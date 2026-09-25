@@ -28,12 +28,9 @@ class DemandaPolicy
 
     public function update(User $user, Demanda $demanda): bool
     {
-        if ($user->can('demandas.chamados.manage')) {
-            return true;
-        }
-
         return $user->can('demandas.chamados.edit') && (
-            (int) $demanda->atribuido_para_id === (int) $user->id
+            $user->can('demandas.chamados.manage')
+            || (int) $demanda->atribuido_para_id === (int) $user->id
             || (int) $demanda->solicitante_id === (int) $user->id
         );
     }
