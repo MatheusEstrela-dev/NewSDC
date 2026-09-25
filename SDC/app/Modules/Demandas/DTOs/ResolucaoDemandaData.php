@@ -12,7 +12,14 @@ final readonly class ResolucaoDemandaData
     public function __construct(
         public CarbonImmutable $abertaEm,
         public CarbonImmutable $resolvidaEm,
-    ) {}
+    ) {
+        if ($this->abertaEm->greaterThan($this->resolvidaEm)) {
+            throw new \DomainException('A data de abertura não pode ser posterior ao fechamento.');
+        }
+        if ($this->resolvidaEm->greaterThan(CarbonImmutable::now())) {
+            throw new \DomainException('A data de fechamento não pode estar no futuro.');
+        }
+    }
 
     public static function fromRequest(ResolverDemandaRequest $request): self
     {

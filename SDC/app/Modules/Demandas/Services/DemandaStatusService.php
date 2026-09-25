@@ -49,6 +49,10 @@ final class DemandaStatusService
         return DB::transaction(function () use ($demanda, $dados, $userId): Demanda {
             $demanda = Demanda::query()->lockForUpdate()->findOrFail($demanda->getKey());
 
+            if (! $demanda->status->isActive()) {
+                throw new TransicaoProibidaException('Esta demanda já está concluída.');
+            }
+
             $aberturaAnterior = $demanda->created_at;
             if (! $aberturaAnterior->equalTo($dados->abertaEm)) {
                 $demanda->created_at = $dados->abertaEm;
@@ -72,11 +76,13 @@ final class DemandaStatusService
 
     public function reabrir(Demanda $demanda, int $userId): Demanda
     {
-        if ($demanda->status !== StatusDemanda::RESOLVIDA) {
-            throw new TransicaoProibidaException('Só é possível reabrir uma demanda concluída.');
-        }
-
         return DB::transaction(function () use ($demanda, $userId): Demanda {
+            $demanda = Demanda::query()->lockForUpdate()->findOrFail($demanda->getKey());
+
+            if ($demanda->status !== StatusDemanda::RESOLVIDA) {
+                throw new TransicaoProibidaException('Só é possível reabrir uma demanda concluída.');
+            }
+
             $reaberta = $this->workflow->transitar($demanda, StatusDemanda::EM_PROGRESSO, $userId);
             $this->historico->registrar(
                 $reaberta, $userId, AcaoHistoricoDemanda::REABERTA,
