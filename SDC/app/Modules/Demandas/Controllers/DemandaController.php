@@ -162,7 +162,7 @@ class DemandaController extends Controller
         $demanda = $this->repository->findById($id) ?? abort(404);
         $this->authorize('manage', $demanda);
         $data = $request->validate(['responsavel_id' => ['required', 'integer', 'exists:users,id']]);
-        $this->interactions->atribuir($demanda, (int) $data['responsavel_id']);
+        $this->interactions->atribuir($demanda, (int) $data['responsavel_id'], (int) $request->user()->id);
 
         return redirect()->back()->with('success', 'Responsável atualizado.');
     }
