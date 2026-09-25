@@ -529,6 +529,12 @@ return [
             'Pedidos' => [
                 'solicitar' => 'resgate.solicitar',
             ],
+            // Quatro olhos: quem propoe nao aprova a propria proposta.
+            'Catalogo' => [
+                'ver'     => 'resgate.catalogo.ver',
+                'propor'  => 'resgate.catalogo.propor',
+                'aprovar' => 'resgate.catalogo.aprovar',
+            ],
         ],
         // Painel estadual de cobertura + envio do plano pelo proprio municipio.
         // O dado vive em compdec_planos_contingencia; a gestao completa
@@ -701,6 +707,7 @@ return [
             // RESGATE - ve carteiras; solicitar e concessao individual.
             'resgate.carteira.view',
             'resgate.carteira.estado',
+            'resgate.catalogo.ver',
             // PAE - CRUD completo exceto delete
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',

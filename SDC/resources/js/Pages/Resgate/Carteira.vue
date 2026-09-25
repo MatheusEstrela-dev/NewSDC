@@ -10,9 +10,14 @@
       variant="gradient"
     >
       <template #actions>
-        <Link :href="route('ranking.index')" class="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <Link :href="route('resgate.catalogo')" class="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
+            Catálogo de prêmios
+          </Link>
+          <Link :href="route('ranking.index')" class="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
           Voltar ao placar
         </Link>
+        </div>
       </template>
     </PageHeader>
 

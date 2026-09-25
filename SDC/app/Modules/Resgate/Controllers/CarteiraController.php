@@ -13,6 +13,7 @@ use App\Modules\Ranking\Services\TemporadaDoRanking;
 use App\Modules\Ranking\Support\NomesDeParticipantes;
 use App\Modules\Resgate\Contracts\SaldoResgatavel;
 use App\Modules\Resgate\Enums\EscopoCarteira;
+use App\Modules\Resgate\Support\EnteDoUsuario;
 use DateTimeImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +38,7 @@ final class CarteiraController extends Controller
         RankingReadService $leitura,
         TemporadaDoRanking $temporada,
         NomesDeParticipantes $nomes,
+        EnteDoUsuario $entes,
     ): Response {
         $user = $request->user();
         abort_unless($user?->can('resgate.carteira.view'), 403);
@@ -47,10 +49,7 @@ final class CarteiraController extends Controller
         ]);
         $escopo = EscopoCarteira::from($dados['escopo'] ?? EscopoCarteira::Municipio->value);
         $estadual = $user->can('resgate.carteira.estado');
-
-        $orgao = $user->orgaoPrincipal;
-        $proprio = $escopo === EscopoCarteira::Municipio ? $orgao?->municipio_id : $orgao?->id;
-        $enteId = $estadual && isset($dados['ente']) ? (int) $dados['ente'] : ($proprio !== null ? (int) $proprio : null);
+        $enteId = $entes->resolver($user, $escopo, isset($dados['ente']) ? (int) $dados['ente'] : null);
 
         $payload = ['carteira' => null, 'faixaFechada' => null, 'faixaAtual' => null, 'ente' => null];
         if ($enteId !== null) {

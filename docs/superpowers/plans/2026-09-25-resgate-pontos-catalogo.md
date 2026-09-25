@@ -118,9 +118,11 @@ Os itens seguem as mesmas regras de versão das regras de pontuação do Ranking
 - o pedido guarda a versão vigente no momento da solicitação;
 - a **publicação exige duas pessoas** (P4): o gestor do catálogo propõe e a autoridade da CEDEC aprova. O sistema recusa quem tenta aprovar a própria proposta.
 
-### 3.3 Bens permanentes: integração com o Inventário
+### 3.3 Bens permanentes: unidades individualizadas
 
-Uma viatura do catálogo é um **modelo** ("Viatura 4x4 de resposta"). As **unidades** reais vêm do módulo Inventário (`Equipamento`, com número de patrimônio). A reserva aloca **uma unidade específica** com `FOR UPDATE`, para que não se prometa a mesma viatura a dois municípios. A entrega registra a movimentação patrimonial (`Movimentacao`) e baixa a unidade do catálogo.
+Uma viatura do catálogo é um **modelo** ("Viatura 4x4 de resposta"). As **unidades** são os bens físicos, cada uma com patrimônio próprio. A reserva aloca **uma unidade específica** com `FOR UPDATE`, para que não se prometa a mesma viatura a dois municípios.
+
+**Constatado na Fase 2:** o módulo Inventário do SDC é de **TI** (`inventario_ti_equipamentos`: patrimônio, número de série, ramal). Não há cadastro de frota, placa nem RENAVAM. Por isso `resgate.unidades` guarda os próprios campos (patrimônio, placa, RENAVAM, chassi, número de série), e o vínculo com o Inventário (`inventario_equipamento_id`) é **opcional**, só para equipamento já inventariado. A unidade nunca é apagada: sai do catálogo por baixa. Se no futuro existir cadastro de frota ou integração com o SIAD, ele passa a ser a origem das viaturas.
 
 ---
 
