@@ -13,6 +13,7 @@ use App\Modules\Resgate\Support\FaixaDoEnte;
 use App\Modules\Resgate\Support\HashEvento;
 use App\Modules\Resgate\Support\ModoDemonstracao;
 use App\Modules\Resgate\Support\Rastro;
+use App\Modules\Resgate\Support\TrilhaDoPedido;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
@@ -42,12 +43,18 @@ use Illuminate\Support\Facades\DB;
  */
 final class PedidoResgate
 {
-    private const ATIVOS = ['reservado', 'aprovado'];
+    /**
+     * Status que ocupam vaga e contam para o limite da temporada: tudo que nao
+     * terminou mal. O concluido conta - o item foi de fato entregue.
+     */
+    private const ATIVOS = ['reservado', 'aprovado', 'termo_emitido', 'termo_assinado', 'entregue', 'contestado', 'concluido'];
 
     public function __construct(
         private readonly SaldoResgatavel $saldo,
         private readonly FaixaDoEnte $faixa,
         private readonly ModoDemonstracao $modoDemonstracao,
+        private readonly TrilhaDoPedido $trilha,
+        private readonly MovimentosDaCarteira $movimentos,
     ) {}
 
     public function solicitar(EscopoCarteira $escopo, int $enteId, string $codigo, string $chaveIdempotencia, int $autorId, Rastro $rastro): int
@@ -86,13 +93,11 @@ final class PedidoResgate
                     $demonstracao, $chaveIdempotencia, $autorId, (string) (int) $item->prazo_reserva_dias],
             );
 
-            if ($custo > 0) {
-                $this->movimentar($db, $escopo, $enteId, 'reserva', -$custo, $id, $demonstracao);
-            }
+            $this->movimentos->reservar($db, $db->selectOne('SELECT * FROM resgate.pedidos WHERE id = ?', [$id]));
             if ($unidadeId !== null) {
                 $db->update("UPDATE resgate.unidades SET estado = 'reservada' WHERE id = ?", [$unidadeId]);
             }
-            $this->registrarEvento($db, $id, 'solicitar', null, 'reservado', $autorId, 'resgate.solicitar', null, $rastro);
+            $this->trilha->registrar($db, $id, 'solicitar', null, 'reservado', $autorId, 'resgate.solicitar', null, $rastro);
 
             return $id;
         });
@@ -101,31 +106,31 @@ final class PedidoResgate
     public function decidir(int $pedidoId, bool $aprovar, string $justificativa, int $decisorId, Rastro $rastro): void
     {
         $this->conexao()->transaction(function (Connection $db) use ($pedidoId, $aprovar, $justificativa, $decisorId, $rastro): void {
-            $pedido = $this->pedidoReservado($db, $pedidoId);
+            $pedido = $this->trilha->travar($db, $pedidoId, ['reservado']);
             if ((int) $pedido->solicitado_por === $decisorId) {
                 throw new RegraDoResgate('Quem solicitou não pode decidir o próprio pedido.', 'pedido');
             }
 
             $novo = $aprovar ? 'aprovado' : 'recusado';
-            $db->update('UPDATE resgate.pedidos SET status = ?, atualizado_em = now() WHERE id = ?', [$novo, $pedidoId]);
+            $this->trilha->mudarStatus($db, $pedidoId, $novo);
             if (! $aprovar) {
-                $this->liberar($db, $pedido);
+                $this->movimentos->liberar($db, $pedido);
             }
-            $this->registrarEvento($db, $pedidoId, $aprovar ? 'aprovar' : 'recusar', 'reservado', $novo, $decisorId, 'resgate.aprovar', $justificativa, $rastro);
+            $this->trilha->registrar($db, $pedidoId, $aprovar ? 'aprovar' : 'recusar', 'reservado', $novo, $decisorId, 'resgate.aprovar', $justificativa, $rastro);
         });
     }
 
     public function cancelar(int $pedidoId, string $justificativa, int $autorId, Rastro $rastro): void
     {
         $this->conexao()->transaction(function (Connection $db) use ($pedidoId, $justificativa, $autorId, $rastro): void {
-            $pedido = $this->pedidoReservado($db, $pedidoId);
+            $pedido = $this->trilha->travar($db, $pedidoId, ['reservado']);
             if ((int) $pedido->solicitado_por !== $autorId) {
                 throw new RegraDoResgate('Só quem solicitou pode cancelar o pedido.', 'pedido');
             }
 
-            $db->update("UPDATE resgate.pedidos SET status = 'cancelado', atualizado_em = now() WHERE id = ?", [$pedidoId]);
-            $this->liberar($db, $pedido);
-            $this->registrarEvento($db, $pedidoId, 'cancelar', 'reservado', 'cancelado', $autorId, 'resgate.solicitar', $justificativa, $rastro);
+            $this->trilha->mudarStatus($db, $pedidoId, 'cancelado');
+            $this->movimentos->liberar($db, $pedido);
+            $this->trilha->registrar($db, $pedidoId, 'cancelar', 'reservado', 'cancelado', $autorId, 'resgate.solicitar', $justificativa, $rastro);
         });
     }
 
@@ -143,9 +148,9 @@ final class PedidoResgate
                 if ($pedido === null) {
                     return;
                 }
-                $db->update("UPDATE resgate.pedidos SET status = 'expirado', atualizado_em = now() WHERE id = ?", [$id]);
-                $this->liberar($db, $pedido);
-                $this->registrarEvento($db, $id, 'expirar', 'reservado', 'expirado', null, null, 'Prazo da reserva vencido sem decisão.', Rastro::doSistema('resgate:expirar-reservas'));
+                $this->trilha->mudarStatus($db, $id, 'expirado');
+                $this->movimentos->liberar($db, $pedido);
+                $this->trilha->registrar($db, $id, 'expirar', 'reservado', 'expirado', null, null, 'Prazo da reserva vencido sem decisão.', Rastro::doSistema('resgate:expirar-reservas'));
                 $expirados++;
             });
         }
@@ -184,7 +189,7 @@ final class PedidoResgate
         ));
     }
 
-    /** @return array{pedido: array<string, mixed>, eventos: list<array<string, mixed>>, adulterado_em: ?int}|null */
+    /** @return array{pedido: array<string, mixed>, eventos: list<array<string, mixed>>, adulterado_em: ?int, documentos: list<array<string, mixed>>, consumos: list<array<string, mixed>>}|null */
     public function detalhe(int $pedidoId): ?array
     {
         $linha = $this->conexao()->selectOne(
@@ -206,7 +211,23 @@ final class PedidoResgate
             [$pedidoId],
         ));
 
-        return ['pedido' => $this->pedido($linha), 'eventos' => $eventos, 'adulterado_em' => HashEvento::verificar($eventos)];
+        // De onde sairam os pontos (plano, secao 2.3): lancamentos consumidos.
+        $consumos = array_map(static fn (object $c): array => (array) $c, $this->conexao()->select(
+            'SELECT c.lancamento_id, c.pontos, l.competencia_em, l.modulo, t.chave_canonica
+               FROM resgate.consumos c
+               JOIN ranking.lancamentos l ON l.id = c.lancamento_id
+               JOIN ranking.transacoes t ON t.id = l.transacao_id
+              WHERE c.pedido_id = ? ORDER BY l.competencia_em, c.lancamento_id',
+            [$pedidoId],
+        ));
+
+        return [
+            'pedido' => $this->pedido($linha),
+            'eventos' => $eventos,
+            'adulterado_em' => HashEvento::verificar($eventos),
+            'documentos' => app(DocumentosDoPedido::class)->listar($this->conexao(), $pedidoId),
+            'consumos' => $consumos,
+        ];
     }
 
     /**
@@ -260,7 +281,7 @@ final class PedidoResgate
         if ($item->limite_por_ente_temporada !== null) {
             $jaPedidos = (int) $db->selectOne(
                 "SELECT count(*) AS n FROM resgate.pedidos
-                  WHERE ente_escopo = ? AND ente_id = ? AND item_codigo = ? AND temporada_referencia = ? AND status IN ('reservado', 'aprovado')",
+                  WHERE ente_escopo = ? AND ente_id = ? AND item_codigo = ? AND temporada_referencia = ? AND status IN ('" . implode("', '", self::ATIVOS) . "')",
                 [$escopo->value, $enteId, $item->codigo, $temporada],
             )->n;
             if ($jaPedidos >= (int) $item->limite_por_ente_temporada) {
@@ -282,7 +303,7 @@ final class PedidoResgate
             $unidadeId = $unidade !== null ? (int) $unidade->id : null;
         } elseif ($item->quantidade !== null) {
             $ativos = (int) $db->selectOne(
-                "SELECT count(*) AS n FROM resgate.pedidos WHERE item_codigo = ? AND status IN ('reservado', 'aprovado')",
+                "SELECT count(*) AS n FROM resgate.pedidos WHERE item_codigo = ? AND status IN ('" . implode("', '", self::ATIVOS) . "')",
                 [$item->codigo],
             )->n;
             if ($ativos >= (int) $item->quantidade) {
@@ -302,68 +323,6 @@ final class PedidoResgate
         }
 
         return ['impedimentos' => $impedimentos, 'item' => $item, 'unidade_id' => $unidadeId, 'demonstracao' => $demonstracao, 'saldo' => $saldo];
-    }
-
-    private function pedidoReservado(Connection $db, int $pedidoId): object
-    {
-        $pedido = $db->selectOne('SELECT * FROM resgate.pedidos WHERE id = ? FOR UPDATE', [$pedidoId]);
-        if ($pedido === null) {
-            throw new RegraDoResgate('Pedido não encontrado.', 'pedido');
-        }
-        if ($pedido->status !== 'reservado') {
-            throw new RegraDoResgate('Este pedido não está mais reservado.', 'pedido');
-        }
-
-        return $pedido;
-    }
-
-    /** Devolve pontos (liberacao) e unidade. Idempotente pela chave do movimento. */
-    private function liberar(Connection $db, object $pedido): void
-    {
-        $custo = (int) $pedido->custo_pontos;
-        if ($custo > 0) {
-            $this->movimentar($db, EscopoCarteira::from((string) $pedido->ente_escopo), (int) $pedido->ente_id, 'liberacao', $custo, (int) $pedido->id, $this->booleano($pedido->demonstracao));
-        }
-        if ($pedido->unidade_id !== null) {
-            $db->update("UPDATE resgate.unidades SET estado = 'disponivel' WHERE id = ? AND estado = 'reservada'", [(int) $pedido->unidade_id]);
-        }
-    }
-
-    private function movimentar(Connection $db, EscopoCarteira $escopo, int $enteId, string $tipo, int $pontos, int $pedidoId, bool $demonstracao): void
-    {
-        $db->insert(
-            'INSERT INTO resgate.movimentos (ente_escopo, ente_id, tipo, pontos, pedido_id, demonstracao, chave)
-             VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (chave) DO NOTHING',
-            [$escopo->value, $enteId, $tipo, $pontos, $pedidoId, $demonstracao, "pedido:{$pedidoId}:{$tipo}"],
-        );
-    }
-
-    private function registrarEvento(Connection $db, int $pedidoId, string $etapa, ?string $de, string $para, ?int $atorId, ?string $permissao, ?string $justificativa, Rastro $rastro): void
-    {
-        $ultimo = $db->selectOne('SELECT sequencia, hash FROM resgate.pedido_eventos WHERE pedido_id = ? ORDER BY sequencia DESC LIMIT 1', [$pedidoId]);
-        $evento = [
-            'pedido_id' => $pedidoId,
-            'sequencia' => $ultimo !== null ? (int) $ultimo->sequencia + 1 : 1,
-            'etapa' => $etapa,
-            'de_status' => $de,
-            'para_status' => $para,
-            'ator_user_id' => $atorId,
-            'permissao' => $permissao,
-            'justificativa' => $justificativa,
-            'ip_address' => $rastro->ip,
-            'ocorrido_em' => (string) $db->selectOne('SELECT clock_timestamp()::text AS agora')->agora,
-        ];
-        $anterior = $ultimo?->hash;
-
-        $db->insert(
-            'INSERT INTO resgate.pedido_eventos
-                (pedido_id, sequencia, etapa, de_status, para_status, ator_user_id, permissao, justificativa,
-                 ip_address, user_agent, session_id, request_id, hash, hash_anterior, ocorrido_em)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::timestamptz)',
-            [$pedidoId, $evento['sequencia'], $etapa, $de, $para, $atorId, $permissao, $justificativa,
-                $rastro->ip, $rastro->userAgent, $rastro->sessao, $rastro->requisicao,
-                HashEvento::calcular($evento, $anterior), $anterior, $evento['ocorrido_em']],
-        );
     }
 
     /** @return array<string, mixed> */
@@ -388,6 +347,12 @@ final class PedidoResgate
             'solicitado_por' => (int) $l->solicitado_por,
             'solicitado_em' => $l->solicitado_em,
             'expira_em' => $l->expira_em,
+            'processo_sei' => $l->processo_sei ?? null,
+            'termo_documento_sei' => $l->termo_documento_sei ?? null,
+            'assinado_estado_por' => isset($l->assinado_estado_por) ? (int) $l->assinado_estado_por : null,
+            'assinado_municipio_por' => isset($l->assinado_municipio_por) ? (int) $l->assinado_municipio_por : null,
+            'entregue_em' => $l->entregue_em ?? null,
+            'concluido_em' => $l->concluido_em ?? null,
         ];
     }
 

@@ -24,4 +24,9 @@ return [
     // e os dois saldos nunca se misturam. Em producao e ignorado a forca
     // (ModoDemonstracao), mesmo que a variavel venha ligada por engano.
     'permitir_demonstracao' => (bool) env('RESGATE_PERMITIR_DEMONSTRACAO', false),
+
+    // Anexos (termo, evidencias): disco privado, compartilhado entre as
+    // replicas. O arquivo leva o SHA-256 no nome e so e servido apos conferir.
+    'disco' => env('RESGATE_DISCO', 'local'),
+    'anexo_max_kb' => (int) env('RESGATE_ANEXO_MAX_KB', 10240),
 ];

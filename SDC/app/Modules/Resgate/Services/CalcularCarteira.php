@@ -7,6 +7,7 @@ namespace App\Modules\Resgate\Services;
 use App\Modules\Resgate\Contracts\SaldoResgatavel;
 use App\Modules\Resgate\DTOs\Carteira;
 use App\Modules\Resgate\Enums\EscopoCarteira;
+use App\Modules\Resgate\Support\CreditosDoEnte;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Database\Connection;
@@ -35,28 +36,8 @@ final class CalcularCarteira implements SaldoResgatavel
     {
         $carencia = max(0, (int) config('resgate.carencia_dias'));
         $corte = $agora->setTimezone(new DateTimeZone('UTC'))->modify("-{$carencia} days");
-        // Coluna vinda do enum, nunca da requisicao: segura para interpolar.
-        $coluna = $escopo->colunaDoLancamento();
-
         $creditos = $this->conexao()->selectOne(
-            "WITH creditos AS (
-                SELECT l.pontos + COALESCE(est.total, 0) AS liquido,
-                       l.competencia_em,
-                       (t.chave_canonica LIKE 'demo:%' OR COALESCE(t.contexto->>'demonstracao', 'false') = 'true') AS demo,
-                       EXISTS (
-                           SELECT 1 FROM ranking.pedidos_ajuste a
-                            WHERE a.lancamento_id = l.id AND a.decisao = 'pendente'
-                       ) AS em_ajuste
-                  FROM ranking.lancamentos l
-                  JOIN ranking.transacoes t ON t.id = l.transacao_id
-                  LEFT JOIN LATERAL (
-                       SELECT SUM(e.pontos) AS total FROM ranking.lancamentos e WHERE e.estorno_de_id = l.id
-                  ) est ON true
-                 WHERE l.{$coluna} = ?
-                   AND l.estorno_de_id IS NULL
-                   AND l.pontos > 0
-                   AND t.decisao = 'confirmada'
-            )
+            'WITH ' . CreditosDoEnte::cte($escopo) . "
             SELECT COALESCE(SUM(liquido) FILTER (WHERE demo), 0) AS demonstracao,
                    COALESCE(SUM(liquido) FILTER (WHERE NOT demo AND em_ajuste), 0) AS em_ajuste,
                    COALESCE(SUM(liquido) FILTER (WHERE NOT demo AND NOT em_ajuste AND competencia_em > ?::timestamptz), 0) AS em_carencia,

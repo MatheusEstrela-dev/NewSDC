@@ -2,6 +2,7 @@
 
 use App\Modules\Resgate\Controllers\CarteiraController;
 use App\Modules\Resgate\Controllers\CatalogoController;
+use App\Modules\Resgate\Controllers\ExecucaoController;
 use App\Modules\Resgate\Controllers\PedidoController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,3 +40,15 @@ Route::post('/ranking/resgate/pedidos/{pedido}/decisao', [PedidoController::clas
     ->whereNumber('pedido')->middleware('throttle:20,1')->name('resgate.pedidos.decidir');
 Route::post('/ranking/resgate/pedidos/{pedido}/cancelamento', [PedidoController::class, 'cancelar'])
     ->whereNumber('pedido')->middleware('throttle:20,1')->name('resgate.pedidos.cancelar');
+
+// Fase 4: execucao do pedido aprovado - termo/SEI, assinaturas, entrega,
+// confirmacao ou contestacao pelo municipio, e anexos com hash conferido.
+Route::prefix('/ranking/resgate/pedidos/{pedido}')->whereNumber('pedido')->group(function (): void {
+    Route::post('/termo', [ExecucaoController::class, 'termo'])->middleware('throttle:10,1')->name('resgate.pedidos.termo');
+    Route::post('/assinatura', [ExecucaoController::class, 'assinar'])->middleware('throttle:10,1')->name('resgate.pedidos.assinar');
+    Route::post('/entrega', [ExecucaoController::class, 'entregar'])->middleware('throttle:10,1')->name('resgate.pedidos.entregar');
+    Route::post('/confirmacao', [ExecucaoController::class, 'confirmar'])->middleware('throttle:10,1')->name('resgate.pedidos.confirmar');
+    Route::post('/contestacao', [ExecucaoController::class, 'contestar'])->middleware('throttle:10,1')->name('resgate.pedidos.contestar');
+    Route::get('/documentos/{documento}', [ExecucaoController::class, 'documento'])->whereNumber('documento')
+        ->middleware('throttle:60,1')->name('resgate.pedidos.documento');
+});

@@ -89,6 +89,120 @@ return new class extends Migration
 
         $this->criarCatalogo();
         $this->criarPedidos();
+        $this->criarExecucao();
+    }
+
+    /**
+     * Fase 4 - termo, SEI, entrega e confirmacao (plano, secao 4).
+     *
+     * Escrito para tambem ATUALIZAR um banco que ja esta na Fase 3: CHECKs e
+     * indice sao recriados e as colunas entram com IF NOT EXISTS, entao
+     * reaplicar o up() e seguro.
+     */
+    private function criarExecucao(): void
+    {
+        // Status e etapas da Fase 4 passam de 12 caracteres ('termo_assinado',
+        // 'assinar_municipio'): alarga as colunas de banco ja criado na Fase 3.
+        $this->exec('ALTER TABLE resgate.pedidos ALTER COLUMN status TYPE varchar(20)');
+        $this->exec('ALTER TABLE resgate.pedido_eventos ALTER COLUMN etapa TYPE varchar(20), ALTER COLUMN de_status TYPE varchar(20), ALTER COLUMN para_status TYPE varchar(20)');
+
+        $status = "'reservado', 'aprovado', 'termo_emitido', 'termo_assinado', 'entregue', 'contestado', 'concluido', 'recusado', 'cancelado', 'expirado'";
+        $this->exec('ALTER TABLE resgate.pedidos DROP CONSTRAINT IF EXISTS ck_resgate_pedidos_status');
+        $this->exec("ALTER TABLE resgate.pedidos ADD CONSTRAINT ck_resgate_pedidos_status CHECK (status IN ({$status}))");
+
+        foreach ([
+            'processo_sei varchar(30) NULL',
+            'termo_documento_sei varchar(20) NULL',
+            'assinado_estado_por bigint NULL',
+            'assinado_estado_em timestamptz NULL',
+            'assinado_municipio_por bigint NULL',
+            'assinado_municipio_em timestamptz NULL',
+            'entregue_em timestamptz NULL',
+            'concluido_em timestamptz NULL',
+        ] as $coluna) {
+            $this->exec("ALTER TABLE resgate.pedidos ADD COLUMN IF NOT EXISTS {$coluna}");
+        }
+
+        // Unidade presa a pedido que ainda nao terminou mal: inclui o
+        // concluido, porque a unidade foi entregue e nao volta ao catalogo.
+        $this->exec('DROP INDEX IF EXISTS resgate.uq_resgate_pedidos_unidade_ativa');
+        $this->exec("CREATE UNIQUE INDEX uq_resgate_pedidos_unidade_ativa ON resgate.pedidos (unidade_id) WHERE status NOT IN ('recusado', 'cancelado', 'expirado') AND unidade_id IS NOT NULL");
+
+        $this->exec('ALTER TABLE resgate.pedido_eventos DROP CONSTRAINT IF EXISTS ck_resgate_eventos_etapa');
+        $this->exec("ALTER TABLE resgate.pedido_eventos ADD CONSTRAINT ck_resgate_eventos_etapa CHECK (etapa IN ('solicitar', 'aprovar', 'recusar', 'cancelar', 'expirar', 'termo', 'assinar_estado', 'assinar_municipio', 'entregar', 'contestar', 'confirmar'))");
+
+        // Segregacao de funcoes (P4), no banco:
+        //  - quem solicitou nao decide, nao emite termo nem entrega;
+        //  - quem aprovou nao entrega;
+        //  - quem entregou nao confirma o recebimento.
+        $this->exec(<<<'SQL'
+            CREATE OR REPLACE FUNCTION resgate.segregar_funcoes() RETURNS trigger
+            LANGUAGE plpgsql AS $$
+            DECLARE
+                conflito text;
+            BEGIN
+                conflito := CASE
+                    WHEN NEW.etapa IN ('aprovar', 'recusar', 'termo', 'assinar_estado') THEN
+                        CASE WHEN EXISTS (SELECT 1 FROM resgate.pedido_eventos e WHERE e.pedido_id = NEW.pedido_id AND e.etapa = 'solicitar' AND e.ator_user_id = NEW.ator_user_id)
+                             THEN 'quem solicitou nao decide nem assina pelo Estado' END
+                    WHEN NEW.etapa = 'entregar' THEN
+                        CASE WHEN EXISTS (SELECT 1 FROM resgate.pedido_eventos e WHERE e.pedido_id = NEW.pedido_id AND e.etapa IN ('solicitar', 'aprovar') AND e.ator_user_id = NEW.ator_user_id)
+                             THEN 'quem solicitou ou aprovou nao entrega' END
+                    WHEN NEW.etapa = 'confirmar' THEN
+                        CASE WHEN EXISTS (SELECT 1 FROM resgate.pedido_eventos e WHERE e.pedido_id = NEW.pedido_id AND e.etapa = 'entregar' AND e.ator_user_id = NEW.ator_user_id)
+                             THEN 'quem entregou nao confirma o recebimento' END
+                END;
+                IF conflito IS NOT NULL THEN
+                    RAISE EXCEPTION 'resgate.pedido_eventos: %', conflito USING ERRCODE = 'check_violation';
+                END IF;
+                RETURN NEW;
+            END;
+            $$
+        SQL);
+
+        // Anexos do pedido: termo assinado, evidencias de entrega. O arquivo
+        // fica no disco com o hash no nome; a linha guarda o SHA-256, e a
+        // leitura confere o hash antes de servir.
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS resgate.documentos (
+                id            bigserial PRIMARY KEY,
+                pedido_id     bigint       NOT NULL REFERENCES resgate.pedidos (id) ON DELETE RESTRICT,
+                tipo          varchar(20)  NOT NULL,
+                nome_original varchar(200) NOT NULL,
+                caminho       varchar(300) NOT NULL,
+                sha256        char(64)     NOT NULL,
+                tamanho       integer      NOT NULL,
+                mime          varchar(100) NOT NULL,
+                enviado_por   bigint       NOT NULL,
+                ip_address    varchar(45)  NULL,
+                user_agent    text         NULL,
+                criado_em     timestamptz  NOT NULL DEFAULT now(),
+
+                CONSTRAINT ck_resgate_documentos_tipo CHECK (tipo IN ('termo', 'evidencia_entrega', 'contestacao'))
+            )
+        SQL);
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_resgate_documentos_pedido ON resgate.documentos (pedido_id)');
+        $this->exec('DROP TRIGGER IF EXISTS tg_resgate_documentos_append_only ON resgate.documentos');
+        $this->exec('CREATE TRIGGER tg_resgate_documentos_append_only BEFORE UPDATE OR DELETE ON resgate.documentos FOR EACH ROW EXECUTE FUNCTION resgate.recusar_alteracao()');
+
+        // Rastreio do ponto consumido (plano, secao 2.3): cada debito aponta os
+        // lancamentos do ledger que o compuseram (FIFO pela competencia).
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS resgate.consumos (
+                id             bigserial PRIMARY KEY,
+                movimento_id   bigint      NOT NULL REFERENCES resgate.movimentos (id) ON DELETE RESTRICT,
+                pedido_id      bigint      NOT NULL REFERENCES resgate.pedidos (id) ON DELETE RESTRICT,
+                lancamento_id  bigint      NOT NULL,
+                pontos         integer     NOT NULL,
+                criado_em      timestamptz NOT NULL DEFAULT now(),
+
+                CONSTRAINT ck_resgate_consumos_pontos CHECK (pontos > 0),
+                CONSTRAINT uq_resgate_consumos UNIQUE (movimento_id, lancamento_id)
+            )
+        SQL);
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_resgate_consumos_lancamento ON resgate.consumos (lancamento_id)');
+        $this->exec('DROP TRIGGER IF EXISTS tg_resgate_consumos_append_only ON resgate.consumos');
+        $this->exec('CREATE TRIGGER tg_resgate_consumos_append_only BEFORE UPDATE OR DELETE ON resgate.consumos FOR EACH ROW EXECUTE FUNCTION resgate.recusar_alteracao()');
     }
 
     /**
@@ -116,7 +230,7 @@ return new class extends Migration
                 faixa_exigida       varchar(12)  NOT NULL,
                 faixa_do_ente       varchar(12)  NOT NULL,
                 temporada_referencia varchar(20) NOT NULL,
-                status              varchar(12)  NOT NULL,
+                status              varchar(20)  NOT NULL,
                 demonstracao        boolean      NOT NULL DEFAULT false,
                 chave_idempotencia  varchar(80)  NOT NULL,
                 solicitado_por      bigint       NOT NULL,
@@ -142,9 +256,9 @@ return new class extends Migration
                 id              bigserial PRIMARY KEY,
                 pedido_id       bigint       NOT NULL REFERENCES resgate.pedidos (id) ON DELETE RESTRICT,
                 sequencia       integer      NOT NULL,
-                etapa           varchar(12)  NOT NULL,
-                de_status       varchar(12)  NULL,
-                para_status     varchar(12)  NOT NULL,
+                etapa           varchar(20)  NOT NULL,
+                de_status       varchar(20)  NULL,
+                para_status     varchar(20)  NOT NULL,
                 -- Nulo so em ato de sistema (expiracao); ato humano exige autor.
                 ator_user_id    bigint       NULL,
                 permissao       varchar(60)  NULL,

@@ -23,12 +23,18 @@
           <div><dt class="text-xs text-slate-500 dark:text-slate-400">Faixa exigida / do ente</dt><dd class="mt-1 flex gap-2"><RankingFaixaBadge :faixa="pedido.faixa_exigida" size="sm" /><RankingFaixaBadge :faixa="pedido.faixa_do_ente" size="sm" /></dd></div>
           <div><dt class="text-xs text-slate-500 dark:text-slate-400">Solicitado por</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ usuarios[pedido.solicitado_por] ?? `#${pedido.solicitado_por}` }}</dd></div>
           <div v-if="pedido.status === 'reservado'"><dt class="text-xs text-slate-500 dark:text-slate-400">Reserva expira em</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ dataHora(pedido.expira_em) }}</dd></div>
+          <div v-if="pedido.processo_sei"><dt class="text-xs text-slate-500 dark:text-slate-400">Processo SEI</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ pedido.processo_sei }} · termo {{ pedido.termo_documento_sei }}</dd></div>
+          <div v-if="pedido.entregue_em"><dt class="text-xs text-slate-500 dark:text-slate-400">Entregue em</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ dataHora(pedido.entregue_em) }}</dd></div>
+          <div v-if="pedido.concluido_em"><dt class="text-xs text-slate-500 dark:text-slate-400">Concluído em</dt><dd class="font-semibold text-emerald-700 dark:text-emerald-300">{{ dataHora(pedido.concluido_em) }}</dd></div>
         </dl>
         <DecisaoPedido :pedido="pedido" :pode-aprovar="podeAprovar" :usuario-id="usuarioId" />
       </section>
 
-      <div class="lg:col-span-2">
+      <div class="space-y-6 lg:col-span-2">
+        <ExecucaoPedido :pedido="pedido" :pode-aprovar="podeAprovar" :pode-entregar="podeEntregar" :age-pelo-ente="agePeloEnte" :usuario-id="usuarioId" />
         <LinhaDoTempoPedido :eventos="eventos" :usuarios="usuarios" :adulterado-em="adulterado_em" />
+        <DocumentosPedido :documentos="documentos" :pedido-id="pedido.id" :usuarios="usuarios" />
+        <ConsumoPedido :consumos="consumos" />
       </div>
     </div>
   </div>
@@ -44,6 +50,9 @@ import RankingFaixaBadge from '@/Components/Atoms/Ranking/RankingFaixaBadge.vue'
 import StatusPedidoBadge from '@/Components/Atoms/Resgate/StatusPedidoBadge.vue';
 import DecisaoPedido from '@/Components/Organisms/Resgate/DecisaoPedido.vue';
 import LinhaDoTempoPedido from '@/Components/Organisms/Resgate/LinhaDoTempoPedido.vue';
+import ExecucaoPedido from '@/Components/Organisms/Resgate/ExecucaoPedido.vue';
+import DocumentosPedido from '@/Components/Organisms/Resgate/DocumentosPedido.vue';
+import ConsumoPedido from '@/Components/Organisms/Resgate/ConsumoPedido.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
@@ -56,6 +65,10 @@ defineProps({
   entes: { type: Object, default: () => ({}) },
   usuarios: { type: Object, default: () => ({}) },
   podeAprovar: { type: Boolean, default: false },
+  podeEntregar: { type: Boolean, default: false },
+  agePeloEnte: { type: Boolean, default: false },
+  documentos: { type: Array, default: () => [] },
+  consumos: { type: Array, default: () => [] },
   usuarioId: { type: Number, default: 0 },
 });
 

@@ -14,6 +14,7 @@ use App\Modules\Resgate\Services\CatalogoResgate;
 use App\Modules\Resgate\Services\PedidoResgate;
 use App\Modules\Resgate\Support\EnteDoUsuario;
 use App\Modules\Resgate\Support\Rastro;
+use App\Modules\Resgate\Support\VisaoDoPedido;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -38,7 +39,7 @@ final class PedidoController extends Controller
         $user = $request->user();
         abort_unless($user?->can('resgate.carteira.view') || $user?->can('resgate.aprovar'), 403);
 
-        $dados = $request->validate(['status' => ['sometimes', 'nullable', Rule::in(['reservado', 'aprovado', 'recusado', 'cancelado', 'expirado'])]]);
+        $dados = $request->validate(['status' => ['sometimes', 'nullable', Rule::in(['reservado', 'aprovado', 'termo_emitido', 'termo_assinado', 'entregue', 'contestado', 'concluido', 'recusado', 'cancelado', 'expirado'])]]);
         $status = $dados['status'] ?? null;
         $global = $user->can('resgate.aprovar') || $user->can('resgate.carteira.estado');
 
@@ -118,12 +119,19 @@ final class PedidoController extends Controller
         $user = $request->user();
         $detalhe = $pedidos->detalhe($pedido);
         abort_if($detalhe === null, 404);
-        $this->autorizarVisao($user, $detalhe['pedido']);
+        $visao = app(VisaoDoPedido::class);
+        abort_unless($visao->podeVer($user, $detalhe['pedido']), 403);
 
         return Inertia::render('Resgate/PedidoShow', $detalhe + [
             'entes' => $this->nomesDosEntes([$detalhe['pedido']], $nomes),
-            'usuarios' => $this->nomesDeUsuarios(array_merge([$detalhe['pedido']['solicitado_por']], array_column($detalhe['eventos'], 'ator_user_id'))),
+            'usuarios' => $this->nomesDeUsuarios(array_merge(
+                [$detalhe['pedido']['solicitado_por']],
+                array_column($detalhe['eventos'], 'ator_user_id'),
+                array_column($detalhe['documentos'], 'enviado_por'),
+            )),
             'podeAprovar' => $user->can('resgate.aprovar'),
+            'podeEntregar' => $user->can('resgate.entregar'),
+            'agePeloEnte' => $visao->agePeloEnte($user, $detalhe['pedido']),
             'usuarioId' => (int) $user->id,
         ]);
     }
@@ -150,17 +158,6 @@ final class PedidoController extends Controller
         $this->traduzirRegra(fn () => $pedidos->cancelar($pedido, $dados['justificativa'], (int) $request->user()->id, Rastro::daRequisicao($request)));
 
         return back()->with('success', 'Pedido cancelado; pontos e unidade liberados.');
-    }
-
-    /** Ente ve o proprio pedido; quem decide ou tem visao estadual ve todos. */
-    private function autorizarVisao(?User $user, array $pedido): void
-    {
-        if ($user?->can('resgate.aprovar') || $user?->can('resgate.carteira.estado')) {
-            return;
-        }
-        abort_unless($user?->can('resgate.carteira.view'), 403);
-        $proprio = app(EnteDoUsuario::class)->resolver($user, EscopoCarteira::from($pedido['ente_escopo']), null);
-        abort_unless($proprio === $pedido['ente_id'], 403);
     }
 
     private function traduzirRegra(callable $operacao): mixed
