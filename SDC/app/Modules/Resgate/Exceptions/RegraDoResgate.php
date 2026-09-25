@@ -7,11 +7,11 @@ namespace App\Modules\Resgate\Exceptions;
 use DomainException;
 
 /**
- * Operacao no catalogo recusada por regra de negocio (quatro olhos, codigo
- * duplicado, proposta ja decidida...). O controller devolve como erro de
+ * Operacao do resgate recusada por regra de negocio (quatro olhos, codigo
+ * duplicado, saldo insuficiente, faixa abaixo...). O controller devolve como erro de
  * validacao, com a mensagem legivel.
  */
-final class RegraDoCatalogo extends DomainException
+final class RegraDoResgate extends DomainException
 {
     public function __construct(string $mensagem, public readonly string $campo = 'catalogo')
     {

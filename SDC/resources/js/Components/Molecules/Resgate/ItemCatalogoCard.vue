@@ -36,7 +36,8 @@
 
     <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[11px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
       <span>{{ item.unidade_responsavel }}</span>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
+        <Link v-if="podeSolicitar && item.liberado" :href="route('resgate.pedidos.novo', { item: item.codigo })" class="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white transition hover:bg-emerald-500" data-item-resgatar>Resgatar</Link>
         <Link v-if="podeGerenciar" :href="route('resgate.catalogo.propostas.nova', { item: item.codigo })" :class="LINK" data-item-gerenciar>Propor mudança</Link>
         <Link v-if="podeGerenciar && item.tipo === 'bem_permanente'" :href="route('resgate.catalogo.unidades.nova', { item: item.codigo })" :class="LINK" data-item-unidade>Cadastrar unidade</Link>
       </div>
@@ -48,7 +49,8 @@
 /**
  * Card de item do catalogo de resgate: tipo, faixa que libera, custo,
  * disponibilidade e se o municipio do usuario ja alcancou a faixa (na
- * temporada fechada). Sem botao de resgatar: a Fase 2 so publica o catalogo.
+ * temporada fechada). "Resgatar" leva a pagina de confirmacao do pedido,
+ * que mostra os impedimentos antes de reservar.
  */
 import { computed } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
@@ -59,6 +61,7 @@ import { TIPOS_ITEM, rotuloFaixa, rotuloInstrumento } from '@/Support/resgateCat
 const props = defineProps({
   item: { type: Object, required: true },
   podeGerenciar: { type: Boolean, default: false },
+  podeSolicitar: { type: Boolean, default: false },
 });
 
 const LINK = 'rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700';

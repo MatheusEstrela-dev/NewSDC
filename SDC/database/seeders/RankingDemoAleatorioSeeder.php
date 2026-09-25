@@ -52,7 +52,13 @@ final class RankingDemoAleatorioSeeder extends Seeder
         mt_srand((int) env('RANKING_DEMO_SEMENTE', 2026));
         $fuso = new DateTimeZone('America/Sao_Paulo');
         $agora = new DateTimeImmutable('now', $fuso);
-        $inicioMes = $agora->modify('first day of this month')->setTime(8, 0);
+        // Mes dos lancamentos: o corrente, ou RANKING_DEMO_REFERENCIA (Y-m-d)
+        // para gerar resultado de temporada FECHADA - a faixa que libera
+        // premios no resgate (decisao D2). Os participantes seguem os do mes
+        // corrente: sao as mesmas pessoas reais, em outra temporada.
+        $referencia = new DateTimeImmutable((string) env('RANKING_DEMO_REFERENCIA', 'now'), $fuso);
+        $inicioMes = $referencia->modify('first day of this month')->setTime(8, 0);
+        $fimMes = min($agora, $inicioMes->modify('first day of next month'));
         $db = DB::connection('ranking');
 
         $regras = $db->select(
@@ -83,7 +89,7 @@ final class RankingDemoAleatorioSeeder extends Seeder
         }
 
         $livro = app(RecordScoreTransaction::class);
-        $segundosNoMes = max(3600, $agora->getTimestamp() - $inicioMes->getTimestamp());
+        $segundosNoMes = max(3600, $fimMes->getTimestamp() - $inicioMes->getTimestamp() - 1);
         $porFaixa = array_fill_keys(array_column(self::DISTRIBUICAO, 0), 0);
         $lancamentos = 0;
 

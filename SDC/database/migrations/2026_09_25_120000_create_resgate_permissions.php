@@ -19,8 +19,9 @@ use Spatie\Permission\PermissionRegistrar;
  * - resgate.catalogo.propor : propor item, nova versao ou encerramento, e
  *                             cadastrar unidades de bem.
  * - resgate.catalogo.aprovar: aprovar ou recusar proposta de OUTRA pessoa.
+ * - resgate.aprovar         : CEDEC aprova ou recusa pedido de resgate.
  *
- * `solicitar`, `propor` e `aprovar` NAO vao para role nenhuma: sao
+ * `solicitar`, `propor`, `aprovar` e `catalogo.aprovar` NAO vao para role nenhuma: sao
  * permissoes especiais, concedidas pessoa a pessoa no Permissionamento, onde
  * cada concessao fica no permission_audit_log com IP, user agent e sessao.
  * A carteira segue quem ja ve o placar estadual; o catalogo, quem ve o placar.
@@ -37,6 +38,7 @@ return new class extends Migration
         'resgate.catalogo.ver'    => ['Resgate - Catalogo - Ver', 'catalogo'],
         'resgate.catalogo.propor' => ['Resgate - Catalogo - Propor item ou versao', 'catalogo'],
         'resgate.catalogo.aprovar' => ['Resgate - Catalogo - Aprovar proposta de outra pessoa', 'catalogo'],
+        'resgate.aprovar'         => ['Resgate - Pedidos - Aprovar ou recusar (CEDEC)', 'pedidos'],
     ];
 
     /** Permissao concedida => roles que ja tem a de referencia. */

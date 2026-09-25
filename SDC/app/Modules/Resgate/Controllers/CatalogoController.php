@@ -6,17 +6,14 @@ namespace App\Modules\Resgate\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Modules\Ranking\Enums\FaixaRanking;
-use App\Modules\Ranking\Services\LeaderboardQuery;
-use App\Modules\Ranking\Services\RankingReadService;
-use App\Modules\Ranking\Services\TemporadaDoRanking;
 use App\Modules\Resgate\Enums\AcaoProposta;
 use App\Modules\Resgate\Enums\EscopoCarteira;
 use App\Modules\Resgate\Enums\TipoItem;
-use App\Modules\Resgate\Exceptions\RegraDoCatalogo;
+use App\Modules\Resgate\Exceptions\RegraDoResgate;
 use App\Modules\Resgate\Requests\ProporItemCatalogoRequest;
 use App\Modules\Resgate\Services\CatalogoResgate;
 use App\Modules\Resgate\Support\EnteDoUsuario;
+use App\Modules\Resgate\Support\FaixaDoEnte;
 use App\Modules\Resgate\Support\Rastro;
 use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -35,8 +32,7 @@ final class CatalogoController extends Controller
         Request $request,
         CatalogoResgate $catalogo,
         EnteDoUsuario $entes,
-        TemporadaDoRanking $temporada,
-        RankingReadService $leitura,
+        FaixaDoEnte $faixa,
     ): Response {
         $user = $request->user();
         abort_unless($user?->can('resgate.catalogo.ver'), 403);
@@ -48,12 +44,11 @@ final class CatalogoController extends Controller
         // fechada (D2). Serve so para o indicador "liberado para voce".
         $municipio = $entes->resolver($user, EscopoCarteira::Municipio, null);
         $faixaFechada = $municipio !== null
-            ? $temporada->resultadoNaTemporadaAnterior(EscopoCarteira::Municipio->escopoDoPlacar(), $municipio, $leitura, app(LeaderboardQuery::class), new DateTimeImmutable())
+            ? $faixa->naTemporadaFechada(EscopoCarteira::Municipio, $municipio, new DateTimeImmutable())
             : null;
 
         $itens = array_map(static fn (array $item): array => $item + [
-            'liberado' => $faixaFechada !== null
-                && FaixaRanking::from($faixaFechada['faixa'])->pontosMinimos() >= FaixaRanking::from($item['faixa_minima'])->pontosMinimos(),
+            'liberado' => $faixaFechada !== null && FaixaDoEnte::alcanca($faixaFechada['faixa'], $item['faixa_minima']),
         ], $catalogo->vigentes());
 
         return Inertia::render('Resgate/Catalogo', [
@@ -63,6 +58,7 @@ final class CatalogoController extends Controller
             'faixaFechada' => $faixaFechada,
             'podePropor' => $podePropor,
             'podeAprovar' => $podeAprovar,
+            'podeSolicitar' => $user->can('resgate.solicitar'),
         ]);
     }
 
@@ -176,7 +172,7 @@ final class CatalogoController extends Controller
     {
         try {
             return $operacao();
-        } catch (RegraDoCatalogo $e) {
+        } catch (RegraDoResgate $e) {
             throw ValidationException::withMessages([$e->campo => $e->getMessage()]);
         }
     }

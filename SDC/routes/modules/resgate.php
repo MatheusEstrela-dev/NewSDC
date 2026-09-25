@@ -2,6 +2,7 @@
 
 use App\Modules\Resgate\Controllers\CarteiraController;
 use App\Modules\Resgate\Controllers\CatalogoController;
+use App\Modules\Resgate\Controllers\PedidoController;
 use Illuminate\Support\Facades\Route;
 
 // Resgate de pontos - Fase 1: carteira somente leitura. Carregado por
@@ -24,3 +25,17 @@ Route::post('/ranking/resgate/catalogo/propostas/{proposta}/decisao', [CatalogoC
     ->whereNumber('proposta')->middleware('throttle:20,1')->name('resgate.catalogo.decidir');
 Route::post('/ranking/resgate/catalogo/unidades', [CatalogoController::class, 'cadastrarUnidade'])
     ->middleware('throttle:20,1')->name('resgate.catalogo.unidades');
+
+// Fase 3: pedido de resgate. Nasce RESERVADO e aguarda a decisao da CEDEC.
+Route::get('/ranking/resgate/pedidos', [PedidoController::class, 'index'])
+    ->middleware('throttle:60,1')->name('resgate.pedidos');
+Route::get('/ranking/resgate/pedidos/novo', [PedidoController::class, 'novo'])
+    ->middleware('throttle:60,1')->name('resgate.pedidos.novo');
+Route::post('/ranking/resgate/pedidos', [PedidoController::class, 'solicitar'])
+    ->middleware('throttle:10,1')->name('resgate.pedidos.solicitar');
+Route::get('/ranking/resgate/pedidos/{pedido}', [PedidoController::class, 'show'])
+    ->whereNumber('pedido')->middleware('throttle:60,1')->name('resgate.pedidos.show');
+Route::post('/ranking/resgate/pedidos/{pedido}/decisao', [PedidoController::class, 'decidir'])
+    ->whereNumber('pedido')->middleware('throttle:20,1')->name('resgate.pedidos.decidir');
+Route::post('/ranking/resgate/pedidos/{pedido}/cancelamento', [PedidoController::class, 'cancelar'])
+    ->whereNumber('pedido')->middleware('throttle:20,1')->name('resgate.pedidos.cancelar');

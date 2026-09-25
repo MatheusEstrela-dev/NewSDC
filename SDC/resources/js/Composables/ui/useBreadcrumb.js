@@ -344,6 +344,7 @@ export function useBreadcrumb() {
         const ranking = { label: 'Ranking', route: 'ranking.index' };
         const catalogo = { label: 'Catálogo de prêmios', route: 'resgate.catalogo' };
         const propostas = { label: 'Propostas', route: 'resgate.catalogo.propostas' };
+        const pedidos = { label: 'Pedidos de resgate', route: 'resgate.pedidos' };
         const aqui = (label) => ({ label, route: null });
         const item = props?.item ?? null;
 
@@ -354,6 +355,9 @@ export function useBreadcrumb() {
             'Resgate/PropostaNova': [inicio, ranking, catalogo, propostas, aqui(item ? `Mudança em ${item.titulo}` : 'Novo item')],
             // O item nao tem pagina propria: aparece como degrau sem link.
             'Resgate/UnidadeNova': [inicio, ranking, catalogo, ...(item ? [aqui(item.titulo)] : []), aqui('Cadastrar unidade')],
+            'Resgate/Pedidos': [inicio, ranking, aqui('Pedidos de resgate')],
+            'Resgate/PedidoNovo': [inicio, ranking, catalogo, aqui(item ? `Resgatar ${item.titulo}` : 'Resgatar')],
+            'Resgate/PedidoShow': [inicio, ranking, pedidos, aqui(props?.pedido?.protocolo ?? 'Pedido')],
         };
 
         return trilhas[componentName] ?? null;

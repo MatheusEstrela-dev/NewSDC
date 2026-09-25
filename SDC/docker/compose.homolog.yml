@@ -64,6 +64,9 @@ x-ranking-env: &ranking-env
   RANKING_SOURCE_DATABASE: ${DB_DATABASE:-sdc}
   RANKING_SOURCE_USERNAME: ${DB_USERNAME:-sdc}
   RANKING_SOURCE_PASSWORD: ${DB_PASSWORD:-sdc}
+  # Resgate: pedidos de DEMONSTRACAO so em homologacao. Em APP_ENV=production
+  # o modo e ignorado a forca (ModoDemonstracao), mesmo com esta variavel.
+  RESGATE_PERMITIR_DEMONSTRACAO: "true"
   RANKING_SOURCE_SSLMODE: disable
 
 services:

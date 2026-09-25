@@ -6,7 +6,7 @@ namespace App\Modules\Resgate\Services;
 
 use App\Modules\Resgate\Enums\AcaoProposta;
 use App\Modules\Resgate\Enums\TipoItem;
-use App\Modules\Resgate\Exceptions\RegraDoCatalogo;
+use App\Modules\Resgate\Exceptions\RegraDoResgate;
 use App\Modules\Resgate\Support\Rastro;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +54,7 @@ final class CatalogoResgate
                 [$codigo],
             );
             if ($pendente !== null) {
-                throw new RegraDoCatalogo("Já existe proposta pendente para {$codigo} (#{$pendente->id}). Decida-a antes de propor outra.", 'codigo');
+                throw new RegraDoResgate("Já existe proposta pendente para {$codigo} (#{$pendente->id}). Decida-a antes de propor outra.", 'codigo');
             }
 
             return (int) $db->selectOne(
@@ -73,13 +73,13 @@ final class CatalogoResgate
         return $this->conexao()->transaction(function (Connection $db) use ($propostaId, $aprovar, $justificativa, $decisorId, $rastro): ?int {
             $proposta = $db->selectOne('SELECT * FROM resgate.catalogo_propostas WHERE id = ? FOR UPDATE', [$propostaId]);
             if ($proposta === null) {
-                throw new RegraDoCatalogo('Proposta não encontrada.');
+                throw new RegraDoResgate('Proposta não encontrada.');
             }
             if ($proposta->status !== 'pendente') {
-                throw new RegraDoCatalogo('Esta proposta já foi decidida.');
+                throw new RegraDoResgate('Esta proposta já foi decidida.');
             }
             if ((int) $proposta->proposto_por === $decisorId) {
-                throw new RegraDoCatalogo('Quem propôs não pode decidir a própria proposta. A decisão precisa de outra pessoa.');
+                throw new RegraDoResgate('Quem propôs não pode decidir a própria proposta. A decisão precisa de outra pessoa.');
             }
 
             $itemId = null;
@@ -159,11 +159,11 @@ final class CatalogoResgate
         return $this->conexao()->transaction(function (Connection $db) use ($codigo, $dados, $autorId, $rastro): int {
             $item = $db->selectOne('SELECT tipo, demonstracao FROM resgate.catalogo_itens WHERE codigo = ? AND vigente_ate IS NULL', [$codigo]);
             if ($item === null || ! TipoItem::from((string) $item->tipo)->individualizado()) {
-                throw new RegraDoCatalogo('Unidades só se cadastram em bem permanente vigente.', 'codigo');
+                throw new RegraDoResgate('Unidades só se cadastram em bem permanente vigente.', 'codigo');
             }
             $patrimonio = trim((string) ($dados['patrimonio'] ?? ''));
             if ($db->selectOne('SELECT 1 FROM resgate.unidades WHERE patrimonio = ?', [$patrimonio]) !== null) {
-                throw new RegraDoCatalogo("O patrimônio {$patrimonio} já está cadastrado.", 'patrimonio');
+                throw new RegraDoResgate("O patrimônio {$patrimonio} já está cadastrado.", 'patrimonio');
             }
 
             return (int) $db->selectOne(
@@ -217,10 +217,10 @@ final class CatalogoResgate
         $vigente = $db->selectOne('SELECT id FROM resgate.catalogo_itens WHERE codigo = ? AND vigente_ate IS NULL', [$codigo]);
 
         if ($acao === AcaoProposta::Criar && $vigente !== null) {
-            throw new RegraDoCatalogo("O código {$codigo} já tem item vigente; proponha uma nova versão.", 'codigo');
+            throw new RegraDoResgate("O código {$codigo} já tem item vigente; proponha uma nova versão.", 'codigo');
         }
         if ($acao !== AcaoProposta::Criar && $vigente === null) {
-            throw new RegraDoCatalogo("O código {$codigo} não tem item vigente.", 'codigo');
+            throw new RegraDoResgate("O código {$codigo} não tem item vigente.", 'codigo');
         }
     }
 
@@ -233,7 +233,7 @@ final class CatalogoResgate
     {
         $codigo = strtoupper(trim($codigo));
         if (! preg_match('/^[A-Z0-9-]{3,40}$/', $codigo)) {
-            throw new RegraDoCatalogo('Código inválido: use de 3 a 40 letras maiúsculas, números ou hífen.', 'codigo');
+            throw new RegraDoResgate('Código inválido: use de 3 a 40 letras maiúsculas, números ou hífen.', 'codigo');
         }
 
         return $codigo;

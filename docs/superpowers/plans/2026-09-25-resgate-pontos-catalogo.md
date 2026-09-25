@@ -340,6 +340,8 @@ Cada etapa só começa com a anterior verificada, e cada uma tem o seu commit at
   - reprocessar uma transição não duplica movimento;
   - `UPDATE`/`DELETE` em eventos e movimentos é bloqueado.
 
+**Implementado (25/09/2026), primeira fatia do fluxo:** o pedido nasce **reservado** (pontos e unidade presos) e fica assim até a CEDEC **aprovar** (a reserva segue até a entrega) ou **recusar** (libera). O solicitante pode **cancelar**; a reserva vencida **expira** pelo comando `resgate:expirar-reservas`, que roda aos :40 de cada hora. Aceite municipal separado, análise técnica e jurídica entram como estados na Fase 4. Homologação usa um **modo demonstração** (`RESGATE_PERMITIR_DEMONSTRACAO`, ignorado à força em `production`): o pedido de demonstração só usa itens e pontos de demonstração, e os dois saldos nunca se misturam.
+
 ### Fase 4 — Documentos, SEI, termo, entrega e confirmação
 
 - Checklist documental, hash de arquivos, número SEI obrigatório, termo assinado pelas duas partes, entrega com evidência, confirmação e contestação pelo município, débito com consumo FIFO.

@@ -31,11 +31,28 @@ final readonly class Carteira
         public int $demonstracao,
         public int $reservado,
         public int $debitado,
+        // Reservado + debitado por pedidos de DEMONSTRACAO.
+        public int $comprometidoDemonstracao = 0,
     ) {}
 
     public function saldoResgatavel(): int
     {
         return $this->maduro - $this->reservado - $this->debitado;
+    }
+
+    /**
+     * Saldo de demonstracao (so homologacao): pontos demo sem carencia, menos
+     * o que pedidos demo ja comprometeram. Nunca soma ao saldo real.
+     */
+    public function saldoDemonstracao(): int
+    {
+        return $this->demonstracao - $this->comprometidoDemonstracao;
+    }
+
+    /** Saldo que um pedido pode consumir, conforme ele seja real ou demonstracao. */
+    public function saldoPara(bool $demonstracao): int
+    {
+        return $demonstracao ? $this->saldoDemonstracao() : $this->saldoResgatavel();
     }
 
     /** @return array<string, mixed> */
@@ -54,6 +71,7 @@ final readonly class Carteira
             'demonstracao' => $this->demonstracao,
             'reservado' => $this->reservado,
             'debitado' => $this->debitado,
+            'saldo_demonstracao' => $this->saldoDemonstracao(),
         ];
     }
 }

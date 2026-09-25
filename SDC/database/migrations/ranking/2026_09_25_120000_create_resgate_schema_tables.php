@@ -67,6 +67,9 @@ return new class extends Migration
                 tipo          varchar(20)  NOT NULL,
                 pontos        integer      NOT NULL,
                 pedido_id     bigint       NULL,
+                -- Movimento de pedido de DEMONSTRACAO: consome so o saldo de
+                -- demonstracao. Os dois saldos nunca se misturam.
+                demonstracao  boolean      NOT NULL DEFAULT false,
                 chave         varchar(160) NOT NULL,
                 criado_em     timestamptz  NOT NULL DEFAULT now(),
 
@@ -85,6 +88,107 @@ return new class extends Migration
         $this->exec('CREATE TRIGGER tg_resgate_movimentos_append_only BEFORE UPDATE OR DELETE ON resgate.movimentos FOR EACH ROW EXECUTE FUNCTION resgate.recusar_alteracao()');
 
         $this->criarCatalogo();
+        $this->criarPedidos();
+    }
+
+    /**
+     * Fase 3 - pedido de resgate, reserva e decisao da CEDEC (plano, secao 4).
+     *
+     * O pedido nasce RESERVADO (pontos e unidade presos) e fica assim ate a
+     * CEDEC aprovar ou recusar. Cada passo e um evento append-only, com hash
+     * encadeado e segregacao de funcoes garantida no banco.
+     */
+    private function criarPedidos(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS resgate.pedidos (
+                id                  bigserial PRIMARY KEY,
+                protocolo           varchar(20)  NOT NULL,
+                ente_escopo         varchar(12)  NOT NULL,
+                ente_id             bigint       NOT NULL,
+                -- Versao do item CONGELADA na solicitacao: mudanca posterior no
+                -- catalogo nao altera pedido ja feito.
+                item_id             bigint       NOT NULL REFERENCES resgate.catalogo_itens (id) ON DELETE RESTRICT,
+                item_codigo         varchar(40)  NOT NULL,
+                item_versao         integer      NOT NULL,
+                unidade_id          bigint       NULL REFERENCES resgate.unidades (id) ON DELETE RESTRICT,
+                custo_pontos        integer      NOT NULL,
+                faixa_exigida       varchar(12)  NOT NULL,
+                faixa_do_ente       varchar(12)  NOT NULL,
+                temporada_referencia varchar(20) NOT NULL,
+                status              varchar(12)  NOT NULL,
+                demonstracao        boolean      NOT NULL DEFAULT false,
+                chave_idempotencia  varchar(80)  NOT NULL,
+                solicitado_por      bigint       NOT NULL,
+                solicitado_em       timestamptz  NOT NULL DEFAULT now(),
+                expira_em           timestamptz  NOT NULL,
+                atualizado_em       timestamptz  NOT NULL DEFAULT now(),
+
+                CONSTRAINT uq_resgate_pedidos_protocolo UNIQUE (protocolo),
+                CONSTRAINT uq_resgate_pedidos_idempotencia UNIQUE (chave_idempotencia),
+                CONSTRAINT ck_resgate_pedidos_escopo CHECK (ente_escopo IN ('municipio', 'orgao')),
+                CONSTRAINT ck_resgate_pedidos_status CHECK (status IN ('reservado', 'aprovado', 'recusado', 'cancelado', 'expirado')),
+                CONSTRAINT ck_resgate_pedidos_custo CHECK (custo_pontos >= 0)
+            )
+        SQL);
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_resgate_pedidos_ente ON resgate.pedidos (ente_escopo, ente_id, status)');
+        $this->exec('CREATE INDEX IF NOT EXISTS ix_resgate_pedidos_fila ON resgate.pedidos (status, solicitado_em)');
+        // Uma unidade em no maximo UM pedido ativo: nao se promete a mesma
+        // viatura a dois municipios, nem sob concorrencia.
+        $this->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_resgate_pedidos_unidade_ativa ON resgate.pedidos (unidade_id) WHERE status IN ('reservado', 'aprovado') AND unidade_id IS NOT NULL");
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS resgate.pedido_eventos (
+                id              bigserial PRIMARY KEY,
+                pedido_id       bigint       NOT NULL REFERENCES resgate.pedidos (id) ON DELETE RESTRICT,
+                sequencia       integer      NOT NULL,
+                etapa           varchar(12)  NOT NULL,
+                de_status       varchar(12)  NULL,
+                para_status     varchar(12)  NOT NULL,
+                -- Nulo so em ato de sistema (expiracao); ato humano exige autor.
+                ator_user_id    bigint       NULL,
+                permissao       varchar(60)  NULL,
+                justificativa   text         NULL,
+                ip_address      varchar(45)  NULL,
+                user_agent      text         NULL,
+                session_id      varchar(100) NULL,
+                request_id      varchar(64)  NULL,
+                hash            char(64)     NOT NULL,
+                hash_anterior   char(64)     NULL,
+                ocorrido_em     timestamptz  NOT NULL DEFAULT clock_timestamp(),
+
+                CONSTRAINT uq_resgate_eventos_sequencia UNIQUE (pedido_id, sequencia),
+                CONSTRAINT ck_resgate_eventos_etapa CHECK (etapa IN ('solicitar', 'aprovar', 'recusar', 'cancelar', 'expirar')),
+                CONSTRAINT ck_resgate_eventos_autor CHECK (etapa = 'expirar' OR ator_user_id IS NOT NULL)
+            )
+        SQL);
+        $this->exec('DROP TRIGGER IF EXISTS tg_resgate_eventos_append_only ON resgate.pedido_eventos');
+        $this->exec('CREATE TRIGGER tg_resgate_eventos_append_only BEFORE UPDATE OR DELETE ON resgate.pedido_eventos FOR EACH ROW EXECUTE FUNCTION resgate.recusar_alteracao()');
+
+        // Segregacao de funcoes NO BANCO: quem solicitou nao decide. So o
+        // proprio solicitante pode CANCELAR o que pediu.
+        $this->exec(<<<'SQL'
+            CREATE OR REPLACE FUNCTION resgate.segregar_funcoes() RETURNS trigger
+            LANGUAGE plpgsql AS $$
+            BEGIN
+                IF NEW.etapa IN ('aprovar', 'recusar') AND EXISTS (
+                    SELECT 1 FROM resgate.pedido_eventos e
+                     WHERE e.pedido_id = NEW.pedido_id AND e.ator_user_id = NEW.ator_user_id
+                ) THEN
+                    RAISE EXCEPTION 'resgate.pedido_eventos: quem ja atuou no pedido nao pode decidi-lo'
+                        USING ERRCODE = 'check_violation';
+                END IF;
+                RETURN NEW;
+            END;
+            $$
+        SQL);
+        $this->exec('DROP TRIGGER IF EXISTS tg_resgate_eventos_segregacao ON resgate.pedido_eventos');
+        $this->exec('CREATE TRIGGER tg_resgate_eventos_segregacao BEFORE INSERT ON resgate.pedido_eventos FOR EACH ROW EXECUTE FUNCTION resgate.segregar_funcoes()');
+
+        // Pedido nunca e apagado; so o status (e atualizado_em) muda, sempre
+        // acompanhado de evento.
+        $this->exec('DROP TRIGGER IF EXISTS tg_resgate_pedidos_sem_delete ON resgate.pedidos');
+        $this->exec('CREATE TRIGGER tg_resgate_pedidos_sem_delete BEFORE DELETE ON resgate.pedidos FOR EACH ROW EXECUTE FUNCTION resgate.recusar_alteracao()');
     }
 
     /**

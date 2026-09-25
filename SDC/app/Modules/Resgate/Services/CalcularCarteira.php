@@ -68,9 +68,11 @@ final class CalcularCarteira implements SaldoResgatavel
 
         // Reserva e debito sao negativos; liberacao e estorno de debito,
         // positivos. Reserva ativa = reservado menos o que ja foi liberado.
+        // Saldo real e de demonstracao separados: nunca se misturam.
         $movimentos = $this->conexao()->selectOne(
-            "SELECT COALESCE(-SUM(pontos) FILTER (WHERE tipo IN ('reserva', 'liberacao')), 0) AS reservado,
-                    COALESCE(-SUM(pontos) FILTER (WHERE tipo IN ('debito', 'estorno_debito')), 0) AS debitado
+            "SELECT COALESCE(-SUM(pontos) FILTER (WHERE NOT demonstracao AND tipo IN ('reserva', 'liberacao')), 0) AS reservado,
+                    COALESCE(-SUM(pontos) FILTER (WHERE NOT demonstracao AND tipo IN ('debito', 'estorno_debito')), 0) AS debitado,
+                    COALESCE(-SUM(pontos) FILTER (WHERE demonstracao), 0) AS comprometido_demo
                FROM resgate.movimentos
               WHERE ente_escopo = ? AND ente_id = ?",
             [$escopo->value, $enteId],
@@ -92,6 +94,7 @@ final class CalcularCarteira implements SaldoResgatavel
             demonstracao: (int) $creditos->demonstracao,
             reservado: (int) $movimentos->reservado,
             debitado: (int) $movimentos->debitado,
+            comprometidoDemonstracao: (int) $movimentos->comprometido_demo,
         );
     }
 
