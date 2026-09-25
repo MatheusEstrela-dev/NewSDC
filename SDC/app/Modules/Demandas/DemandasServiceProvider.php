@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas;
 
+use App\Modules\Demandas\Console\SlaVerificadorCommand;
 use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
 use App\Modules\Demandas\Infrastructure\Persistence\EloquentDemandaRepository;
 use App\Modules\Demandas\Models\Demanda;
@@ -36,5 +37,9 @@ class DemandasServiceProvider extends ServiceProvider
 
         // Tempo real: avisa listagens abertas que uma demanda mudou.
         Demanda::observe(DemandaTempoRealObserver::class);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([SlaVerificadorCommand::class]);
+        }
     }
 }

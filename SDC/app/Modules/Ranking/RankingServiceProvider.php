@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Ranking;
 
+use App\Modules\Demandas\Domain\Events\DemandaResolvidaV1;
 use App\Modules\Pae\Domain\Events\FormularioValidadoV1;
 use App\Modules\Pae\Domain\Events\ParecerConcluidoV1;
 use App\Modules\Pae\Domain\Events\ProtocoloEnviadoV1;
 use App\Modules\Pae\Domain\Events\RevisaoAceitaV1;
 use App\Modules\Ranking\Adapters\AjudaHumanitariaAdapter;
 use App\Modules\Ranking\Adapters\CisternaAdapter;
+use App\Modules\Ranking\Adapters\DemandaAdapter;
 use App\Modules\Ranking\Adapters\PaeAdapter;
 use App\Modules\Ranking\Adapters\PmdaAdapter;
 use App\Modules\Ranking\Adapters\RatAdapter;
@@ -143,6 +145,7 @@ class RankingServiceProvider extends ServiceProvider
             CisternaAdapter::class,
             PmdaAdapter::class,
             TdapAdapter::class,
+            DemandaAdapter::class,
         ];
 
         foreach ($adaptadores as $adaptador) {
@@ -197,6 +200,7 @@ class RankingServiceProvider extends ServiceProvider
             FormularioValidadoV1::class,
             RevisaoAceitaV1::class,
             ParecerConcluidoV1::class,
+            DemandaResolvidaV1::class,
         ];
 
         foreach ($eventos as $evento) {
