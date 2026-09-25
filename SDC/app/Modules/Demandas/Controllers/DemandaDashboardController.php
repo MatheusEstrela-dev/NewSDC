@@ -9,6 +9,7 @@ use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
 use App\Modules\Demandas\Enums\PrioridadeSimples;
 use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Demandas\Queries\DemandaDashboardQuery;
+use App\Modules\Demandas\Support\CsvSeguro;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -54,8 +55,7 @@ class DemandaDashboardController extends Controller
             $this->escreverLinhaCsv($out, ['assunto', 'total', 'concluidas']);
             foreach ($linhas as $l) {
                 // Formula injection: nome de assunto vem de cadastro livre.
-                $assunto = preg_match('/^[=+\-@]/', $l['assunto']) ? "'".$l['assunto'] : $l['assunto'];
-                $this->escreverLinhaCsv($out, [$assunto, $l['total'], $l['concluidas']]);
+                $this->escreverLinhaCsv($out, [CsvSeguro::celula($l['assunto']), $l['total'], $l['concluidas']]);
             }
             fclose($out);
         }, 'demandas-quantitativo-'.now()->format('Ymd').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
