@@ -10,12 +10,16 @@ use App\Modules\Demandas\Domain\Exceptions\TransicaoProibidaException;
 use App\Modules\Demandas\Domain\Guards\ExigeAtribuicaoParaProgresso;
 use App\Modules\Demandas\Enums\StatusDemanda;
 use App\Modules\Demandas\Models\Demanda;
+use App\Modules\Demandas\Support\ContextoImportacao;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 final class DemandaWorkflow
 {
-    public function __construct(private readonly ExigeAtribuicaoParaProgresso $atribuicao) {}
+    public function __construct(
+        private readonly ExigeAtribuicaoParaProgresso $atribuicao,
+        private readonly ContextoImportacao $contexto,
+    ) {}
 
     public function transitar(Demanda $demanda, StatusDemanda $novoStatus, int $usuarioId, ?CarbonInterface $momento = null): Demanda
     {
@@ -38,12 +42,17 @@ final class DemandaWorkflow
             }
             $demanda->save();
 
-            DB::afterCommit(static function () use ($demanda, $anterior, $novoStatus, $usuarioId): void {
-                event(StatusAlteradoV1::create($demanda->id, $anterior->value, $novoStatus->value, $usuarioId));
-                if ($novoStatus === StatusDemanda::RESOLVIDA) {
-                    event(DemandaResolvidaV1::create($demanda->id, $usuarioId));
-                }
-            });
+            // Carga do legado nao produz evento de negocio: importacao nao e
+            // acao de usuario, e o Ranking (e outros consumidores) nao pode
+            // pontuar nem notificar retroativamente por causa de uma migracao.
+            if (! $this->contexto->ativo()) {
+                DB::afterCommit(static function () use ($demanda, $anterior, $novoStatus, $usuarioId): void {
+                    event(StatusAlteradoV1::create($demanda->id, $anterior->value, $novoStatus->value, $usuarioId));
+                    if ($novoStatus === StatusDemanda::RESOLVIDA) {
+                        event(DemandaResolvidaV1::create($demanda->id, $usuarioId));
+                    }
+                });
+            }
 
             return $demanda;
         });
