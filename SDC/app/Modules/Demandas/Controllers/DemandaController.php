@@ -241,8 +241,10 @@ class DemandaController extends Controller
         } catch (DomainException $e) {
             return redirect()->back()->withErrors(['automacao' => $e->getMessage()]);
         } catch (\Throwable) {
-            // Fila sincrona (dev/teste) propaga a falha do AD; o historico ja
-            // registrou a solicitacao e o estado da demanda nao muda.
+            // Fila sincrona (dev/teste): o SyncQueue chama failed() do job
+            // (que ja grava o automation_failed) antes de relancar a
+            // excecao ate aqui; o estado da demanda nao muda. So resta
+            // avisar o usuario com uma mensagem generica.
             return redirect()->back()->withErrors(['automacao' => 'O diretório corporativo não respondeu. Tente novamente.']);
         }
 

@@ -11,6 +11,8 @@ use App\Modules\Demandas\Services\HistoricoDemanda;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Throwable;
@@ -19,6 +21,11 @@ use Throwable;
  * Chamada ao diretorio corporativo fora da requisicao. Idempotente pelo
  * operationId (Idempotency-Key no adaptador HTTP): retry nao desbloqueia duas
  * vezes. Resposta do AD nunca vai para historico ou log -- reset devolve senha.
+ *
+ * Sob QUEUE_CONNECTION=sync o SyncQueue chama fail() (que chama failed())
+ * antes de relancar a excecao para quem despachou o job; o historico ja tem
+ * o automation_failed quando a excecao chega no controller, entao o
+ * controller nao grava historico de novo -- so mostra uma mensagem generica.
  */
 class ExecutarAutomacaoDemandaJob implements ShouldQueue
 {
@@ -73,8 +80,28 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
         }
         app(HistoricoDemanda::class)->registrar(
             $demanda, $this->userId, AcaoHistoricoDemanda::AUTOMACAO_FALHOU,
-            sprintf('"%s" falhou: %s', $this->acao, mb_substr($erro->getMessage(), 0, 200)),
+            sprintf('"%s" falhou: %s', $this->acao, $this->descreverFalha($erro)),
             ['operation_id' => $this->operationId],
         );
+    }
+
+    /**
+     * Descricao segura da falha para o historico. A mensagem de excecao do
+     * cliente HTTP (getMessage) embute um resumo do corpo da resposta do
+     * diretorio, que pode conter dado de conta/credencial -- por isso nunca
+     * persistimos $erro->getMessage() em lugar nenhum, so fatos seguros
+     * (status HTTP, tipo de falha).
+     */
+    private function descreverFalha(Throwable $erro): string
+    {
+        if ($erro instanceof RequestException) {
+            return sprintf('diretório respondeu HTTP %d', $erro->response->status());
+        }
+
+        if ($erro instanceof ConnectionException) {
+            return 'diretório indisponível';
+        }
+
+        return 'erro ao falar com o diretório ('.class_basename($erro).')';
     }
 }
