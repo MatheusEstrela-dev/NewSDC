@@ -108,6 +108,7 @@ final class RankingController extends Controller
             'estadual' => $estadual,
             'cobertura' => 'Piloto RAT/PAE. Cobertura parcial; IPCM em apuracao.',
             'podeGerenciarRegras' => $user->can('is-admin'),
+            'podeVerCarteira' => $user->can('resgate.carteira.view'),
             // Limiares vindos do config, conferido contra FaixaRanking pelo
             // verify-catalog: o Vue nao mantem uma segunda copia dos cortes.
             'faixas' => config('ranking.faixas'),

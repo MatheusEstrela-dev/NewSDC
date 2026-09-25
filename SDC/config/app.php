@@ -246,6 +246,7 @@ return [
         App\Modules\Cedec\CedecServiceProvider::class,
         App\Modules\Pae\PaeServiceProvider::class,
         App\Modules\Ranking\RankingServiceProvider::class,
+        App\Modules\Resgate\ResgateServiceProvider::class,
     ])->toArray(),
 
     /*
