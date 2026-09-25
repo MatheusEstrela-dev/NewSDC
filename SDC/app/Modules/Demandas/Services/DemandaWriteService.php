@@ -22,6 +22,16 @@ use Illuminate\Support\Facades\DB;
  */
 final class DemandaWriteService
 {
+    /**
+     * Mensagem de historico por campo editado, para o titulo nao aparecer como
+     * "Descrição alterada." na aba Historico.
+     */
+    private const MENSAGENS_CAMPO_EDITADO = [
+        'titulo' => 'Título alterado.',
+        'descricao' => 'Descrição alterada.',
+        'assunto_id' => 'Assunto alterado.',
+    ];
+
     public function __construct(
         private readonly DemandaRepository $repository,
         private readonly ValidadorCamposDinamicos $validador,
@@ -84,7 +94,7 @@ final class DemandaWriteService
                 }
                 $this->historico->registrar(
                     $demanda, $userId, AcaoHistoricoDemanda::EDITADA,
-                    $campo === 'assunto_id' ? 'Assunto alterado.' : 'Descrição alterada.',
+                    self::MENSAGENS_CAMPO_EDITADO[$campo] ?? 'Edição.',
                     campo: $campo, anterior: (string) $valorAnterior, novo: (string) $demanda->{$campo},
                 );
             }
