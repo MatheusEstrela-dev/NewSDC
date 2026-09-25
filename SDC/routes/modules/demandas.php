@@ -2,6 +2,7 @@
 
 use App\Modules\Demandas\Controllers\DemandaController;
 use App\Modules\Demandas\Controllers\CatalogoDemandaController;
+use App\Modules\Demandas\Controllers\DemandaDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth'])->group(function () {
@@ -9,6 +10,14 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/demandas', [DemandaController::class, 'index'])
         ->name('demandas.index')
         ->middleware('can:demandas.chamados.view');
+
+    Route::get('/demandas/dashboard', [DemandaDashboardController::class, 'index'])
+        ->name('demandas.dashboard')
+        ->middleware('can:demandas.dashboard.view');
+
+    Route::get('/demandas/dashboard/export', [DemandaDashboardController::class, 'export'])
+        ->name('demandas.dashboard.export')
+        ->middleware('can:demandas.chamados.export');
 
     Route::get('/demandas/nova', [DemandaController::class, 'create'])
         ->name('demandas.create')
