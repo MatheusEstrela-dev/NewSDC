@@ -167,6 +167,26 @@ return [
             ]) : [],
         ],
 
+        // Somente leitura, consumida por demandas:importar-legado. MySQL do
+        // cedec-demanda (chamados, comentarios, anexos, historico). Nenhuma
+        // migration nem model aponta para ela.
+        'cedec_demanda_legacy' => [
+            'driver' => 'mysql',
+            'host' => env('DB_CEDEC_DEMANDA_HOST', '127.0.0.1'),
+            'port' => env('DB_CEDEC_DEMANDA_PORT', '3306'),
+            'database' => env('DB_CEDEC_DEMANDA_DATABASE', 'cedec_demanda'),
+            'username' => env('DB_CEDEC_DEMANDA_USERNAME', 'root'),
+            'password' => env('DB_CEDEC_DEMANDA_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('DB_CEDEC_DEMANDA_SSL_CA'),
+            ]) : [],
+        ],
+
         // Conexão para carga/queries otimizadas (leitura intensiva, ETL, BI)
         // Aponta para réplica de leitura ou banco dedicado a carga de dados
         'carga' => [

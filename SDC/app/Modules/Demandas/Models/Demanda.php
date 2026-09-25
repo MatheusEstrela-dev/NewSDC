@@ -142,6 +142,10 @@ class Demanda extends Model implements Rastreavel
         $ultimoNumero = static::query()
             ->where('tipo', $this->tipo->value)
             ->where('protocolo', 'like', "{$prefix}-{$ano}-%")
+            // Protocolo importado do legado carrega o id original com prefixo L
+            // (ex.: REQ-2026-L000199). Como max() e lexicografico e 'L' > digito,
+            // sem este filtro o legado passaria a definir a proxima sequencia.
+            ->where('protocolo', 'not like', "{$prefix}-{$ano}-L%")
             ->max('protocolo');
 
         if ($ultimoNumero) {

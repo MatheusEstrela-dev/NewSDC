@@ -34,7 +34,9 @@ final class HistoricoDemanda
             'campo' => $campo,
             'valor_anterior' => $anterior,
             'valor_novo' => $novo,
-            'metadata' => array_merge($metadata, ['rotulo' => $acao->rotulo(), 'detalhes' => $detalhes]),
+            // Rotulo do enum por padrao, mas quem chama pode informar o texto
+            // original (ex.: importacao do legado preservando a acao literal).
+            'metadata' => array_merge(['rotulo' => $acao->rotulo()], $metadata, ['detalhes' => $detalhes]),
         ]);
         if ($em !== null) {
             $log->created_at = $em;
