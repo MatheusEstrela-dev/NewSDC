@@ -64,6 +64,12 @@ return new class extends Migration
                 ->nullOnDelete()
                 ->comment('Responsável atual');
 
+            $table->foreignId('criado_por_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->comment('Quem registrou a demanda (pode diferir do solicitante)');
+
             $table->foreignId('grupo_id')
                 ->nullable()
                 ->comment('Grupo/Equipe responsável (FK futura para groups table)');
@@ -104,6 +110,7 @@ return new class extends Migration
             $table->index(['atribuido_para_id', 'status']);
             $table->index(['solicitante_id', 'created_at']);
             $table->index(['categoria', 'status']);
+            $table->index(['criado_por_id', 'created_at']);
 
             // TODO: Full-text search (adicionar manualmente se necessário)
             // DB::statement('ALTER TABLE tasks ADD FULLTEXT idx_tasks_titulo_fulltext(titulo)');

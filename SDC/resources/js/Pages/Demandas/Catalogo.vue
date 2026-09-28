@@ -22,7 +22,17 @@
           <p v-for="(error, field) in assuntoForm.errors" :key="field" class="text-sm text-rose-600">{{ error }}</p>
           <button :disabled="assuntoForm.processing" class="rounded bg-orange-600 px-4 py-2 text-white">Adicionar assunto</button>
         </form>
-        <ul class="divide-y dark:divide-slate-700"><li v-for="item in assuntos" :key="item.id" class="flex items-center justify-between gap-2 py-2"><span>{{ item.nome }} <span v-if="!item.ativo" class="text-xs text-slate-500">(inativo)</span></span><button class="text-sm text-sky-600" @click="toggleAssunto(item)">{{ item.ativo ? 'Desativar' : 'Ativar' }}</button></li></ul>
+        <div class="space-y-2">
+          <div v-for="item in assuntos" :key="item.id" class="space-y-1">
+            <div class="flex items-center justify-between gap-2 rounded border-b py-2 dark:border-slate-700">
+              <span>{{ item.nome }} <span v-if="!item.ativo" class="text-xs text-slate-500">(inativo)</span></span>
+              <button class="text-sm text-sky-600" @click="toggleAssunto(item)">{{ item.ativo ? 'Desativar' : 'Ativar' }}</button>
+            </div>
+            <CollapsibleSection namespace="demandas-catalogo" :section-id="`assunto-campos-${item.id}`" title="Campos e automação" :expandido-por-padrao="false">
+              <AssuntoCamposEditor :assunto="item" />
+            </CollapsibleSection>
+          </div>
+        </div>
       </section>
     </div>
   </div>
@@ -32,6 +42,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
+import AssuntoCamposEditor from '@/Components/Organisms/Demandas/Catalogo/AssuntoCamposEditor.vue';
 defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({ categorias: Array, assuntos: Array });
 const categoriasPrincipais = computed(() => props.categorias.filter(item => !item.parent_id && item.ativo));

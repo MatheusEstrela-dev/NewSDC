@@ -1,10 +1,12 @@
 <script setup>
 import { computed, inject } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import { usePermissions } from '@/Composables/auth';
 import {
   HomeIcon,
   DocumentTextIcon,
   ClipboardDocumentCheckIcon,
+  ChartBarIcon,
   ShieldExclamationIcon,
   Bars3Icon,
 } from '@heroicons/vue/24/outline';
@@ -12,12 +14,14 @@ import {
   HomeIcon as HomeIconSolid,
   DocumentTextIcon as DocumentTextIconSolid,
   ClipboardDocumentCheckIcon as ClipboardDocumentCheckIconSolid,
+  ChartBarIcon as ChartBarIconSolid,
   ShieldExclamationIcon as ShieldExclamationIconSolid,
 } from '@heroicons/vue/24/solid';
 
 const openSidebar = inject('openSidebar', () => {});
 
 const page = usePage();
+const { can } = usePermissions();
 
 const navigationItems = computed(() => {
   const items = [
@@ -42,8 +46,16 @@ const navigationItems = computed(() => {
       href: route().has('demandas.index') ? route('demandas.index') : route('dashboard'),
       icon: ClipboardDocumentCheckIcon,
       iconActive: ClipboardDocumentCheckIconSolid,
-      active: route().current('demandas.*'),
+      active: route().current('demandas.*') && !route().current('demandas.dashboard'),
       show: route().has('demandas.index'),
+    },
+    {
+      name: 'Painel',
+      href: route().has('demandas.dashboard') ? route('demandas.dashboard') : route('dashboard'),
+      icon: ChartBarIcon,
+      iconActive: ChartBarIconSolid,
+      active: route().current('demandas.dashboard'),
+      show: route().has('demandas.dashboard') && can('demandas.dashboard.view'),
     },
     {
       name: 'PAE',

@@ -11,9 +11,9 @@ class DemandaAssunto extends Model
 {
     protected $table = 'demanda_assuntos';
 
-    protected $fillable = ['categoria_id', 'nome', 'campos_dinamicos', 'ativo'];
+    protected $fillable = ['categoria_id', 'nome', 'campos_dinamicos', 'form_automacao', 'ativo'];
 
-    protected $casts = ['campos_dinamicos' => 'array', 'ativo' => 'boolean'];
+    protected $casts = ['campos_dinamicos' => 'array', 'form_automacao' => 'array', 'ativo' => 'boolean'];
 
     public function categoria(): BelongsTo
     {

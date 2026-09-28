@@ -124,24 +124,28 @@
         >
           Visão Geral
         </NavItem>
-        <NavItem
-          v-if="canSeeDemandas && _routes.hasDemandas"
-          :href="route('demandas.index')"
-          :active="isRouteActive('demandas.*')"
-          icon="checkbadge"
-          :collapsed="isCollapsed"
+        <!-- DEMANDAS - drill-down (abre submenu como nova seccao) -->
+        <button
+          v-if="canSeeDemandasGroup"
+          @click="openSubmenu('demandas')"
+          class="nav-group-toggle nav-drilldown"
+          :class="{ 'is-active-route': isRouteActive('demandas.*') || isRouteActive('admin.demandas.catalogo.*') }"
+          :title="isCollapsed ? 'Demandas' : ''"
         >
-          DEMANDAS
-        </NavItem>
-        <NavItem
-          v-if="hasPermission(['demandas.chamados.manage'])"
-          href="/admin/demandas/catalogo"
-          :active="isRouteActive('admin.demandas.catalogo.*')"
-          icon="checkbadge"
-          :collapsed="isCollapsed"
-        >
-          Catálogo de demandas
-        </NavItem>
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </svg>
+          <span v-show="!isCollapsed">Demandas</span>
+          <svg
+            v-show="!isCollapsed"
+            class="nav-arrow nav-arrow-drill"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
         <NavItem
           v-if="canSeeRat && _routes.hasRat"
           :href="ratHref"
@@ -796,6 +800,59 @@
       </div>
     </nav>
 
+    <!-- SUBMENU VIEW: DEMANDAS -->
+    <nav
+      v-if="canSeeDemandasGroup"
+      class="sidebar-nav sidebar-view sidebar-view-submenu"
+      :class="{ 'is-active': activeSubmenu === 'demandas' }"
+      :inert="activeSubmenu !== 'demandas'"
+    >
+      <button
+        type="button"
+        class="submenu-back"
+        @click="closeSubmenu"
+        v-show="!isCollapsed"
+      >
+        <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="submenu-back-title">{{ submenuTitle || 'Demandas' }}</span>
+      </button>
+
+      <div class="nav-section">
+        <NavItem
+          v-if="canSeeDemandasDashboard"
+          :href="route('demandas.dashboard')"
+          :active="isRouteActive('demandas.dashboard')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Painel
+        </NavItem>
+        <NavItem
+          v-if="canSeeDemandasIndex"
+          :href="route('demandas.index')"
+          :active="isRouteActive('demandas.index') || isRouteActive('demandas.show') || isRouteActive('demandas.create')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Listar demandas
+        </NavItem>
+        <NavItem
+          v-if="canSeeDemandasCatalogo"
+          :href="demandasCatalogoHref"
+          :active="isRouteActive('admin.demandas.catalogo.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Catálogo
+        </NavItem>
+      </div>
+    </nav>
+
     </div><!-- /.sidebar-views -->
 
     <!-- Gradiente inferior -->
@@ -907,6 +964,16 @@ const _activeRoutes = computed(() => {
     'dashboard': route().current('dashboard'),
     'rat.*': route().current('rat.*'),
     'demandas.*': route().current('demandas.*'),
+    // isRouteActive so acende o item quando o padrao e chave DESTE mapa. Sem
+    // as linhas abaixo os itens do submenu Demandas (Task 18b) nunca
+    // acendiam: so 'demandas.*' existia, e o padrao usado pelos NavItems e
+    // pelo botao do grupo e mais especifico (rota nomeada exata ou
+    // admin.demandas.catalogo.*, que fica fora do prefixo demandas.).
+    'demandas.dashboard': route().current('demandas.dashboard'),
+    'demandas.index': route().current('demandas.index'),
+    'demandas.show': route().current('demandas.show'),
+    'demandas.create': route().current('demandas.create'),
+    'admin.demandas.catalogo.*': route().current('admin.demandas.catalogo.*'),
     'pae.*': route().current('pae.*'),
     'plantao.*': route().current('plantao.*'),
     'decretacoes.*': route().current('decretacoes.*'),
@@ -1017,6 +1084,25 @@ const canSeeRat = computed(() => {
 
 const canSeeDemandas = computed(() => {
   return hasPermission(['demandas.chamados.view']);
+});
+
+// Grupo Demandas (Task 18b) - o botao do grupo so aparece se algum dos tres
+// filhos abaixo for visivel; cada gate reproduz exatamente o v-if que o item
+// solto tinha antes da fusao em grupo.
+const canSeeDemandasDashboard = computed(() => {
+  return hasPermission(['demandas.dashboard.view']) && route().has('demandas.dashboard');
+});
+
+const canSeeDemandasIndex = computed(() => {
+  return canSeeDemandas.value && _routes.hasDemandas;
+});
+
+const canSeeDemandasCatalogo = computed(() => {
+  return hasPermission(['demandas.chamados.manage']);
+});
+
+const canSeeDemandasGroup = computed(() => {
+  return canSeeDemandasDashboard.value || canSeeDemandasIndex.value || canSeeDemandasCatalogo.value;
 });
 
 const canSeePae = computed(() => {
@@ -1165,6 +1251,8 @@ const submenuPorRota = {
   'tdap.': 'tdap',
   'estoque.': 'estoque',
   'ajuda-humanitaria.': 'ajuda-humanitaria',
+  'demandas.': 'demandas',
+  'admin.demandas.': 'demandas',
 };
 
 function submenuDaRotaAtual() {
@@ -1185,6 +1273,7 @@ const submenuTitles = {
   tdap: 'TDAP',
   estoque: 'Estoque',
   'ajuda-humanitaria': 'Ajuda Humanitaria',
+  demandas: 'Demandas',
 };
 
 const submenuTitle = computed(() => submenuTitles[activeSubmenu.value] ?? '');
@@ -1201,6 +1290,11 @@ const paeHref = route().has('pae.protocolos.index') ? route('pae.protocolos.inde
 
 const pmdaHref = route().has('pmda.planos.index') ? route('pmda.planos.index') :
                 route('dashboard');
+
+// Catalogo tem rota nomeada (admin.demandas.catalogo.index); cai para a URL
+// crua so se o Ziggy nao a conhecer.
+const demandasCatalogoHref = route().has('admin.demandas.catalogo.index') ? route('admin.demandas.catalogo.index') :
+                '/admin/demandas/catalogo';
 
 const permissionamentoHref = route().has('admin.permissions.users.index') ? route('admin.permissions.users.index') :
                               route().has('admin.permissions.roles.index') ? route('admin.permissions.roles.index') :

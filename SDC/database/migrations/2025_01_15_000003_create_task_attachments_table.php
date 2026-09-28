@@ -34,6 +34,12 @@ return new class extends Migration
             $table->integer('tamanho_bytes');
             $table->string('path', 500);
 
+            // Anexo importado do legado sem o arquivo fisico no disco de origem:
+            // o registro (vinculo com a demanda) e mantido, so o conteudo binario
+            // que falta. checksum_sha256 confirma integridade do que foi copiado.
+            $table->boolean('arquivo_disponivel')->default(true);
+            $table->string('checksum_sha256', 64)->nullable();
+
             $table->timestamps();
 
             // Índices

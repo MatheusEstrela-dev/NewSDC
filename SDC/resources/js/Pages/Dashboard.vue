@@ -245,6 +245,10 @@ const props = defineProps({
     // o DTO vale para todo mundo e isto e por usuario. Nulo enquanto o
     // DashboardController nao enviar o prop, e o widget trata esse caso.
     rankingResumo:      { type: Object, default: null },
+    // Demandas recentes do usuario para o widget de mesmo nome. FORA do DTO
+    // cacheado pelo mesmo motivo do canVerFrota/rankingResumo: o escopo
+    // (minhas vs. todas) e por usuario via escopoVisivel.
+    demandasRecentes:   { type: Array,  default: () => [] },
 });
 
 const currentYear = ref(new Date().getFullYear());
@@ -412,7 +416,8 @@ if (inertiaPage.props.rankingDisponivel) {
 widgetItems.value.push({
     id: 'demandas-recentes',
     component: markRaw(DemandasWidget),
-    colSpan: 'col-span-1 lg:col-span-4'
+    colSpan: 'col-span-1 lg:col-span-4',
+    props: { demandasRecentes: props.demandasRecentes }
 });
 
 </script>

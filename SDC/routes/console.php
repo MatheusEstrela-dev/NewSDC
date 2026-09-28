@@ -72,6 +72,12 @@ Schedule::command('pae:verificar-notificacoes')
     ->onOneServer()
     ->runInBackground();
 
+// Demandas: marca SLA vencido. Sem SlaDefinicao ativa o comando nao faz nada.
+Schedule::command('demandas:verificar-slas')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onOneServer();
+
 // A retencao do inbox de notificacoes NAO fica aqui: ela arquiva em vez de
 // apagar, e esta agendada em app/Console/Kernel.php como notificacoes:arquivar,
 // ao lado do webhooks:archive que segue a mesma tratativa.

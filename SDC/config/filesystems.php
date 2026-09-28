@@ -133,6 +133,15 @@ return [
             'throw' => false,
         ],
 
+        // Anexos do cedec-demanda (storage/app/public do legado). Somente leitura
+        // pelo ETL de demandas; caminho_arquivo e relativo a esta raiz.
+        'legado_demandas' => [
+            'driver' => 'local',
+            'root' => env('LEGADO_DEMANDAS_ANEXOS_ROOT', storage_path('app/legado_demandas')),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
         // Arquivos do modulo Cisterna no legado `sdc`: fotos do imovel em
         // cisterna/{cpf}/ e fotos de vistoria em
         // relatorios/cisterna/{form}/{id}/. Disco de LEITURA, usado somente

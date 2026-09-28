@@ -155,6 +155,11 @@ return [
                 'delete' => 'demandas.chamados.delete',
                 'export' => 'demandas.chamados.export',
                 'manage' => 'demandas.chamados.manage',
+                'resolver' => 'demandas.chamados.resolver',
+                'automatizar' => 'demandas.chamados.automatizar',
+            ],
+            'Dashboard' => [
+                'view' => 'demandas.dashboard.view',
             ],
         ],
         'DECRETACOES' => [
@@ -716,6 +721,9 @@ return [
             'demandas.chamados.edit',
             'demandas.chamados.export',
             'demandas.chamados.manage',
+            'demandas.chamados.resolver',
+            'demandas.chamados.automatizar',
+            'demandas.dashboard.view',
             // Decretacoes - CRUD completo exceto delete
             'decretacoes.processos.view',
             'decretacoes.processos.create',

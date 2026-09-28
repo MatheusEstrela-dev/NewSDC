@@ -7,9 +7,9 @@ namespace App\Modules\Demandas\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Demandas\Models\DemandaAssunto;
 use App\Modules\Demandas\Models\DemandaCategoria;
+use App\Modules\Demandas\Requests\SalvarAssuntoRequest;
+use App\Modules\Demandas\Requests\SalvarCategoriaRequest;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,50 +19,34 @@ class CatalogoDemandaController extends Controller
     {
         return Inertia::render('Demandas/Catalogo', [
             'categorias' => DemandaCategoria::query()->orderBy('nome')->get(['id', 'nome', 'descricao', 'parent_id', 'ativo']),
-            'assuntos' => DemandaAssunto::query()->orderBy('nome')->get(['id', 'nome', 'categoria_id', 'ativo']),
+            'assuntos' => DemandaAssunto::query()->orderBy('nome')->get(['id', 'nome', 'categoria_id', 'ativo', 'campos_dinamicos', 'form_automacao']),
         ]);
     }
 
-    public function storeCategoria(Request $request): RedirectResponse
+    public function storeCategoria(SalvarCategoriaRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'nome' => ['required', 'string', 'max:100'],
-            'descricao' => ['nullable', 'string', 'max:2000'],
-            'parent_id' => ['nullable', 'integer', Rule::exists('demanda_categorias', 'id')->whereNull('parent_id')],
-        ]);
+        $data = $request->validated();
         DemandaCategoria::create($data);
         return redirect()->back()->with('success', 'Categoria cadastrada.');
     }
 
-    public function updateCategoria(Request $request, DemandaCategoria $categoria): RedirectResponse
+    public function updateCategoria(SalvarCategoriaRequest $request, DemandaCategoria $categoria): RedirectResponse
     {
-        $data = $request->validate([
-            'nome' => ['sometimes', 'required', 'string', 'max:100'],
-            'descricao' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'parent_id' => ['sometimes', 'nullable', 'integer', Rule::exists('demanda_categorias', 'id')->whereNull('parent_id')->whereNot('id', $categoria->id)],
-            'ativo' => ['sometimes', 'boolean'],
-        ]);
+        $data = $request->validated();
         $categoria->update($data);
         return redirect()->back()->with('success', 'Categoria atualizada.');
     }
 
-    public function storeAssunto(Request $request): RedirectResponse
+    public function storeAssunto(SalvarAssuntoRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'nome' => ['required', 'string', 'max:150', 'unique:demanda_assuntos,nome'],
-            'categoria_id' => ['nullable', 'integer', 'exists:demanda_categorias,id'],
-        ]);
+        $data = $request->validated();
         DemandaAssunto::create($data);
         return redirect()->back()->with('success', 'Assunto cadastrado.');
     }
 
-    public function updateAssunto(Request $request, DemandaAssunto $assunto): RedirectResponse
+    public function updateAssunto(SalvarAssuntoRequest $request, DemandaAssunto $assunto): RedirectResponse
     {
-        $data = $request->validate([
-            'nome' => ['sometimes', 'required', 'string', 'max:150', Rule::unique('demanda_assuntos', 'nome')->ignore($assunto->id)],
-            'categoria_id' => ['sometimes', 'nullable', 'integer', 'exists:demanda_categorias,id'],
-            'ativo' => ['sometimes', 'boolean'],
-        ]);
+        $data = $request->validated();
         $assunto->update($data);
         return redirect()->back()->with('success', 'Assunto atualizado.');
     }
