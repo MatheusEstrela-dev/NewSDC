@@ -20,12 +20,12 @@ interface DemandaRepository
     public function findByProtocolo(string $protocolo): ?Demanda;
 
     /**
-     * Lista demandas com filtros e paginação.
+     * Lista demandas com filtros e paginacao.
      */
     public function paginate(array $filters, int $perPage, int $viewerId, bool $manage, ?int $page = null): LengthAwarePaginator;
 
     /**
-     * Retorna as estatísticas consolidadas do escopo visível ao usuário.
+     * Retorna as estatisticas consolidadas do escopo visivel ao usuario.
      *
      * @return array{total: int, abertas: int, em_andamento: int, concluidas: int, resolvidas_hoje: int}
      */

@@ -141,7 +141,7 @@ class DemandaController extends Controller
                 'url' => route('demandas.attachments.download', [$demanda->id, $a->id]),
                 'disponivel' => (bool) $a->arquivo_disponivel,
             ])->values(),
-            'assuntos' => $this->opcoesAssunto(),
+            'assuntos' => $this->opcoesAssunto(comCampos: true),
             'usuarios' => $gerir ? $this->opcoesUsuario() : [],
             'automacao' => ['disponivel' => is_array($automacao) && isset($automacao['acao']), 'acao' => $automacao['acao'] ?? null],
             'pode' => [
@@ -320,11 +320,16 @@ class DemandaController extends Controller
         ];
     }
 
-    /** @return list<array{value:int,label:string}> */
-    private function opcoesAssunto(): array
+    /** @return list<array{value:int,label:string}|array{value:int,label:string,campos:array}> */
+    private function opcoesAssunto(bool $comCampos = false): array
     {
-        return DemandaAssunto::query()->where('ativo', true)->orderBy('nome')->get(['id', 'nome'])
-            ->map(fn (DemandaAssunto $a): array => ['value' => $a->id, 'label' => $a->nome])->all();
+        $colunas = $comCampos ? ['id', 'nome', 'campos_dinamicos'] : ['id', 'nome'];
+
+        return DemandaAssunto::query()->where('ativo', true)->orderBy('nome')->get($colunas)
+            ->map(fn (DemandaAssunto $a): array => $comCampos
+                ? ['value' => $a->id, 'label' => $a->nome, 'campos' => $a->campos_dinamicos ?? []]
+                : ['value' => $a->id, 'label' => $a->nome])
+            ->all();
     }
 
     /** @return list<array{value:int,label:string}> */
