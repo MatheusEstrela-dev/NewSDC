@@ -36,6 +36,9 @@ class ImportarLegadoCommand extends Command
                 foreach ($relatorio->motivos as $motivo => $n) {
                     $this->warn(sprintf('  %s: %d rejeitado(s) por %s', $etapa->nome(), $n, $motivo));
                 }
+                foreach ($relatorio->avisos as $motivo => $n) {
+                    $this->warn(sprintf('  %s: %d aviso(s) por %s', $etapa->nome(), $n, $motivo));
+                }
             }
         });
 

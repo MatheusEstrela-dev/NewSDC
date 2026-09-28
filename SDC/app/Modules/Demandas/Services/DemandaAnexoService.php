@@ -32,6 +32,7 @@ final class DemandaAnexoService
                     'mime_type' => $arquivo->getMimeType(),
                     'tamanho_bytes' => $arquivo->getSize(),
                     'path' => $path,
+                    'checksum_sha256' => hash_file('sha256', $arquivo->getRealPath()) ?: null,
                 ]);
                 $this->historico->registrar(
                     $demanda, $userId, AcaoHistoricoDemanda::ANEXO_ADICIONADO,
@@ -48,8 +49,11 @@ final class DemandaAnexoService
 
     public function baixar(Demanda $demanda, DemandaAnexo $anexo): StreamedResponse
     {
-        $disk = Storage::disk((string) config('demandas.anexos.disk'));
         abort_unless((int) $anexo->task_id === (int) $demanda->id, 404);
+        // Anexo do legado sem o arquivo fisico: nem chega a olhar o disco.
+        abort_unless((bool) $anexo->arquivo_disponivel, 404);
+
+        $disk = Storage::disk((string) config('demandas.anexos.disk'));
         abort_unless($disk->exists($anexo->path), 404);
 
         return $disk->download($anexo->path, $anexo->nome_original);

@@ -139,6 +139,7 @@ class DemandaController extends Controller
                 'id' => $a->id, 'nome_original' => $a->nome_original, 'tamanho_bytes' => (int) $a->tamanho_bytes,
                 'created_at' => $a->created_at?->toIso8601String(), 'autor' => $a->user?->name,
                 'url' => route('demandas.attachments.download', [$demanda->id, $a->id]),
+                'disponivel' => (bool) $a->arquivo_disponivel,
             ])->values(),
             'assuntos' => $this->opcoesAssunto(),
             'usuarios' => $gerir ? $this->opcoesUsuario() : [],

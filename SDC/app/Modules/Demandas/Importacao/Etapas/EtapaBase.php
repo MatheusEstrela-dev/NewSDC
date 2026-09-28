@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\DB;
 
 abstract class EtapaBase implements EtapaImportacao
 {
+    /**
+     * Relatorio do lote em processamento, para gravar() poder registrar um
+     * aviso (avisar()) sem precisar do RelatorioEtapa como parametro proprio.
+     */
+    private ?RelatorioEtapa $relatorioAtual = null;
+
     public function __construct(protected readonly MapaImportacao $mapa) {}
 
     /** Tabela de origem no cedec-demanda. */
@@ -50,8 +56,18 @@ abstract class EtapaBase implements EtapaImportacao
         return $relatorio;
     }
 
+    /**
+     * Aviso que nao rejeita a linha em curso: ela e importada do mesmo jeito,
+     * mas o relatorio precisa mostrar que algo faltou.
+     */
+    protected function avisar(string $motivo): void
+    {
+        $this->relatorioAtual?->avisar($motivo);
+    }
+
     protected function processar(object $linha, RelatorioEtapa $relatorio): void
     {
+        $this->relatorioAtual = $relatorio;
         $relatorio->lidos++;
         $id = (string) $linha->id;
         $hash = MapaLegado::hash($linha);

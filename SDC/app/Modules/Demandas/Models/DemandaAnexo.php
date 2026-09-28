@@ -24,10 +24,13 @@ class DemandaAnexo extends Model
         'mime_type',
         'tamanho_bytes',
         'path',
+        'arquivo_disponivel',
+        'checksum_sha256',
     ];
 
     protected $casts = [
         'tamanho_bytes' => 'integer',
+        'arquivo_disponivel' => 'boolean',
     ];
 
     public function task(): BelongsTo

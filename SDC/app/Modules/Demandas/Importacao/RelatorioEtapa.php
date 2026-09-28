@@ -15,12 +15,26 @@ final class RelatorioEtapa
     /** @var array<string, int> */
     public array $motivos = [];
 
+    /**
+     * Avisos que nao rejeitam a linha: ela e importada do mesmo jeito, mas o
+     * operador precisa ver no relatorio que algo faltou (ex.: anexo do legado
+     * sem o arquivo fisico correspondente).
+     *
+     * @var array<string, int>
+     */
+    public array $avisos = [];
+
     public function __construct(public readonly string $etapa) {}
 
     public function rejeitar(string $motivo): void
     {
         $this->rejeitados++;
         $this->motivos[$motivo] = ($this->motivos[$motivo] ?? 0) + 1;
+    }
+
+    public function avisar(string $motivo): void
+    {
+        $this->avisos[$motivo] = ($this->avisos[$motivo] ?? 0) + 1;
     }
 
     public function toArray(): array

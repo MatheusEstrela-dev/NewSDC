@@ -6,7 +6,13 @@ namespace App\Modules\Demandas\Importacao\Etapas;
 
 use App\Models\User;
 
-/** So mapeia; nunca cria conta. CPF, depois e-mail. Ambiguidade rejeita. */
+/**
+ * So mapeia; nunca cria conta. CPF, depois e-mail. Ambiguidade rejeita.
+ *
+ * O cedec-demanda tambem tem login/MASP como terceiro criterio, mas a tabela
+ * users do NewSDC nao tem coluna equivalente -- entao o match para por aqui,
+ * so CPF e e-mail.
+ */
 final class ImportarUsuarios extends EtapaBase
 {
     public function nome(): string { return 'usuarios'; }

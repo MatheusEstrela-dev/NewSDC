@@ -32,6 +32,13 @@ return new class extends Migration
 
         DB::statement('ALTER TABLE task_audit_logs DROP CONSTRAINT IF EXISTS task_audit_logs_acao_check');
         DB::statement('ALTER TABLE task_audit_logs ALTER COLUMN acao TYPE varchar(40)');
+
+        if (! Schema::hasColumn('task_attachments', 'arquivo_disponivel')) {
+            Schema::table('task_attachments', function (Blueprint $table): void {
+                $table->boolean('arquivo_disponivel')->default(true);
+                $table->string('checksum_sha256', 64)->nullable();
+            });
+        }
     }
 
     public function down(): void
