@@ -17,9 +17,27 @@ class CatalogoDemandaController extends Controller
 {
     public function index(): Response
     {
+        $categorias = DemandaCategoria::query()->orderBy('nome')->get(['id', 'nome', 'descricao', 'parent_id', 'ativo']);
+        $assuntosModelos = DemandaAssunto::query()->orderBy('nome')->get(['id', 'nome', 'categoria_id', 'ativo', 'campos_dinamicos', 'form_automacao']);
+        $categoriasPorId = $categorias->keyBy('id');
+
+        $assuntos = $assuntosModelos->map(function (DemandaAssunto $assunto) use ($categoriasPorId) {
+            $dados = $assunto->toArray();
+            $dados['categoria_nome'] = $categoriasPorId->get($assunto->categoria_id)?->nome;
+
+            return $dados;
+        });
+
         return Inertia::render('Demandas/Catalogo', [
-            'categorias' => DemandaCategoria::query()->orderBy('nome')->get(['id', 'nome', 'descricao', 'parent_id', 'ativo']),
-            'assuntos' => DemandaAssunto::query()->orderBy('nome')->get(['id', 'nome', 'categoria_id', 'ativo', 'campos_dinamicos', 'form_automacao']),
+            'categorias' => $categorias,
+            'assuntos' => $assuntos,
+            'estatisticas' => [
+                'categorias_ativas' => $categorias->where('ativo', true)->count(),
+                'assuntos_ativos' => $assuntosModelos->where('ativo', true)->count(),
+                'assuntos_com_automacao' => $assuntosModelos
+                    ->filter(fn (DemandaAssunto $assunto) => filled($assunto->form_automacao['acao'] ?? null))
+                    ->count(),
+            ],
         ]);
     }
 
