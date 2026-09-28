@@ -43,16 +43,11 @@ class CronoCaminhaoController extends Controller
      */
     public function update(UpdateCronoCaminhaoRequest $request, CronoCaminhao $cronoCaminhao): RedirectResponse
     {
-        $dados = $request->validated();
-
-        $dto = new CronoCaminhaoDTO(
-            cronograma_id: $cronoCaminhao->cronograma_id,
-            caminhao_id:   $cronoCaminhao->caminhao_id,
-            comunidade_id: isset($dados['comunidade_id']) && $dados['comunidade_id'] !== '' ? (int) $dados['comunidade_id'] : null,
-            agua_prevista: (float) ($dados['agua_prevista'] ?? 0),
-            num_viagens:   (int) ($dados['num_viagens'] ?? 0),
-            ordem:         (int) ($dados['ordem'] ?? 0),
-        );
+        $dto = CronoCaminhaoDTO::fromRequest([
+            ...$request->validated(),
+            'cronograma_id' => $cronoCaminhao->cronograma_id,
+            'caminhao_id'   => $cronoCaminhao->caminhao_id,
+        ]);
 
         try {
             $this->service->atualizar($cronoCaminhao->id, $dto);
