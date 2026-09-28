@@ -869,6 +869,15 @@ Regras invariantes:
 3. Cada caminhão alocado precisa ter **vistoria aprovada vigente** (≤ 12 meses).
 4. `agua_entregue` é derivada: somatório de viagens validadas × `capacidade` do caminhão.
 5. Auditoria via `LogsModelChanges` trait.
+6. **Cálculo de viagens pela capacidade do caminhão** (`App\Modules\Tdap\Support\CalculoDeViagens`, desde 2026-09-28):
+   `num_viagens = agua_prevista ÷ capacidade_m3`, e quando o resultado é quebrado:
+   - parte decimal **até 0,4** (qualquer valor abaixo de 0,5) → arredonda **para baixo** (`188 ÷ 14 = 13,43 → 13`);
+   - parte decimal **a partir de 0,5** → arredonda **para cima** (`189 ÷ 14 = 13,5 → 14`);
+   - piso de **1 viagem** (meia viagem não se faz: `5 ÷ 14 = 0,36 → 1`);
+   - caminhão com capacidade 0 não é calculado (erro de domínio, a alocação não é gravada).
+
+   O ruído do ponto flutuante é neutralizado antes de arredondar (`0,7 ÷ 0,2 = 3,4999999…` conta como 3,5 → 4).
+   No **modo automático** do modal de alocação (`num_viagens_calculado = true`) o servidor recalcula e grava o número dele, ignorando o que veio do navegador; no **modo manual** grava o valor informado. O front mostra a prévia com o espelho `resources/js/Support/calculoViagensTdap.js`, calculado sobre a água já arredondada a 2 casas — o mesmo valor que vai ao servidor. Alocações gravadas antes da regra não são recalculadas.
 
 ### DB
 
@@ -928,7 +937,7 @@ DB::statement("CREATE INDEX idx_cron_geo ON tdap_cronogramas USING GIST (ponto_c
 
 - [ ] **Step 3.2: Migration `tdap_crono_caminhoes`**
 
-Campos: `cronograma_id`, `caminhao_id`, `comunidade_id`, `agua_prevista` (decimal 12,2), `num_viagens` (smallint), `agua_entregue` (decimal 12,2 default 0), `vr_total` (decimal 12,2 default 0), `ordem` (tinyint), `softDeletes`. FKs cascateadas.
+Campos: `cronograma_id`, `caminhao_id`, `comunidade_id`, `agua_prevista` (decimal 12,2), `num_viagens` (smallint — no modo automático, derivado de `agua_prevista ÷ capacidade` pela regra 6 acima), `agua_entregue` (decimal 12,2 default 0), `vr_total` (decimal 12,2 default 0), `ordem` (tinyint), `softDeletes`. FKs cascateadas.
 
 - [ ] **Step 3.3: Migration `tdap_crono_viagens`**
 
@@ -1056,6 +1065,7 @@ Rota `tdap/portal/cronogramas` (acesso `tdap.prestador`) lista apenas cronograma
 - [ ] Criar Cronograma com Lote → alocar 2 Caminhões → tentar ativar sem Vistoria → recebe erro 422.
 - [ ] Após cadastrar Vistorias aprovadas, ativação dispara update `ativo=1` (e-mail é validado na Fase 5).
 - [ ] Registrar 3 viagens, validar 2 → `agua_entregue` atualizado automaticamente.
+- [ ] Alocar caminhão de 14 m³ no modo automático: 188 m³ grava 13 viagens (13,43 ↓), 189 m³ grava 14 (13,5 ↑); no modo manual, o número digitado é mantido. Cobertura: `tests/Unit/Tdap/CalculoDeViagensTest.php` e `tests/Feature/Tdap/AlocacaoCalculoDeViagensTest.php`.
 - [ ] Export Excel/PDF do cronograma gera arquivo equivalente ao legado.
 
 ---

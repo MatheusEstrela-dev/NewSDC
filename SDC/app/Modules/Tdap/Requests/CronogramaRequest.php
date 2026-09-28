@@ -172,6 +172,8 @@ abstract class AbstractCronoCaminhaoRequest extends FormRequest
             'comunidade_id' => ['nullable', 'integer'],
             'agua_prevista' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
             'num_viagens'   => ['required', 'integer', 'min:1', 'max:10000'],
+            // true: o servidor recalcula num_viagens (CalculoDeViagens).
+            'num_viagens_calculado' => ['sometimes', 'boolean'],
             'ordem'         => ['nullable', 'integer', 'min:0', 'max:255'],
         ];
 
