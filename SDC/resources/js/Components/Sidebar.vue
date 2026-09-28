@@ -125,9 +125,18 @@
           Visão Geral
         </NavItem>
         <NavItem
+          v-if="hasPermission(['demandas.dashboard.view']) && route().has('demandas.dashboard')"
+          :href="route('demandas.dashboard')"
+          :active="isRouteActive('demandas.dashboard')"
+          icon="checkbadge"
+          :collapsed="isCollapsed"
+        >
+          Painel de demandas
+        </NavItem>
+        <NavItem
           v-if="canSeeDemandas && _routes.hasDemandas"
           :href="route('demandas.index')"
-          :active="isRouteActive('demandas.*')"
+          :active="isRouteActive('demandas.index') || isRouteActive('demandas.show') || isRouteActive('demandas.create')"
           icon="checkbadge"
           :collapsed="isCollapsed"
         >
