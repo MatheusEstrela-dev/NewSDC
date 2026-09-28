@@ -89,6 +89,16 @@ function valoresVaziosPara(campos) {
 
 function selecionarAssunto(v) {
   const novoId = normalizarId(v);
+
+  // voltou, pelo proprio select, para o assunto que ja esta salvo (ex.: A -> B
+  // -> A de novo): restaura os valores reais em vez de tratar como assunto
+  // novo, senao valoresVaziosPara() apaga os dados salvos na tela e o proximo
+  // blur autosalva campos em branco por cima do que ja estava no servidor.
+  if (novoId === normalizarId(props.assuntoId)) {
+    cancelar();
+    return;
+  }
+
   assuntoSelecionadoId.value = novoId;
 
   const camposNovoAssunto = camposDoAssunto(novoId);
