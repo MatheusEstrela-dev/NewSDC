@@ -54,7 +54,10 @@ final class DemandaStatusService
             }
 
             $aberturaAnterior = $demanda->created_at;
-            if (! $aberturaAnterior->equalTo($dados->abertaEm)) {
+            // O input datetime-local trunca os segundos; comparar por minuto evita
+            // marcar "ajustada" (e regravar created_at) quando so os segundos diferem.
+            $mudouMinuto = ! $aberturaAnterior->copy()->startOfMinute()->equalTo($dados->abertaEm->startOfMinute());
+            if ($mudouMinuto) {
                 $demanda->created_at = $dados->abertaEm;
                 $demanda->saveQuietly();
                 $this->historico->registrar(

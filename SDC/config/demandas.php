@@ -18,7 +18,7 @@ return [
 
     'automacao' => [
         'timeout_segundos' => 15,
-        'tentativas' => 3,
+        'tentativas' => 2,
         'backoff_segundos' => [10, 30],
     ],
 ];

@@ -56,11 +56,23 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
 
     public function handle(DiretorioCorporativo $diretorio, HistoricoDemanda $historico): void
     {
-        match ($this->acao) {
-            'desbloquear' => $diretorio->solicitarDesbloqueio($this->login, $this->operationId),
-            'ativar' => $diretorio->solicitarAtivacao($this->login, $this->operationId),
-            'resetar' => $diretorio->solicitarReset($this->login, $this->operationId),
-        };
+        try {
+            match ($this->acao) {
+                'desbloquear' => $diretorio->solicitarDesbloqueio($this->login, $this->operationId),
+                'ativar' => $diretorio->solicitarAtivacao($this->login, $this->operationId),
+                'resetar' => $diretorio->solicitarReset($this->login, $this->operationId),
+            };
+        } catch (RequestException $erro) {
+            // 4xx e erro do cliente (login invalido/inexistente etc): tentar de novo
+            // nao muda o resultado, entao falha direto em vez de reenfileirar.
+            if ($erro->response->status() >= 400 && $erro->response->status() < 500) {
+                $this->fail($erro);
+
+                return;
+            }
+
+            throw $erro;
+        }
 
         $demanda = Demanda::find($this->demandaId);
         if ($demanda !== null) {
