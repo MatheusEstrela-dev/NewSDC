@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Services;
 
 use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
+use App\Modules\Demandas\Support\CsvSeguro;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class DemandaCsvExporter
@@ -22,8 +23,8 @@ final class DemandaCsvExporter
                 $batch = $this->repository->paginate($filters, 500, $viewerId, $manage, $page);
                 foreach ($batch->items() as $demanda) {
                     fputcsv($output, [
-                        $this->safeCell($demanda->protocolo),
-                        $this->safeCell($demanda->titulo),
+                        CsvSeguro::celula($demanda->protocolo),
+                        CsvSeguro::celula($demanda->titulo),
                         $demanda->tipo->value,
                         $demanda->status->value,
                         $demanda->created_at?->format('d/m/Y H:i'),
@@ -33,11 +34,5 @@ final class DemandaCsvExporter
             } while ($batch->hasMorePages());
             fclose($output);
         }, 'demandas.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
-    }
-
-    private function safeCell(?string $value): string
-    {
-        $value = (string) $value;
-        return preg_match('/^[\s]*[=+\-@]/u', $value) ? "'".$value : $value;
     }
 }

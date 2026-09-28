@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Modules\Dashboard\Services\DashboardStatisticsService;
+use App\Modules\Demandas\Enums\PrioridadeSimples;
+use App\Modules\Demandas\Models\Demanda;
+use App\Modules\Demandas\Queries\DemandaDashboardQuery;
 use App\Modules\Ranking\DTOs\FiltroPlacar;
 use App\Modules\Ranking\Enums\EscopoPlacar;
 use App\Modules\Ranking\Enums\TipoPeriodo;
@@ -13,13 +16,17 @@ use App\Modules\Ranking\Services\RankingReadService;
 use App\Modules\Ranking\Support\RankingAccess;
 use DateTimeImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
 
 class DashboardController extends Controller
 {
-    public function __construct(private readonly DashboardStatisticsService $dashboardStats) {}
+    public function __construct(
+        private readonly DashboardStatisticsService $dashboardStats,
+        private readonly DemandaDashboardQuery $demandaDashboardQuery,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -37,6 +44,10 @@ class DashboardController extends Controller
             // primeiro a abrir o dashboard entregaria o proprio placar a todos
             // os seguintes.
             'rankingResumo' => $this->resumoDoRanking($request),
+
+            // Mesmo motivo: escopoVisivel() decide minhas-vs-todas por usuario
+            // (via permissao demandas.chamados.manage).
+            'demandasRecentes' => $this->demandasRecentesParaWidget($request),
         ]));
     }
 
@@ -77,6 +88,46 @@ class DashboardController extends Controller
             );
         } catch (Throwable) {
             return null;
+        }
+    }
+
+    /**
+     * Demandas recentes do usuario, para o widget da Visao Geral.
+     *
+     * Reusa a mesma DemandaDashboardQuery::recentes() do painel de demandas
+     * (Task 18), ja com o limite padrao de 5 e o escopo minhas-vs-todas via
+     * escopoVisivel(). O catch e largo pelo mesmo motivo do resumoDoRanking:
+     * um modulo indisponivel no ambiente nao pode derrubar a Visao Geral.
+     *
+     * @return list<array{id:int, protocolo:string, titulo:string, etapa:string, etapa_label:string, prioridade_simples:string, prioridade_label:string, solicitante:?string, created_at:?string}>
+     */
+    private function demandasRecentesParaWidget(Request $request): array
+    {
+        $user = $request->user();
+
+        if ($user === null || ! $user->can('demandas.chamados.view') || ! Schema::hasTable((new Demanda())->getTable())) {
+            return [];
+        }
+
+        try {
+            $demandas = $this->demandaDashboardQuery->recentes(
+                (int) $user->getKey(),
+                $user->can('demandas.chamados.manage'),
+            );
+
+            return array_map(static fn (Demanda $d): array => [
+                'id' => $d->id,
+                'protocolo' => $d->protocolo,
+                'titulo' => $d->titulo,
+                'etapa' => $d->status->etapa()->value,
+                'etapa_label' => $d->status->etapa()->label(),
+                'prioridade_simples' => PrioridadeSimples::dePrioridade($d->prioridade)->value,
+                'prioridade_label' => PrioridadeSimples::dePrioridade($d->prioridade)->label(),
+                'solicitante' => $d->solicitante?->name,
+                'created_at' => $d->created_at?->toIso8601String(),
+            ], $demandas);
+        } catch (Throwable) {
+            return [];
         }
     }
 }

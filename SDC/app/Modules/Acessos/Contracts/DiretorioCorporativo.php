@@ -11,4 +11,6 @@ interface DiretorioCorporativo
     public function solicitarDesbloqueio(string $login, string $operationId): array;
 
     public function solicitarReset(string $login, string $operationId): array;
+
+    public function solicitarAtivacao(string $login, string $operationId): array;
 }

@@ -2,6 +2,7 @@
 
 use App\Modules\Demandas\Controllers\DemandaController;
 use App\Modules\Demandas\Controllers\CatalogoDemandaController;
+use App\Modules\Demandas\Controllers\DemandaDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth'])->group(function () {
@@ -9,6 +10,14 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/demandas', [DemandaController::class, 'index'])
         ->name('demandas.index')
         ->middleware('can:demandas.chamados.view');
+
+    Route::get('/demandas/dashboard', [DemandaDashboardController::class, 'index'])
+        ->name('demandas.dashboard')
+        ->middleware('can:demandas.dashboard.view');
+
+    Route::get('/demandas/dashboard/export', [DemandaDashboardController::class, 'export'])
+        ->name('demandas.dashboard.export')
+        ->middleware('can:demandas.chamados.export');
 
     Route::get('/demandas/nova', [DemandaController::class, 'create'])
         ->name('demandas.create')
@@ -18,8 +27,24 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->name('demandas.store')
         ->middleware('can:demandas.chamados.create');
 
+    Route::post('/demandas/{id}/resolver', [DemandaController::class, 'resolver'])
+        ->name('demandas.resolver')
+        ->whereNumber('id')
+        ->middleware('can:demandas.chamados.resolver');
+
+    Route::post('/demandas/{id}/reabrir', [DemandaController::class, 'reabrir'])
+        ->name('demandas.reabrir')
+        ->whereNumber('id')
+        ->middleware('can:demandas.chamados.resolver');
+
+    Route::post('/demandas/{id}/automacao', [DemandaController::class, 'automatizar'])
+        ->name('demandas.automacao')
+        ->whereNumber('id')
+        ->middleware('can:demandas.chamados.automatizar');
+
     Route::get('/demandas/{id}', [DemandaController::class, 'show'])
         ->name('demandas.show')
+        ->whereNumber('id')
         ->middleware('can:demandas.chamados.view');
 
     Route::post('/demandas/{id}/comentarios', [DemandaController::class, 'addComment'])
@@ -30,8 +55,9 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->name('demandas.attachments.store')
         ->middleware('can:demandas.chamados.view');
 
-    Route::get('/demandas/{id}/anexos/{anexo}', [DemandaController::class, 'downloadAttachment'])
+    Route::get('/demandas/{id}/anexos/{anexoId}', [DemandaController::class, 'downloadAttachment'])
         ->name('demandas.attachments.download')
+        ->whereNumber('anexoId')
         ->middleware('can:demandas.chamados.view');
 
     Route::prefix('admin/demandas')->name('admin.demandas.')->group(function () {

@@ -25,6 +25,11 @@ final class HttpDiretorioCorporativo implements DiretorioCorporativo
         return $this->request('POST', '/accounts/'.rawurlencode($login).'/reset', $operationId);
     }
 
+    public function solicitarAtivacao(string $login, string $operationId): array
+    {
+        return $this->request('POST', '/accounts/'.rawurlencode($login).'/enable', $operationId);
+    }
+
     private function request(string $method, string $path, ?string $operationId = null): array
     {
         $baseUrl = rtrim((string) config('services.corporate_directory.url'), '/');
@@ -33,7 +38,7 @@ final class HttpDiretorioCorporativo implements DiretorioCorporativo
             throw new RuntimeException('Diretório corporativo não configurado.');
         }
 
-        $http = Http::withToken($token)->acceptJson()->timeout(10)->connectTimeout(3);
+        $http = Http::withToken($token)->acceptJson()->timeout((int) config('demandas.automacao.timeout_segundos', 15))->connectTimeout(3);
         if ($operationId !== null) {
             $http = $http->withHeaders(['Idempotency-Key' => $operationId]);
         }

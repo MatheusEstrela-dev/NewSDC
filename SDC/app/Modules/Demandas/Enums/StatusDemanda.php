@@ -158,6 +158,19 @@ enum StatusDemanda: string
     }
 
     /**
+     * Etapa exibida na tela. Ver EtapaDemanda.
+     */
+    public function etapa(): EtapaDemanda
+    {
+        return match ($this) {
+            self::ABERTA, self::EM_ANALISE => EtapaDemanda::ABERTO,
+            self::EM_PROGRESSO, self::AGUARDANDO_TERCEIROS => EtapaDemanda::EM_ANDAMENTO,
+            self::RESOLVIDA, self::FECHADA => EtapaDemanda::CONCLUIDO,
+            self::CANCELADA => EtapaDemanda::CANCELADO,
+        };
+    }
+
+    /**
      * Retorna todos os status disponíveis como array associativo
      *
      * @return array<string, string>

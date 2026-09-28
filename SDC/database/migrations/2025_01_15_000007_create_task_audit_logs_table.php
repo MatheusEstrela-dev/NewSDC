@@ -29,16 +29,9 @@ return new class extends Migration
                 ->constrained('users')
                 ->nullOnDelete();
 
-            $table->enum('acao', [
-                'created',
-                'updated',
-                'deleted',
-                'status_changed',
-                'assigned',
-                'commented',
-                'approved',
-                'rejected',
-            ])->index();
+            // String e nao enum: as acoes vivem em AcaoHistoricoDemanda, e enum no
+            // banco exigiria migration a cada acao nova.
+            $table->string('acao', 40)->index();
 
             $table->string('campo', 100)->nullable()
                 ->comment('Campo que foi alterado');
