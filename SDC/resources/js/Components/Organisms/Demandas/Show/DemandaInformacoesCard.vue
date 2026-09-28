@@ -28,16 +28,20 @@ import { formatarDataHora } from '@/Support/demandasFormat';
 const props = defineProps({
   demanda: { type: Object, required: true },
   podeEditar: { type: Boolean, default: false },
+  podeResolver: { type: Boolean, default: false },
 });
 const emit = defineEmits(['concluir']);
 
 // "Concluido" nao muda status direto: abre o card de resolucao, que pede datas.
+// So aparece como opcao para quem tem permissao de resolver -- sem isso, a
+// opcao existia mas o clique nao fazia nada (o card de resolucao nem monta).
 const ALVO = { em_andamento: 'em_progresso', cancelado: 'cancelada' };
 const opcoesEtapa = computed(() => {
   if (!['aberto', 'em_andamento'].includes(props.demanda.etapa)) return [];
   const base = [{ value: props.demanda.etapa, label: props.demanda.etapa_label }];
   if (props.demanda.etapa === 'aberto') base.push({ value: 'em_andamento', label: 'Em andamento' });
-  base.push({ value: 'concluido', label: 'Concluído' }, { value: 'cancelado', label: 'Cancelado' });
+  if (props.podeResolver) base.push({ value: 'concluido', label: 'Concluído' });
+  base.push({ value: 'cancelado', label: 'Cancelado' });
   return base;
 });
 const erroStatus = computed(() => usePage().props.errors?.status);

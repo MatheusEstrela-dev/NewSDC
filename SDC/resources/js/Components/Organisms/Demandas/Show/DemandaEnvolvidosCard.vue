@@ -5,8 +5,15 @@
     <p class="font-semibold text-slate-900 dark:text-slate-100">{{ demanda.solicitante?.name ?? '—' }}</p>
     <p v-if="demanda.criado_por && demanda.criado_por.id !== demanda.solicitante?.id" class="mt-1 text-xs text-slate-500">Aberto por {{ demanda.criado_por.name }}</p>
     <p class="mt-4 text-xs text-slate-500">Responsável</p>
+    <!--
+      Desatribuir nao e uma feature -- o endpoint de assign exige responsavel_id.
+      "Ninguem" so aparece como placeholder (nao entra em `options`) quando ainda
+      nao ha responsavel: representa o estado atual, e reselecionar o valor ja
+      selecionado nao dispara @change, entao nunca chama transferir(). Havendo
+      responsavel, a opcao some da lista -- nao ha como "voltar" para Ninguem.
+    -->
     <FilterField v-if="podeGerir" :model-value="demanda.atribuido_para?.id ?? ''" label="" type="select"
-      :options="[{ value: '', label: 'Ninguém' }, ...usuarios]" @update:model-value="transferir" />
+      :options="usuarios" :placeholder="demanda.atribuido_para ? '' : 'Ninguém'" @update:model-value="transferir" />
     <p v-else class="font-semibold text-slate-900 dark:text-slate-100">{{ demanda.atribuido_para?.name ?? 'Ninguém' }}</p>
   </section>
 </template>

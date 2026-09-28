@@ -19,7 +19,7 @@
       </div>
       <aside class="min-w-0 space-y-6">
         <DemandaEnvolvidosCard :demanda="demanda" :usuarios="usuarios" :pode-gerir="pode.gerir" />
-        <DemandaInformacoesCard :demanda="demanda" :pode-editar="pode.editar" @concluir="resolver?.focar()" />
+        <DemandaInformacoesCard :demanda="demanda" :pode-editar="pode.editar" :pode-resolver="pode.resolver" @concluir="resolver?.focar()" />
         <DemandaAnexosCard :demanda-id="demanda.id" :anexos="anexos" />
         <DemandaResolverCard v-if="pode.resolver || pode.reabrir" ref="resolver" :demanda="demanda" :pode-resolver="pode.resolver" :pode-reabrir="pode.reabrir" />
       </aside>

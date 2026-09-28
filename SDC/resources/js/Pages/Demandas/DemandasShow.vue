@@ -1,8 +1,10 @@
 <template>
+  <Head :title="`Demanda ${demanda.protocolo}`" />
   <DemandasShowTemplate v-bind="$props" />
 </template>
 
 <script setup>
+import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DemandasShowTemplate from '@/Templates/Demandas/DemandasShowTemplate.vue';
 
