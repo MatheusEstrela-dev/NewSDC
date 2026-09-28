@@ -1,6 +1,7 @@
 <script setup>
 import { computed, inject } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import { usePermissions } from '@/Composables/auth';
 import {
   HomeIcon,
   DocumentTextIcon,
@@ -20,6 +21,7 @@ import {
 const openSidebar = inject('openSidebar', () => {});
 
 const page = usePage();
+const { can } = usePermissions();
 
 const navigationItems = computed(() => {
   const items = [
@@ -53,7 +55,7 @@ const navigationItems = computed(() => {
       icon: ChartBarIcon,
       iconActive: ChartBarIconSolid,
       active: route().current('demandas.dashboard'),
-      show: route().has('demandas.dashboard'),
+      show: route().has('demandas.dashboard') && can('demandas.dashboard.view'),
     },
     {
       name: 'PAE',

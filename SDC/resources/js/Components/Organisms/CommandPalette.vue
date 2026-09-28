@@ -219,10 +219,13 @@ import {
 import { router } from '@inertiajs/vue3';
 import { computed, nextTick, ref, watch } from 'vue';
 import { route } from 'ziggy-js';
+import { usePermissions } from '@/Composables/auth';
 
 const props = defineProps({
   isOpen: Boolean,
 });
+
+const { can } = usePermissions();
 
 const emit = defineEmits(['close']);
 
@@ -260,12 +263,14 @@ const safeRoute = (name, fallback = '') => {
 };
 
 // Static Navigation Data (Indexed for client-side search)
+// .filter(Boolean) so entries gated por permissao (ex.: nav_dem_dash) podem
+// virar `null` em vez de precisar de um array condicional separado.
 const navigationIndex = computed(() => [
     // Principal
     { id: 'nav_dash', title: 'Visão Geral', subtitle: 'Dashboard Principal', url: safeRoute('dashboard'), icon: 'dashboard', category: 'navigation', keywords: ['home', 'inicio', 'painel'] },
     { id: 'nav_rat', title: 'RAT', subtitle: 'Relatório de Atendimento Técnico', url: safeRoute('rat.index'), icon: 'document', category: 'navigation', keywords: ['vistoria', 'relatorio', 'tecnico'] },
     { id: 'nav_dem', title: 'Demandas', subtitle: 'Gestão de Chamados e Tarefas', url: safeRoute('demandas.index'), icon: 'checkbadge', category: 'navigation', keywords: ['chamado', 'ticket', 'tarefa'] },
-    { id: 'nav_dem_dash', title: 'Painel de Demandas', subtitle: 'Estatísticas e volume de chamados', url: safeRoute('demandas.dashboard'), icon: 'checkbadge', category: 'navigation', keywords: ['painel', 'dashboard', 'estatisticas', 'chamados'] },
+    can('demandas.dashboard.view') && { id: 'nav_dem_dash', title: 'Painel de Demandas', subtitle: 'Estatísticas e volume de chamados', url: safeRoute('demandas.dashboard'), icon: 'checkbadge', category: 'navigation', keywords: ['painel', 'dashboard', 'estatisticas', 'chamados'] },
     { id: 'nav_pae', title: 'PAE', subtitle: 'Plano de Ação de Emergência', url: safeRoute('pae.index', safeRoute('pae.protocolos.index')), icon: 'document', category: 'navigation', keywords: ['plano', 'emergencia', 'protocolo'] },
 
     // Módulos de Gestão
@@ -288,7 +293,7 @@ const navigationIndex = computed(() => [
     { id: 'act_rat', title: 'Novo RAT', subtitle: 'Criar Relatório', url: safeRoute('rat.create'), icon: 'document', category: 'actions', keywords: ['criar', 'novo', 'adicionar'] },
     { id: 'act_dem', title: 'Nova Demanda', subtitle: 'Abrir Chamado', url: safeRoute('demandas.create'), icon: 'checkbadge', category: 'actions', keywords: ['criar', 'novo', 'adicionar'] },
     { id: 'act_logout', title: 'Sair do Sistema', subtitle: 'Fazer Logout', url: safeRoute('logout'), icon: 'logout', category: 'actions', method: 'post', keywords: ['sair', 'logoff'] },
-]);
+].filter(Boolean));
 
 // Quick Actions — acoes e navegacao rapida
 const quickActions = computed(() => [
