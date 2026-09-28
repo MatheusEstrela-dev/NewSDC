@@ -42,26 +42,43 @@ const props = defineProps({
   podeEditar: { type: Boolean, default: false },
 });
 
+// o <select> nativo sempre emite $event.target.value como string; assuntoId e
+// assuntos[].value chegam do backend como numero. Sem normalizar, toda comparacao
+// de id falha e a troca de assunto nunca encontra os campos do assunto novo.
+function normalizarId(v) {
+  return v === '' || v === null || v === undefined ? null : Number(v);
+}
+
 // assunto ja salvo no servidor (props.assuntoId) x assunto escolhido no select
 // (assuntoSelecionadoId), que pode ainda nao ter sido salvo.
-const assuntoSelecionadoId = ref(props.assuntoId);
+const assuntoSelecionadoId = ref(normalizarId(props.assuntoId));
 const valores = reactive({ ...props.valoresIniciais });
 
 watch(() => props.valoresIniciais, (v) => Object.assign(valores, v));
-watch(() => props.assuntoId, (v) => { assuntoSelecionadoId.value = v; });
+watch(() => props.assuntoId, (v) => { assuntoSelecionadoId.value = normalizarId(v); });
 
 const erros = computed(() => usePage().props.errors ?? {});
-const erroGeral = computed(() => erros.value.assunto_id);
+const erroGeral = computed(() => {
+  if (erros.value.assunto_id) {
+    return erros.value.assunto_id;
+  }
+
+  const temErroDeCampo = Object.keys(erros.value).some((k) => k.startsWith('campos_customizados.'));
+
+  return temErroDeCampo ? 'Preencha os campos obrigatórios do assunto selecionado.' : null;
+});
 const { salvar } = useDemandaAutosave(props.demandaId);
 
-const assuntoAlterado = computed(() => assuntoSelecionadoId.value !== props.assuntoId);
+const assuntoAlterado = computed(() => normalizarId(assuntoSelecionadoId.value) !== normalizarId(props.assuntoId));
 
 function camposDoAssunto(id) {
-  if (id === props.assuntoId) {
+  const idNormalizado = normalizarId(id);
+
+  if (idNormalizado === normalizarId(props.assuntoId)) {
     return props.campos;
   }
 
-  return props.assuntos.find((a) => a.value === id)?.campos ?? [];
+  return props.assuntos.find((a) => normalizarId(a.value) === idNormalizado)?.campos ?? [];
 }
 
 const camposExibidos = computed(() => camposDoAssunto(assuntoSelecionadoId.value));
@@ -71,7 +88,7 @@ function valoresVaziosPara(campos) {
 }
 
 function selecionarAssunto(v) {
-  const novoId = v || null;
+  const novoId = normalizarId(v);
   assuntoSelecionadoId.value = novoId;
 
   const camposNovoAssunto = camposDoAssunto(novoId);
@@ -97,7 +114,8 @@ function salvarNovoAssunto() {
 }
 
 function cancelar() {
-  assuntoSelecionadoId.value = props.assuntoId;
+  assuntoSelecionadoId.value = normalizarId(props.assuntoId);
+  Object.keys(valores).forEach((k) => delete valores[k]);
   Object.assign(valores, props.valoresIniciais);
 }
 
