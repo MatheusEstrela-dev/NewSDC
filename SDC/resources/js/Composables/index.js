@@ -45,7 +45,6 @@ export * from './rat';
 export * from './dashboard';
 
 // Composables gerais (root level)
-export * from './useDemandas';
 export * from './useDocuments';
 export * from './useHierarchy';
 export * from './useNavigation';
