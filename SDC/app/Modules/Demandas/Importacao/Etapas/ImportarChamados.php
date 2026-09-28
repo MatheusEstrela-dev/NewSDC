@@ -92,6 +92,11 @@ final class ImportarChamados extends EtapaBase
         $demanda->created_at = $criadoEm;
         $demanda->updated_at = CarbonImmutable::parse($linha->updated_at ?? $criadoEm);
         $demanda->timestamps = false;
+        // saveQuietly() nao dispara os callbacks creating/updating do model, e e
+        // neles que calcularPrioridade() roda -- sem esta chamada explicita a
+        // prioridade legada (alta/baixa) se perderia e o registro ficaria com o
+        // default do banco (media).
+        $demanda->calcularPrioridade();
         $demanda->saveQuietly();
         $demanda->timestamps = true;
 

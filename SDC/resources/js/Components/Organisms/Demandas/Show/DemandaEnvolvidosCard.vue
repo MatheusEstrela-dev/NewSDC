@@ -31,7 +31,9 @@ const props = defineProps({
 });
 
 function transferir(id) {
-  if (!id || id === props.demanda.atribuido_para?.id) return;
-  router.post(route('admin.demandas.assign', props.demanda.id), { responsavel_id: id }, { preserveScroll: true });
+  // o <select> nativo sempre emite o valor como string; atribuido_para.id chega
+  // do backend como numero, entao a comparacao precisa normalizar os dois lados.
+  if (!id || Number(id) === Number(props.demanda.atribuido_para?.id)) return;
+  router.post(route('admin.demandas.assign', props.demanda.id), { responsavel_id: Number(id) }, { preserveScroll: true });
 }
 </script>

@@ -10,7 +10,7 @@
         <input v-model="form.resolvida_em" type="datetime-local" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" />
       </label>
       <p v-if="erroFechamento" class="mt-1 text-xs text-red-500">{{ erroFechamento }}</p>
-      <Button class="mt-4 w-full" variant="success" size="md" :disabled="form.processing || !!erroAbertura || !!erroFechamento" @click="enviar">Confirmar resolução</Button>
+      <Button class="mt-4 w-full" variant="success" size="md" :disabled="form.processing || !podeEnviar" @click="enviar">Confirmar resolução</Button>
     </template>
     <template v-else-if="podeReabrir">
       <p class="text-sm text-slate-600 dark:text-slate-300">Resolvido em {{ formatarDataHora(demanda.resolvido_em) }}.</p>
@@ -35,7 +35,9 @@ const props = defineProps({
 });
 
 const raiz = ref(null);
-const { form, erroAbertura, erroFechamento, enviar } = useDemandaResolucao(props.demanda);
+const {
+  form, erroAbertura, erroFechamento, podeEnviar, enviar,
+} = useDemandaResolucao(props.demanda);
 
 function reabrir() {
   router.post(route('demandas.reabrir', props.demanda.id), {}, { preserveScroll: true });

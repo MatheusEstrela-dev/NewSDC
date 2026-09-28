@@ -41,7 +41,11 @@ final class ImportarAnexos extends EtapaBase
         if ($seguro && $origem->exists($caminho)) {
             $conteudo = $origem->get($caminho);
             $destino = 'demandas/'.$demandaId.'/legado-'.$linha->id.'-'.basename($caminho);
-            Storage::disk((string) config('demandas.anexos.disk'))->put($destino, $conteudo);
+            if (! $this->dryRun) {
+                $disco = (string) config('demandas.anexos.disk');
+                Storage::disk($disco)->put($destino, $conteudo);
+                $this->registrarArquivoGravado($disco, $destino);
+            }
 
             $anexo->forceFill([
                 'task_id' => $demandaId,
