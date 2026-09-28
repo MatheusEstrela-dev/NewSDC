@@ -13,6 +13,7 @@ final readonly class DemandaResolvidaV1 extends DomainEvent
         string $aggregateId,
         \DateTimeImmutable $occurredAt,
         public int $resolvidoPorId,
+        public ?int $responsavelId = null,
         array $metadata = []
     ) {
         parent::__construct(
@@ -26,13 +27,15 @@ final readonly class DemandaResolvidaV1 extends DomainEvent
 
     public static function create(
         int $demandaId,
-        int $resolvidoPorId
+        int $resolvidoPorId,
+        ?int $responsavelId = null
     ): self {
         return new self(
             eventId: self::newId(),
             aggregateId: (string) $demandaId,
             occurredAt: new \DateTimeImmutable(),
-            resolvidoPorId: $resolvidoPorId
+            resolvidoPorId: $resolvidoPorId,
+            responsavelId: $responsavelId
         );
     }
 
@@ -50,6 +53,7 @@ final readonly class DemandaResolvidaV1 extends DomainEvent
     {
         return [
             'resolvido_por_id' => $this->resolvidoPorId,
+            'responsavel_id' => $this->responsavelId,
         ];
     }
 }

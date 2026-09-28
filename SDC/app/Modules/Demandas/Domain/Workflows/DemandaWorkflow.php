@@ -49,7 +49,8 @@ final class DemandaWorkflow
                 DB::afterCommit(static function () use ($demanda, $anterior, $novoStatus, $usuarioId): void {
                     event(StatusAlteradoV1::create($demanda->id, $anterior->value, $novoStatus->value, $usuarioId));
                     if ($novoStatus === StatusDemanda::RESOLVIDA) {
-                        event(DemandaResolvidaV1::create($demanda->id, $usuarioId));
+                        $responsavelId = $demanda->atribuido_para_id === null ? null : (int) $demanda->atribuido_para_id;
+                        event(DemandaResolvidaV1::create($demanda->id, $usuarioId, $responsavelId));
                     }
                 });
             }

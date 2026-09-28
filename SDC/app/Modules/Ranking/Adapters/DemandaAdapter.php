@@ -30,19 +30,21 @@ final class DemandaAdapter implements ModuleAdapter
         if (! $evento instanceof DemandaResolvidaV1) {
             return null;
         }
-        $autor = $evento->resolvidoPorId > 0 ? $evento->resolvidoPorId : null;
+        $ator = $evento->resolvidoPorId > 0 ? $evento->resolvidoPorId : null;
+        $responsavel = $evento->responsavelId !== null && $evento->responsavelId > 0 ? $evento->responsavelId : null;
 
-        // DemandaResolvidaV1 so e disparado apos uma resolucao commitada e
-        // autorizada, feita por usuario autenticado (DemandaController::resolver
-        // -> DemandaStatusService::resolver -> DemandaWorkflow::conduzirAte). Um
-        // resolvidoPorId valido JA E a evidencia de origem; sem ele nao ha o que
-        // comprovar, entao evidencia acompanha autoria.
+        // O credito vai para o responsavel atribuido (atribuido_para_id) no
+        // momento da resolucao, nao para quem clicou em resolver -- um gestor
+        // pode resolver em nome de outra pessoa. Uma demanda resolvida sempre
+        // tem responsavel porque ExigeAtribuicaoParaProgresso exige atribuicao
+        // para a demanda chegar em em_progresso; sem ele (dado legado ou
+        // anomalia) nao ha o que comprovar, entao evidencia acompanha autoria.
         return new FatoNormalizado(
             eventId: $evento->eventId, eventName: $evento->eventName(), modulo: 'Demandas',
             chaveCanonica: 'demanda:'.$evento->aggregateId.':entrega_aceita', familia: 'demandas_entrega_aceita',
             ruleKey: 'demandas.entrega_aceita', ocorridoEm: $evento->occurredAt, competenciaEm: $evento->occurredAt,
-            autoriaComprovada: $autor !== null, evidenciaComprovada: $autor !== null, validada: false,
-            actorUserId: $autor, creditedUserId: $autor, entregueEm: $evento->occurredAt,
+            autoriaComprovada: $responsavel !== null, evidenciaComprovada: $responsavel !== null, validada: false,
+            actorUserId: $ator, creditedUserId: $responsavel, entregueEm: $evento->occurredAt,
             contexto: ['demanda_id' => $evento->aggregateId, 'fonte' => 'demanda.resolvida'],
         );
     }
