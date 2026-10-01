@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace App\Modules\Inventario\Services;
 
 use App\Modules\Inventario\Enums\SituacaoEquipamento;
+use App\Modules\Inventario\Enums\TipoMovimentacao;
 use App\Modules\Inventario\Models\Equipamento;
 use App\Modules\Inventario\Models\Movimentacao;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Movimentacao avulsa (emprestimo). O remanejamento em lote vive em
+ * RemanejamentoService; aqui so se garante que um nao desfaz o outro.
+ */
 final class MovimentacaoService
 {
     public function registrar(array $data, int $actorId): Movimentacao
@@ -23,7 +29,7 @@ final class MovimentacaoService
                 throw ValidationException::withMessages(['equipamento_id' => 'Equipamento não permite empréstimo.']);
             }
 
-            $ativos = (int) $equipamento->movimentacoes()->where('status', 'ativo')->sum('quantidade');
+            $ativos = (int) $this->ativasComEfeito($equipamento)->sum('quantidade');
             if ($ativos > 0 || $data['quantidade'] !== $equipamento->quantidade) {
                 throw ValidationException::withMessages(['quantidade' => 'Movimente a quantidade integral do equipamento, sem movimentação ativa.']);
             }
@@ -33,6 +39,7 @@ final class MovimentacaoService
                 'registrado_por_id' => $actorId,
                 'usuario_origem_id' => $equipamento->user_id,
                 'estacao_origem_id' => $equipamento->estacao_id,
+                'situacao_origem' => $equipamento->situacao->value,
                 'data_saida' => now(),
                 'status' => 'ativo',
             ]);
@@ -50,6 +57,11 @@ final class MovimentacaoService
     {
         return DB::transaction(function () use ($id): Movimentacao {
             $referencia = Movimentacao::query()->findOrFail($id);
+            if ($referencia->lote_id !== null) {
+                throw ValidationException::withMessages([
+                    'movimentacao' => 'Esta movimentação faz parte de um remanejamento em lote. Use "Desfazer" no lote.',
+                ]);
+            }
             $equipamento = Equipamento::query()->lockForUpdate()->findOrFail($referencia->equipamento_id);
             $movimentacao = Movimentacao::query()->lockForUpdate()->findOrFail($id);
             if ($movimentacao->status !== 'ativo') {
@@ -57,7 +69,7 @@ final class MovimentacaoService
             }
 
             $movimentacao->update(['status' => 'devolvido', 'data_devolucao' => now()]);
-            if (! $equipamento->movimentacoes()->where('status', 'ativo')->exists()) {
+            if (! $this->ativasComEfeito($equipamento)->exists()) {
                 $equipamento->update([
                     'user_id' => $movimentacao->usuario_origem_id,
                     'estacao_id' => $movimentacao->estacao_origem_id,
@@ -68,5 +80,16 @@ final class MovimentacaoService
 
             return $movimentacao;
         });
+    }
+
+    /**
+     * Movimentacoes ativas que seguram o equipamento. A liberacao do lote fica
+     * "ativa" so para poder ser desfeita: o equipamento liberado esta livre.
+     */
+    private function ativasComEfeito(Equipamento $equipamento): HasMany
+    {
+        return $equipamento->movimentacoes()
+            ->where('status', 'ativo')
+            ->where('tipo', '!=', TipoMovimentacao::LIBERACAO->value);
     }
 }
