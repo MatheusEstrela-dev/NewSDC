@@ -65,6 +65,7 @@ final class RemanejamentoService
     {
         return DB::transaction(function () use ($remanejamento, $dados): Remanejamento {
             $lote = $this->travarLoteAtivo($remanejamento);
+            $this->travarUniaoAntigaENova($lote, $dados);
             $this->reverter($lote);
 
             // As linhas antigas ja cumpriram o papel de restaurar o estado; se
@@ -77,6 +78,30 @@ final class RemanejamentoService
 
             return $lote->refresh();
         });
+    }
+
+    /**
+     * Editar toca o conteudo antigo (reverter) e o novo (aplicar). Travar um
+     * depois do outro quebraria a ordem crescente de id; por isso trava a uniao
+     * em uma passada so, equipamentos e depois estacoes. Reverter e aplicar
+     * relem linhas ja travadas, o que e barato.
+     */
+    private function travarUniaoAntigaENova(Remanejamento $lote, RemanejamentoData $dados): void
+    {
+        $idsEquipamentos = array_values(array_unique(array_merge(
+            $lote->movimentacoes()->pluck('equipamento_id')->all(),
+            $dados->equipamentoIds(),
+        )));
+        $this->travarEquipamentos(Equipamento::withTrashed()->where(
+            static fn (Builder $q) => $q->whereIn('id', $idsEquipamentos)->orWhereIn('user_id', $dados->usuarioIds())
+        ));
+
+        $pessoas = $lote->pessoas()->get();
+        $this->travarEstacoes(array_values(array_unique(array_filter(array_merge(
+            $pessoas->pluck('estacao_origem_id')->all(),
+            $pessoas->pluck('estacao_destino_id')->all(),
+            $dados->estacaoIds(),
+        )))));
     }
 
     private function travarLoteAtivo(Remanejamento $remanejamento): Remanejamento
