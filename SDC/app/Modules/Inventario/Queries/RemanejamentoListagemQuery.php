@@ -36,9 +36,8 @@ final class RemanejamentoListagemQuery
             'demanda:id,protocolo',
         ]);
 
-        $termo = trim((string) ($filtros['search'] ?? ''));
-        if ($termo !== '') {
-            $like = '%'.$termo.'%';
+        $like = self::padraoBusca($filtros);
+        if ($like !== null) {
             $query->where(static fn (Builder $q) => $q
                 ->whereHas('pessoas.usuario', static fn (Builder $u) => $u->where('name', 'ilike', $like))
                 ->orWhereHas('itensRemanejados.equipamento', static fn (Builder $e) => $e->where(
@@ -67,9 +66,8 @@ final class RemanejamentoListagemQuery
         $query = Movimentacao::query()->whereNull('lote_id')
             ->with(['equipamento:id,nome,patrimonio', 'registradoPor:id,name', 'usuarioDestino:id,name']);
 
-        $termo = trim((string) ($filtros['search'] ?? ''));
-        if ($termo !== '') {
-            $like = '%'.$termo.'%';
+        $like = self::padraoBusca($filtros);
+        if ($like !== null) {
             $query->whereHas('equipamento', static fn (Builder $e) => $e->where(
                 static fn (Builder $x) => $x->where('nome', 'ilike', $like)->orWhere('patrimonio', 'ilike', $like)
             ));
@@ -85,5 +83,18 @@ final class RemanejamentoListagemQuery
         }
 
         return $query->latest('data_saida')->paginate(self::POR_PAGINA, ['*'], 'pagina_avulsas')->withQueryString();
+    }
+
+    /**
+     * Padrao ILIKE do termo de busca, com % _ e \ escapados para que o termo
+     * seja tratado como texto literal.
+     *
+     * @param array{search?:string|null} $filtros
+     */
+    private static function padraoBusca(array $filtros): ?string
+    {
+        $termo = trim((string) ($filtros['search'] ?? ''));
+
+        return $termo === '' ? null : '%'.addcslashes($termo, '%_\\').'%';
     }
 }

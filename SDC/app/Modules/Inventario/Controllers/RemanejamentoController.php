@@ -80,6 +80,7 @@ class RemanejamentoController extends Controller
         return response($this->planilha->gerar($remanejamento), 200, [
             'Content-Type' => PlanilhaRemanejamento::MIME,
             'Content-Disposition' => 'attachment; filename="'.$this->planilha->nomeArquivo($remanejamento).'"',
+            'Cache-Control' => 'no-store, private',
         ]);
     }
 
