@@ -63,3 +63,9 @@
   background-size: 1.5em 1.5em;
 }
 
+/* A seta ocupa a direita: o pr-10 precisa vencer o px-* do tamanho
+   (.atom-input.atom-input-md tem a mesma especificidade e vinha depois),
+   senao texto longo corre por baixo dela. */
+.atom-input.atom-select {
+  @apply pr-10;
+}
