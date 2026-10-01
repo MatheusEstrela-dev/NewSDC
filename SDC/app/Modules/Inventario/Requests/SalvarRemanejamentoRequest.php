@@ -32,6 +32,7 @@ class SalvarRemanejamentoRequest extends FormRequest
             'pessoas.*.estacao_destino_id' => ['nullable', 'integer', 'exists:inventario_ti_estacoes,id'],
             'pessoas.*.condicao_destino' => ['nullable', 'string', 'max:60'],
             'pessoas.*.equipamento_ids' => ['required', 'array', 'min:1', 'max:50'],
+            // O distinct sob dois curingas compara o lote inteiro, nao so o bloco.
             'pessoas.*.equipamento_ids.*' => ['integer', 'distinct', Rule::exists('inventario_ti_equipamentos', 'id')->whereNull('deleted_at')],
         ];
     }
@@ -44,7 +45,7 @@ class SalvarRemanejamentoRequest extends FormRequest
             'pessoas.*.equipamento_ids.required' => 'Selecione ao menos um equipamento.',
             'pessoas.*.equipamento_ids.min' => 'Selecione ao menos um equipamento.',
             'pessoas.*.equipamento_ids.max' => 'No máximo :max equipamentos por pessoa.',
-            'pessoas.*.equipamento_ids.*.distinct' => 'Equipamento repetido para a mesma pessoa.',
+            'pessoas.*.equipamento_ids.*.distinct' => 'Equipamento repetido no lote: cada equipamento entra uma vez só.',
             'pessoas.*.equipamento_ids.*.exists' => 'Equipamento não encontrado.',
         ];
     }
