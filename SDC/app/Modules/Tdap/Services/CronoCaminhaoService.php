@@ -114,14 +114,19 @@ class CronoCaminhaoService
                 throw new \DomainException("Caminhao {$caminhao->placa} ja alocado neste cronograma.");
             }
 
-            return CronoCaminhao::create($dto->toArray());
+            return CronoCaminhao::create([
+                ...$dto->toArray(),
+                'num_viagens' => $dto->viagensPara((float) $caminhao->capacidade_m3),
+            ]);
         });
     }
 
     public function atualizar(int $id, CronoCaminhaoDTO $dto): CronoCaminhao
     {
         return DB::transaction(function () use ($id, $dto): CronoCaminhao {
-            $cc = CronoCaminhao::query()->with('cronograma:id,encerrado_em')->findOrFail($id);
+            $cc = CronoCaminhao::query()
+                ->with(['cronograma:id,encerrado_em', 'caminhao:id,capacidade_m3'])
+                ->findOrFail($id);
 
             // Mesmo guard de alocar(): cronograma encerrado e registro fechado.
             // Sem ele era possivel remexer em agua_prevista depois do
@@ -134,7 +139,7 @@ class CronoCaminhaoService
             $cc->update([
                 'comunidade_id' => $dto->comunidade_id,
                 'agua_prevista' => $dto->agua_prevista,
-                'num_viagens'   => $dto->num_viagens,
+                'num_viagens'   => $dto->viagensPara((float) $cc->caminhao?->capacidade_m3),
                 'ordem'         => $dto->ordem,
             ]);
 
