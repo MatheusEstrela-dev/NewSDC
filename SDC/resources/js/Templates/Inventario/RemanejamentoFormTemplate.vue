@@ -1,5 +1,5 @@
 <template>
-  <div class="min-w-0 space-y-6 pb-8">
+  <div ref="raiz" class="min-w-0 space-y-6 pb-8">
     <PageHeader
       :title="editando ? 'Editar remanejamento' : 'Novo remanejamento'"
       description="Pessoas que mudam de estação levando seus equipamentos"
@@ -20,7 +20,7 @@
       <p class="break-words">{{ erroGeral }}</p>
     </div>
 
-    <form class="space-y-6" novalidate @submit.prevent="enviar">
+    <form class="space-y-6" novalidate @submit.prevent="enviarFormulario">
       <PessoaRemanejamentoBloco
         v-for="(bloco, indice) in form.pessoas"
         :key="bloco.chave"
@@ -60,13 +60,14 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { ArrowLeftIcon, ArrowsRightLeftIcon, PlusIcon } from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import PessoaRemanejamentoBloco from '@/Components/Organisms/Inventario/Remanejamentos/PessoaRemanejamentoBloco.vue';
 import { useRemanejamentoForm } from '@/Composables/inventario/useRemanejamentoForm';
+import { focarPrimeiroErro } from '@/utils/focarPrimeiroErro';
 
 const props = defineProps({
   remanejamento: { type: Object, default: null },
@@ -82,4 +83,10 @@ const {
 // Erros que nao pertencem a um bloco: lote vazio, lote ja desfeito, item
 // movimentado depois (editar) e configuracao.
 const erroGeral = computed(() => form.errors.pessoas || form.errors.remanejamento || form.errors.configuracao || '');
+
+// Envio recusado: o preserveScroll deixa a tela no botao; leva ao primeiro erro.
+const raiz = ref(null);
+function enviarFormulario() {
+  enviar({ aoFalhar: () => nextTick(() => focarPrimeiroErro(raiz.value)) });
+}
 </script>

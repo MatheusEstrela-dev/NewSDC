@@ -36,6 +36,7 @@
       <div class="mt-2"><Badge variant="info" size="sm">{{ rotuloItens(lote) }}</Badge></div>
       <footer class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700/50">
         <RemanejamentoAcoes
+          rotulado
           :lote="lote"
           :pode="pode"
           :expandido="estaExpandido(lote.id)"

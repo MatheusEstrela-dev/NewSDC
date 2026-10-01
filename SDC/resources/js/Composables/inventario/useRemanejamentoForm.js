@@ -112,7 +112,8 @@ export function useRemanejamentoForm(remanejamento, opcoes) {
     return erros;
   }
 
-  function enviar() {
+  // `aoFalhar` roda quando o servidor recusa (o template leva ao primeiro erro).
+  function enviar({ aoFalhar } = {}) {
     if (form.processing) return;
 
     form.transform((dados) => ({
@@ -125,7 +126,7 @@ export function useRemanejamentoForm(remanejamento, opcoes) {
       })),
     }));
 
-    const opcoesEnvio = { preserveScroll: true };
+    const opcoesEnvio = { preserveScroll: true, onError: () => aoFalhar?.() };
     if (editando.value) {
       form.put(route('inventario.remanejamentos.update', remanejamento.id), opcoesEnvio);
     } else {

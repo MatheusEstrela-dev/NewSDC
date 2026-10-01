@@ -11,6 +11,11 @@ use Inertia\Middleware;
 class HandleInertiaRequests extends Middleware
 {
     /**
+     * Marca o reload parcial disparado pelo useAtualizacaoAoVivo, e nao pelo usuario.
+     */
+    public const CABECALHO_ATUALIZACAO_AO_VIVO = 'X-Atualizacao-Ao-Vivo';
+
+    /**
      * The root template that is loaded on the first page visit.
      *
      * @var string
@@ -42,8 +47,19 @@ class HandleInertiaRequests extends Middleware
             $user = null;
         }
 
+        $compartilhado = parent::share($request);
+
+        // Reload ao vivo nao responde pelos erros da pagina. Sem esta exclusao o
+        // errors (always) voltava vazio -- a sessao ja foi consumida pela visita
+        // do proprio usuario -- e apagava o aviso que ele estava lendo so porque
+        // outra pessoa mexeu na listagem. Ausente na resposta, o cliente funde as
+        // props e mantem o errors atual: erros so mudam nas visitas do usuario.
+        if ($request->hasHeader(self::CABECALHO_ATUALIZACAO_AO_VIVO)) {
+            unset($compartilhado['errors']);
+        }
+
         return [
-            ...parent::share($request),
+            ...$compartilhado,
             'auth' => [
                 'user' => fn() => $user ? $this->getCachedUserData($user) : null,
                 // Flags de onboarding NAO sao cacheadas: variam por carregamento
