@@ -14,9 +14,9 @@ class Movimentacao extends Model
 
     protected $fillable = [
         'equipamento_id', 'registrado_por_id', 'usuario_origem_id', 'usuario_destino_id',
-        'estacao_origem_id', 'estacao_destino_id', 'lote_id', 'tipo', 'status', 'quantidade',
-        'data_saida', 'data_prevista_devolucao', 'data_devolucao', 'retirante_nome',
-        'retirante_cpf', 'retirante_contato', 'observacao',
+        'estacao_origem_id', 'estacao_destino_id', 'lote_id', 'remanejamento_pessoa_id', 'tipo', 'status',
+        'situacao_origem', 'quantidade', 'data_saida', 'data_prevista_devolucao', 'data_devolucao',
+        'retirante_nome', 'retirante_cpf', 'retirante_contato', 'observacao',
     ];
 
     protected $casts = [
@@ -34,5 +34,35 @@ class Movimentacao extends Model
     public function registradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'registrado_por_id');
+    }
+
+    public function remanejamento(): BelongsTo
+    {
+        return $this->belongsTo(Remanejamento::class, 'lote_id');
+    }
+
+    public function pessoa(): BelongsTo
+    {
+        return $this->belongsTo(RemanejamentoPessoa::class, 'remanejamento_pessoa_id');
+    }
+
+    public function usuarioOrigem(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'usuario_origem_id');
+    }
+
+    public function usuarioDestino(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'usuario_destino_id');
+    }
+
+    public function estacaoOrigem(): BelongsTo
+    {
+        return $this->belongsTo(Estacao::class, 'estacao_origem_id');
+    }
+
+    public function estacaoDestino(): BelongsTo
+    {
+        return $this->belongsTo(Estacao::class, 'estacao_destino_id');
     }
 }
