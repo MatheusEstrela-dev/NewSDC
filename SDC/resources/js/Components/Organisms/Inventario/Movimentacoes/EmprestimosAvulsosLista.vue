@@ -33,7 +33,7 @@
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ListaResponsiva from '@/Components/Molecules/Inventario/ListaResponsiva.vue';
 import StatusRemanejamentoBadge from '@/Components/Atoms/Inventario/StatusRemanejamentoBadge.vue';
-import { formatarDataHora } from '@/Support/demandasFormat';
+import { formatarDataHora } from '@/utils/dateFormatter';
 
 defineProps({
   movimentacoes: { type: Array, required: true },

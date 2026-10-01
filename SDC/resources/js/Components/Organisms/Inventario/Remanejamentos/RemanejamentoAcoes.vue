@@ -59,7 +59,7 @@ import {
 } from '@heroicons/vue/24/outline';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
-import { formatarDataHora } from '@/Support/demandasFormat';
+import { formatarDataHora } from '@/utils/dateFormatter';
 
 const props = defineProps({
   lote: { type: Object, required: true },

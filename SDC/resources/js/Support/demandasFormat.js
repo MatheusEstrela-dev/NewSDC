@@ -1,9 +1,5 @@
-const DATA_HORA = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-
-export function formatarDataHora(iso) {
-  if (!iso) return '—';
-  return DATA_HORA.format(new Date(iso)).replace(',', '');
-}
+// Formatador generico mora em utils; reexportado para os chamadores de Demandas.
+export { formatarDataHora } from '@/utils/dateFormatter';
 
 export function formatarBytes(bytes) {
   if (!bytes) return '0 B';
