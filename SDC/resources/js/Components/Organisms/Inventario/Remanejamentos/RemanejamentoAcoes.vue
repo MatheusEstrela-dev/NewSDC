@@ -1,54 +1,39 @@
 <template>
-  <div class="flex flex-wrap items-center justify-end gap-1">
-    <ButtonIcon
-      v-if="pode.seplag && ativo"
-      :icon="PaperAirplaneIcon"
-      variant="info"
-      size="sm"
-      :title="tituloSeplag"
-      :disabled="processando"
-      @click="$emit('seplag', lote)"
-    />
-    <ButtonIcon
-      :icon="ChevronDownIcon"
-      variant="secondary"
-      size="sm"
-      class="transition-transform"
-      :class="{ 'rotate-180': expandido }"
-      :title="expandido ? 'Recolher itens' : 'Ver itens do lote'"
-      @click="$emit('expandir', lote)"
-    />
-    <ButtonIcon v-if="pode.planilha" :icon="ArrowDownTrayIcon" variant="secondary" size="sm" title="Baixar planilha" @click="$emit('planilha', lote)" />
-    <ButtonIcon
-      v-if="pode.editar && ativo"
-      :icon="PencilSquareIcon"
-      variant="primary"
-      size="sm"
-      title="Editar lote"
-      :disabled="processando"
-      @click="$emit('editar', lote)"
-    />
-    <ButtonIcon
-      v-if="pode.editar && ativo"
-      :icon="ArrowUturnLeftIcon"
-      variant="danger"
-      size="sm"
-      title="Desfazer lote"
-      :disabled="processando"
-      @click="$emit('desfazer', lote)"
-    />
-    <Button v-if="lote.demanda" variant="outline" size="sm" :title="`Protocolo ${lote.demanda.protocolo}`" @click="$emit('abrir-chamado', lote)">
-      Chamado #{{ lote.demanda.id }}
+  <!-- Cartao (mobile): rotulo visivel e alvo de 40px, porque no toque o title nao aparece. -->
+  <div v-if="rotulado" class="grid grid-cols-2 gap-2">
+    <Button
+      v-for="acao in acoes"
+      :key="acao.chave"
+      :variant="acao.variante"
+      size="md"
+      :icon="acao.icone"
+      :disabled="acao.trava && processando"
+      :title="acao.titulo"
+      class="min-h-10 w-full"
+      :class="{ 'col-span-2': acao.largo }"
+      @click="acao.acionar"
+    >
+      {{ acao.rotulo }}
     </Button>
-    <ButtonIcon
-      v-else-if="pode.editar && ativo"
-      :icon="TicketIcon"
-      variant="success"
-      size="sm"
-      title="Registrar chamado"
-      :disabled="processando"
-      @click="$emit('chamado', lote)"
-    />
+  </div>
+
+  <div v-else class="flex flex-wrap items-center justify-end gap-1">
+    <template v-for="acao in acoes" :key="acao.chave">
+      <Button v-if="acao.largo" variant="outline" size="sm" :title="acao.titulo" @click="acao.acionar">
+        {{ acao.rotulo }}
+      </Button>
+      <ButtonIcon
+        v-else
+        :icon="acao.icone"
+        :variant="acao.variante"
+        size="sm"
+        :class="acao.classe"
+        :title="acao.titulo"
+        :aria-label="acao.titulo"
+        :disabled="acao.trava && processando"
+        @click="acao.acionar"
+      />
+    </template>
   </div>
 </template>
 
@@ -67,8 +52,10 @@ const props = defineProps({
   expandido: { type: Boolean, default: false },
   // Acao do lote em andamento: trava os botoes que disparam requisicao.
   processando: { type: Boolean, default: false },
+  // Botao com texto (cartao do mobile) em vez de so o icone (tabela).
+  rotulado: { type: Boolean, default: false },
 });
-defineEmits(['seplag', 'expandir', 'planilha', 'editar', 'desfazer', 'chamado', 'abrir-chamado']);
+const emit = defineEmits(['seplag', 'expandir', 'planilha', 'editar', 'desfazer', 'chamado', 'abrir-chamado']);
 
 const ativo = computed(() => props.lote.status === 'ativo');
 
@@ -76,5 +63,52 @@ const tituloSeplag = computed(() => {
   const { envios, ultimo_envio_em: ultimo } = props.lote.seplag;
   if (!envios) return 'Enviar à SEPLAG';
   return `Reenviar à SEPLAG — ${envios} envio(s), último em ${formatarDataHora(ultimo)}`;
+});
+
+// Uma lista so para as duas formas: a ordem e as regras de exibicao nao divergem.
+const acoes = computed(() => {
+  const { lote, pode, expandido } = props;
+  const editavel = pode.editar && ativo.value;
+  const lista = [
+    pode.seplag && ativo.value && {
+      chave: 'seplag', icone: PaperAirplaneIcon, variante: 'info', trava: true,
+      rotulo: lote.seplag.envios ? 'Reenviar à SEPLAG' : 'Enviar à SEPLAG', titulo: tituloSeplag.value,
+      acionar: () => emit('seplag', lote),
+    },
+    {
+      chave: 'expandir', icone: ChevronDownIcon, variante: 'secondary',
+      classe: ['transition-transform', { 'rotate-180': expandido }],
+      rotulo: expandido ? 'Recolher itens' : 'Ver itens', titulo: expandido ? 'Recolher itens' : 'Ver itens do lote',
+      acionar: () => emit('expandir', lote),
+    },
+    pode.planilha && {
+      chave: 'planilha', icone: ArrowDownTrayIcon, variante: 'secondary',
+      rotulo: 'Planilha', titulo: 'Baixar planilha',
+      acionar: () => emit('planilha', lote),
+    },
+    editavel && {
+      chave: 'editar', icone: PencilSquareIcon, variante: 'primary', trava: true,
+      rotulo: 'Editar', titulo: 'Editar lote',
+      acionar: () => emit('editar', lote),
+    },
+    editavel && {
+      chave: 'desfazer', icone: ArrowUturnLeftIcon, variante: 'danger', trava: true,
+      rotulo: 'Desfazer', titulo: 'Desfazer lote',
+      acionar: () => emit('desfazer', lote),
+    },
+    lote.demanda
+      ? {
+        chave: 'abrir-chamado', icone: TicketIcon, variante: 'outline', largo: true,
+        rotulo: `Chamado #${lote.demanda.id}`, titulo: `Protocolo ${lote.demanda.protocolo}`,
+        acionar: () => emit('abrir-chamado', lote),
+      }
+      : editavel && {
+        chave: 'chamado', icone: TicketIcon, variante: 'success', trava: true,
+        rotulo: 'Registrar chamado', titulo: 'Registrar chamado',
+        acionar: () => emit('chamado', lote),
+      },
+  ];
+
+  return lista.filter(Boolean);
 });
 </script>

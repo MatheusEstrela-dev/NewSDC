@@ -60,15 +60,11 @@
     </ListContainer>
 
     <ConfirmDialog
-      :is-open="Boolean(loteParaDesfazer)"
-      title="Desfazer remanejamento"
-      message="Desfazer este lote?"
-      description="Equipamentos, estações e itens liberados voltam ao estado de antes do lote. Se algum equipamento foi movimentado depois, nada é alterado."
-      variant="danger"
-      confirm-text="Desfazer"
+      :is-open="dialogoAberto"
+      v-bind="dialogo"
       :loading="processando"
-      @confirm="confirmarDesfazer"
-      @cancel="cancelarDesfazer"
+      @confirm="confirmarAcao"
+      @cancel="cancelarConfirmacao"
     />
 
     <ConfirmDialog
@@ -122,8 +118,8 @@ defineProps({
 defineEmits(['novo', 'aplicar', 'limpar', 'pagina', 'pagina-avulsas']);
 
 const {
-  loteParaDesfazer, processando, pedirDesfazer, cancelarDesfazer, confirmarDesfazer,
-  editar, baixarPlanilha, registrarChamado, abrirChamado, enviarSeplag,
+  dialogo, dialogoAberto, processando, cancelarConfirmacao, confirmarAcao,
+  pedirDesfazer, enviarSeplag, registrarChamado, editar, baixarPlanilha, abrirChamado,
 } = useRemanejamentoAcoes();
 
 const emprestimoAberto = ref(false);
