@@ -37,3 +37,13 @@ export function formatDate(date) {
   
   return `${day}/${month}/${year}`;
 }
+
+/**
+ * Data e hora para listagens: mesmo formato de formatDateTime, com travessao
+ * quando nao ha data valida (celula em branco parece dado faltando).
+ * @param {Date|string|null} date - Data a ser formatada
+ * @returns {string} dd/mm/aaaa hh:mm ou travessao
+ */
+export function formatarDataHora(date) {
+  return formatDateTime(date) || '—';
+}

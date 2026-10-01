@@ -6,8 +6,6 @@ namespace App\Modules\Inventario\Queries;
 
 use App\Models\User;
 use App\Modules\Inventario\Enums\SituacaoEquipamento;
-use App\Modules\Inventario\Enums\StatusMovimentacao;
-use App\Modules\Inventario\Enums\TipoMovimentacao;
 use App\Modules\Inventario\Models\Equipamento;
 use App\Modules\Inventario\Models\Estacao;
 use App\Modules\Inventario\Models\Movimentacao;
@@ -21,8 +19,7 @@ final class OpcoesRemanejamentoQuery
     public function paraFormulario(): array
     {
         $emprestados = Movimentacao::query()
-            ->where('tipo', TipoMovimentacao::EMPRESTIMO->value)
-            ->where('status', StatusMovimentacao::ATIVO->value)
+            ->emprestimoAtivo()
             ->pluck('equipamento_id')->map(static fn ($id): int => (int) $id)->all();
 
         return [

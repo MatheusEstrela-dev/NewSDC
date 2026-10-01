@@ -59,7 +59,7 @@ import ListaResponsiva from '@/Components/Molecules/Inventario/ListaResponsiva.v
 import StatusRemanejamentoBadge from '@/Components/Atoms/Inventario/StatusRemanejamentoBadge.vue';
 import RemanejamentoAcoes from '@/Components/Organisms/Inventario/Remanejamentos/RemanejamentoAcoes.vue';
 import RemanejamentoItensTabela from '@/Components/Organisms/Inventario/Remanejamentos/RemanejamentoItensTabela.vue';
-import { formatarDataHora } from '@/Support/demandasFormat';
+import { formatarDataHora } from '@/utils/dateFormatter';
 
 defineProps({
   lotes: { type: Array, required: true },

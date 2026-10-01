@@ -25,8 +25,9 @@ use Illuminate\Support\Facades\DB;
  * Remanejamento em lote: registrar, desfazer e editar.
  *
  * Toda escrita numa transacao, com lockForUpdate em equipamentos e depois em
- * estacoes, cada grupo em ordem crescente de id. A ordem fixa e o que impede
- * dois lotes concorrentes de travarem um esperando o outro.
+ * estacoes, cada grupo em ordem crescente de id e numa passada so (as estacoes
+ * ocupadas pelas pessoas do lote entram na mesma passada). A ordem fixa e o que
+ * impede dois lotes concorrentes de travarem um esperando o outro.
  */
 final class RemanejamentoService
 {
@@ -101,7 +102,7 @@ final class RemanejamentoService
             $pessoas->pluck('estacao_origem_id')->all(),
             $pessoas->pluck('estacao_destino_id')->all(),
             $dados->estacaoIds(),
-        )))));
+        )))), $dados->usuarioIds());
     }
 
     private function travarLoteAtivo(Remanejamento $remanejamento): Remanejamento
@@ -257,7 +258,7 @@ final class RemanejamentoService
         $equipamentos = $this->travarEquipamentos(Equipamento::query()->where(
             static fn (Builder $q) => $q->whereIn('id', $dados->equipamentoIds())->orWhereIn('user_id', $dados->usuarioIds())
         ));
-        $estacoes = $this->travarEstacoes($dados->estacaoIds());
+        $estacoes = $this->travarEstacoes($dados->estacaoIds(), $dados->usuarioIds());
         $emprestados = $this->comEmprestimoAtivo($equipamentos->keys()->all());
 
         $this->validar($dados, $equipamentos, $estacoes, $emprestados);
@@ -327,6 +328,9 @@ final class RemanejamentoService
                 } elseif ((int) $origem->user_id !== $pessoa->usuarioId) {
                     $erros["{$chave}.estacao_origem_id"][] = "A estação {$origem->nome} não está ocupada por esta pessoa.";
                 }
+            } elseif (($ocupada = $this->estacaoOcupadaForaDoDestino($pessoa, $estacoes)) !== null) {
+                // Sem origem a mesa atual nao seria solta e a pessoa ficaria com duas.
+                $erros["{$chave}.estacao_origem_id"][] = "Esta pessoa ocupa a estação {$ocupada->nome}; informe-a como origem.";
             }
 
             if ($pessoa->estacaoDestinoId !== null) {
@@ -365,6 +369,23 @@ final class RemanejamentoService
         if ($erros !== []) {
             throw RemanejamentoProibido::comErros($erros);
         }
+    }
+
+    /**
+     * Mesa que a pessoa ocupa e que nao e o destino dela. Sem destino a pessoa
+     * nao troca de mesa, entao nao ha risco de ficar com duas.
+     *
+     * @param Collection<int, Estacao> $estacoes
+     */
+    private function estacaoOcupadaForaDoDestino(PessoaRemanejadaData $pessoa, Collection $estacoes): ?Estacao
+    {
+        if ($pessoa->estacaoDestinoId === null) {
+            return null;
+        }
+
+        return $estacoes->first(static fn (Estacao $e): bool => $e->user_id !== null
+            && (int) $e->user_id === $pessoa->usuarioId
+            && (int) $e->id !== $pessoa->estacaoDestinoId);
     }
 
     /**
@@ -463,16 +484,22 @@ final class RemanejamentoService
     }
 
     /**
+     * Trava as estacoes pedidas e, na mesma passada, as ocupadas pelos usuarios
+     * informados: trava-las depois quebraria a ordem crescente de id.
+     *
      * @param list<int> $ids
+     * @param list<int> $usuarioIds
      * @return Collection<int, Estacao>
      */
-    private function travarEstacoes(array $ids): Collection
+    private function travarEstacoes(array $ids, array $usuarioIds = []): Collection
     {
-        if ($ids === []) {
+        if ($ids === [] && $usuarioIds === []) {
             return new Collection();
         }
 
-        return Estacao::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+        return Estacao::query()
+            ->where(static fn (Builder $q) => $q->whereIn('id', $ids)->orWhereIn('user_id', $usuarioIds))
+            ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
     }
 
     /**
@@ -486,9 +513,8 @@ final class RemanejamentoService
         }
 
         return Movimentacao::query()
+            ->emprestimoAtivo()
             ->whereIn('equipamento_id', $ids)
-            ->where('tipo', TipoMovimentacao::EMPRESTIMO->value)
-            ->where('status', StatusMovimentacao::ATIVO->value)
             ->pluck('equipamento_id')
             ->map(static fn ($id): int => (int) $id)
             ->unique()->values()->all();

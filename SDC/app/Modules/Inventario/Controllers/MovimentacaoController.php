@@ -6,6 +6,7 @@ namespace App\Modules\Inventario\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Inventario\Enums\SituacaoEquipamento;
 use App\Modules\Inventario\Enums\StatusRemanejamento;
 use App\Modules\Inventario\Models\Equipamento;
 use App\Modules\Inventario\Models\Estacao;
@@ -35,6 +36,7 @@ class MovimentacaoController extends Controller
             'data' => ['nullable', 'date'],
         ]);
         $user = $request->user();
+        $podeEmprestar = $user->can('inventario.emprestimos.create');
 
         return Inertia::render('Inventario/MovimentacoesIndex', [
             'remanejamentos' => $this->listagem->lotes($filters)
@@ -48,13 +50,17 @@ class MovimentacaoController extends Controller
                 'editar' => $user->can('inventario.remanejamentos.edit'),
                 'seplag' => $user->can('inventario.remanejamentos.seplag'),
                 'planilha' => $user->can('inventario.emprestimos.export'),
-                'emprestar' => $user->can('inventario.emprestimos.create'),
+                'emprestar' => $podeEmprestar,
                 'devolver' => $user->can('inventario.emprestimos.return'),
             ],
-            'equipamentos' => Equipamento::query()->whereNotIn('situacao', ['manutencao', 'baixado'])
-                ->orderBy('nome')->get(['id', 'nome', 'patrimonio', 'quantidade']),
-            'usuarios' => User::query()->orderBy('name')->get(['id', 'name']),
-            'estacoes' => Estacao::query()->orderBy('nome')->get(['id', 'nome']),
+            // Opcoes do modal de emprestimo: so para quem pode emprestar (perfis de
+            // leitura nao recebem a lista inteira de usuarios e equipamentos).
+            'equipamentos' => $podeEmprestar
+                ? Equipamento::query()->whereNotIn('situacao', [SituacaoEquipamento::MANUTENCAO->value, SituacaoEquipamento::BAIXADO->value])
+                    ->orderBy('nome')->get(['id', 'nome', 'patrimonio', 'quantidade'])
+                : [],
+            'usuarios' => $podeEmprestar ? User::query()->orderBy('name')->get(['id', 'name']) : [],
+            'estacoes' => $podeEmprestar ? Estacao::query()->orderBy('nome')->get(['id', 'nome']) : [],
         ]);
     }
 
@@ -62,7 +68,8 @@ class MovimentacaoController extends Controller
     {
         $data = $request->validate([
             'equipamento_id' => ['required', 'integer', 'exists:inventario_ti_equipamentos,id'],
-            'tipo' => ['required', 'in:emprestimo,remanejamento'],
+            // Remanejamento e sempre em lote (permissao propria); a via avulsa so empresta.
+            'tipo' => ['required', 'in:emprestimo'],
             'quantidade' => ['required', 'integer', 'min:1'],
             'usuario_destino_id' => ['nullable', 'integer', 'exists:users,id'],
             'estacao_destino_id' => ['nullable', 'integer', 'exists:inventario_ti_estacoes,id'],
