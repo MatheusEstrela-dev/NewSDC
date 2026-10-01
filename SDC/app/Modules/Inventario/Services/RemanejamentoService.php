@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventario\Services;
 
+use App\Models\User;
 use App\Modules\Inventario\DTOs\PessoaRemanejadaData;
 use App\Modules\Inventario\DTOs\RemanejamentoData;
 use App\Modules\Inventario\Enums\SituacaoEquipamento;
@@ -104,7 +105,7 @@ final class RemanejamentoService
             $pessoas->pluck('estacao_destino_id')->all(),
         )))));
 
-        $this->validarReversao($lote, $movimentacoes);
+        $this->validarReversao($lote, $movimentacoes, $pessoas, $estacoes);
 
         // Ordem inversa do registro (id decrescente).
         foreach ($movimentacoes as $movimentacao) {
@@ -133,8 +134,12 @@ final class RemanejamentoService
         }
     }
 
-    /** @param Collection<int, Movimentacao> $movimentacoes */
-    private function validarReversao(Remanejamento $lote, Collection $movimentacoes): void
+    /**
+     * @param Collection<int, Movimentacao> $movimentacoes
+     * @param Collection<int, RemanejamentoPessoa> $pessoas
+     * @param Collection<int, Estacao> $estacoes
+     */
+    private function validarReversao(Remanejamento $lote, Collection $movimentacoes, Collection $pessoas, Collection $estacoes): void
     {
         $erros = [];
 
@@ -164,9 +169,33 @@ final class RemanejamentoService
             );
         }
 
+        $membros = $pessoas->pluck('usuario_id')->map(static fn ($id): int => (int) $id)->all();
+        foreach ($pessoas as $pessoa) {
+            // Destino: ainda tem de ser de quem o recebeu neste lote. Em troca
+            // mutua o destino de um e a origem do outro, e cada um segue com o seu.
+            $destino = $pessoa->estacao_destino_id !== null ? $estacoes->get($pessoa->estacao_destino_id) : null;
+            if ($destino !== null && (int) $destino->user_id !== (int) $pessoa->usuario_id) {
+                $erros['remanejamento'][] = $this->estacaoOcupadaDepois($destino);
+            }
+
+            // Origem: ou continua vazia ou foi ocupada por alguem deste lote.
+            $origem = $pessoa->estacao_origem_id !== null ? $estacoes->get($pessoa->estacao_origem_id) : null;
+            if ($origem !== null && $origem->user_id !== null && ! in_array((int) $origem->user_id, $membros, true)) {
+                $erros['remanejamento'][] = $this->estacaoOcupadaDepois($origem);
+            }
+        }
+
         if ($erros !== []) {
             throw RemanejamentoProibido::comErros($erros);
         }
+    }
+
+    private function estacaoOcupadaDepois(Estacao $estacao): string
+    {
+        $ocupante = $estacao->user_id !== null ? User::query()->find($estacao->user_id) : null;
+        $quem = $ocupante?->name ?? ($estacao->user_id !== null ? '#'.$estacao->user_id : 'ninguém');
+
+        return "Estação {$estacao->nome} está ocupada por {$quem} desde outro remanejamento.";
     }
 
     private function descrever(Movimentacao $movimentacao): string
