@@ -93,6 +93,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { viagensNecessarias } from '@/Support/calculoViagensTdap';
 
 const props = defineProps({
   show:             { type: Boolean, default: false },
@@ -144,7 +145,13 @@ const calculoAtivo = computed(() => podeCalcular.value && !manual.value);
  * letra para os numeros do sistema novo baterem com os do antigo:
  *
  *   agua_prevista = (consumo_diario * dias * pop_atendida) / 1000
- *   num_viagens   = round(agua_prevista / capacidade), com piso de 1
+ *   num_viagens   = agua_prevista / capacidade, com decimal abaixo de 0,5
+ *                   para baixo e de 0,5 em diante para cima, piso de 1
+ *                   (viagensNecessarias, espelho de CalculoDeViagens)
+ *
+ * As viagens saem da agua ja arredondada a 2 casas -- o mesmo valor que vai
+ * ao servidor -- para a tela e o backend nunca discordarem no limite do 0,5.
+ * No modo automatico o servidor recalcula e grava o numero dele.
  *
  * O consumo diario e por HABITANTE, nao do municipio inteiro -- 20 L/hab/dia e
  * a referencia de abastecimento emergencial. Tratar esse 20 como consumo total
@@ -162,13 +169,12 @@ function recalcular() {
   const consumo = Number(props.consumoDiario) || 0;
   const dias = Number(props.dias) || 0;
   const populacao = Number(comunidadeSelecionada.value.pop_atendida) || 0;
-  const capacidade = Number(caminhaoSelecionado.value.capacidade_m3) || 1;
+  const capacidade = Number(caminhaoSelecionado.value.capacidade_m3);
 
-  const aguaPrevista = (consumo * dias * populacao) / 1000;
-  const viagens = Math.max(1, Math.round(aguaPrevista / capacidade));
+  const aguaPrevista = ((consumo * dias * populacao) / 1000).toFixed(2);
 
-  form.agua_prevista = aguaPrevista.toFixed(2);
-  form.num_viagens = viagens;
+  form.agua_prevista = aguaPrevista;
+  form.num_viagens = viagensNecessarias(aguaPrevista, capacidade);
 }
 
 watch([() => form.comunidade_id, () => form.caminhao_id, manual], recalcular);
@@ -179,7 +185,7 @@ const caminhoesDisponiveis = computed(() => {
 });
 
 function submit() {
-  form.post(route('tdap.crono_caminhoes.store'), {
+  form.transform((dados) => ({ ...dados, num_viagens_calculado: calculoAtivo.value })).post(route('tdap.crono_caminhoes.store'), {
     preserveScroll: true,
     onSuccess: () => {
       form.reset('caminhao_id', 'comunidade_id', 'agua_prevista', 'num_viagens', 'ordem');
