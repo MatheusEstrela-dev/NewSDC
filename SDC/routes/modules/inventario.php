@@ -33,7 +33,7 @@ Route::prefix('inventario')->name('inventario.')->group(function () {
     Route::post('/movimentacoes', [MovimentacaoController::class, 'store'])
         ->name('movimentacoes.store')->middleware('can:inventario.emprestimos.create');
     Route::post('/movimentacoes/{movimentacao}/devolver', [MovimentacaoController::class, 'devolver'])
-        ->name('movimentacoes.devolver')->middleware('can:inventario.emprestimos.return');
+        ->name('movimentacoes.devolver')->middleware('can:inventario.emprestimos.return')->whereNumber('movimentacao');
 
     // Lotes de remanejamento. {remanejamento} e uuid: whereUuid devolve 404 (e
     // nao 500 do cast do PostgreSQL) para id malformado. O nome nao tem
@@ -53,5 +53,5 @@ Route::prefix('inventario')->name('inventario.')->group(function () {
     Route::post('/remanejamentos/{remanejamento}/chamado', [RemanejamentoController::class, 'chamado'])
         ->name('remanejamentos.chamado')->middleware('can:inventario.remanejamentos.edit')->whereUuid('remanejamento');
     Route::post('/remanejamentos/{remanejamento}/seplag', [RemanejamentoController::class, 'seplag'])
-        ->name('remanejamentos.seplag')->middleware('can:inventario.remanejamentos.seplag')->whereUuid('remanejamento');
+        ->name('remanejamentos.seplag')->middleware(['can:inventario.remanejamentos.seplag', 'throttle:6,1'])->whereUuid('remanejamento');
 });
