@@ -34,7 +34,7 @@
       @blur="$emit('blur', $event)"
       @focus="$emit('focus', $event)"
     />
-    <p v-if="error" class="mt-1 text-xs text-red-400">
+    <p v-if="error" class="mt-1 text-xs text-red-600 dark:text-red-400">
       {{ error }}
     </p>
     <p v-else-if="hint" class="mt-1 text-xs text-slate-500">
