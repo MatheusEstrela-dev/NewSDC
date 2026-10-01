@@ -19,7 +19,15 @@
       @click="$emit('expandir', lote)"
     />
     <ButtonIcon v-if="pode.planilha" :icon="ArrowDownTrayIcon" variant="secondary" size="sm" title="Baixar planilha" @click="$emit('planilha', lote)" />
-    <ButtonIcon v-if="pode.editar && ativo" :icon="PencilSquareIcon" variant="primary" size="sm" title="Editar lote" @click="$emit('editar', lote)" />
+    <ButtonIcon
+      v-if="pode.editar && ativo"
+      :icon="PencilSquareIcon"
+      variant="primary"
+      size="sm"
+      title="Editar lote"
+      :disabled="processando"
+      @click="$emit('editar', lote)"
+    />
     <ButtonIcon
       v-if="pode.editar && ativo"
       :icon="ArrowUturnLeftIcon"

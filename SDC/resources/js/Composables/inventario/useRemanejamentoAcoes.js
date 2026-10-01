@@ -10,13 +10,15 @@ export function useRemanejamentoAcoes() {
 
   // Um clique = uma requisicao: a trava sobe antes do post (e nao no onStart)
   // para que o segundo clique do duplo clique ja encontre a acao em andamento.
-  function postar(nomeRota, lote, extra = {}) {
+  function postar(nomeRota, lote, aoTerminar = () => {}) {
     if (processando.value) return;
     processando.value = true;
     router.post(route(nomeRota, lote.id), {}, {
       preserveScroll: true,
-      ...extra,
-      onFinish: () => { processando.value = false; },
+      onFinish: () => {
+        processando.value = false;
+        aoTerminar();
+      },
     });
   }
 
@@ -30,8 +32,10 @@ export function useRemanejamentoAcoes() {
 
   function confirmarDesfazer() {
     if (!loteParaDesfazer.value) return;
-    postar('inventario.remanejamentos.desfazer', loteParaDesfazer.value, {
-      onSuccess: () => { loteParaDesfazer.value = null; },
+    // Fecha no fim, com sucesso ou erro: o erro de dominio aparece no aviso
+    // do topo, que o dialogo aberto esconderia.
+    postar('inventario.remanejamentos.desfazer', loteParaDesfazer.value, () => {
+      loteParaDesfazer.value = null;
     });
   }
 

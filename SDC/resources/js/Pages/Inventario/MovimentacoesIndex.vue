@@ -13,8 +13,8 @@
     @novo="router.visit(route('inventario.remanejamentos.create'))"
     @aplicar="aplicar()"
     @limpar="limpar"
-    @pagina="(p) => aplicar({ page: p })"
-    @pagina-avulsas="(p) => aplicar({ pagina_avulsas: p })"
+    @pagina="(p) => paginar({ page: p })"
+    @pagina-avulsas="(p) => paginar({ pagina_avulsas: p })"
   />
 </template>
 
@@ -48,6 +48,16 @@ function aplicar(extra = {}) {
     Object.entries({ ...filtros, ...extra }).filter(([, v]) => v !== '' && v !== null && v !== undefined),
   );
   router.get(route('inventario.movimentacoes.index'), params, { preserveState: true, preserveScroll: true, replace: true });
+}
+
+// Paginar uma lista mantem a pagina da outra; mudar filtro (aplicar sem
+// pagina) volta as duas para a primeira.
+function paginar(pagina) {
+  aplicar({
+    page: props.remanejamentos.current_page,
+    pagina_avulsas: props.movimentacoes.current_page,
+    ...pagina,
+  });
 }
 
 function limpar() {
