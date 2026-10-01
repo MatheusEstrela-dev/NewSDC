@@ -513,9 +513,8 @@ final class RemanejamentoService
         }
 
         return Movimentacao::query()
+            ->emprestimoAtivo()
             ->whereIn('equipamento_id', $ids)
-            ->where('tipo', TipoMovimentacao::EMPRESTIMO->value)
-            ->where('status', StatusMovimentacao::ATIVO->value)
             ->pluck('equipamento_id')
             ->map(static fn ($id): int => (int) $id)
             ->unique()->values()->all();

@@ -28,7 +28,7 @@ class EquipamentoController extends Controller
     {
         $model = $this->equipamentos->find($equipamento) ?? abort(404);
         abort_if(
-            $model->movimentacoes()->where('status', 'ativo')->exists()
+            $model->movimentacoes()->seguraEquipamento()->exists()
                 && (int) $request->validated('quantidade') !== $model->quantidade,
             409,
             'Não é possível alterar a quantidade durante uma movimentação ativa.'
@@ -42,7 +42,7 @@ class EquipamentoController extends Controller
     public function destroy(int $equipamento): RedirectResponse
     {
         $model = $this->equipamentos->find($equipamento) ?? abort(404);
-        abort_if($model->movimentacoes()->where('status', 'ativo')->exists(), 409, 'Há movimentação ativa para este equipamento.');
+        abort_if($model->movimentacoes()->seguraEquipamento()->exists(), 409, 'Há movimentação ativa para este equipamento.');
         $model->delete();
 
         return redirect()->back()->with('success', 'Equipamento removido.');

@@ -6,6 +6,7 @@ namespace App\Modules\Inventario\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Inventario\Enums\SituacaoEquipamento;
 use App\Modules\Inventario\Enums\StatusRemanejamento;
 use App\Modules\Inventario\Models\Equipamento;
 use App\Modules\Inventario\Models\Estacao;
@@ -55,7 +56,7 @@ class MovimentacaoController extends Controller
             // Opcoes do modal de emprestimo: so para quem pode emprestar (perfis de
             // leitura nao recebem a lista inteira de usuarios e equipamentos).
             'equipamentos' => $podeEmprestar
-                ? Equipamento::query()->whereNotIn('situacao', ['manutencao', 'baixado'])
+                ? Equipamento::query()->whereNotIn('situacao', [SituacaoEquipamento::MANUTENCAO->value, SituacaoEquipamento::BAIXADO->value])
                     ->orderBy('nome')->get(['id', 'nome', 'patrimonio', 'quantidade'])
                 : [],
             'usuarios' => $podeEmprestar ? User::query()->orderBy('name')->get(['id', 'name']) : [],
