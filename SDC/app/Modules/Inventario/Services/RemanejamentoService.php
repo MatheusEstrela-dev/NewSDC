@@ -45,6 +45,137 @@ final class RemanejamentoService
         });
     }
 
+    public function desfazer(Remanejamento $remanejamento, int $userId): Remanejamento
+    {
+        return DB::transaction(function () use ($remanejamento, $userId): Remanejamento {
+            $lote = $this->travarLoteAtivo($remanejamento);
+            $this->reverter($lote);
+            $lote->update([
+                'status' => StatusRemanejamento::DESFEITO,
+                'desfeito_em' => now(),
+                'desfeito_por_id' => $userId,
+            ]);
+
+            return $lote;
+        });
+    }
+
+    private function travarLoteAtivo(Remanejamento $remanejamento): Remanejamento
+    {
+        $lote = Remanejamento::query()->lockForUpdate()->findOrFail($remanejamento->getKey());
+        if (! $lote->estaAtivo()) {
+            throw RemanejamentoProibido::loteDesfeito();
+        }
+
+        return $lote;
+    }
+
+    /**
+     * Devolve equipamentos e estacoes ao estado de antes do lote. Valida tudo
+     * antes de escrever qualquer linha: tudo ou nada, mesmo fora da transacao.
+     */
+    private function reverter(Remanejamento $lote): void
+    {
+        $movimentacoes = $lote->movimentacoes()->with('equipamento:id,patrimonio')->orderByDesc('id')->get();
+        $equipamentos = $this->travarEquipamentos(
+            Equipamento::withTrashed()->whereIn('id', $movimentacoes->pluck('equipamento_id')->unique()->values()->all())
+        );
+        $pessoas = $lote->pessoas()->orderBy('id')->get();
+        $estacoes = $this->travarEstacoes(array_values(array_unique(array_filter(array_merge(
+            $pessoas->pluck('estacao_origem_id')->all(),
+            $pessoas->pluck('estacao_destino_id')->all(),
+        )))));
+
+        $this->validarReversao($lote, $movimentacoes);
+
+        // Ordem inversa do registro (id decrescente).
+        foreach ($movimentacoes as $movimentacao) {
+            $equipamentos->get($movimentacao->equipamento_id)?->update([
+                'user_id' => $movimentacao->usuario_origem_id,
+                'estacao_id' => $movimentacao->estacao_origem_id,
+                'situacao' => $movimentacao->situacao_origem ?? SituacaoEquipamento::DISPONIVEL->value,
+            ]);
+            $movimentacao->update(['status' => StatusMovimentacao::DEVOLVIDO->value, 'data_devolucao' => now()]);
+            if ($movimentacao->tipo === TipoMovimentacao::REMANEJAMENTO->value) {
+                $this->reativarSubstituida($movimentacao);
+            }
+        }
+
+        // Destinos antes das origens: numa troca mutua a mesa e destino de um e
+        // origem do outro, e quem fica com ela no fim e o dono original.
+        foreach ($pessoas as $pessoa) {
+            if ($pessoa->estacao_destino_id !== null) {
+                $estacoes->get($pessoa->estacao_destino_id)?->update(['user_id' => $pessoa->estacao_destino_usuario_anterior_id]);
+            }
+        }
+        foreach ($pessoas as $pessoa) {
+            if ($pessoa->estacao_origem_id !== null) {
+                $estacoes->get($pessoa->estacao_origem_id)?->update(['user_id' => $pessoa->usuario_id]);
+            }
+        }
+    }
+
+    /** @param Collection<int, Movimentacao> $movimentacoes */
+    private function validarReversao(Remanejamento $lote, Collection $movimentacoes): void
+    {
+        $erros = [];
+
+        foreach ($movimentacoes as $movimentacao) {
+            // Devolvido nao conta: desfazer em ordem inversa (o lote mais novo
+            // primeiro) tem de liberar o lote anterior.
+            $posterior = Movimentacao::query()
+                ->with('remanejamento:id,created_at')
+                ->where('equipamento_id', $movimentacao->equipamento_id)
+                ->where('id', '>', $movimentacao->id)
+                ->where(static fn (Builder $q) => $q->whereNull('lote_id')->orWhere('lote_id', '!=', $lote->id))
+                ->where('status', '!=', StatusMovimentacao::DEVOLVIDO->value)
+                ->orderBy('id')
+                ->first();
+            $substituida = $movimentacao->tipo === TipoMovimentacao::REMANEJAMENTO->value
+                && $movimentacao->status !== StatusMovimentacao::ATIVO->value;
+
+            if ($posterior === null && ! $substituida) {
+                continue;
+            }
+
+            $rotulo = $movimentacao->equipamento?->patrimonio ?? '#'.$movimentacao->equipamento_id;
+            $erros['remanejamento'][] = sprintf(
+                'O equipamento %s foi movimentado depois deste lote (%s). Desfaça primeiro o que veio depois.',
+                $rotulo,
+                $posterior !== null ? $this->descrever($posterior) : 'remanejamento posterior',
+            );
+        }
+
+        if ($erros !== []) {
+            throw RemanejamentoProibido::comErros($erros);
+        }
+    }
+
+    private function descrever(Movimentacao $movimentacao): string
+    {
+        if ($movimentacao->remanejamento !== null) {
+            return 'lote de '.$movimentacao->remanejamento->created_at->format('d/m/Y H:i');
+        }
+
+        return TipoMovimentacao::tryFrom($movimentacao->tipo)?->label().' #'.$movimentacao->id;
+    }
+
+    /**
+     * Uma so movimentacao de remanejamento fica ativa por equipamento; a
+     * substituida mais recente antes desta e exatamente a que esta substituiu.
+     */
+    private function reativarSubstituida(Movimentacao $movimentacao): void
+    {
+        Movimentacao::query()
+            ->where('equipamento_id', $movimentacao->equipamento_id)
+            ->where('tipo', TipoMovimentacao::REMANEJAMENTO->value)
+            ->where('status', StatusMovimentacao::SUBSTITUIDA->value)
+            ->where('id', '<', $movimentacao->id)
+            ->orderByDesc('id')
+            ->first()
+            ?->update(['status' => StatusMovimentacao::ATIVO->value]);
+    }
+
     private function aplicar(Remanejamento $lote, RemanejamentoData $dados): void
     {
         if ($dados->pessoas === []) {
