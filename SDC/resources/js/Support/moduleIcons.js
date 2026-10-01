@@ -20,13 +20,14 @@ import mountains from '../../images/modulos/mountains.svg?url';
 // Arte raster (PNG); as demais sao SVG, mas o PageHeader aceita os dois.
 import notification from '../../images/modulos/notification.png?url';
 import user from '../../images/modulos/user.png?url';
+import trofeu from '../../images/modulos/trofeu.png?url';
 
 // Catalogo bruto (todas as artes disponiveis).
 export const ICONS = {
   apartment, box, chart, cistern, drop, file, house, hydrant,
   'office-building': officeBuilding, shield, 'tank-truck': tankTruck,
   'heart-attack': heartAttack, 'help-desk': helpDesk, bookshelf, certificate, clock, mountains,
-  notification,
+  notification, trofeu,
 };
 
 // Mapa modulo -> icone (confirmado pelo usuario).
@@ -40,9 +41,7 @@ export const MODULE_ICONS = {
   rat: file,
   inicio: house,
   dashboard: house,
-  // Sem arte de trofeu/medalha em resources/images/modulos: `chart` e o mais
-  // proximo (placar) ate que o icone proprio do modulo seja fornecido.
-  ranking: chart,
+  ranking: trofeu,
   tdap: tankTruck,
   'plano-contingencia': shield,
   'ajuda-humanitaria': heartAttack,

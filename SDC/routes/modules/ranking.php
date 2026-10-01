@@ -9,3 +9,6 @@ Route::patch('/ranking/regras/{ruleKey}', [RankingController::class, 'atualizarR
     ->middleware('throttle:30,1')->name('ranking.regras.atualizar');
 Route::post('/ranking/simular', \App\Modules\Ranking\Controllers\RankingSimulationController::class)
     ->middleware('throttle:60,1')->name('ranking.simular');
+
+// Resgate de pontos: modulo proprio, mesmas regras de acesso autenticado.
+require __DIR__ . '/resgate.php';

@@ -28,6 +28,17 @@
               <span class="block text-xs font-normal opacity-75">{{ numero(regras.length) }} regras · pontos e bônus</span>
             </span>
           </Button>
+          <Link
+            v-if="podeVerCarteira && !indisponivel"
+            :href="route('resgate.carteira')"
+            class="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+            data-link-carteira
+          >
+            <span class="text-left">
+              <span class="block">Carteira de resgate</span>
+              <span class="block text-xs font-normal opacity-75">saldo do município</span>
+            </span>
+          </Link>
 
         </div>
       </template>
@@ -406,7 +417,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { BookOpenIcon } from '@heroicons/vue/24/outline';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -457,6 +468,7 @@ const props = defineProps({
   temporada: { type: Object, default: null },
   tetoLancamento: { type: Number, default: 500 },
   podeGerenciarRegras: { type: Boolean, default: false },
+  podeVerCarteira: { type: Boolean, default: false },
 });
 
 const POR_PAGINA_PLACAR = 25;
