@@ -71,11 +71,19 @@ const props = defineProps({
     type: String,
     default: 'md',
   },
+  // Id explicito do select. Sem ele o id sai do label, e o mesmo campo
+  // repetido na tela (um bloco por pessoa, por exemplo) gerava ids iguais:
+  // o label de um bloco focava o campo do primeiro.
+  id: {
+    type: String,
+    default: '',
+  },
 });
 
 defineEmits(['update:modelValue', 'blur', 'focus']);
 
 const selectId = computed(() => {
+  if (props.id) return props.id;
   return props.label ? `select-${props.label.toLowerCase().replace(/\s+/g, '-')}` : `select-${Math.random().toString(36).substr(2, 9)}`;
 });
 </script>
