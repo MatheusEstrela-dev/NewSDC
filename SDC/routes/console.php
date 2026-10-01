@@ -44,6 +44,14 @@ if (config('ranking.habilitado', false)) {
     // 00:50 e do reconcile das 01:00, que e a ordem que o snapshot exige.
     Schedule::command('ranking:snapshot')->dailyAt('01:15')
         ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(55);
+    // Resgate: reserva vencida sem decisao da CEDEC libera pontos e unidade.
+    // Aos :40, longe dos jobs de :50, :55 e hora cheia.
+    Schedule::command('resgate:expirar-reservas')->hourlyAt(40)
+        ->onOneServer()->withoutOverlapping(30);
+    // Recalcula a cadeia de hash de todos os pedidos e o hash dos anexos:
+    // adulteracao direta no banco ou no disco aparece mesmo sem ninguem abrir.
+    Schedule::command('resgate:verificar-trilhas')->dailyAt('02:30')
+        ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(60);
 }
 
 /*

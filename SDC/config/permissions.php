@@ -523,6 +523,27 @@ return [
                 'admin' => 'ranking.admin',
             ],
         ],
+        // Resgate de pontos (plano 2026-09-25). O beneficiario e sempre o ente;
+        // `solicitar` e permissao ESPECIAL, concedida pessoa a pessoa, com a
+        // concessao registrada no permission_audit_log (IP, sessao).
+        'RESGATE' => [
+            'Carteira' => [
+                'view'   => 'resgate.carteira.view',
+                'estado' => 'resgate.carteira.estado',
+            ],
+            'Pedidos' => [
+                'solicitar' => 'resgate.solicitar',
+                'aprovar'   => 'resgate.aprovar',
+                'entregar'  => 'resgate.entregar',
+                'bloquear'  => 'resgate.bloquear',
+            ],
+            // Quatro olhos: quem propoe nao aprova a propria proposta.
+            'Catalogo' => [
+                'ver'     => 'resgate.catalogo.ver',
+                'propor'  => 'resgate.catalogo.propor',
+                'aprovar' => 'resgate.catalogo.aprovar',
+            ],
+        ],
         // Painel estadual de cobertura + envio do plano pelo proprio municipio.
         // O dado vive em compdec_planos_contingencia; a gestao completa
         // (versoes, aprovacao) fica em COMPDEC > Planos.
@@ -676,6 +697,7 @@ return [
             'plancon.*',
             'geoespacial.*',
             'ranking.*',
+            'resgate.*',
         ],
         'manager' => [
             // RANKING - ve os tres placares e o extrato da propria equipe, e
@@ -690,6 +712,10 @@ return [
             'ranking.regras.view',
             'ranking.ajustes.view',
             'ranking.ajustes.decidir',
+            // RESGATE - ve carteiras; solicitar e concessao individual.
+            'resgate.carteira.view',
+            'resgate.carteira.estado',
+            'resgate.catalogo.ver',
             // PAE - CRUD completo exceto delete
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
