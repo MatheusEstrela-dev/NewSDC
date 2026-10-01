@@ -2,6 +2,9 @@ import { router } from '@inertiajs/vue3';
 import { onBeforeUnmount, onMounted } from 'vue';
 import { initEcho } from '@/bootstrap';
 
+// Espelha HandleInertiaRequests::CABECALHO_ATUALIZACAO_AO_VIVO.
+const CABECALHO_ATUALIZACAO_AO_VIVO = 'X-Atualizacao-Ao-Vivo';
+
 /**
  * Recarrega props da pagina quando o servidor avisa que o dado mudou.
  *
@@ -35,10 +38,15 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400 })
         // preserveState mantem a pagina da tabela e o estado local; sem
         // preserveScroll a atualizacao daria um salto e seria pior que o F5 que
         // ela veio substituir.
+        //
+        // O cabecalho faz o servidor omitir o errors desta resposta, e o cliente
+        // mantem o atual: sem ele o aviso de erro que o usuario estava lendo
+        // sumia porque OUTRA pessoa mexeu na listagem (ver HandleInertiaRequests).
         router.reload({
             only: props,
             preserveScroll: true,
             preserveState: true,
+            headers: { [CABECALHO_ATUALIZACAO_AO_VIVO]: '1' },
         });
     };
 
