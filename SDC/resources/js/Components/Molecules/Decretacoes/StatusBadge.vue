@@ -8,7 +8,7 @@
 /**
  * Situacao do reconhecimento do processo de decretacao.
  *
- * O badge mais rico do sistema: 16 situacoes, e a cor carrega o estagio no fluxo
+ * O badge mais rico do sistema: 17 situacoes, e a cor carrega o estagio no fluxo
  * (quem reconheceu, quem falta, quem negou). Por isso cor explicita e nao variant
  * semantico -- mapear tudo em success/warning/danger colapsaria distincoes que o
  * usuario usa para ler a tabela de relance:
@@ -51,6 +51,7 @@ const config = {
   'Não reconhecido pelo Estado': { label: 'Nao Reconhecido (Estado)', cor: 'red' },
   'Não reconhecido pela União': { label: 'Nao Reconhecido (Uniao)', cor: 'rose' },
   'Não reconhecido pelo Estado e União': { label: 'Nao Reconhecido', cor: 'red' },
+  'Solicitar exclusão do município': { label: 'Solicitar Exclusao', cor: 'yellow' },
   'Pendente': { label: 'Pendente', cor: 'violet' },
   'Em andamento': { label: 'Em Andamento', cor: 'indigo' },
   'Concluido': { label: 'Concluido', cor: 'emerald' },
