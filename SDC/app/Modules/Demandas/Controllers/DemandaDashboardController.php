@@ -9,7 +9,7 @@ use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
 use App\Modules\Demandas\Enums\PrioridadeSimples;
 use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Demandas\Queries\DemandaDashboardQuery;
-use App\Modules\Demandas\Support\CsvSeguro;
+use App\Modules\Shared\Support\CsvSeguro;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

@@ -4,6 +4,7 @@ use App\Modules\Inventario\Controllers\InventarioController;
 use App\Modules\Inventario\Controllers\EquipamentoController;
 use App\Modules\Inventario\Controllers\EstacaoController;
 use App\Modules\Inventario\Controllers\MovimentacaoController;
+use App\Modules\Inventario\Controllers\RemanejamentoController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('inventario')->name('inventario.')->group(function () {
@@ -33,4 +34,24 @@ Route::prefix('inventario')->name('inventario.')->group(function () {
         ->name('movimentacoes.store')->middleware('can:inventario.emprestimos.create');
     Route::post('/movimentacoes/{movimentacao}/devolver', [MovimentacaoController::class, 'devolver'])
         ->name('movimentacoes.devolver')->middleware('can:inventario.emprestimos.return');
+
+    // Lotes de remanejamento. {remanejamento} e uuid: whereUuid devolve 404 (e
+    // nao 500 do cast do PostgreSQL) para id malformado. O nome nao tem
+    // Route::model() global (conferido com grep em routes/ e app/Providers).
+    Route::get('/remanejamentos/novo', [RemanejamentoController::class, 'create'])
+        ->name('remanejamentos.create')->middleware('can:inventario.remanejamentos.create');
+    Route::post('/remanejamentos', [RemanejamentoController::class, 'store'])
+        ->name('remanejamentos.store')->middleware('can:inventario.remanejamentos.create');
+    Route::get('/remanejamentos/{remanejamento}/editar', [RemanejamentoController::class, 'edit'])
+        ->name('remanejamentos.edit')->middleware('can:inventario.remanejamentos.edit')->whereUuid('remanejamento');
+    Route::put('/remanejamentos/{remanejamento}', [RemanejamentoController::class, 'update'])
+        ->name('remanejamentos.update')->middleware('can:inventario.remanejamentos.edit')->whereUuid('remanejamento');
+    Route::post('/remanejamentos/{remanejamento}/desfazer', [RemanejamentoController::class, 'desfazer'])
+        ->name('remanejamentos.desfazer')->middleware('can:inventario.remanejamentos.edit')->whereUuid('remanejamento');
+    Route::get('/remanejamentos/{remanejamento}/planilha', [RemanejamentoController::class, 'planilha'])
+        ->name('remanejamentos.planilha')->middleware('can:inventario.emprestimos.export')->whereUuid('remanejamento');
+    Route::post('/remanejamentos/{remanejamento}/chamado', [RemanejamentoController::class, 'chamado'])
+        ->name('remanejamentos.chamado')->middleware('can:inventario.remanejamentos.edit')->whereUuid('remanejamento');
+    Route::post('/remanejamentos/{remanejamento}/seplag', [RemanejamentoController::class, 'seplag'])
+        ->name('remanejamentos.seplag')->middleware('can:inventario.remanejamentos.seplag')->whereUuid('remanejamento');
 });

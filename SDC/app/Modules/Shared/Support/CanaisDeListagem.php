@@ -49,6 +49,10 @@ final class CanaisDeListagem
         // routes/modules/demandas.php -> can:demandas.chamados.view. A listagem
         // recorta por envolvido no servidor; o canal so diz "recarregue".
         'demandas' => 'demandas.chamados.view',
+
+        // routes/modules/inventario.php -> can:inventario.emprestimos.view
+        // (movimentacoes.index, que lista os lotes de remanejamento).
+        'inventario-remanejamentos' => 'inventario.emprestimos.view',
     ];
 
     /**

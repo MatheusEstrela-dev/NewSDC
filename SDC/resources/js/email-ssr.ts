@@ -3,15 +3,18 @@ import { renderToString } from '@vue/server-renderer';
 import EmailShell from './Components/Emails/Templates/EmailShell.vue';
 import EmailChangeVerificationBody from './Components/Emails/Organisms/EmailChangeVerificationBody.vue';
 import EmailChangeNoticeBody from './Components/Emails/Organisms/EmailChangeNoticeBody.vue';
+import RemanejamentoSeplagBody from './Components/Emails/Organisms/RemanejamentoSeplagBody.vue';
 
 const COMPONENTS: Record<string, any> = {
     EmailChangeVerification: EmailChangeVerificationBody,
     EmailChangeNotice: EmailChangeNoticeBody,
+    RemanejamentoSeplag: RemanejamentoSeplagBody,
 };
 
 const TITLES: Record<string, string> = {
     EmailChangeVerification: 'Codigo de verificacao',
     EmailChangeNotice: 'Pedido de troca de e-mail',
+    RemanejamentoSeplag: 'Remanejamento de estacoes de trabalho',
 };
 
 export async function renderEmail(

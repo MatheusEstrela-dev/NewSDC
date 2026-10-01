@@ -27,6 +27,7 @@ class VueEmailRenderer
     private const COMPONENT_TO_BLADE = [
         'EmailChangeVerification' => 'emails.email_change_verification',
         'EmailChangeNotice'       => 'emails.email_change_notice',
+        'RemanejamentoSeplag'     => 'emails.inventario_remanejamento_seplag',
     ];
 
     public function render(string $component, array $props): string
