@@ -60,6 +60,24 @@ final class RemanejamentoService
         });
     }
 
+    public function editar(Remanejamento $remanejamento, RemanejamentoData $dados): Remanejamento
+    {
+        return DB::transaction(function () use ($remanejamento, $dados): Remanejamento {
+            $lote = $this->travarLoteAtivo($remanejamento);
+            $this->reverter($lote);
+
+            // As linhas antigas ja cumpriram o papel de restaurar o estado; se
+            // ficassem, a planilha e o "N itens movidos" somariam o lote velho.
+            $lote->movimentacoes()->delete();
+            $lote->pessoas()->delete();
+            $lote->update(['observacao' => $dados->observacao]);
+
+            $this->aplicar($lote, $dados);
+
+            return $lote->refresh();
+        });
+    }
+
     private function travarLoteAtivo(Remanejamento $remanejamento): Remanejamento
     {
         $lote = Remanejamento::query()->lockForUpdate()->findOrFail($remanejamento->getKey());
