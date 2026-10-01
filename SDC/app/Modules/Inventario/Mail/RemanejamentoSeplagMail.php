@@ -9,10 +9,12 @@ use App\Modules\Inventario\Services\PlanilhaRemanejamento;
 use App\Services\Mail\VueEmailRenderer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Mail\Attachment;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Mime\Email;
 
 /**
@@ -23,6 +25,9 @@ use Symfony\Component\Mime\Email;
 class RemanejamentoSeplagMail extends Mailable implements ShouldQueue
 {
     use Queueable;
+
+    /** Preenchido so na execucao (o job e serializado antes, com ele nulo). */
+    private ?Remanejamento $lote = null;
 
     public function __construct(public string $remanejamentoId) {}
 
@@ -64,11 +69,37 @@ class RemanejamentoSeplagMail extends Mailable implements ShouldQueue
         ];
     }
 
+    /**
+     * O lote pode ter sido desfeito entre o enfileiramento e o worker: o pedido
+     * de desbloqueio ja nao vale. Descarta sem excecao, senao o job tentaria de
+     * novo a cada retry e o aviso viraria uma enxurrada.
+     */
+    public function send($mailer)
+    {
+        $lote = $this->carregarLote();
+        if ($lote === null || ! $lote->estaAtivo()) {
+            Log::warning('Envio a SEPLAG descartado: o lote foi desfeito ou removido antes do envio.', [
+                'remanejamento_id' => $this->remanejamentoId,
+            ]);
+
+            return null;
+        }
+
+        return parent::send($mailer);
+    }
+
     private function lote(): Remanejamento
     {
-        return Remanejamento::query()
+        return $this->carregarLote()
+            ?? throw (new ModelNotFoundException())->setModel(Remanejamento::class, [$this->remanejamentoId]);
+    }
+
+    /** Uma leitura por envio: send, content e attachments usam o mesmo lote. */
+    private function carregarLote(): ?Remanejamento
+    {
+        return $this->lote ??= Remanejamento::query()
             ->with('pessoas.usuario:id,name')
             ->withCount('itensRemanejados')
-            ->findOrFail($this->remanejamentoId);
+            ->find($this->remanejamentoId);
     }
 }
