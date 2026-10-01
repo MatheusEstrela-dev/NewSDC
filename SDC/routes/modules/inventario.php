@@ -53,5 +53,5 @@ Route::prefix('inventario')->name('inventario.')->group(function () {
     Route::post('/remanejamentos/{remanejamento}/chamado', [RemanejamentoController::class, 'chamado'])
         ->name('remanejamentos.chamado')->middleware('can:inventario.remanejamentos.edit')->whereUuid('remanejamento');
     Route::post('/remanejamentos/{remanejamento}/seplag', [RemanejamentoController::class, 'seplag'])
-        ->name('remanejamentos.seplag')->middleware(['can:inventario.remanejamentos.seplag', 'throttle:6,1'])->whereUuid('remanejamento');
+        ->name('remanejamentos.seplag')->middleware(['can:inventario.remanejamentos.seplag', 'throttle:inventario-seplag'])->whereUuid('remanejamento');
 });
