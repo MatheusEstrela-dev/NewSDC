@@ -6,10 +6,13 @@ namespace App\Modules\Inventario\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Inventario\Enums\StatusRemanejamento;
 use App\Modules\Inventario\Models\Equipamento;
 use App\Modules\Inventario\Models\Estacao;
-use App\Modules\Inventario\Models\Movimentacao;
+use App\Modules\Inventario\Models\Remanejamento;
+use App\Modules\Inventario\Queries\RemanejamentoListagemQuery;
 use App\Modules\Inventario\Services\MovimentacaoService;
+use App\Modules\Inventario\Support\RemanejamentoApresentacao;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -18,27 +21,36 @@ use Inertia\Response;
 
 class MovimentacaoController extends Controller
 {
-    public function __construct(private readonly MovimentacaoService $service) {}
+    public function __construct(
+        private readonly MovimentacaoService $service,
+        private readonly RemanejamentoListagemQuery $listagem,
+        private readonly RemanejamentoApresentacao $apresentacao,
+    ) {}
 
     public function index(Request $request): Response
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'status' => ['nullable', 'in:ativo,devolvido'],
+            'status' => ['nullable', 'in:ativo,desfeito,devolvido'],
+            'data' => ['nullable', 'date'],
         ]);
-        $query = Movimentacao::query()->with(['equipamento:id,nome,patrimonio', 'registradoPor:id,name']);
-        if (! empty($filters['search'])) {
-            $query->whereHas('equipamento', static fn ($query) => $query
-                ->where('nome', 'ilike', '%'.$filters['search'].'%')
-                ->orWhere('patrimonio', 'ilike', '%'.$filters['search'].'%'));
-        }
-        if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
+        $user = $request->user();
 
         return Inertia::render('Inventario/MovimentacoesIndex', [
-            'movimentacoes' => $query->latest('data_saida')->paginate(15)->withQueryString(),
+            'remanejamentos' => $this->listagem->lotes($filters)
+                ->through(fn (Remanejamento $lote): array => $this->apresentacao->paraListagem($lote)),
+            // Emprestimos avulsos, no formato de antes: a tela antiga le esta prop.
+            'movimentacoes' => $this->listagem->avulsas($filters),
             'filters' => $filters,
+            'opcoes' => ['status' => StatusRemanejamento::options()],
+            'pode' => [
+                'criar' => $user->can('inventario.remanejamentos.create'),
+                'editar' => $user->can('inventario.remanejamentos.edit'),
+                'seplag' => $user->can('inventario.remanejamentos.seplag'),
+                'planilha' => $user->can('inventario.emprestimos.export'),
+                'emprestar' => $user->can('inventario.emprestimos.create'),
+                'devolver' => $user->can('inventario.emprestimos.return'),
+            ],
             'equipamentos' => Equipamento::query()->whereNotIn('situacao', ['manutencao', 'baixado'])
                 ->orderBy('nome')->get(['id', 'nome', 'patrimonio', 'quantidade']),
             'usuarios' => User::query()->orderBy('name')->get(['id', 'name']),
