@@ -33,6 +33,12 @@ return new class extends Migration
         'inventario.remanejamentos.seplag' => 'Seplag Remanejamentos (INVENTARIO)',
     ];
 
+    /**
+     * Slugs que ja existem e ganharam cargos com o lote: quem empresta tambem
+     * devolve, senao um emprestimo sobre item de lote ativo trava o desfazer.
+     */
+    private const CONCESSOES_NOVAS = ['inventario.emprestimos.return'];
+
     public function up(): void
     {
         if (! Schema::hasTable('inventario_ti_remanejamentos')) {
@@ -115,19 +121,33 @@ return new class extends Migration
             DB::table('permissions')->where('name', $slug)->where('guard_name', self::GUARD)
                 ->whereNull('created_at')->update(['created_at' => $agora]);
 
-            $permissaoId = DB::table('permissions')->where('name', $slug)->where('guard_name', self::GUARD)->value('id');
-            $roles = DB::table('roles')->where('guard_name', self::GUARD)
-                ->whereIn('slug', $this->cargosDoConfig($slug))->pluck('id');
+            $this->concederConformeConfig($slug);
+        }
 
-            foreach ($roles as $roleId) {
-                DB::table('role_has_permissions')->insertOrIgnore([
-                    'permission_id' => $permissaoId,
-                    'role_id'       => $roleId,
-                ]);
-            }
+        foreach (self::CONCESSOES_NOVAS as $slug) {
+            $this->concederConformeConfig($slug);
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    /** So acrescenta concessoes; nada concedido a mao e removido. Slug inexistente e ignorado. */
+    private function concederConformeConfig(string $slug): void
+    {
+        $permissaoId = DB::table('permissions')->where('name', $slug)->where('guard_name', self::GUARD)->value('id');
+        if ($permissaoId === null) {
+            return;
+        }
+
+        $roles = DB::table('roles')->where('guard_name', self::GUARD)
+            ->whereIn('slug', $this->cargosDoConfig($slug))->pluck('id');
+
+        foreach ($roles as $roleId) {
+            DB::table('role_has_permissions')->insertOrIgnore([
+                'permission_id' => $permissaoId,
+                'role_id'       => $roleId,
+            ]);
+        }
     }
 
     /** @return list<string> slugs de cargo que o config concede, direto ou por `prefixo.*` */
