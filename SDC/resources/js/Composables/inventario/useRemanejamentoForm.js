@@ -48,13 +48,25 @@ export function useRemanejamentoForm(remanejamento, opcoes) {
     if (chaves.length) form.clearErrors(...chaves);
   }
 
+  // Ids ja marcados nos outros blocos: o servidor recusa o mesmo equipamento
+  // duas vezes no lote, entao a busca e a pre-marcacao nao os oferecem.
+  function idsEmOutrosBlocos(bloco) {
+    return form.pessoas.filter((b) => b.chave !== bloco.chave).flatMap((b) => b.equipamento_ids);
+  }
+
   // Trocar a pessoa recarrega o bloco com o que ela tem hoje: equipamentos
-  // pre-marcados (menos os bloqueados, que ficam com ela) e a estacao atual
-  // como origem -- o servidor recusa origem que nao seja dela.
+  // pre-marcados (menos os bloqueados, que ficam com ela, e os que outro bloco
+  // ja leva) e a estacao atual como origem -- o servidor recusa origem que nao
+  // seja dela. Na edicao a estacao atual e o estado depois do lote (em geral o
+  // destino dele), e o servidor valida contra o estado de antes: a origem fica
+  // vazia para o usuario escolher.
   function selecionarPessoa(bloco, usuarioId) {
+    const emOutros = new Set(idsEmOutrosBlocos(bloco));
     bloco.usuario_id = paraId(usuarioId);
-    bloco.equipamento_ids = equipamentosDoUsuario(bloco.usuario_id).filter((e) => !e.bloqueio).map((e) => e.id);
-    bloco.estacao_origem_id = estacaoAtual(bloco.usuario_id)?.value ?? '';
+    bloco.equipamento_ids = equipamentosDoUsuario(bloco.usuario_id)
+      .filter((e) => !e.bloqueio && !emOutros.has(e.id))
+      .map((e) => e.id);
+    bloco.estacao_origem_id = editando.value ? '' : estacaoAtual(bloco.usuario_id)?.value ?? '';
   }
 
   const CAMPOS_DE_ID = ['estacao_origem_id', 'estacao_destino_id'];
@@ -123,6 +135,6 @@ export function useRemanejamentoForm(remanejamento, opcoes) {
 
   return {
     form, editando, equipamentosPorId, equipamentosDoUsuario, selecionarPessoa, atualizarCampo,
-    adicionarPessoa, removerPessoa, alternarEquipamento, liberados, errosDoBloco, enviar,
+    adicionarPessoa, removerPessoa, alternarEquipamento, liberados, errosDoBloco, idsEmOutrosBlocos, enviar,
   };
 }

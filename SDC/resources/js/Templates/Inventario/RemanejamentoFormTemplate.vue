@@ -32,6 +32,7 @@
         :equipamentos-do-usuario="equipamentosDoUsuario(bloco.usuario_id)"
         :equipamentos-por-id="equipamentosPorId"
         :liberados="liberados(bloco)"
+        :em-outros-blocos="idsEmOutrosBlocos(bloco)"
         @selecionar-pessoa="selecionarPessoa"
         @atualizar="atualizarCampo"
         @alternar-equipamento="alternarEquipamento"
@@ -75,7 +76,7 @@ defineEmits(['voltar']);
 
 const {
   form, editando, equipamentosPorId, equipamentosDoUsuario, selecionarPessoa, atualizarCampo,
-  adicionarPessoa, removerPessoa, alternarEquipamento, liberados, errosDoBloco, enviar,
+  adicionarPessoa, removerPessoa, alternarEquipamento, liberados, errosDoBloco, idsEmOutrosBlocos, enviar,
 } = useRemanejamentoForm(props.remanejamento, props.opcoes);
 
 // Erros que nao pertencem a um bloco: lote vazio, lote ja desfeito, item

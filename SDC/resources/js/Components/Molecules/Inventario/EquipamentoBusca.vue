@@ -17,11 +17,11 @@
         <button
           type="button"
           class="flex w-full min-w-0 items-center justify-between gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800"
-          :disabled="Boolean(equipamento.bloqueio)"
+          :disabled="Boolean(impedimento(equipamento))"
           @click="adicionar(equipamento)"
         >
-          <span class="min-w-0 truncate">{{ equipamento.patrimonio }} — {{ equipamento.nome }}</span>
-          <span v-if="equipamento.bloqueio" class="shrink-0 text-xs text-amber-600 dark:text-amber-400">{{ equipamento.bloqueio }}</span>
+          <span class="min-w-0 truncate">{{ equipamento.patrimonio ?? 'Sem patrimônio' }} — {{ equipamento.nome }}</span>
+          <span v-if="impedimento(equipamento)" class="shrink-0 text-xs text-amber-600 dark:text-amber-400">{{ impedimento(equipamento) }}</span>
         </button>
       </li>
     </ul>
@@ -36,9 +36,16 @@ const LIMITE_RESULTADOS = 20;
 
 const props = defineProps({
   equipamentos: { type: Array, required: true },
+  // Ja aparecem na lista do bloco: nao repetem na busca.
   jaListados: { type: Array, default: () => [] },
+  // Marcados em outro bloco do lote: aparecem, mas desabilitados, para o
+  // usuario entender por que nao pode adicionar.
+  noLote: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['adicionar']);
+
+const impedimento = (equipamento) => equipamento.bloqueio
+  || (props.noLote.includes(equipamento.id) ? 'Já está no lote' : '');
 
 const campoId = `busca-equipamento-${Math.random().toString(36).slice(2, 8)}`;
 const termo = ref('');
@@ -52,6 +59,7 @@ const resultados = computed(() => {
 });
 
 function adicionar(equipamento) {
+  if (impedimento(equipamento)) return;
   emit('adicionar', equipamento.id);
   termo.value = '';
 }

@@ -68,7 +68,7 @@
             <span class="block truncate font-medium">{{ equipamento.nome }}</span>
             <span class="block truncate text-xs text-slate-500 dark:text-slate-400">{{ equipamento.patrimonio ?? 'Sem patrimônio' }} · {{ equipamento.categoria ?? 'Sem categoria' }}</span>
           </label>
-          <Badge v-if="equipamento.bloqueio" variant="warning" size="sm" class="shrink-0">{{ equipamento.bloqueio }}</Badge>
+          <Badge v-if="impedimento(equipamento)" variant="warning" size="sm" class="shrink-0">{{ impedimento(equipamento) }}</Badge>
         </li>
         <li v-if="!listaVisivel.length" class="text-sm text-slate-500 dark:text-slate-400">
           {{ bloco.usuario_id ? 'Esta pessoa não tem equipamentos. Use a busca abaixo.' : 'Selecione a pessoa para ver os equipamentos dela.' }}
@@ -79,6 +79,7 @@
         class="mt-3"
         :equipamentos="opcoes.equipamentos"
         :ja-listados="idsVisiveis"
+        :no-lote="emOutrosBlocos"
         @adicionar="(id) => $emit('alternar-equipamento', bloco, id)"
       />
     </div>
@@ -113,6 +114,8 @@ const props = defineProps({
   equipamentosDoUsuario: { type: Array, default: () => [] },
   equipamentosPorId: { type: Map, required: true },
   liberados: { type: Array, default: () => [] },
+  // Ids marcados nos outros blocos do lote.
+  emOutrosBlocos: { type: Array, default: () => [] },
 });
 defineEmits(['selecionar-pessoa', 'atualizar', 'alternar-equipamento', 'remover']);
 
@@ -125,8 +128,12 @@ const opcoesEstacao = computed(() => props.opcoes.estacoes.map((e) => ({
 
 const selecionado = (equipamento) => props.bloco.equipamento_ids.includes(equipamento.id);
 
-// Bloqueado nao entra; mas se ja estava marcado (lote em edicao), ainda pode sair.
-const travado = (equipamento) => Boolean(equipamento.bloqueio) && !selecionado(equipamento);
+// Motivo de nao poder marcar: bloqueio do equipamento ou outro bloco ja leva.
+const impedimento = (equipamento) => equipamento.bloqueio
+  || (props.emOutrosBlocos.includes(equipamento.id) ? 'Em outro bloco' : '');
+
+// Impedido nao entra; mas se ja estava marcado (lote em edicao), ainda pode sair.
+const travado = (equipamento) => Boolean(impedimento(equipamento)) && !selecionado(equipamento);
 
 // Item do lote em edicao que saiu das opcoes (baixado depois): continua
 // visivel para poder ser desmarcado, senao seguiria no envio sem aparecer.
