@@ -42,6 +42,7 @@ class CronogramaController extends Controller
             'estatisticas' => fn () => $this->service->obterEstatisticas(),
             'atas'         => fn () => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero']),
             'prestadores'  => fn () => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
+            'municipios'   => fn () => $this->service->municipiosDosLotes(),
             'filtros'      => $filtros,
             'canCreate'    => $request->user()?->can('tdap.cronogramas.create') ?? false,
             'canEdit'      => $request->user()?->can('tdap.cronogramas.edit') ?? false,

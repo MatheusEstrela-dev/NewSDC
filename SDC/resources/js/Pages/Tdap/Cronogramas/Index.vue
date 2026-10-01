@@ -28,7 +28,7 @@
       <StatCard title="Volume ativo (m³)" :value="Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0})" :icon="CubeIcon" variant="info" :format-number="false" />
     </div>
 
-    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="true">
+    <FilterSection title="Filtros de Pesquisa" :columns="4" :default-collapsed="true">
       <FilterField
         label="Buscar"
         type="text"
@@ -50,7 +50,14 @@
         :options="ataOptions"
         @update:model-value="filtroAta = $event"
       />
-      <div class="md:col-span-2 lg:col-span-3 flex justify-end items-end pt-1">
+      <FilterField
+        label="Município"
+        type="select"
+        :model-value="filtroMunicipio"
+        :options="municipioOptions"
+        @update:model-value="filtroMunicipio = $event"
+      />
+      <div class="md:col-span-2 lg:col-span-4 flex justify-end items-end pt-1">
         <FilterActions @search="aplicarFiltros" @clear="limparFiltros" />
       </div>
     </FilterSection>
@@ -290,7 +297,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -326,6 +333,8 @@ const props = defineProps({
   estatisticas: { type: Object, default: () => ({ total: 0, ativos: 0, rascunhos: 0, encerrados: 0, volume_ativo_m3: 0 }) },
   atas:         { type: Array, default: () => [] },
   prestadores:  { type: Array, default: () => [] },
+  /** Municipios dos lotes: { id, nome, uf, ata_ids } (CronogramaService::municipiosDosLotes). */
+  municipios:   { type: Array, default: () => [] },
   filtros:      { type: Object, default: () => ({}) },
   canCreate:    { type: Boolean, default: false },
   canEdit:      { type: Boolean, default: false },
@@ -349,11 +358,31 @@ const ataOptions = computed(() => [
   ...props.atas.map(a => ({ value: a.id, label: a.numero })),
 ]);
 
+const filtroMunicipio = ref(props.filtros.municipio_id ?? '');
+
+// Só municípios vinculados a lotes; com uma Ata escolhida, só os dos lotes dela.
+const municipiosDisponiveis = computed(() => (filtroAta.value
+  ? props.municipios.filter(m => m.ata_ids.includes(Number(filtroAta.value)))
+  : props.municipios));
+
+const municipioOptions = computed(() => [
+  { value: '', label: 'Todos' },
+  ...municipiosDisponiveis.value.map(m => ({ value: m.id, label: m.uf ? `${m.nome}/${m.uf}` : m.nome })),
+]);
+
+// Trocar a Ata pode deixar o município escolhido fora da lista: aí ele sai do filtro.
+watch(filtroAta, () => {
+  if (filtroMunicipio.value && !municipiosDisponiveis.value.some(m => Number(m.id) === Number(filtroMunicipio.value))) {
+    filtroMunicipio.value = '';
+  }
+});
+
 function aplicarFiltros() {
   router.get(route('tdap.cronogramas.index'), {
     search: filtroSearch.value || undefined,
     estado: filtroEstado.value || undefined,
     ata_id: filtroAta.value || undefined,
+    municipio_id: filtroMunicipio.value || undefined,
   }, { preserveState: true, replace: true });
 }
 
@@ -361,6 +390,7 @@ function limparFiltros() {
   filtroSearch.value = '';
   filtroEstado.value = '';
   filtroAta.value = '';
+  filtroMunicipio.value = '';
   router.get(route('tdap.cronogramas.index'), {}, { preserveState: false });
 }
 
@@ -371,6 +401,7 @@ function filtrarPorEstado(estado) {
     search: filtroSearch.value || undefined,
     estado: estado || undefined,
     ata_id: filtroAta.value || undefined,
+    municipio_id: filtroMunicipio.value || undefined,
   }, { preserveState: true, replace: true });
 }
 
@@ -382,6 +413,7 @@ function onExport(params) {
     search: filtroSearch.value || undefined,
     estado: filtroEstado.value || undefined,
     ata_id: filtroAta.value || undefined,
+    municipio_id: filtroMunicipio.value || undefined,
   });
 }
 

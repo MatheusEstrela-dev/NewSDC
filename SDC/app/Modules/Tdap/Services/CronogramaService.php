@@ -439,6 +439,37 @@ class CronogramaService
     }
 
     /**
+     * Municipios para o filtro da listagem: so os vinculados a algum lote
+     * (tdap_lote_municipios), cada um com as atas desses lotes.
+     *
+     * Cronograma so e emitido para municipio do lote (StoreCronogramaRequest),
+     * entao oferecer os 853 do catalogo era oferecer filtros que sempre voltam
+     * vazios. `ata_ids` deixa a tela restringir a lista quando uma Ata ja esta
+     * escolhida. Lote inativo entra: cronograma antigo continua filtravel.
+     *
+     * @return list<array{id: int, nome: string, uf: ?string, ata_ids: list<int>}>
+     */
+    public function municipiosDosLotes(): array
+    {
+        return DB::table('tdap_lote_municipios as lm')
+            ->join('tdap_lotes as l', 'l.id', '=', 'lm.lote_id')
+            ->join('municipios as m', 'm.id', '=', 'lm.municipio_id')
+            ->whereNull('l.deleted_at')
+            ->distinct()
+            ->orderBy('m.nome')
+            ->get(['m.id', 'm.nome', 'm.uf', 'l.ata_id'])
+            ->groupBy('id')
+            ->map(fn ($linhas) => [
+                'id'      => (int) $linhas->first()->id,
+                'nome'    => (string) $linhas->first()->nome,
+                'uf'      => $linhas->first()->uf,
+                'ata_ids' => $linhas->pluck('ata_id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array<string, int|float>
      */
     public function obterEstatisticas(): array

@@ -141,7 +141,6 @@
                       <th class="px-4 py-3 text-left">Marca / Modelo</th>
                       <th class="px-4 py-3 text-right">Capacidade (m³)</th>
                       <th class="px-4 py-3 text-left">Vistoria</th>
-                      <th class="px-4 py-3 text-left">Dias Restantes</th>
                       <th class="px-4 py-3 text-left">Status</th>
                       <th class="w-36 px-4 py-3 text-right">Ações</th>
                     </tr>
@@ -175,14 +174,11 @@
                         {{ Number(caminhao.capacidade_m3 || 0).toFixed(2) }}
                       </td>
                       <td class="px-4 py-4">
-                        <VistoriaSituacaoBadge :situacao="caminhao.situacao_vistoria" :dias-restantes="caminhao.vistoria?.dias_restantes" />
+                        <VistoriaProgressoBar :dias-restantes="caminhao.vistoria?.dias_restantes" />
                         <p v-if="caminhao.vistoria" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                           {{ fmtDate(caminhao.vistoria.data) }}
                           <span v-if="caminhao.total_vistorias > 1" class="text-slate-400">· {{ caminhao.total_vistorias }} no histórico</span>
                         </p>
-                      </td>
-                      <td class="px-4 py-4">
-                        <VistoriaProgressoBar :dias-restantes="caminhao.vistoria?.dias_restantes" />
                       </td>
                       <td class="whitespace-nowrap px-4 py-4">
                         <TdapStatusBadge :active="caminhao.ativo" />
@@ -195,7 +191,7 @@
                     </tr>
         
                     <tr v-if="caminhoes.data.length === 0">
-                      <td colspan="8" class="px-4 py-10 text-center">
+                      <td colspan="7" class="px-4 py-10 text-center">
                         <TruckIcon class="mx-auto h-12 w-12 text-slate-400" />
                         <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum caminhão encontrado</p>
                         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou cadastre um novo caminhão.</p>
@@ -223,14 +219,10 @@
       </template>
 
       <template #mobile-c4="{ item: caminhao }">
-        <VistoriaSituacaoBadge :situacao="caminhao.situacao_vistoria" :dias-restantes="caminhao.vistoria?.dias_restantes" />
-        <span v-if="caminhao.vistoria" class="ml-1 text-xs text-slate-500 dark:text-slate-400">
+        <VistoriaProgressoBar :dias-restantes="caminhao.vistoria?.dias_restantes" />
+        <span v-if="caminhao.vistoria" class="mt-1 block text-xs text-slate-500 dark:text-slate-400">
         {{ fmtDate(caminhao.vistoria.data) }}
         </span>
-      </template>
-
-      <template #mobile-c5="{ item: caminhao }">
-        <VistoriaProgressoBar :dias-restantes="caminhao.vistoria?.dias_restantes" />
       </template>
 
       <template #mobile-c6="{ item: caminhao }">
@@ -306,7 +298,6 @@ import TdapCaminhoesFiltersSection from '@/Components/Organisms/Tdap/TdapCaminho
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
-import VistoriaSituacaoBadge from '@/Components/Organisms/Tdap/VistoriaSituacaoBadge.vue';
 import VistoriaProgressoBar from '@/Components/Organisms/Tdap/VistoriaProgressoBar.vue';
 import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
@@ -524,7 +515,6 @@ const CAMPOS_MOBILE = [
   { key: 'c2', label: 'Marca / Modelo' },
   { key: 'c3', label: 'Capacidade (m³)' },
   { key: 'c4', label: 'Vistoria' },
-  { key: 'c5', label: 'Dias Restantes' },
   { key: 'c6', label: 'Status' },
 ];
 </script>
