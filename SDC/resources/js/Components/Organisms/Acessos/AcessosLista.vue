@@ -9,7 +9,7 @@
         <td :class="td"><span class="block max-w-[12rem] truncate" :title="item.cargo">{{ item.cargo || '—' }}</span></td>
         <td :class="td"><StatusAcessoBadge :status="item.status" /></td>
         <td class="px-3 py-2 text-right">
-          <Link :href="`/acessos/${item.id}`" :class="[LINK_ABRIR, 'px-3 py-1.5 text-xs']" :title="`Abrir cadastro de ${item.nome}`">Abrir</Link>
+          <Button :href="`/acessos/${item.id}`" variant="outline" size="sm" :title="`Abrir cadastro de ${item.nome}`">Abrir</Button>
         </td>
       </tr>
     </template>
@@ -38,14 +38,14 @@
       </dl>
       <footer class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700/50">
         <!-- Alvo de 40px no toque, com rotulo visivel. -->
-        <Link :href="`/acessos/${item.id}`" :class="[LINK_ABRIR, 'min-h-10 w-full px-4 py-2 text-sm']">Abrir cadastro</Link>
+        <Button :href="`/acessos/${item.id}`" variant="outline" size="md" full-width class="min-h-10">Abrir cadastro</Button>
       </footer>
     </template>
   </ListaResponsiva>
 </template>
 
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import ListaResponsiva from '@/Components/Molecules/List/ListaResponsiva.vue';
 import StatusAcessoBadge from '@/Components/Atoms/Acessos/StatusAcessoBadge.vue';
 
@@ -55,7 +55,4 @@ defineProps({
 
 const COLUNAS = ['Nome', 'Login AD', 'CPF final', 'Setor', 'Cargo', 'Status'];
 const VAZIO = { titulo: 'Nenhum cadastro encontrado', ajuda: 'Ajuste os filtros ou cadastre um novo acesso.' };
-
-// Mesma aparencia do Button "outline", mas como link (navegacao Inertia).
-const LINK_ABRIR = 'inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white/70 font-medium text-slate-700 transition-colors duration-200 hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-100 dark:hover:bg-slate-800';
 </script>
