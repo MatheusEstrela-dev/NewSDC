@@ -1,21 +1,28 @@
 <template>
   <Teleport to="body">
     <Transition name="dialog">
-      <div v-if="isOpen" class="dialog-overlay" @click="onCancel">
+      <div v-if="isOpen" class="dialog-overlay bg-gray-500/75 dark:bg-black/75" @click="onCancel">
         <div
-          class="dialog-container"
+          ref="container"
+          class="dialog-container bg-white outline-none dark:bg-slate-800"
           role="dialog"
           aria-modal="true"
           :aria-labelledby="idTitulo"
           :aria-describedby="idMensagem"
+          tabindex="-1"
           @click.stop
         >
-          <div class="dialog-header" :class="variantClass">
-            <div class="dialog-icon">
+          <div class="dialog-header border-slate-200 dark:border-slate-700" :class="variantClass">
+            <div class="dialog-icon bg-slate-900/5 dark:bg-white/5" :class="iconClass">
               <component :is="currentIcon" />
             </div>
-            <h3 :id="idTitulo" class="dialog-title">{{ title }}</h3>
-            <button type="button" @click="onCancel" class="dialog-close" aria-label="Fechar">
+            <h3 :id="idTitulo" class="dialog-title text-slate-900 dark:text-slate-100">{{ title }}</h3>
+            <button
+              type="button"
+              @click="onCancel"
+              class="dialog-close bg-transparent text-slate-400 hover:bg-slate-900/5 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-slate-200"
+              aria-label="Fechar"
+            >
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -23,15 +30,19 @@
           </div>
 
           <div class="dialog-body">
-            <p :id="idMensagem" class="dialog-message">{{ message }}</p>
-            <p v-if="description" class="dialog-description">{{ description }}</p>
+            <p :id="idMensagem" class="dialog-message text-slate-700 dark:text-slate-200">{{ message }}</p>
+            <p v-if="description" class="dialog-description text-slate-500 dark:text-slate-400">{{ description }}</p>
           </div>
 
-          <div class="dialog-footer">
-            <button @click="onCancel" class="btn btn-secondary">
+          <div class="dialog-footer border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
+            <button
+              ref="botaoCancelar"
+              @click="onCancel"
+              class="btn bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+            >
               {{ cancelText }}
             </button>
-            <button @click="onConfirm" class="btn" :class="confirmButtonClass" :disabled="loading">
+            <button ref="botaoConfirmar" @click="onConfirm" class="btn" :class="confirmButtonClass" :disabled="loading">
               <svg v-if="loading" class="btn-spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle class="spinner-circle" cx="12" cy="12" r="10" stroke-width="4" />
               </svg>
@@ -45,7 +56,8 @@
 </template>
 
 <script setup>
-import { computed, h, useId } from 'vue';
+import { computed, h, onUnmounted, ref, useId, watch } from 'vue';
+import { usePrisaoDeFoco } from '@/Composables/ui/usePrisaoDeFoco';
 
 const props = defineProps({
   isOpen: {
@@ -92,6 +104,17 @@ const idMensagem = `${idBase}-mensagem`;
 
 const variantClass = computed(() => `variant-${props.variant}`);
 
+// Tom 600 no claro (o 400 some no branco); no escuro, o 400 de sempre.
+const iconClass = computed(() => {
+  const classes = {
+    info: 'text-blue-600 dark:text-blue-400',
+    warning: 'text-amber-600 dark:text-amber-400',
+    danger: 'text-red-600 dark:text-red-400',
+    success: 'text-emerald-600 dark:text-emerald-400'
+  };
+  return classes[props.variant] || classes.info;
+});
+
 const confirmButtonClass = computed(() => {
   const classes = {
     info: 'btn-primary',
@@ -127,13 +150,52 @@ const onConfirm = () => {
 const onCancel = () => {
   emit('cancel');
 };
+
+const container = ref(null);
+const botaoCancelar = ref(null);
+const botaoConfirmar = ref(null);
+
+// Foco inicial no botao seguro: em exclusao (danger) ou acao de impacto
+// (warning: arquivar, publicar, enviar) um Enter apressado nao pode confirmar.
+// Nas demais, no Confirmar -- salvo se estiver desabilitado.
+const VARIANTES_COM_FOCO_NO_CANCELAR = ['danger', 'warning'];
+usePrisaoDeFoco(container, () => props.isOpen, {
+  focoInicial: () => (VARIANTES_COM_FOCO_NO_CANCELAR.includes(props.variant) || props.loading
+    ? botaoCancelar.value
+    : botaoConfirmar.value)
+});
+
+// Escape cancela, com a mesma guarda dos chamadores: durante o loading nao
+// fecha. Escuta na fase de captura e para a propagacao para que um Modal
+// aberto por baixo nao feche junto no mesmo Escape.
+const aoTeclarEscape = (e) => {
+  if (e.key !== 'Escape') {
+    return;
+  }
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (!props.loading) {
+    onCancel();
+  }
+};
+
+watch(() => props.isOpen, (aberto) => {
+  if (aberto) {
+    document.addEventListener('keydown', aoTeclarEscape, true);
+  } else {
+    document.removeEventListener('keydown', aoTeclarEscape, true);
+  }
+}, { immediate: true });
+
+onUnmounted(() => document.removeEventListener('keydown', aoTeclarEscape, true));
 </script>
 
 <style scoped>
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -142,7 +204,6 @@ const onCancel = () => {
 }
 
 .dialog-container {
-  background: #1e293b;
   border-radius: 16px;
   max-width: 480px;
   width: 100%;
@@ -155,7 +216,8 @@ const onCancel = () => {
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  border-bottom: 1px solid #334155;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
   position: relative;
 }
 
@@ -183,23 +245,6 @@ const onCancel = () => {
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.variant-info .dialog-icon {
-  color: #60a5fa;
-}
-
-.variant-warning .dialog-icon {
-  color: #fbbf24;
-}
-
-.variant-danger .dialog-icon {
-  color: #f87171;
-}
-
-.variant-success .dialog-icon {
-  color: #34d399;
 }
 
 .dialog-icon svg {
@@ -211,7 +256,6 @@ const onCancel = () => {
   flex: 1;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #f1f5f9;
   margin: 0;
 }
 
@@ -224,17 +268,10 @@ const onCancel = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
   border: none;
   border-radius: 6px;
-  color: #94a3b8;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.dialog-close:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #e2e8f0;
 }
 
 .dialog-close svg {
@@ -247,14 +284,12 @@ const onCancel = () => {
 }
 
 .dialog-message {
-  color: #e2e8f0;
   font-size: 1rem;
   line-height: 1.5;
   margin: 0;
 }
 
 .dialog-description {
-  color: #94a3b8;
   font-size: 0.875rem;
   line-height: 1.5;
   margin-top: 0.75rem;
@@ -265,8 +300,8 @@ const onCancel = () => {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1.5rem;
-  border-top: 1px solid #334155;
-  background: #0f172a;
+  border-top-width: 1px;
+  border-top-style: solid;
 }
 
 .btn {
@@ -285,15 +320,6 @@ const onCancel = () => {
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #334155;
-  color: #e2e8f0;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #475569;
 }
 
 .btn-primary {

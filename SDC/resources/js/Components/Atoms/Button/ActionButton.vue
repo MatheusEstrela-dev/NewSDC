@@ -91,13 +91,27 @@
   </template>
 </template>
 
-<script setup>
-import { computed, markRaw, ref } from 'vue';
-import { router, usePage } from '@inertiajs/vue3';
-import Button from './Button.vue';
-import ButtonIcon from './ButtonIcon.vue';
-import Dropdown from '@/Components/Dropdown.vue';
-import { usePermissions } from '@/Composables/auth';
+<script>
+/*
+ * Convencao de acoes do sistema: icone, rotulo e cor por acao. Fica num <script>
+ * comum para ser exportada -- quem monta botao de acao fora do ActionButton
+ * (ButtonIcon ou Button soltos) importa daqui em vez de escolher cor a mao:
+ *
+ *   import { ActionIconVariants, ActionVariants } from '@/Components/Atoms/Button/ActionButton.vue';
+ *
+ * Mora no .vue e nao num .js porque o Tailwind so varre .vue: as classes de
+ * ActionMenuIconClasses sumiriam do CSS final.
+ *
+ * Acoes sem equivalente nas antigas:
+ *   spreadsheet = baixar planilha (verde de planilha; o export generico segue cinza)
+ *   undo        = desfazer/reverter algo ja aplicado (vermelho, sem o laranja do delete)
+ *   send        = enviar a sistema externo (informativo)
+ *   ticket      = chamado de suporte (violeta, cor que nenhuma outra acao usa)
+ */
+import { markRaw } from 'vue';
+import {
+  ArrowDownTrayIcon, ArrowUturnLeftIcon, PaperAirplaneIcon, TicketIcon,
+} from '@heroicons/vue/24/outline';
 
 import PlusIcon from '../../Icons/PlusIcon.vue';
 import EyeIcon from '../../Icons/EyeIcon.vue';
@@ -119,7 +133,7 @@ import EllipsisVerticalIcon from '../../Icons/EllipsisVerticalIcon.vue';
 import UserIcon from '../../Icons/UserIcon.vue';
 import BellIcon from '../../Icons/BellIcon.vue';
 
-const ActionIcons = {
+export const ActionIcons = {
   create: markRaw(PlusIcon),
   view: markRaw(EyeIcon),
   edit: markRaw(PencilIcon),
@@ -140,9 +154,13 @@ const ActionIcons = {
   options: markRaw(EllipsisVerticalIcon),
   assign: markRaw(UserIcon),
   notifications: markRaw(BellIcon),
+  spreadsheet: markRaw(ArrowDownTrayIcon),
+  undo: markRaw(ArrowUturnLeftIcon),
+  send: markRaw(PaperAirplaneIcon),
+  ticket: markRaw(TicketIcon),
 };
 
-const ActionLabels = {
+export const ActionLabels = {
   create: 'Novo',
   view: 'Visualizar',
   edit: 'Editar',
@@ -163,9 +181,13 @@ const ActionLabels = {
   options: 'Opcoes',
   assign: 'Atribuir',
   notifications: 'Notificacoes',
+  spreadsheet: 'Planilha',
+  undo: 'Desfazer',
+  send: 'Enviar',
+  ticket: 'Chamado',
 };
 
-const ActionVariants = {
+export const ActionVariants = {
   create: 'primary',
   view: 'primary',
   edit: 'warning',
@@ -185,9 +207,13 @@ const ActionVariants = {
   options: 'secondary',
   assign: 'info',
   notifications: 'secondary',
+  spreadsheet: 'success',
+  undo: 'danger',
+  send: 'info',
+  ticket: 'violet',
 };
 
-const ActionIconVariants = {
+export const ActionIconVariants = {
   create: 'primary',
   view: 'primary',
   edit: 'warning',
@@ -207,12 +233,16 @@ const ActionIconVariants = {
   options: 'secondary',
   assign: 'info',
   notifications: 'secondary',
+  spreadsheet: 'success',
+  undo: 'danger',
+  send: 'info',
+  ticket: 'violet',
 };
 
 // Cores dos icones dentro do dropdown de Opcoes (modo grupo).
 // Espelham as variantes inline (ActionIconVariants) em classes Tailwind diretas.
 // Sobrescrevivel por item via `iconClass: 'text-...'`.
-const ActionMenuIconClasses = {
+export const ActionMenuIconClasses = {
   create: 'text-blue-500',
   view: 'text-blue-500',
   edit: 'text-yellow-500',
@@ -233,7 +263,20 @@ const ActionMenuIconClasses = {
   options: 'text-slate-400',
   assign: 'text-sky-400',
   notifications: 'text-slate-400',
+  spreadsheet: 'text-emerald-500',
+  undo: 'text-red-500',
+  send: 'text-sky-500',
+  ticket: 'text-violet-500',
 };
+</script>
+
+<script setup>
+import { computed, ref } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
+import Button from './Button.vue';
+import ButtonIcon from './ButtonIcon.vue';
+import Dropdown from '@/Components/Dropdown.vue';
+import { usePermissions } from '@/Composables/auth';
 
 const ACTION_ALIAS = {
   check: 'validar',
@@ -254,7 +297,8 @@ const props = defineProps({
       'create', 'view', 'edit', 'delete', 'print',
       'export', 'duplicate', 'relate', 'finalize', 'attachments',
       'history', 'archive', 'upload', 'warning',
-      'options', 'assign', 'notifications', 'check', 'pdf'
+      'options', 'assign', 'notifications', 'check', 'pdf',
+      'spreadsheet', 'undo', 'send', 'ticket',
     ].includes(value),
   },
   actions: { type: Array, default: null },

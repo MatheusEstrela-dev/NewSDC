@@ -3,7 +3,7 @@
     <PageHeader
       title="Movimentações"
       description="Remanejamentos em lote e empréstimos de equipamentos"
-      :icon="ArchiveBoxIcon"
+      :icon-image="moduleIcon('inventario')"
       variant="gradient"
       :espaco-inferior="false"
     >
@@ -89,6 +89,7 @@
 </template>
 
 <script setup>
+import { moduleIcon } from '@/Support/moduleIcons';
 import { computed, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';

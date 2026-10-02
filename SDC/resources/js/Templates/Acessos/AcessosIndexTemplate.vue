@@ -3,7 +3,7 @@
     <PageHeader
       title="Acessos"
       :description="resumoAtivos"
-      :icon="IdentificationIcon"
+      :icon-image="moduleIcon('acessos')"
       variant="gradient"
       :espaco-inferior="false"
     >
@@ -26,8 +26,9 @@
 </template>
 
 <script setup>
+import { moduleIcon } from '@/Support/moduleIcons';
 import { computed, ref } from 'vue';
-import { IdentificationIcon, PlusIcon, UserGroupIcon } from '@heroicons/vue/24/outline';
+import { PlusIcon, UserGroupIcon } from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';

@@ -24,7 +24,7 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'secondary',
-    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'black', 'topaz', 'vibrant-warning', 'vibrant-danger'].includes(value),
+    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'violet', 'black', 'topaz', 'vibrant-warning', 'vibrant-danger'].includes(value),
   },
   size: {
     type: String,
@@ -71,16 +71,20 @@ const handleClick = (event) => {
   emit('click', event);
 };
 
+// O tom -400 vale para o tema escuro; sobre o fundo branco do tema claro ele
+// fica abaixo de 3:1 e o icone some. No claro o texto desce para -600 (o
+// vibrant-danger ja passa de 3:1 e fica igual nos dois). O dark segue identico.
 const variantClasses = {
-  primary: 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10',
-  secondary: 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/50',
-  success: 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10',
-  danger: 'text-red-400 hover:text-red-300 hover:bg-red-500/10',
-  warning: 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10',
-  info: 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10',
+  primary: 'text-blue-600 hover:text-blue-500 hover:bg-blue-500/10 dark:text-blue-400 dark:hover:text-blue-300',
+  secondary: 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:bg-slate-700/50',
+  success: 'text-emerald-600 hover:text-emerald-500 hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:text-emerald-300',
+  danger: 'text-red-600 hover:text-red-500 hover:bg-red-500/10 dark:text-red-400 dark:hover:text-red-300',
+  warning: 'text-amber-600 hover:text-amber-500 hover:bg-amber-500/10 dark:text-amber-400 dark:hover:text-amber-300',
+  info: 'text-sky-600 hover:text-sky-500 hover:bg-sky-500/10 dark:text-sky-400 dark:hover:text-sky-300',
+  violet: 'text-violet-600 hover:text-violet-500 hover:bg-violet-500/10 dark:text-violet-400 dark:hover:text-violet-300',
   black: 'text-white bg-black hover:bg-neutral-800',
-  topaz: 'text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10',
-  'vibrant-warning': 'text-[#ff800d] hover:text-[#ff9d47] hover:bg-[#ff800d]/10',
+  topaz: 'text-yellow-600 hover:text-yellow-500 hover:bg-yellow-500/10 dark:text-yellow-500 dark:hover:text-yellow-400',
+  'vibrant-warning': 'text-orange-600 hover:text-orange-500 hover:bg-[#ff800d]/10 dark:text-[#ff800d] dark:hover:text-[#ff9d47]',
   'vibrant-danger': 'text-[#ff4d00] hover:text-[#ff6a26] hover:bg-[#ff4d00]/10',
 };
 

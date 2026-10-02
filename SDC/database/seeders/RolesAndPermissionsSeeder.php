@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\Permissoes\CatalogoDePermissoes;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -32,29 +33,11 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function seedPermissions(string $guard): void
     {
-        $modules = config('permissions.modules', []);
-
-        foreach ($modules as $moduleName => $groups) {
-            foreach ($groups as $groupName => $actions) {
-                foreach ($actions as $actionKey => $permissionSlug) {
-                    Permission::updateOrCreate(
-                        [
-                            'name' => $permissionSlug,
-                            'guard_name' => $guard,
-                        ],
-                        [
-                            'name' => $permissionSlug,
-                            'guard_name' => $guard,
-                            'slug' => $permissionSlug,
-                            'description' => $this->generatePermissionDescription($moduleName, $groupName, $actionKey),
-                            'group' => strtolower($groupName),
-                            'module' => strtolower($moduleName),
-                            'is_active' => true,
-                            'is_immutable' => in_array($permissionSlug, config('permissions.immutable_permissions', [])),
-                        ]
-                    );
-                }
-            }
+        foreach ($this->catalogo()->permissoes() as $slug => $permissao) {
+            Permission::updateOrCreate(
+                ['name' => $slug, 'guard_name' => $guard],
+                ['name' => $slug, 'guard_name' => $guard, ...$permissao, 'is_active' => true]
+            );
         }
     }
 
@@ -63,26 +46,10 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function seedRoles(string $guard): void
     {
-        $levels = config('permissions.levels', []);
-        $rolesMetadata = config('permissions.roles', []);
-
-        foreach ($levels as $slug => $hierarchyLevel) {
-            $metadata = $rolesMetadata[$slug] ?? [];
-            $displayName = $metadata['name'] ?? ucfirst($slug);
-
+        foreach ($this->catalogo()->cargos() as $slug => $cargo) {
             Role::updateOrCreate(
-                [
-                    'slug' => $slug,
-                    'guard_name' => $guard,
-                ],
-                [
-                    'name' => $displayName,
-                    'guard_name' => $guard,
-                    'slug' => $slug,
-                    'hierarchy_level' => $hierarchyLevel,
-                    'description' => $metadata['description'] ?? "Cargo {$slug}",
-                    'is_active' => $metadata['is_active'] ?? true,
-                ]
+                ['slug' => $slug, 'guard_name' => $guard],
+                [...$cargo, 'guard_name' => $guard]
             );
         }
     }
@@ -131,24 +98,7 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function expandWildcardPermissions(array $permissions, array $allPermissionSlugs): array
     {
-        $expanded = [];
-
-        foreach ($permissions as $permission) {
-            if (str_ends_with($permission, '.*')) {
-                $prefix = substr($permission, 0, -2);
-                foreach ($allPermissionSlugs as $slug) {
-                    if (str_starts_with($slug, $prefix . '.')) {
-                        $expanded[] = $slug;
-                    }
-                }
-            } else {
-                if (in_array($permission, $allPermissionSlugs)) {
-                    $expanded[] = $permission;
-                }
-            }
-        }
-
-        return array_unique($expanded);
+        return $this->catalogo()->expandirCuringas($permissions, $allPermissionSlugs);
     }
 
     /**
@@ -156,54 +106,16 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function getAllPermissionSlugs(): array
     {
-        $modules = config('permissions.modules', []);
-        $slugs = [];
-
-        foreach ($modules as $groups) {
-            foreach ($groups as $actions) {
-                foreach ($actions as $slug) {
-                    $slugs[] = $slug;
-                }
-            }
-        }
-
-        return $slugs;
+        return $this->catalogo()->slugs();
     }
 
     /**
-     * Gera descricao automatica para permissao.
+     * Regras de derivacao compartilhadas com o SincronizadorDePermissoes, para
+     * o reseed e a sincronizacao pos-migrate gravarem o mesmo.
      */
-    protected function generatePermissionDescription(string $module, string $group, string $action): string
+    protected function catalogo(): CatalogoDePermissoes
     {
-        $actionLabels = [
-            'view' => 'Visualizar',
-            'create' => 'Criar',
-            'edit' => 'Editar',
-            'delete' => 'Deletar',
-            'approve' => 'Aprovar',
-            'assign' => 'Atribuir',
-            'atribuir' => 'Atribuir',
-            'finalize' => 'Finalizar',
-            'manage' => 'Gerenciar',
-            'execute' => 'Executar',
-            'export' => 'Exportar',
-            'send' => 'Enviar',
-            'logs' => 'Visualizar Logs',
-            'cache' => 'Limpar Cache',
-            'settings' => 'Configuracoes',
-            'print' => 'Imprimir',
-            'pdf' => 'Gerar PDF',
-            'history' => 'Visualizar Historico',
-            'arquivar' => 'Arquivar',
-            'validar' => 'Validar',
-            'attachments' => 'Gerenciar Anexos',
-            'desvincular' => 'Desvincular',
-            'movimentar' => 'Movimentar',
-            'encerrar_alheio' => 'Encerrar (Alheio)',
-        ];
-
-        $actionLabel = $actionLabels[$action] ?? ucfirst($action);
-        return "{$actionLabel} {$group} ({$module})";
+        return app(CatalogoDePermissoes::class);
     }
 
     /**

@@ -6,38 +6,19 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Leva bancos que ja rodaram 2026_09_23_000001 ao schema que a instalacao limpa
  * produz. Em instalacao limpa tudo aqui e no-op.
  *
- * Tambem cria os slugs do remanejamento em lote, e nao so no seeder: o
- * entrypoint so semeia com SEED_MOCK_DATA=true, e sem o slug no banco o `can:`
- * das rotas nega o lote a todo cargo que nao e super-admin. Os cargos saem do
- * config/permissions.php (role_permissions, com o mesmo `modulo.*` do seeder);
- * o super-admin recebe tudo, como no seeder. So acrescenta: concessao feita a
- * mao no Permissionamento continua. Query builder, e nao os models: os eventos
- * deles limpam o cache a cada save; aqui limpa uma vez, no fim.
+ * Os slugs do remanejamento em lote (create, edit, seplag) nao sao criados
+ * aqui: estao no config/permissions.php, e o SincronizaPermissoesAposMigrations
+ * os cria e concede no MigrationsEnded deste mesmo `migrate`, por serem novos
+ * na execucao. Migration antiga nao chama codigo vivo da aplicacao.
  */
 return new class extends Migration
 {
     private const FK_LOTE = 'inventario_ti_movimentacoes_lote_id_foreign';
-
-    private const GUARD = 'web';
-
-    /** Mesma descricao que o RolesAndPermissionsSeeder gera, para o reseed nao reescrever. */
-    private const PERMISSOES = [
-        'inventario.remanejamentos.create' => 'Criar Remanejamentos (INVENTARIO)',
-        'inventario.remanejamentos.edit'   => 'Editar Remanejamentos (INVENTARIO)',
-        'inventario.remanejamentos.seplag' => 'Seplag Remanejamentos (INVENTARIO)',
-    ];
-
-    /**
-     * Slugs que ja existem e ganharam cargos com o lote: quem empresta tambem
-     * devolve, senao um emprestimo sobre item de lote ativo trava o desfazer.
-     */
-    private const CONCESSOES_NOVAS = ['inventario.emprestimos.return'];
 
     public function up(): void
     {
@@ -96,76 +77,6 @@ return new class extends Migration
                 $table->foreign('lote_id')->references('id')->on('inventario_ti_remanejamentos')->nullOnDelete();
             });
         }
-
-        $this->garantirPermissoes();
-    }
-
-    private function garantirPermissoes(): void
-    {
-        $agora = now();
-
-        foreach (self::PERMISSOES as $slug => $descricao) {
-            DB::table('permissions')->updateOrInsert(
-                ['name' => $slug, 'guard_name' => self::GUARD],
-                [
-                    'slug'         => $slug,
-                    'description'  => $descricao,
-                    'group'        => 'remanejamentos',
-                    'module'       => 'inventario',
-                    'is_active'    => true,
-                    'is_immutable' => false,
-                    'deleted_at'   => null,
-                    'updated_at'   => $agora,
-                ],
-            );
-            DB::table('permissions')->where('name', $slug)->where('guard_name', self::GUARD)
-                ->whereNull('created_at')->update(['created_at' => $agora]);
-
-            $this->concederConformeConfig($slug);
-        }
-
-        foreach (self::CONCESSOES_NOVAS as $slug) {
-            $this->concederConformeConfig($slug);
-        }
-
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-    }
-
-    /** So acrescenta concessoes; nada concedido a mao e removido. Slug inexistente e ignorado. */
-    private function concederConformeConfig(string $slug): void
-    {
-        $permissaoId = DB::table('permissions')->where('name', $slug)->where('guard_name', self::GUARD)->value('id');
-        if ($permissaoId === null) {
-            return;
-        }
-
-        $roles = DB::table('roles')->where('guard_name', self::GUARD)
-            ->whereIn('slug', $this->cargosDoConfig($slug))->pluck('id');
-
-        foreach ($roles as $roleId) {
-            DB::table('role_has_permissions')->insertOrIgnore([
-                'permission_id' => $permissaoId,
-                'role_id'       => $roleId,
-            ]);
-        }
-    }
-
-    /** @return list<string> slugs de cargo que o config concede, direto ou por `prefixo.*` */
-    private function cargosDoConfig(string $permissao): array
-    {
-        $cargos = ['super-admin'];
-
-        foreach (config('permissions.role_permissions', []) as $cargo => $concedidas) {
-            foreach ($concedidas as $concedida) {
-                $curinga = str_ends_with($concedida, '.*') && str_starts_with($permissao, substr($concedida, 0, -1));
-                if ($concedida === $permissao || $curinga) {
-                    $cargos[] = $cargo;
-                    break;
-                }
-            }
-        }
-
-        return array_values(array_unique($cargos));
     }
 
     public function down(): void

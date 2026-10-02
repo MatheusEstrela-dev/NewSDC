@@ -3,7 +3,7 @@
     <PageHeader
       title="Estações de trabalho"
       description="Locais, ocupação e ponto de rede"
-      :icon="ComputerDesktopIcon"
+      :icon-image="moduleIcon('inventario')"
       variant="gradient"
       :espaco-inferior="false"
     >
@@ -21,11 +21,12 @@
       <Pagination class="mt-4" :pagination="paginacao" @page-change="(p) => $emit('pagina', p)" />
     </ListContainer>
 
-    <EstacaoFormModal :show="formularioAberto" :estacao="selecionada" :usuarios="usuarios" @close="formularioAberto = false" />
+    <EstacaoFormModal :show="formularioAberto" :estacao="selecionada" @close="formularioAberto = false" />
   </div>
 </template>
 
 <script setup>
+import { moduleIcon } from '@/Support/moduleIcons';
 import { ref } from 'vue';
 import { ComputerDesktopIcon, PlusIcon } from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
@@ -41,7 +42,6 @@ defineProps({
   paginacao: { type: Object, required: true },
   filtros: { type: Object, required: true },
   pode: { type: Object, required: true },
-  usuarios: { type: Array, default: () => [] },
 });
 defineEmits(['aplicar', 'limpar', 'pagina', 'remover']);
 

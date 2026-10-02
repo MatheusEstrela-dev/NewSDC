@@ -3,7 +3,7 @@
     <PageHeader
       :title="cadastro.nome"
       :description="`Status no AD: ${cadastro.status_ad || '—'}`"
-      :icon="IdentificationIcon"
+      :icon-image="moduleIcon('acessos')"
       variant="gradient"
       :espaco-inferior="false"
     >
@@ -43,9 +43,10 @@
 </template>
 
 <script setup>
+import { moduleIcon } from '@/Support/moduleIcons';
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { ArrowLeftIcon, IdentificationIcon } from '@heroicons/vue/24/outline';
+import { ArrowLeftIcon} from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';

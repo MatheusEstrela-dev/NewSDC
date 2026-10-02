@@ -8,6 +8,7 @@ use App\Modules\Inventario\Enums\StatusMovimentacao;
 use App\Modules\Inventario\Enums\StatusRemanejamento;
 use App\Modules\Inventario\Models\Movimentacao;
 use App\Modules\Inventario\Models\Remanejamento;
+use App\Modules\Shared\Support\PadraoBusca;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -85,16 +86,9 @@ final class RemanejamentoListagemQuery
         return $query->latest('data_saida')->paginate(self::POR_PAGINA, ['*'], 'pagina_avulsas')->withQueryString();
     }
 
-    /**
-     * Padrao ILIKE do termo de busca, com % _ e \ escapados para que o termo
-     * seja tratado como texto literal.
-     *
-     * @param array{search?:string|null} $filtros
-     */
+    /** @param array{search?:string|null} $filtros */
     private static function padraoBusca(array $filtros): ?string
     {
-        $termo = trim((string) ($filtros['search'] ?? ''));
-
-        return $termo === '' ? null : '%'.addcslashes($termo, '%_\\').'%';
+        return PadraoBusca::contem($filtros['search'] ?? null);
     }
 }
