@@ -155,10 +155,12 @@ const container = ref(null);
 const botaoCancelar = ref(null);
 const botaoConfirmar = ref(null);
 
-// Foco inicial no botao seguro: em exclusao (danger) um Enter apressado nao
-// pode confirmar. Nas demais, no Confirmar -- salvo se estiver desabilitado.
+// Foco inicial no botao seguro: em exclusao (danger) ou acao de impacto
+// (warning: arquivar, publicar, enviar) um Enter apressado nao pode confirmar.
+// Nas demais, no Confirmar -- salvo se estiver desabilitado.
+const VARIANTES_COM_FOCO_NO_CANCELAR = ['danger', 'warning'];
 usePrisaoDeFoco(container, () => props.isOpen, {
-  focoInicial: () => (props.variant === 'danger' || props.loading
+  focoInicial: () => (VARIANTES_COM_FOCO_NO_CANCELAR.includes(props.variant) || props.loading
     ? botaoCancelar.value
     : botaoConfirmar.value)
 });
