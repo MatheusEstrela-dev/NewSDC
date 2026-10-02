@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Support\Permissoes\SincronizadorDePermissoes;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -12,14 +11,10 @@ use Illuminate\Support\Facades\Schema;
  * Leva bancos que ja rodaram 2026_09_23_000001 ao schema que a instalacao limpa
  * produz. Em instalacao limpa tudo aqui e no-op.
  *
- * Tambem garante os slugs do remanejamento em lote (create, edit, seplag) e o
- * inventario.emprestimos.return para quem empresta, e nao so no seeder: o
- * entrypoint so semeia com SEED_MOCK_DATA=true, e sem o slug no banco o `can:`
- * das rotas nega o lote a todo cargo que nao e super-admin. Delega ao
- * SincronizadorDePermissoes, o mesmo que roda ao fim de todo `migrate`: cargos
- * e curingas saem do config/permissions.php como no seeder, o super-admin
- * recebe tudo, e nada concedido a mao e removido. Chamado aqui tambem para a
- * migration nao depender do listener (que so reporta falha, sem abortar).
+ * Os slugs do remanejamento em lote (create, edit, seplag) nao sao criados
+ * aqui: estao no config/permissions.php, e o SincronizaPermissoesAposMigrations
+ * os cria e concede no MigrationsEnded deste mesmo `migrate`, por serem novos
+ * na execucao. Migration antiga nao chama codigo vivo da aplicacao.
  */
 return new class extends Migration
 {
@@ -82,8 +77,6 @@ return new class extends Migration
                 $table->foreign('lote_id')->references('id')->on('inventario_ti_remanejamentos')->nullOnDelete();
             });
         }
-
-        app(SincronizadorDePermissoes::class)->sincronizar();
     }
 
     public function down(): void

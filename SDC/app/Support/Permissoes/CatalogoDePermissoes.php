@@ -146,7 +146,7 @@ final class CatalogoDePermissoes
         return array_values(array_unique($expandidas));
     }
 
-    public function descricao(string $modulo, string $grupo, string $acao): string
+    private function descricao(string $modulo, string $grupo, string $acao): string
     {
         $rotulo = self::ROTULOS_DE_ACAO[$acao] ?? ucfirst($acao);
 

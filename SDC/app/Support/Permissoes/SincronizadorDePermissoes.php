@@ -13,13 +13,25 @@ use Spatie\Permission\PermissionRegistrar;
  * Garante no banco o que config/permissions.php declara, sem depender do seeder.
  *
  * So acrescenta: cria permissao e cargo ausentes, completa coluna vazia e
- * concede o par cargo -> permissao que falta. Nunca revoga, nunca apaga, nunca
- * sobrescreve valor preenchido a mao (descricao, is_active, nome do cargo) e
- * nao restaura permissao excluida a mao. Idempotente e seguro com processos
- * concorrentes (insertOrIgnore sobre as chaves unicas).
+ * concede par cargo -> permissao. Nunca revoga, nunca apaga, nunca sobrescreve
+ * valor preenchido a mao (descricao, is_active, nome do cargo) e nao restaura
+ * permissao excluida a mao. O super-admin recebe toda permissao nao excluida
+ * do guard, inclusive as que estao no banco e nao no config, como no seeder.
  *
- * Query builder, e nao os models: os eventos deles limpam o cache do Spatie a
- * cada save; aqui o cache e limpo uma vez, no fim.
+ * Dois modos de concessao:
+ * - completo (manual): concede todo par do config que falta, inclusive o que
+ *   foi revogado a mao no Permissionamento;
+ * - somente novas (automatico, apos o migrate): so concede par cuja permissao
+ *   ou cargo nasceu nesta execucao. Par antigo sem concessao fica como
+ *   pendente no relatorio, para o boot nao desfazer revogacao manual.
+ *
+ * Cargo e unico por (name, guard_name), nao por slug: cargo do config e
+ * achado pelo slug ou, sem slug, pelo nome. Nome igual com slug vazio recebe
+ * o slug; com outro slug e conflito, sem concessao.
+ *
+ * Idempotente e seguro com processos concorrentes (insertOrIgnore sobre as
+ * chaves unicas). Query builder, e nao os models: os eventos deles limpam o
+ * cache do Spatie a cada save; aqui o cache e limpo uma vez, no fim.
  */
 final class SincronizadorDePermissoes
 {
@@ -58,42 +70,56 @@ final class SincronizadorDePermissoes
         return true;
     }
 
-    public function sincronizar(bool $simular = false): RelatorioDeSincronizacao
+    public function sincronizar(bool $simular = false, bool $somenteNovas = false): RelatorioDeSincronizacao
     {
         $conexao = $this->db->connection();
 
         if ($simular) {
-            return $this->executar($conexao, true);
+            return $this->executar($conexao, true, $somenteNovas);
         }
 
-        $relatorio = $conexao->transaction(fn (): RelatorioDeSincronizacao => $this->executar($conexao, false));
+        $relatorio = $conexao->transaction(
+            fn (): RelatorioDeSincronizacao => $this->executar($conexao, false, $somenteNovas),
+        );
         $this->registrar->forgetCachedPermissions();
 
         return $relatorio;
     }
 
-    private function executar(ConnectionInterface $conexao, bool $simular): RelatorioDeSincronizacao
+    private function executar(ConnectionInterface $conexao, bool $simular, bool $somenteNovas): RelatorioDeSincronizacao
     {
         $guard = $this->catalogo->guard();
         $definidas = $this->catalogo->permissoes();
         $existentes = $conexao->table(self::PERMISSOES)
             ->where('guard_name', $guard)
             ->whereIn('name', array_keys($definidas))
+            ->orderBy('id')
             ->get(['id', 'name', 'deleted_at', 'created_at', ...self::COLUNAS_COMPLETAVEIS])
             ->keyBy('name');
 
         $criadas = array_values(array_diff(array_keys($definidas), $existentes->keys()->all()));
         $excluidas = $existentes->whereNotNull('deleted_at')->keys()->values()->all();
         $completadas = $this->completarPermissoes($conexao, $existentes->whereNull('deleted_at'), $definidas, $simular);
-        $cargosCriados = $this->criarCargos($conexao, $guard, $simular);
+        $cargos = $this->resolverCargos($conexao, $guard, $simular);
 
         if (! $simular) {
             $this->criarPermissoes($conexao, $guard, array_intersect_key($definidas, array_flip($criadas)));
         }
 
-        $concessoes = $this->concederFaltantes($conexao, $guard, $criadas, $excluidas, $cargosCriados, $simular);
+        [$novas, $pendentes] = $this->conceder($conexao, $guard, $criadas, $excluidas, $cargos, $simular, $somenteNovas);
 
-        return new RelatorioDeSincronizacao($simular, $criadas, $completadas, $excluidas, $cargosCriados, $concessoes);
+        return new RelatorioDeSincronizacao(
+            simulado: $simular,
+            somenteNovas: $somenteNovas,
+            permissoesCriadas: $criadas,
+            permissoesCompletadas: $completadas,
+            permissoesExcluidas: $excluidas,
+            cargosCriados: $cargos['criados'],
+            cargosCompletados: $cargos['completados'],
+            cargosEmConflito: $cargos['conflitos'],
+            concessoesNovas: $novas,
+            concessoesPendentes: $pendentes,
+        );
     }
 
     /** @param  array<string, array<string, mixed>>  $definicoes */
@@ -113,7 +139,7 @@ final class SincronizadorDePermissoes
     }
 
     /**
-     * @param  Collection<string, object>  $existentes
+     * @param  Collection<string, object>  $existentes  em ordem de id
      * @param  array<string, array<string, mixed>>  $definidas
      * @return list<string>
      */
@@ -160,62 +186,101 @@ final class SincronizadorDePermissoes
     }
 
     /**
-     * Cargo ausente e o que nao tem linha com o slug, nem excluida: cargo
-     * excluido a mao continua excluido.
+     * Acha cada cargo do config pelo slug ou, sem slug, pelo nome (a chave
+     * unica). Linha excluida conta como existente: cargo excluido a mao
+     * continua excluido. Simulacao e execucao real decidem igual.
      *
-     * @return list<string>
+     * @return array{criados: list<string>, completados: list<string>, conflitos: array<string, string>, ids: array<string, int>}
      */
-    private function criarCargos(ConnectionInterface $conexao, string $guard, bool $simular): array
+    private function resolverCargos(ConnectionInterface $conexao, string $guard, bool $simular): array
     {
         $cargos = $this->catalogo->cargos();
-        $existentes = $conexao->table(self::CARGOS)
+        $linhas = $conexao->table(self::CARGOS)
             ->where('guard_name', $guard)
-            ->whereIn('slug', array_keys($cargos))
-            ->pluck('slug')
-            ->all();
-        $ausentes = array_diff_key($cargos, array_flip($existentes));
+            ->where(fn ($q) => $q->whereIn('slug', array_keys($cargos))->orWhereIn('name', array_column($cargos, 'name')))
+            ->orderBy('id')
+            ->get(['id', 'name', 'slug', 'deleted_at']);
+        $porSlug = $linhas->whereNotNull('slug')->unique('slug')->keyBy('slug');
+        $porNome = $linhas->unique('name')->keyBy('name')->all();
+
+        $resolucao = ['criados' => [], 'completados' => [], 'conflitos' => [], 'ids' => []];
+        foreach ($cargos as $slug => $cargo) {
+            if ($porSlug->has($slug)) {
+                continue;
+            }
+
+            $mesmoNome = $porNome[$cargo['name']] ?? null;
+            if ($mesmoNome === null) {
+                $resolucao['criados'][] = $slug;
+            } elseif ($mesmoNome->slug === null || $mesmoNome->slug === '') {
+                $resolucao['completados'][] = $slug;
+                if ($mesmoNome->deleted_at === null) {
+                    $resolucao['ids'][$slug] = (int) $mesmoNome->id;
+                }
+                if (! $simular) {
+                    $conexao->table(self::CARGOS)->where('id', $mesmoNome->id)->update(['slug' => $slug, 'updated_at' => now()]);
+                }
+            } else {
+                $resolucao['conflitos'][$slug] = sprintf(
+                    "nome '%s' ja usado pelo cargo id %s, slug '%s'",
+                    $cargo['name'], $mesmoNome->id ?? '(novo)', $mesmoNome->slug,
+                );
+                continue;
+            }
+
+            // Reserva o nome: outro cargo do config com o mesmo nome vira conflito.
+            $porNome[$cargo['name']] = (object) ['id' => $mesmoNome->id ?? null, 'slug' => $slug, 'deleted_at' => null];
+        }
 
         if (! $simular) {
             $agora = now();
-            $this->inserirEmLotes($conexao, self::CARGOS, array_map(static fn (array $cargo): array => [
-                ...$cargo,
+            $this->inserirEmLotes($conexao, self::CARGOS, array_map(static fn (string $slug): array => [
+                ...$cargos[$slug],
                 'guard_name' => $guard,
                 'created_at' => $agora,
                 'updated_at' => $agora,
-            ], array_values($ausentes)));
+            ], $resolucao['criados']));
         }
 
-        return array_keys($ausentes);
+        return $resolucao;
     }
 
     /**
      * @param  list<string>  $criadas
      * @param  list<string>  $excluidas
-     * @param  list<string>  $cargosCriados
-     * @return array<string, list<string>> cargo => slugs concedidos agora
+     * @param  array{criados: list<string>, completados: list<string>, conflitos: array<string, string>, ids: array<string, int>}  $cargos
+     * @return array{0: array<string, list<string>>, 1: array<string, list<string>>} [novas, pendentes], cargo => slugs
      */
-    private function concederFaltantes(
+    private function conceder(
         ConnectionInterface $conexao,
         string $guard,
         array $criadas,
         array $excluidas,
-        array $cargosCriados,
+        array $cargos,
         bool $simular,
+        bool $somenteNovas,
     ): array {
-        $desejadas = $this->concessoesDesejadas($conexao, $guard, $criadas, $excluidas);
-        $idsCargos = $this->idsDosCargos($conexao, $guard, array_keys($desejadas));
+        $desejadas = array_diff_key($this->concessoesDesejadas($conexao, $guard, $criadas, $excluidas), $cargos['conflitos']);
+        $idsCargos = $this->idsDosCargos($conexao, $guard, array_keys($desejadas)) + $cargos['ids'];
         $jaConcedidas = $this->concessoesExistentes($conexao, $guard, array_values($idsCargos));
 
         $novas = [];
+        $pendentes = [];
         foreach ($desejadas as $cargo => $slugs) {
-            $existe = isset($idsCargos[$cargo]) || ($simular && in_array($cargo, $cargosCriados, true));
-            if (! $existe) {
+            $cargoNovo = in_array($cargo, $cargos['criados'], true);
+            if (! isset($idsCargos[$cargo]) && ! ($simular && $cargoNovo)) {
                 continue;
             }
 
             $faltantes = array_values(array_diff($slugs, $jaConcedidas[$idsCargos[$cargo] ?? 0] ?? []));
-            if ($faltantes !== []) {
-                $novas[$cargo] = $faltantes;
+            $concedidas = $somenteNovas && ! $cargoNovo ? array_values(array_intersect($faltantes, $criadas)) : $faltantes;
+            $adiadas = array_values(array_diff($faltantes, $concedidas));
+
+            if ($concedidas !== []) {
+                $novas[$cargo] = $concedidas;
+            }
+            if ($adiadas !== []) {
+                $pendentes[$cargo] = $adiadas;
             }
         }
 
@@ -223,12 +288,12 @@ final class SincronizadorDePermissoes
             $this->gravarConcessoes($conexao, $guard, $novas, $idsCargos);
         }
 
-        return $novas;
+        return [$novas, $pendentes];
     }
 
     /**
      * Pares do config com curinga expandido, mais o super-admin com toda
-     * permissao ativa do guard, como no seeder.
+     * permissao nao excluida do guard, como no seeder.
      *
      * @param  list<string>  $criadas
      * @param  list<string>  $excluidas
@@ -240,6 +305,7 @@ final class SincronizadorDePermissoes
         $todas = $conexao->table(self::PERMISSOES)
             ->where('guard_name', $guard)
             ->whereNull('deleted_at')
+            ->orderBy('id')
             ->pluck('name')
             ->all();
         $desejadas[self::SUPER_ADMIN] = [...($desejadas[self::SUPER_ADMIN] ?? []), ...$todas, ...$criadas];
@@ -299,7 +365,7 @@ final class SincronizadorDePermissoes
         $linhas = [];
         foreach ($novas as $cargo => $slugs) {
             foreach ($slugs as $slug) {
-                if (isset($idsPermissoes[$slug])) {
+                if (isset($idsPermissoes[$slug], $idsCargos[$cargo])) {
                     $linhas[] = ['permission_id' => (int) $idsPermissoes[$slug], 'role_id' => $idsCargos[$cargo]];
                 }
             }

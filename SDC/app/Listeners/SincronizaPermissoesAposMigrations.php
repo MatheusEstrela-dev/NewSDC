@@ -27,6 +27,11 @@ use Throwable;
  * replica que chega depois do lock liberado roda sem pendencias e sincroniza
  * de novo, sem efeito: a sincronizacao e idempotente e segura em paralelo.
  *
+ * Modo somente novas: o entrypoint roda migrate a cada boot de container, e
+ * reconceder todo par do config desfaria a revogacao feita a mao no
+ * Permissionamento. Aqui so ganha concessao a permissao ou o cargo que nasceu
+ * nesta execucao; o resto fica pendente para o `permissions:sincronizar` manual.
+ *
  * Falha e reportada e engolida: permissao fora de sincronia nao pode
  * derrubar o deploy, e `permissions:sincronizar` refaz depois.
  */
@@ -54,7 +59,7 @@ final class SincronizaPermissoesAposMigrations
     {
         try {
             if ($this->sincronizador->tabelasExistem()) {
-                $this->sincronizador->sincronizar();
+                $this->sincronizador->sincronizar(somenteNovas: true);
             }
         } catch (Throwable $erro) {
             report($erro);

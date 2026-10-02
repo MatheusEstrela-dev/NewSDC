@@ -33,29 +33,11 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function seedPermissions(string $guard): void
     {
-        $modules = config('permissions.modules', []);
-
-        foreach ($modules as $moduleName => $groups) {
-            foreach ($groups as $groupName => $actions) {
-                foreach ($actions as $actionKey => $permissionSlug) {
-                    Permission::updateOrCreate(
-                        [
-                            'name' => $permissionSlug,
-                            'guard_name' => $guard,
-                        ],
-                        [
-                            'name' => $permissionSlug,
-                            'guard_name' => $guard,
-                            'slug' => $permissionSlug,
-                            'description' => $this->generatePermissionDescription($moduleName, $groupName, $actionKey),
-                            'group' => strtolower($groupName),
-                            'module' => strtolower($moduleName),
-                            'is_active' => true,
-                            'is_immutable' => in_array($permissionSlug, config('permissions.immutable_permissions', [])),
-                        ]
-                    );
-                }
-            }
+        foreach ($this->catalogo()->permissoes() as $slug => $permissao) {
+            Permission::updateOrCreate(
+                ['name' => $slug, 'guard_name' => $guard],
+                ['name' => $slug, 'guard_name' => $guard, ...$permissao, 'is_active' => true]
+            );
         }
     }
 
@@ -64,26 +46,10 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function seedRoles(string $guard): void
     {
-        $levels = config('permissions.levels', []);
-        $rolesMetadata = config('permissions.roles', []);
-
-        foreach ($levels as $slug => $hierarchyLevel) {
-            $metadata = $rolesMetadata[$slug] ?? [];
-            $displayName = $metadata['name'] ?? ucfirst($slug);
-
+        foreach ($this->catalogo()->cargos() as $slug => $cargo) {
             Role::updateOrCreate(
-                [
-                    'slug' => $slug,
-                    'guard_name' => $guard,
-                ],
-                [
-                    'name' => $displayName,
-                    'guard_name' => $guard,
-                    'slug' => $slug,
-                    'hierarchy_level' => $hierarchyLevel,
-                    'description' => $metadata['description'] ?? "Cargo {$slug}",
-                    'is_active' => $metadata['is_active'] ?? true,
-                ]
+                ['slug' => $slug, 'guard_name' => $guard],
+                [...$cargo, 'guard_name' => $guard]
             );
         }
     }
@@ -141,14 +107,6 @@ class RolesAndPermissionsSeeder extends Seeder
     protected function getAllPermissionSlugs(): array
     {
         return $this->catalogo()->slugs();
-    }
-
-    /**
-     * Gera descricao automatica para permissao.
-     */
-    protected function generatePermissionDescription(string $module, string $group, string $action): string
-    {
-        return $this->catalogo()->descricao($module, $group, $action);
     }
 
     /**
