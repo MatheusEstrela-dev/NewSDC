@@ -12,6 +12,7 @@
         "ext-pdo_pgsql": "*",
         "azure-oss/storage-blob-flysystem": "^1.6",
         "darkaonline/l5-swagger": "^8.6",
+        "directorytree/ldaprecord": "^3",
         "doctrine/dbal": "^4",
         "doctrine/orm": "^3",
         "endroid/qr-code": "^5.1",
