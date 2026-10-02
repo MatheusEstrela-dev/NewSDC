@@ -61,7 +61,7 @@ import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
-import ListaResponsiva from '@/Components/Molecules/Inventario/ListaResponsiva.vue';
+import ListaResponsiva from '@/Components/Molecules/List/ListaResponsiva.vue';
 
 const props = defineProps({
   estacoes: { type: Array, required: true },
