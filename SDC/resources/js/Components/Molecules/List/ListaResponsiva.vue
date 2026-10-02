@@ -40,7 +40,8 @@ import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import { useMobile } from '@/Composables/useMobile';
 
 /**
- * Casca das listas do Inventario: tabela no desktop, cartoes no mobile.
+ * Casca das listas responsivas (Inventario, Acessos): tabela no desktop,
+ * cartoes no mobile.
  * Quem usa so desenha a linha (slot `linha`, que recebe as classes de celula)
  * e o conteudo do cartao (slot `cartao`).
  */

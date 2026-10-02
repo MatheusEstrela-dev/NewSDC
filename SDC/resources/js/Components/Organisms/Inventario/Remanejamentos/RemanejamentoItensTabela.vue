@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import ListaResponsiva from '@/Components/Molecules/Inventario/ListaResponsiva.vue';
+import ListaResponsiva from '@/Components/Molecules/List/ListaResponsiva.vue';
 import StatusRemanejamentoBadge from '@/Components/Atoms/Inventario/StatusRemanejamentoBadge.vue';
 
 defineProps({ itens: { type: Array, required: true } });

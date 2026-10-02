@@ -56,7 +56,7 @@
 <script setup>
 import { ref } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import ListaResponsiva from '@/Components/Molecules/Inventario/ListaResponsiva.vue';
+import ListaResponsiva from '@/Components/Molecules/List/ListaResponsiva.vue';
 import StatusRemanejamentoBadge from '@/Components/Atoms/Inventario/StatusRemanejamentoBadge.vue';
 import RemanejamentoAcoes from '@/Components/Organisms/Inventario/Remanejamentos/RemanejamentoAcoes.vue';
 import RemanejamentoItensTabela from '@/Components/Organisms/Inventario/Remanejamentos/RemanejamentoItensTabela.vue';

@@ -31,7 +31,7 @@
 
 <script setup>
 import Button from '@/Components/Atoms/Button/Button.vue';
-import ListaResponsiva from '@/Components/Molecules/Inventario/ListaResponsiva.vue';
+import ListaResponsiva from '@/Components/Molecules/List/ListaResponsiva.vue';
 import StatusRemanejamentoBadge from '@/Components/Atoms/Inventario/StatusRemanejamentoBadge.vue';
 import { formatarDataHora } from '@/utils/dateFormatter';
 
