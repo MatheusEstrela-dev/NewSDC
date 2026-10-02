@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Listeners\PermissionEventSubscriber;
+use App\Listeners\SincronizaPermissoesAposMigrations;
 use App\Models\Role;
 use App\Models\User;
 use App\Modules\Rat\Models\RatOcorrencia;
@@ -15,6 +16,8 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
+use Illuminate\Database\Events\MigrationsEnded;
+use Illuminate\Database\Events\NoPendingMigrations;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Support\Facades\Event;
@@ -36,6 +39,9 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(Registered::class, SendEmailVerificationNotification::class);
 
         Event::subscribe(PermissionEventSubscriber::class);
+
+        Event::listen(MigrationsEnded::class, [SincronizaPermissoesAposMigrations::class, 'aoTerminarMigrations']);
+        Event::listen(NoPendingMigrations::class, [SincronizaPermissoesAposMigrations::class, 'semMigrationsPendentes']);
 
         Event::listen(JobFailed::class, function (JobFailed $event) {
             Log::channel('jobs')->error('Job failed', [

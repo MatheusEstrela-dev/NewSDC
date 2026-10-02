@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\Permissoes\CatalogoDePermissoes;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -131,24 +132,7 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function expandWildcardPermissions(array $permissions, array $allPermissionSlugs): array
     {
-        $expanded = [];
-
-        foreach ($permissions as $permission) {
-            if (str_ends_with($permission, '.*')) {
-                $prefix = substr($permission, 0, -2);
-                foreach ($allPermissionSlugs as $slug) {
-                    if (str_starts_with($slug, $prefix . '.')) {
-                        $expanded[] = $slug;
-                    }
-                }
-            } else {
-                if (in_array($permission, $allPermissionSlugs)) {
-                    $expanded[] = $permission;
-                }
-            }
-        }
-
-        return array_unique($expanded);
+        return $this->catalogo()->expandirCuringas($permissions, $allPermissionSlugs);
     }
 
     /**
@@ -156,18 +140,7 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function getAllPermissionSlugs(): array
     {
-        $modules = config('permissions.modules', []);
-        $slugs = [];
-
-        foreach ($modules as $groups) {
-            foreach ($groups as $actions) {
-                foreach ($actions as $slug) {
-                    $slugs[] = $slug;
-                }
-            }
-        }
-
-        return $slugs;
+        return $this->catalogo()->slugs();
     }
 
     /**
@@ -175,35 +148,16 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected function generatePermissionDescription(string $module, string $group, string $action): string
     {
-        $actionLabels = [
-            'view' => 'Visualizar',
-            'create' => 'Criar',
-            'edit' => 'Editar',
-            'delete' => 'Deletar',
-            'approve' => 'Aprovar',
-            'assign' => 'Atribuir',
-            'atribuir' => 'Atribuir',
-            'finalize' => 'Finalizar',
-            'manage' => 'Gerenciar',
-            'execute' => 'Executar',
-            'export' => 'Exportar',
-            'send' => 'Enviar',
-            'logs' => 'Visualizar Logs',
-            'cache' => 'Limpar Cache',
-            'settings' => 'Configuracoes',
-            'print' => 'Imprimir',
-            'pdf' => 'Gerar PDF',
-            'history' => 'Visualizar Historico',
-            'arquivar' => 'Arquivar',
-            'validar' => 'Validar',
-            'attachments' => 'Gerenciar Anexos',
-            'desvincular' => 'Desvincular',
-            'movimentar' => 'Movimentar',
-            'encerrar_alheio' => 'Encerrar (Alheio)',
-        ];
+        return $this->catalogo()->descricao($module, $group, $action);
+    }
 
-        $actionLabel = $actionLabels[$action] ?? ucfirst($action);
-        return "{$actionLabel} {$group} ({$module})";
+    /**
+     * Regras de derivacao compartilhadas com o SincronizadorDePermissoes, para
+     * o reseed e a sincronizacao pos-migrate gravarem o mesmo.
+     */
+    protected function catalogo(): CatalogoDePermissoes
+    {
+        return app(CatalogoDePermissoes::class);
     }
 
     /**
