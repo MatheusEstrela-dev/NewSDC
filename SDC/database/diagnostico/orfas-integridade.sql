@@ -52,6 +52,7 @@ FROM (VALUES
     ('tdap_crono_caminhoes_cronograma_id_foreign'),
     ('tdap_crono_viagens_crono_caminhao_id_foreign'),
     ('tdap_cronogramas_ponto_captacao_id_foreign'),
+    ('tdap_cronograma_ponto_ponto_id_foreign'),
     ('dec_decreto_municipios_entrada_processos_id_foreign'),
     ('dec_entrada_decretos_entrada_processos_id_foreign')
 ) AS esperada(conname)
@@ -80,6 +81,10 @@ FROM (
     SELECT count(*) FROM tdap_cronogramas c LEFT JOIN pip_pmda_ponto p ON p.id = c.ponto_captacao_id
      WHERE c.ponto_captacao_id IS NOT NULL AND p.id IS NULL
        AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tdap_cronogramas_ponto_captacao_id_foreign' AND convalidated)
+    UNION ALL
+    SELECT count(*) FROM tdap_cronograma_ponto cp LEFT JOIN pip_pmda_ponto p ON p.id = cp.ponto_id
+     WHERE p.id IS NULL
+       AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tdap_cronograma_ponto_ponto_id_foreign' AND convalidated)
     UNION ALL
     SELECT count(*) FROM dec_decreto_municipios d LEFT JOIN dec_entrada_processos p ON p.id = d.entrada_processos_id
      WHERE d.entrada_processos_id IS NOT NULL AND p.id IS NULL
@@ -113,6 +118,10 @@ SELECT 'tdap_cronogramas.ponto_captacao_id',
        count(*) FILTER (WHERE p.id IS NULL), count(*)
   FROM tdap_cronogramas c LEFT JOIN pip_pmda_ponto p ON p.id = c.ponto_captacao_id
  WHERE c.ponto_captacao_id IS NOT NULL
+UNION ALL
+SELECT 'tdap_cronograma_ponto.ponto_id',
+       count(*) FILTER (WHERE p.id IS NULL), count(*)
+  FROM tdap_cronograma_ponto cp LEFT JOIN pip_pmda_ponto p ON p.id = cp.ponto_id
 UNION ALL
 SELECT 'dec_decreto_municipios.entrada_processos_id',
        count(*) FILTER (WHERE p.id IS NULL), count(*)

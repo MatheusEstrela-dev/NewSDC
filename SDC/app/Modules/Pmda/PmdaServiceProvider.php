@@ -11,6 +11,8 @@ use App\Modules\Pmda\Services\PlanoPontoService;
 use App\Modules\Pmda\Services\PmdaCopiaService;
 use App\Modules\Pmda\Services\PmdaPlanoService;
 use App\Modules\Pmda\Services\RepresentanteService;
+use App\Modules\Pmda\Support\PontosCaptacaoAprovados;
+use App\Modules\Tdap\Contracts\PontosCaptacaoDoPmda;
 use Illuminate\Support\ServiceProvider;
 
 class PmdaServiceProvider extends ServiceProvider
@@ -22,6 +24,9 @@ class PmdaServiceProvider extends ServiceProvider
         $this->app->singleton(ComunidadeService::class);
         $this->app->singleton(RepresentanteService::class);
         $this->app->singleton(PlanoPontoService::class);
+
+        // O TDAP le daqui quais pontos o PMDA aprovado do municipio autoriza.
+        $this->app->singleton(PontosCaptacaoDoPmda::class, PontosCaptacaoAprovados::class);
     }
 
     public function boot(): void

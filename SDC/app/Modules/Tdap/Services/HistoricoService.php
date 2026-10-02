@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
  *
  * Tipos de evento canonicos:
  *   - cronograma.criado, cronograma.ativado, cronograma.encerrado, cronograma.prorrogado
+ *   - cronograma.pontos_alterados (payload: incluidos/removidos, ids de pip_pmda_ponto)
  *   - viagem.registrada, viagem.aprovada, viagem.rejeitada, viagem.removida
  *   - vistoria.criada, vistoria.aprovada, vistoria.reprovada
  */

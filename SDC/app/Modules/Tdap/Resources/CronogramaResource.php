@@ -47,13 +47,9 @@ class CronogramaResource extends JsonResource
             'justificativa'         => $this->justificativa,
             'observacao'            => $this->observacao,
             'cnpj'                  => $this->cnpj,
-            'ponto_captacao_id'     => $this->ponto_captacao_id,
-            'ponto_captacao'        => $this->whenLoaded('pontoCaptacao', fn () => [
-                'id'        => $this->pontoCaptacao->id,
-                'nome'      => $this->pontoCaptacao->nome,
-                'tipo'      => $this->pontoCaptacao->tipo,
-                'tipo_nome' => $this->pontoCaptacao->tipo_nome,
-            ]),
+            // Os dados de cada ponto (com o PMDA de origem) vao na prop
+            // `pontosCaptacao` da ficha, montada por PoliticaPontoCaptacao.
+            'ponto_captacao_ids'    => $this->whenLoaded('pontosCaptacao', fn () => $this->pontosCaptacao->pluck('id')->all()),
 
             'ata_id'         => $this->ata_id,
             'ata'            => $this->whenLoaded('ata', fn () => [

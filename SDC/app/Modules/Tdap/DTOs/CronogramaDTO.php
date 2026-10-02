@@ -6,6 +6,10 @@ namespace App\Modules\Tdap\DTOs;
 
 final readonly class CronogramaDTO
 {
+    /**
+     * @param  list<int>  $ponto_captacao_ids  vao para o pivot tdap_cronograma_ponto,
+     *                                          por isso ficam fora de toArray()
+     */
     public function __construct(
         public string $numero,
         public ?string $empenho,
@@ -24,7 +28,7 @@ final readonly class CronogramaDTO
         public ?string $dt_final_prorrogacao,
         public ?string $justificativa,
         public ?string $nota_empenho,
-        public ?int $ponto_captacao_id,
+        public array $ponto_captacao_ids,
         public ?string $observacao,
     ) {}
 
@@ -61,7 +65,7 @@ final readonly class CronogramaDTO
             dt_final_prorrogacao:  self::nullable($data['dt_final_prorrogacao'] ?? null),
             justificativa:         self::nullable($data['justificativa'] ?? null),
             nota_empenho:          self::nullable($data['nota_empenho'] ?? null),
-            ponto_captacao_id:     isset($data['ponto_captacao_id']) && $data['ponto_captacao_id'] !== '' ? (int) $data['ponto_captacao_id'] : null,
+            ponto_captacao_ids:    self::ids($data['ponto_captacao_ids'] ?? []),
             observacao:            self::nullable($data['observacao'] ?? null),
         );
     }
@@ -89,9 +93,19 @@ final readonly class CronogramaDTO
             'dt_final_prorrogacao'  => $this->dt_final_prorrogacao,
             'justificativa'         => $this->justificativa,
             'nota_empenho'          => $this->nota_empenho,
-            'ponto_captacao_id'     => $this->ponto_captacao_id,
             'observacao'            => $this->observacao,
         ];
+    }
+
+    /**
+     * @return list<int> ids positivos, sem repeticao, na ordem recebida
+     */
+    private static function ids(mixed $value): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map('intval', (array) $value),
+            fn (int $id) => $id > 0,
+        )));
     }
 
     private static function nullable(mixed $value): ?string

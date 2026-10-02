@@ -14,6 +14,8 @@
       :atas="atas"
       :lotes="lotes"
       :pontos-captacao="pontosCaptacao"
+      :exige-pmda="exigePmda"
+      :pode-ver-pmda="podeVerPmda"
       submit-label="Salvar alterações"
       @submit="submit"
       @cancel="cancelar"
@@ -36,7 +38,10 @@ const props = defineProps({
   lotes:          { type: Array, default: () => [] },
   municipios:     { type: Array, default: () => [] },
   prestadores:    { type: Array, default: () => [] },
-  pontosCaptacao: { type: Array, default: () => [] },
+  // Agrupado por municipio: { [municipio_id]: [ponto, ...] }.
+  pontosCaptacao: { type: [Object, Array], default: () => ({}) },
+  exigePmda:      { type: Boolean, default: true },
+  podeVerPmda:    { type: Boolean, default: false },
 });
 
 const c = props.cronograma.data;
@@ -59,7 +64,7 @@ const form = useForm({
   dt_final_prorrogacao: c.dt_final_prorrogacao || '',
   justificativa: c.justificativa || '',
   nota_empenho: c.nota_empenho || '',
-  ponto_captacao_id: c.ponto_captacao_id,
+  ponto_captacao_ids: c.ponto_captacao_ids ?? [],
   observacao: c.observacao || '',
 });
 

@@ -58,8 +58,32 @@
             <div><dt class="text-slate-500">Consumo diário</dt><dd class="font-mono">{{ Number(c.consumo_diario).toFixed(2) }} L</dd></div>
             <div><dt class="text-slate-500">Dias</dt><dd>{{ c.dias }}</dd></div>
             <div><dt class="text-slate-500">Fator (m³)</dt><dd>{{ Number(c.fator).toFixed(2) }}<span v-if="c.usar_fator_manual" class="ml-1 text-xs text-amber-600">(manual)</span></dd></div>
-            <div v-if="c.ponto_captacao"><dt class="text-slate-500">Ponto de captação</dt><dd>{{ c.ponto_captacao.nome }} <span class="text-xs text-slate-400">({{ c.ponto_captacao.tipo_nome }})</span></dd></div>
           </dl>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
+          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Pontos de captação ({{ pontosCaptacao.length }})</h3>
+          <ul v-if="pontosCaptacao.length" class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+            <li v-for="p in pontosCaptacao" :key="p.id" class="flex flex-wrap items-center justify-between gap-2 py-2">
+              <div>
+                <p class="font-medium text-slate-900 dark:text-slate-100">{{ p.nome }}</p>
+                <p class="text-xs text-slate-500">
+                  {{ p.tipo_nome }}<template v-if="Number(p.capacidade) > 0"> · {{ fmtM3(p.capacidade) }} m³</template>
+                  <template v-if="p.latitude && p.longitude"> · {{ p.latitude }}, {{ p.longitude }}</template>
+                </p>
+              </div>
+              <span
+                v-if="p.pmda_plano_id"
+                class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+              >PMDA {{ p.protocolo || `#${p.pmda_plano_id}` }}</span>
+              <span
+                v-else
+                class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                title="Ponto vinculado sem PMDA aprovado (acervo legado)"
+              >Fora do PMDA aprovado</span>
+            </li>
+          </ul>
+          <p v-else class="text-sm text-slate-400">Nenhum ponto de captação vinculado.</p>
         </div>
 
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
@@ -272,6 +296,8 @@ const props = defineProps({
   canProrrogar:      { type: Boolean, default: false },
   canAlocarCaminhao: { type: Boolean, default: false },
   canValidarViagem:  { type: Boolean, default: false },
+  // Cronograma ja ativado: retrato da ativacao; rascunho: vinculos atuais.
+  pontosCaptacao:    { type: Array, default: () => [] },
 });
 
 const c = computed(() => props.cronograma.data ?? props.cronograma).value;
@@ -344,6 +370,7 @@ const EVENTO_LABELS = {
   'cronograma.prorrogado':   'Cronograma prorrogado',
   'cronograma.arquivado':    'Cronograma arquivado',
   'cronograma.desarquivado': 'Cronograma desarquivado',
+  'cronograma.pontos_alterados': 'Pontos de captação alterados',
 };
 
 function tipoCategoria(tipoEvento) {

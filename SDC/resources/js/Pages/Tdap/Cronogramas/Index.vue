@@ -449,6 +449,7 @@ const EVENTO_LABELS = {
   'cronograma.prorrogado':   'Cronograma prorrogado',
   'cronograma.arquivado':    'Cronograma arquivado',
   'cronograma.desarquivado': 'Cronograma desarquivado',
+  'cronograma.pontos_alterados': 'Pontos de captação alterados',
 };
 
 function tipoCategoria(tipoEvento) {

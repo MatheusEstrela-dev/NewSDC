@@ -11,13 +11,13 @@ use App\Modules\Tdap\Models\Ata;
 use App\Modules\Pmda\Models\Comunidade;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\Lote;
-use App\Modules\Tdap\Models\PontoCaptacao;
 use App\Modules\Tdap\Models\Prestador;
 use App\Modules\Tdap\Requests\StoreCronogramaRequest;
 use App\Modules\Tdap\Requests\UpdateCronogramaRequest;
 use App\Modules\Tdap\Resources\CronogramaIndexResource;
 use App\Modules\Tdap\Resources\CronogramaResource;
 use App\Modules\Tdap\Services\CronogramaService;
+use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,6 +28,7 @@ class CronogramaController extends Controller
 {
     public function __construct(
         private readonly CronogramaService $service,
+        private readonly PoliticaPontoCaptacao $politicaPontos,
     ) {}
 
     public function index(Request $request): Response
@@ -80,13 +81,40 @@ class CronogramaController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Tdap/Cronogramas/Create', [
+        return Inertia::render('Tdap/Cronogramas/Create', $this->propsDoFormulario());
+    }
+
+    /**
+     * Opcoes do formulario de cadastro/edicao.
+     *
+     * `pontosCaptacao` vem agrupado por municipio e ja filtrado pela
+     * PoliticaPontoCaptacao (PMDA aprovado), so para os municipios dos lotes
+     * ativos -- antes ia o estado inteiro e o filtro era so no navegador.
+     *
+     * @return array<string, mixed>
+     */
+    private function propsDoFormulario(?Cronograma $cronograma = null): array
+    {
+        $lotes = Lote::ativo()->with(['ata:id,numero', 'municipios:id,nome,uf', 'prestador:id,nome,cnpj'])->get();
+
+        $municipioIds = $lotes->flatMap(fn (Lote $l) => $l->municipios->pluck('id'))
+            ->push($cronograma?->municipio_id)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+        $vinculados = $cronograma?->pontosCaptacao()->allRelatedIds()->map(fn ($id) => (int) $id)->all() ?? [];
+
+        return [
             'atas'           => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero', 'dt_inicio', 'dt_final']),
-            'lotes'          => Lote::ativo()->with(['ata:id,numero', 'municipios:id,nome,uf', 'prestador:id,nome,cnpj'])->get(),
+            'lotes'          => $lotes,
             'municipios'     => Municipio::catalogo(),
             'prestadores'    => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
-            'pontosCaptacao' => PontoCaptacao::ativo()->orderBy('nome')->get(['id', 'nome', 'tipo', 'municipio_id']),
-        ]);
+            'pontosCaptacao' => $this->politicaPontos->opcoesPorMunicipio($municipioIds, $vinculados),
+            'exigePmda'      => $this->politicaPontos->exigePmda(),
+            'podeVerPmda'    => request()->user()?->can('pmda.planos.view') ?? false,
+        ];
     }
 
     public function store(StoreCronogramaRequest $request): RedirectResponse
@@ -105,6 +133,12 @@ class CronogramaController extends Controller
 
         return Inertia::render('Tdap/Cronogramas/Show', [
             'cronograma'       => CronogramaResource::make($cronograma),
+            // Ativado (ativo ou ja encerrado): o retrato gravado na ativacao.
+            // Rascunho, ou ativado antes do retrato existir: os vinculos de
+            // agora, cada um com o PMDA que o autorizou (nulo = legado).
+            'pontosCaptacao'   => $cronograma->stored_pmda_ponto !== null
+                ? $cronograma->stored_pmda_ponto
+                : $this->politicaPontos->apresentarVinculados($cronograma->pontosCaptacao),
             // As comunidades do municipio atendido, com a populacao que a
             // alocacao usa para calcular agua prevista e viagens. Sem elas o
             // modal so aceitaria os dois numeros digitados a mao.
@@ -128,12 +162,8 @@ class CronogramaController extends Controller
     public function edit(Cronograma $cronograma): Response
     {
         return Inertia::render('Tdap/Cronogramas/Edit', [
-            'cronograma'     => CronogramaResource::make($cronograma->load(['ata', 'lote', 'municipio', 'prestador'])),
-            'atas'           => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero', 'dt_inicio', 'dt_final']),
-            'lotes'          => Lote::ativo()->with(['ata:id,numero', 'municipios:id,nome,uf', 'prestador:id,nome,cnpj'])->get(),
-            'municipios'     => Municipio::catalogo(),
-            'prestadores'    => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
-            'pontosCaptacao' => PontoCaptacao::ativo()->orderBy('nome')->get(['id', 'nome', 'tipo', 'municipio_id']),
+            'cronograma' => CronogramaResource::make($cronograma->load(['ata', 'lote', 'municipio', 'prestador', 'pontosCaptacao'])),
+            ...$this->propsDoFormulario($cronograma),
         ]);
     }
 

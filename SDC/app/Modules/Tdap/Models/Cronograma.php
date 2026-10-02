@@ -11,6 +11,7 @@ use App\Modules\Tdap\Support\VigenciaAta;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -34,7 +35,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property ?\Carbon\Carbon $dt_final_prorrogacao
  * @property ?string         $justificativa
  * @property ?string         $nota_empenho
- * @property ?int            $ponto_captacao_id
+ * @property ?int            $ponto_captacao_id  @deprecated substituido pelo pivot tdap_cronograma_ponto
+ *                                               (pontosCaptacao()); a coluna so fica para rollback
  * @property ?int            $user_id
  * @property bool            $ativo
  * @property ?\Carbon\Carbon $ativado_em
@@ -70,7 +72,6 @@ class Cronograma extends Model
         'dt_final_prorrogacao',
         'justificativa',
         'nota_empenho',
-        'ponto_captacao_id',
         'user_id',
         'ativo',
         'ativado_em',
@@ -132,9 +133,17 @@ class Cronograma extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function pontoCaptacao(): BelongsTo
+    /**
+     * Pontos de onde os caminhoes tiram a agua. `pmda_plano_id` no pivot e o
+     * PMDA aprovado que autorizou o ponto; nulo = legado (ver
+     * PoliticaPontoCaptacao).
+     */
+    public function pontosCaptacao(): BelongsToMany
     {
-        return $this->belongsTo(PontoCaptacao::class, 'ponto_captacao_id');
+        return $this->belongsToMany(PontoCaptacao::class, 'tdap_cronograma_ponto', 'cronograma_id', 'ponto_id')
+            ->withPivot('pmda_plano_id')
+            ->withTimestamps()
+            ->orderBy('pip_pmda_ponto.nome');
     }
 
     public function caminhoes(): HasMany

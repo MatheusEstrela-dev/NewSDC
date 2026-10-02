@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Requests;
 
+use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\Lote;
-use App\Modules\Tdap\Models\PontoCaptacao;
+use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
@@ -61,7 +62,8 @@ abstract class AbstractCronogramaRequest extends FormRequest
             'dt_final_prorrogacao'  => ['nullable', 'date', 'after_or_equal:dt_inicio_prorrogacao', 'required_with:dt_inicio_prorrogacao'],
             'justificativa'         => ['nullable', 'string', 'max:5000'],
             'nota_empenho'          => ['nullable', 'string', 'max:50'],
-            'ponto_captacao_id'     => ['required', 'integer', Rule::exists('pip_pmda_ponto', 'id')->whereNull('deleted_at')],
+            'ponto_captacao_ids'    => ['required', 'array', 'min:1'],
+            'ponto_captacao_ids.*'  => ['integer', 'distinct', Rule::exists('pip_pmda_ponto', 'id')->whereNull('deleted_at')],
             'observacao'            => ['nullable', 'string', 'max:5000'],
         ];
     }
@@ -96,14 +98,30 @@ abstract class AbstractCronogramaRequest extends FormRequest
                 $v->errors()->add('prestador_id', 'O Prestador nao confere com o Lote escolhido.');
             }
 
-            $pontoId = (int) $this->input('ponto_captacao_id');
-            if ($pontoId > 0) {
-                $ponto = PontoCaptacao::find($pontoId);
-                if ($ponto && (int) $ponto->municipio_id !== (int) $this->input('municipio_id')) {
-                    $v->errors()->add('ponto_captacao_id', 'O Ponto de Captacao nao pertence ao Municipio do Lote.');
+            // Municipio e PMDA aprovado: a regra inteira mora na politica, a
+            // mesma que monta as opcoes do formulario.
+            if ($municipioId > 0 && ! $v->errors()->has('ponto_captacao_ids*')) {
+                $recusas = app(PoliticaPontoCaptacao::class)->recusas(
+                    $municipioId,
+                    array_map('intval', (array) $this->input('ponto_captacao_ids', [])),
+                    $this->pontosJaVinculados(),
+                );
+                foreach ($recusas as $posicao => $mensagem) {
+                    $v->errors()->add("ponto_captacao_ids.{$posicao}", $mensagem);
                 }
             }
         });
+    }
+
+    /**
+     * Pontos que o cronograma ja tem. Continuam aceitos mesmo fora do PMDA
+     * aprovado (acervo legado); no cadastro nao ha nenhum.
+     *
+     * @return list<int>
+     */
+    protected function pontosJaVinculados(): array
+    {
+        return [];
     }
 }
 
@@ -136,6 +154,18 @@ class UpdateCronogramaRequest extends AbstractCronogramaRequest
         return Rule::unique('tdap_cronogramas', 'numero')
             ->ignore($this->idDaRota('cronograma'))
             ->whereNull('deleted_at');
+    }
+
+    protected function pontosJaVinculados(): array
+    {
+        $id = $this->idDaRota('cronograma');
+        if ($id === null) {
+            return [];
+        }
+
+        return Cronograma::query()->find($id)?->pontosCaptacao()->allRelatedIds()
+            ->map(fn ($pontoId) => (int) $pontoId)
+            ->all() ?? [];
     }
 }
 

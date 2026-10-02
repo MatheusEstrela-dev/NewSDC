@@ -11,6 +11,7 @@ use App\Modules\Tdap\DTOs\CronogramaDTO;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Vistoria;
+use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,7 @@ class CronogramaService
     public function __construct(
         private readonly OutboxDispatcher $outbox,
         private readonly HistoricoService $historico,
+        private readonly PoliticaPontoCaptacao $politicaPontos,
     ) {}
 
 
@@ -81,6 +83,7 @@ class CronogramaService
                 'lote:id,numero',
                 'municipio:id,nome,uf',
                 'prestador:id,nome,cnpj',
+                'pontosCaptacao',
             ])
             ->withCount('caminhoes')
             // volume_contratado/volume_entregue somam colunas dos caminhoes
@@ -124,6 +127,7 @@ class CronogramaService
             'UF'                     => $c->municipio?->uf,
             'Prestador'              => $c->prestador?->nome,
             'CNPJ'                   => $c->prestador?->cnpj,
+            'Pontos de Captacao'     => $c->pontosCaptacao->pluck('nome')->implode(' | '),
             // Contratado = soma da agua prevista dos caminhoes alocados. Esta
             // coluna trazia `fator` (<= 0,60 em toda a base) e passava a
             // impressao de que o cronograma nao movia agua nenhuma.
@@ -150,7 +154,9 @@ class CronogramaService
                 'municipio:id,nome,uf',
                 'prestador:id,nome,cnpj,email',
                 'user:id,name,email',
-                'pontoCaptacao:id,nome,tipo,municipio_id',
+                // Sem lista de colunas: no BelongsToMany o `id` sem tabela
+                // colide com o `id` do pivot.
+                'pontosCaptacao',
                 'caminhoes.caminhao:id,placa,marca,modelo,capacidade_m3',
                 'comprovantes',
             ])
@@ -167,7 +173,10 @@ class CronogramaService
             $data['user_id'] = Auth::id();
             $data['ativo'] = false;
 
-            return Cronograma::create($data);
+            $cronograma = Cronograma::create($data);
+            $this->sincronizarPontos($cronograma, $dto->ponto_captacao_ids);
+
+            return $cronograma;
         });
     }
 
@@ -180,8 +189,43 @@ class CronogramaService
             }
             $cronograma->update($dto->toArray());
 
+            $mudancas = $this->sincronizarPontos($cronograma, $dto->ponto_captacao_ids);
+            if ($mudancas['attached'] !== [] || $mudancas['detached'] !== []) {
+                $this->historico->registrar(
+                    'cronograma.pontos_alterados',
+                    $cronograma,
+                    'Pontos de captacao alterados.',
+                    ['incluidos' => $mudancas['attached'], 'removidos' => $mudancas['detached']],
+                );
+            }
+
             return $cronograma->fresh();
         });
+    }
+
+    /**
+     * Grava os pontos no pivot com o PMDA de origem de cada um.
+     *
+     * O ponto que ja estava vinculado mantem a origem gravada quando nao consta
+     * mais no PMDA vigente: o vinculo nasceu valido e a origem e historico, nao
+     * estado atual.
+     *
+     * @param  list<int>  $pontoIds
+     * @return array{attached: list<int>, detached: list<int>, updated: list<int>}
+     */
+    private function sincronizarPontos(Cronograma $cronograma, array $pontoIds): array
+    {
+        $origensAtuais = $cronograma->pontosCaptacao()
+            ->pluck('tdap_cronograma_ponto.pmda_plano_id', 'pip_pmda_ponto.id')
+            ->all();
+        $origens = $this->politicaPontos->origens((int) $cronograma->municipio_id, $pontoIds);
+
+        $vinculos = [];
+        foreach ($pontoIds as $pontoId) {
+            $vinculos[$pontoId] = ['pmda_plano_id' => $origens[$pontoId] ?? $origensAtuais[$pontoId] ?? null];
+        }
+
+        return $cronograma->pontosCaptacao()->sync($vinculos);
     }
 
     public function deletar(int $id): bool
@@ -336,6 +380,7 @@ class CronogramaService
                     'agua_prevista'  => (float) $cc->agua_prevista,
                     'num_viagens'    => (int) $cc->num_viagens,
                 ])->toArray();
+            $cronograma->stored_pmda_ponto = $this->snapshotDosPontos($cronograma);
             $cronograma->save();
 
             $fresh = $cronograma->fresh(['prestador', 'municipio', 'ata', 'lote']);
@@ -360,6 +405,17 @@ class CronogramaService
 
             return $fresh;
         });
+    }
+
+    /**
+     * Pontos como estavam na ativacao, com o PMDA que os autorizou (o gravado
+     * no vinculo, nao o vigente hoje: e a origem que justificou o ponto).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function snapshotDosPontos(Cronograma $cronograma): array
+    {
+        return $this->politicaPontos->apresentarVinculados($cronograma->pontosCaptacao()->get());
     }
 
     public function encerrar(int $id, ?string $obs = null): Cronograma

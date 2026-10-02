@@ -80,19 +80,6 @@
           <InputError :message="form.errors.prestador_id" class="mt-2" />
         </div>
         <div>
-          <InputLabel for="ponto_captacao_id" value="Ponto de Captação *" />
-          <select id="ponto_captacao_id" v-model="form.ponto_captacao_id" class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" :class="fieldCls(form.ponto_captacao_id, form.errors.ponto_captacao_id)" required :disabled="!form.municipio_id">
-            <option :value="null">{{ form.municipio_id ? 'Selecione o Ponto de Captação' : 'Selecione o Lote primeiro' }}</option>
-            <option v-for="p in pontosDoMunicipio" :key="p.id" :value="p.id">
-              {{ p.nome }}<span v-if="tipoNome(p.tipo)"> ({{ tipoNome(p.tipo) }})</span>
-            </option>
-          </select>
-          <p v-if="form.municipio_id && pontosDoMunicipio.length === 0" class="mt-1 text-xs text-amber-600">
-            Nenhum ponto de captação cadastrado para este município.
-          </p>
-          <InputError :message="form.errors.ponto_captacao_id" class="mt-2" />
-        </div>
-        <div>
           <InputLabel value="Valor Unitário (auto)" />
           <div class="mt-1 px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 text-sm font-mono text-slate-700 dark:text-slate-300 min-h-[2.5rem]" :class="valorUnitario !== null ? '!border-2 !border-emerald-500/60' : ''">
             <span v-if="valorUnitario !== null">{{ fmtMoeda(valorUnitario) }} / m³</span>
@@ -100,6 +87,27 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!--
+      Pontos de captacao: de onde os caminhoes tiram a agua. Vem do PMDA
+      aprovado do municipio (regra no backend, PoliticaPontoCaptacao) e o
+      cronograma pode usar mais de um.
+    -->
+    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
+      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Pontos de Captação *</h3>
+      <p class="text-xs text-slate-500 mb-4">
+        <template v-if="exigePmda">Pontos ativos do PMDA aprovado do município. Selecione um ou mais.</template>
+        <template v-else>Pontos ativos do município. Selecione um ou mais.</template>
+      </p>
+      <PontosCaptacaoSelector
+        v-model="form.ponto_captacao_ids"
+        :pontos="pontosDoMunicipio"
+        :disabled="!form.municipio_id"
+        :exige-pmda="exigePmda"
+        :pode-ver-pmda="podeVerPmda"
+        :error="erroPontos"
+      />
     </div>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
@@ -211,25 +219,20 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
+import PontosCaptacaoSelector from '@/Components/Organisms/Tdap/PontosCaptacaoSelector.vue';
 
 const props = defineProps({
   form:           { type: Object, required: true },
   atas:           { type: Array, default: () => [] },
   lotes:          { type: Array, default: () => [] },
-  pontosCaptacao: { type: Array, default: () => [] },
+  // Agrupado por municipio e ja filtrado pelo backend: { [municipio_id]: [ponto, ...] }.
+  pontosCaptacao: { type: [Object, Array], default: () => ({}) },
+  exigePmda:      { type: Boolean, default: true },
+  podeVerPmda:    { type: Boolean, default: false },
   submitLabel:    { type: String, default: 'Salvar' },
 });
 
 defineEmits(['submit', 'cancel']);
-
-const TIPOS_PONTO = {
-  1: 'COPASA',
-  2: 'COPANOR',
-  3: 'BARRAGEM',
-  4: 'SAAE/DMAE',
-  5: 'POÇO PÚBLICO',
-  6: 'POÇO PARTICULAR',
-};
 
 // Afordancia visual: vermelho se houver erro de validacao (ao salvar),
 // verde quando preenchido, padrao caso contrario. !important para vencer
@@ -253,8 +256,26 @@ const valorUnitario = computed(() => {
 
 const pontosDoMunicipio = computed(() => {
   if (!props.form.municipio_id) return [];
-  return props.pontosCaptacao.filter(p => Number(p.municipio_id) === Number(props.form.municipio_id));
+  return props.pontosCaptacao[props.form.municipio_id] ?? [];
 });
+
+// A validacao responde no campo (`ponto_captacao_ids`) ou por item
+// (`ponto_captacao_ids.N`, quando um ponto especifico e recusado).
+const erroPontos = computed(() => {
+  const errors = props.form.errors ?? {};
+  if (errors.ponto_captacao_ids) return errors.ponto_captacao_ids;
+  const chave = Object.keys(errors).find(k => k.startsWith('ponto_captacao_ids.'));
+  return chave ? errors[chave] : '';
+});
+
+function limparPontos() {
+  props.form.ponto_captacao_ids = [];
+  if (props.form.errors) {
+    Object.keys(props.form.errors)
+      .filter(k => k.startsWith('ponto_captacao_ids'))
+      .forEach(k => { props.form.errors[k] = undefined; });
+  }
+}
 
 const fatorAuto = computed(() => {
   const c = Number(props.form.consumo_diario || 0);
@@ -284,13 +305,12 @@ function onAtaChange() {
   props.form.lote_id = null;
   props.form.municipio_id = null;
   props.form.prestador_id = null;
-  props.form.ponto_captacao_id = null;
   if (props.form.errors) {
     props.form.errors.lote_id = undefined;
     props.form.errors.municipio_id = undefined;
     props.form.errors.prestador_id = undefined;
-    props.form.errors.ponto_captacao_id = undefined;
   }
+  limparPontos();
 }
 
 function onLoteChange() {
@@ -306,16 +326,12 @@ function onLoteChange() {
     props.form.prestador_id = null;
   }
   // Ponto depende do municipio; limpa para evitar inconsistencia.
-  props.form.ponto_captacao_id = null;
+  limparPontos();
 }
 
 function onMunicipioChange() {
   // Ponto de captacao e por municipio.
-  props.form.ponto_captacao_id = null;
-}
-
-function tipoNome(tipo) {
-  return TIPOS_PONTO[Number(tipo)] ?? '';
+  limparPontos();
 }
 
 function fmtDate(d) {
