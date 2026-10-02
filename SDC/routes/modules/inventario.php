@@ -15,18 +15,18 @@ Route::prefix('inventario')->name('inventario.')->group(function () {
     Route::post('/equipamentos', [EquipamentoController::class, 'store'])
         ->name('equipamentos.store')->middleware('can:inventario.equipamentos.create');
     Route::put('/equipamentos/{equipamento}', [EquipamentoController::class, 'update'])
-        ->name('equipamentos.update')->middleware('can:inventario.equipamentos.edit');
+        ->name('equipamentos.update')->middleware('can:inventario.equipamentos.edit')->whereNumber('equipamento');
     Route::delete('/equipamentos/{equipamento}', [EquipamentoController::class, 'destroy'])
-        ->name('equipamentos.destroy')->middleware('can:inventario.equipamentos.delete');
+        ->name('equipamentos.destroy')->middleware('can:inventario.equipamentos.delete')->whereNumber('equipamento');
 
     Route::get('/estacoes', [EstacaoController::class, 'index'])
         ->name('estacoes.index')->middleware('can:inventario.equipamentos.view');
     Route::post('/estacoes', [EstacaoController::class, 'store'])
         ->name('estacoes.store')->middleware('can:inventario.equipamentos.create');
     Route::put('/estacoes/{estacao}', [EstacaoController::class, 'update'])
-        ->name('estacoes.update')->middleware('can:inventario.equipamentos.edit');
+        ->name('estacoes.update')->middleware('can:inventario.equipamentos.edit')->whereNumber('estacao');
     Route::delete('/estacoes/{estacao}', [EstacaoController::class, 'destroy'])
-        ->name('estacoes.destroy')->middleware('can:inventario.equipamentos.delete');
+        ->name('estacoes.destroy')->middleware('can:inventario.equipamentos.delete')->whereNumber('estacao');
 
     Route::get('/movimentacoes', [MovimentacaoController::class, 'index'])
         ->name('movimentacoes.index')->middleware('can:inventario.emprestimos.view');
