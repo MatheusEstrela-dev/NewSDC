@@ -7,6 +7,7 @@ namespace App\Modules\Inventario\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventario\Models\Estacao;
 use App\Modules\Inventario\Requests\EstacaoRequest;
+use App\Modules\Shared\Support\PadraoBusca;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,10 +23,11 @@ class EstacaoController extends Controller
         ]);
 
         $query = Estacao::query()->with('usuario:id,name')->withCount('equipamentos');
-        if (! empty($filters['search'])) {
+        $padrao = PadraoBusca::contem($filters['search'] ?? null);
+        if ($padrao !== null) {
             $query->where(static fn ($query) => $query
-                ->where('nome', 'ilike', '%'.$filters['search'].'%')
-                ->orWhere('ponto_rede', 'ilike', '%'.$filters['search'].'%'));
+                ->where('nome', 'ilike', $padrao)
+                ->orWhere('ponto_rede', 'ilike', $padrao));
         }
         if (($filters['status'] ?? null) === 'livre') {
             $query->whereNull('user_id');

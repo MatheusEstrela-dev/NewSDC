@@ -10,6 +10,7 @@ use App\Modules\Shared\Support\PadraoBusca;
 /**
  * Busca sob demanda de usuarios por nome para os campos de escolha de pessoa.
  * Substitui o envio da lista inteira (900+ usuarios) junto com a pagina.
+ * So contas ativas.
  */
 final class BuscaUsuarioQuery
 {
@@ -27,6 +28,8 @@ final class BuscaUsuarioQuery
 
         return User::query()
             ->where('name', 'ilike', PadraoBusca::contem($termo))
+            // Conta desativada nao ocupa estacao nem recebe equipamento.
+            ->where('active', true)
             ->orderBy('name')->orderBy('id')
             ->limit(self::LIMITE)
             ->get(['id', 'name'])
