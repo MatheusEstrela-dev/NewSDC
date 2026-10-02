@@ -629,7 +629,11 @@ return [
                 'create' => 'acessos.cadastros.create',
                 'edit' => 'acessos.cadastros.edit',
                 'approve' => 'acessos.cadastros.approve',
-                'directory' => 'acessos.diretorio.manage',
+            ],
+            'Diretorio' => [
+                'view' => 'acessos.diretorio.view',
+                'manage' => 'acessos.diretorio.manage',
+                'reset' => 'acessos.diretorio.reset',
             ],
         ],
         'ESTOQUE' => [
@@ -941,6 +945,10 @@ return [
             'acessos.cadastros.create',
             'acessos.cadastros.edit',
             'acessos.cadastros.approve',
+            // Acessos/AD - consulta, acoes de conta e redefinicao de senha
+            'acessos.diretorio.view',
+            'acessos.diretorio.manage',
+            'acessos.diretorio.reset',
             // Estoque - MVP completo exceto delete
             'estoque.produtos.view',
             'estoque.produtos.create',
@@ -1133,6 +1141,9 @@ return [
             'acessos.cadastros.view',
             'acessos.cadastros.create',
             'acessos.cadastros.edit',
+            // Acessos/AD - consulta e acoes de conta, sem redefinir senha
+            'acessos.diretorio.view',
+            'acessos.diretorio.manage',
             // Estoque - operacao sem delete/aprovacao
             'estoque.produtos.view',
             'estoque.produtos.create',
@@ -1245,6 +1256,8 @@ return [
             'inventario.remanejamentos.create',
             'inventario.remanejamentos.edit',
             'inventario.remanejamentos.seplag',
+            // Acessos/AD - so consulta
+            'acessos.diretorio.view',
             // Estoque - leitura e movimentacao operacional
             'estoque.produtos.view',
             'estoque.lotes.view',
