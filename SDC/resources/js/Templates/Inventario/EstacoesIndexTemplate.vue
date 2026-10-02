@@ -21,7 +21,7 @@
       <Pagination class="mt-4" :pagination="paginacao" @page-change="(p) => $emit('pagina', p)" />
     </ListContainer>
 
-    <EstacaoFormModal :show="formularioAberto" :estacao="selecionada" :usuarios="usuarios" @close="formularioAberto = false" />
+    <EstacaoFormModal :show="formularioAberto" :estacao="selecionada" @close="formularioAberto = false" />
   </div>
 </template>
 
@@ -42,7 +42,6 @@ defineProps({
   paginacao: { type: Object, required: true },
   filtros: { type: Object, required: true },
   pode: { type: Object, required: true },
-  usuarios: { type: Array, default: () => [] },
 });
 defineEmits(['aplicar', 'limpar', 'pagina', 'remover']);
 

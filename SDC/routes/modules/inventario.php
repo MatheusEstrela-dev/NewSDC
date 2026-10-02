@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Inventario\Controllers\BuscaUsuarioController;
 use App\Modules\Inventario\Controllers\InventarioController;
 use App\Modules\Inventario\Controllers\EquipamentoController;
 use App\Modules\Inventario\Controllers\EstacaoController;
@@ -27,6 +28,11 @@ Route::prefix('inventario')->name('inventario.')->group(function () {
         ->name('estacoes.update')->middleware('can:inventario.equipamentos.edit')->whereNumber('estacao');
     Route::delete('/estacoes/{estacao}', [EstacaoController::class, 'destroy'])
         ->name('estacoes.destroy')->middleware('can:inventario.equipamentos.delete')->whereNumber('estacao');
+
+    // Busca sob demanda do campo de usuario. A permissao (criar OU editar) fica
+    // no BuscaUsuarioRequest, porque o middleware `can:` aceita uma so.
+    Route::get('/usuarios/buscar', BuscaUsuarioController::class)
+        ->name('usuarios.buscar')->middleware('throttle:inventario-busca-usuario');
 
     Route::get('/movimentacoes', [MovimentacaoController::class, 'index'])
         ->name('movimentacoes.index')->middleware('can:inventario.emprestimos.view');

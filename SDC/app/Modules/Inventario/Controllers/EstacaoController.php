@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Inventario\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Modules\Inventario\Models\Estacao;
 use App\Modules\Inventario\Requests\EstacaoRequest;
 use Illuminate\Http\RedirectResponse;
@@ -36,8 +35,9 @@ class EstacaoController extends Controller
 
         return Inertia::render('Inventario/EstacoesIndex', [
             'estacoes' => $query->orderBy('nome')->paginate(15)->withQueryString(),
+            // Sem a lista de usuarios: o campo do formulario busca sob demanda e o
+            // ocupante atual (id e nome) ja vem em `usuario` de cada estacao.
             'filters' => $filters,
-            'usuarios' => User::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

@@ -5,7 +5,6 @@
     :paginacao="estacoes"
     :filtros="filtros"
     :pode="pode"
-    :usuarios="usuarios"
     @aplicar="aplicar(filtros)"
     @limpar="limpar"
     @pagina="paginar"
@@ -26,7 +25,6 @@ defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
   estacoes: { type: Object, required: true },
   filters: { type: [Object, Array], default: () => ({}) },
-  usuarios: { type: Array, default: () => [] },
 });
 
 const { can } = usePermissions();

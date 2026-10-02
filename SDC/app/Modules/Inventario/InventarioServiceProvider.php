@@ -24,6 +24,17 @@ class InventarioServiceProvider extends ServiceProvider
     {
         Remanejamento::observe(RemanejamentoTempoRealObserver::class);
         $this->registrarLimiteSeplag();
+        $this->registrarLimiteBuscaUsuario();
+    }
+
+    /**
+     * Balde proprio por usuario, pelo mesmo motivo do SEPLAG: o throttle cru
+     * dividiria o contador com o polling. 60/min cobre a digitacao com debounce.
+     */
+    private function registrarLimiteBuscaUsuario(): void
+    {
+        RateLimiter::for('inventario-busca-usuario', static fn (Request $request) => Limit::perMinute(60)
+            ->by('inventario-busca-usuario|'.($request->user()?->id ?? $request->ip())));
     }
 
     /**
