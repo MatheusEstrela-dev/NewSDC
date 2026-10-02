@@ -425,42 +425,30 @@
           Permissionamento
         </NavItem>
 
-        <NavItem
-          v-if="canSeeInventario && _routes.hasInventario"
-          :href="route('inventario.index')"
-          :active="isRouteActive('inventario.*')"
-          icon="inventory"
-          :collapsed="isCollapsed"
+        <!-- INVENTARIO - drill-down (abre submenu como nova seccao) -->
+        <button
+          v-if="canSeeInventarioGroup"
+          @click="openSubmenu('inventario')"
+          class="nav-group-toggle nav-drilldown"
+          :class="{ 'is-active-route': isRouteActive('inventario.*') || isRouteActive('acessos.*') }"
+          :title="isCollapsed ? 'Inventário' : ''"
         >
-          Inventario
-        </NavItem>
-        <NavItem
-          v-if="canSeeInventario"
-          href="/inventario/estacoes"
-          :active="isRouteActive('inventario.estacoes.*')"
-          icon="inventory"
-          :collapsed="isCollapsed"
-        >
-          Estações de trabalho
-        </NavItem>
-        <NavItem
-          v-if="canSeeMovimentacoes"
-          href="/inventario/movimentacoes"
-          :active="isRouteActive('inventario.movimentacoes.*')"
-          icon="inventory"
-          :collapsed="isCollapsed"
-        >
-          Movimentações
-        </NavItem>
-        <NavItem
-          v-if="canSeeAcessos"
-          href="/acessos"
-          :active="isRouteActive('acessos.*')"
-          icon="lock"
-          :collapsed="isCollapsed"
-        >
-          Acessos
-        </NavItem>
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 8.25l-9-5.25-9 5.25 9 5.25 9-5.25z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8.25v7.5l9 5.25 9-5.25v-7.5" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13.5V21" />
+          </svg>
+          <span v-show="!isCollapsed">Inventário</span>
+          <svg
+            v-show="!isCollapsed"
+            class="nav-arrow nav-arrow-drill"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
         <NavItem
           v-if="canSeeLogs"
@@ -853,6 +841,69 @@
       </div>
     </nav>
 
+    <!-- SUBMENU VIEW: INVENTARIO -->
+    <nav
+      v-if="canSeeInventarioGroup"
+      class="sidebar-nav sidebar-view sidebar-view-submenu"
+      :class="{ 'is-active': activeSubmenu === 'inventario' }"
+      :inert="activeSubmenu !== 'inventario'"
+    >
+      <button
+        type="button"
+        class="submenu-back"
+        @click="closeSubmenu"
+        v-show="!isCollapsed"
+      >
+        <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="submenu-back-title">{{ submenuTitle || 'Inventário' }}</span>
+      </button>
+
+      <div class="nav-section">
+        <NavItem
+          v-if="canSeeInventarioEquipamentos"
+          :href="route('inventario.index')"
+          :active="isRouteActive('inventario.index')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Equipamentos
+        </NavItem>
+        <NavItem
+          v-if="canSeeInventario"
+          href="/inventario/estacoes"
+          :active="isRouteActive('inventario.estacoes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Estações de trabalho
+        </NavItem>
+        <NavItem
+          v-if="canSeeMovimentacoes"
+          href="/inventario/movimentacoes"
+          :active="isRouteActive('inventario.movimentacoes.*') || isRouteActive('inventario.remanejamentos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Movimentações
+        </NavItem>
+        <NavItem
+          v-if="canSeeAcessos"
+          href="/acessos"
+          :active="isRouteActive('acessos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Acessos
+        </NavItem>
+      </div>
+    </nav>
+
     </div><!-- /.sidebar-views -->
 
     <!-- Gradiente inferior -->
@@ -1010,6 +1061,14 @@ const _activeRoutes = computed(() => {
     'cisternas.*': route().current('cisternas.*'),
     'pmda.*': route().current('pmda.*'),
     'inventario.*': route().current('inventario.*'),
+    // isRouteActive so consulta ESTE mapa: sem as linhas abaixo os filhos do
+    // submenu Inventario nunca acendiam ('inventario.*' acendia todos juntos).
+    // Remanejamentos nasce da tela de Movimentacoes e acende aquele item.
+    'inventario.index': route().current('inventario.index'),
+    'inventario.estacoes.*': route().current('inventario.estacoes.*'),
+    'inventario.movimentacoes.*': route().current('inventario.movimentacoes.*'),
+    'inventario.remanejamentos.*': route().current('inventario.remanejamentos.*'),
+    'acessos.*': route().current('acessos.*'),
     'estoque.*': route().current('estoque.*'),
     'estoque.index': route().current('estoque.index'),
     'estoque.produtos.*': route().current('estoque.produtos.*'),
@@ -1170,6 +1229,17 @@ const canSeeInventario = computed(() => {
 const canSeeMovimentacoes = computed(() => hasPermission(['inventario.emprestimos.view']));
 const canSeeAcessos = computed(() => hasPermission(['acessos.cadastros.view']));
 
+// Grupo Inventario - o botao do grupo so aparece se algum dos filhos abaixo
+// for visivel; cada gate reproduz exatamente o v-if que o item solto tinha
+// antes da fusao em grupo (Acessos entra no grupo com o proprio gate).
+const canSeeInventarioEquipamentos = computed(() => {
+  return canSeeInventario.value && _routes.hasInventario;
+});
+
+const canSeeInventarioGroup = computed(() => {
+  return canSeeInventario.value || canSeeMovimentacoes.value || canSeeAcessos.value;
+});
+
 const canSeeEstoque = computed(() => {
   return hasPermission([
     'estoque.produtos.view',
@@ -1253,6 +1323,8 @@ const submenuPorRota = {
   'ajuda-humanitaria.': 'ajuda-humanitaria',
   'demandas.': 'demandas',
   'admin.demandas.': 'demandas',
+  'inventario.': 'inventario',
+  'acessos.': 'inventario',
 };
 
 function submenuDaRotaAtual() {
@@ -1274,6 +1346,7 @@ const submenuTitles = {
   estoque: 'Estoque',
   'ajuda-humanitaria': 'Ajuda Humanitaria',
   demandas: 'Demandas',
+  inventario: 'Inventário',
 };
 
 const submenuTitle = computed(() => submenuTitles[activeSubmenu.value] ?? '');
