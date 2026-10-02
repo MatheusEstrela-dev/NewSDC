@@ -26,6 +26,7 @@
 </template>
 
 <script setup>
+import { watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import Modal from '@/Components/Modal.vue';
@@ -33,12 +34,17 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import CadastroAcessoFields from '@/Components/Organisms/Acessos/CadastroAcessoFields.vue';
 import { dadosFormularioAcesso } from '@/Support/acessos';
 
-defineProps({
+const props = defineProps({
   show: { type: Boolean, default: false },
 });
 const emit = defineEmits(['close']);
 
 const form = useForm(dadosFormularioAcesso());
+
+// Cada abertura limpa os erros de um envio anterior que falhou.
+watch(() => props.show, (aberto) => {
+  if (aberto) form.clearErrors();
+});
 
 function fechar() {
   emit('close');

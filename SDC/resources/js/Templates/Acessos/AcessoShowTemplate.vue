@@ -33,8 +33,8 @@
     </div>
 
     <ConfirmDialog
-      :is-open="Boolean(confirmacao)"
-      v-bind="confirmacao?.dialogo ?? DIALOGO_VAZIO"
+      :is-open="dialogoAberto"
+      v-bind="dialogo"
       :loading="processando"
       @confirm="confirmar"
       @cancel="cancelar"
@@ -63,45 +63,53 @@ const props = defineProps({
 });
 defineEmits(['voltar']);
 
-// O ConfirmDialog exige title/message mesmo fechado.
-const DIALOGO_VAZIO = { title: '', message: '' };
-
-// { dialogo, url, dados } da acao aguardando confirmacao; nulo = nada pendente.
-const confirmacao = ref(null);
+// Conteudo do ultimo dialogo aberto. Fica preenchido depois de fechar para o
+// titulo e o texto nao sumirem durante a transicao de saida; quem fecha e o
+// dialogoAberto. O ConfirmDialog exige title/message mesmo fechado.
+const dialogo = ref({ title: '', message: '' });
+const dialogoAberto = ref(false);
+// { url, dados } da acao aguardando confirmacao.
+const acaoPendente = ref(null);
 const processando = ref(false);
 
+function abrirConfirmacao(conteudo, url, dados) {
+  dialogo.value = conteudo;
+  acaoPendente.value = { url, dados };
+  dialogoAberto.value = true;
+}
+
 function pedirAprovacao() {
-  confirmacao.value = {
-    dialogo: { title: 'Aprovar cadastro', message: 'Aprovar este cadastro?', variant: 'success', confirmText: 'Aprovar' },
-    url: `/acessos/${props.cadastro.id}/aprovar`,
-    dados: {},
-  };
+  abrirConfirmacao(
+    { title: 'Aprovar cadastro', message: 'Aprovar este cadastro?', variant: 'success', confirmText: 'Aprovar' },
+    `/acessos/${props.cadastro.id}/aprovar`,
+    {},
+  );
 }
 
 function pedirStatus(status) {
-  confirmacao.value = {
-    dialogo: {
+  abrirConfirmacao(
+    {
       title: 'Alterar status',
       message: `Alterar status para ${rotuloStatusAcesso(status)}?`,
       variant: status === 'ativo' ? 'info' : 'warning',
     },
-    url: `/acessos/${props.cadastro.id}/status`,
-    dados: { status },
-  };
+    `/acessos/${props.cadastro.id}/status`,
+    { status },
+  );
 }
 
 function cancelar() {
-  if (!processando.value) confirmacao.value = null;
+  if (!processando.value) dialogoAberto.value = false;
 }
 
 function confirmar() {
-  if (processando.value || !confirmacao.value) return;
-  const { url, dados } = confirmacao.value;
+  if (processando.value || !dialogoAberto.value) return;
+  const { url, dados } = acaoPendente.value;
   processando.value = true;
   router.post(url, dados, {
     onFinish: () => {
       processando.value = false;
-      confirmacao.value = null;
+      dialogoAberto.value = false;
     },
   });
 }
