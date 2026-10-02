@@ -17,14 +17,14 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Str;
 use Throwable;
 
 /**
  * Chamada ao diretorio corporativo fora da requisicao, pela porta
  * DiretorioCorporativo: resolve a conta pelo login e age sobre a referencia
  * recem-lida. Ponte ate a automacao passar pelo caso de uso de Acessos (que
- * traz guardas de escopo e entrega da senha). Resposta do AD nunca vai para
+ * traz guardas de escopo e entrega da senha); ate la `resetar` e recusado
+ * sem chamada ao diretorio. Resposta do AD nunca vai para
  * historico ou log: so o CodigoErroDiretorio.
  *
  * Sob QUEUE_CONNECTION=sync o SyncQueue chama fail() (que chama failed())
@@ -38,6 +38,10 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+
+    // Sem a entrega com leitura unica a senha nova nao chegaria a ninguem: a
+    // ponte recusa o reset antes de tocar no diretorio.
+    private const RESET_INDISPONIVEL = 'Redefinição de senha pela demanda ainda não disponível.';
 
     public int $timeout = 30;
 
@@ -61,6 +65,13 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
 
     public function handle(DiretorioCorporativo $diretorio, HistoricoDemanda $historico): void
     {
+        if ($this->acao === 'resetar') {
+            // config_ausente e definitiva: falha sem reenfileirar e sem chamada ao AD
+            $this->fail(new DiretorioIndisponivel(CodigoErroDiretorio::CONFIG_AUSENTE));
+
+            return;
+        }
+
         try {
             $conta = $diretorio->consultar($this->login)
                 ?? throw new DiretorioRecusou(CodigoErroDiretorio::CONTA_INEXISTENTE);
@@ -101,13 +112,6 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
         match ($this->acao) {
             'desbloquear' => $diretorio->desbloquear($conta, $this->operationId),
             'ativar' => $diretorio->habilitar($conta, $this->operationId),
-            // senha so na memoria do job, com troca obrigatoria no proximo logon
-            'resetar' => $diretorio->redefinirSenha(
-                $conta,
-                Str::password(max(14, (int) config('acessos.diretorio.senha_tamanho', 16))),
-                true,
-                $this->operationId,
-            ),
         };
     }
 
@@ -117,6 +121,9 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
      */
     private function descreverFalha(Throwable $erro): string
     {
+        if ($this->acao === 'resetar' && $erro instanceof DiretorioIndisponivel && $erro->codigo() === CodigoErroDiretorio::CONFIG_AUSENTE) {
+            return self::RESET_INDISPONIVEL;
+        }
         if ($erro instanceof DiretorioRecusou || $erro instanceof DiretorioIndisponivel) {
             return $erro->codigo()->mensagem();
         }
