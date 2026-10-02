@@ -1,5 +1,5 @@
 <template>
-  <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
+  <SectionCard>
     <h2 class="mb-4 text-lg font-bold text-slate-900 dark:text-slate-100">Histórico</h2>
     <ol v-if="eventos.length" class="space-y-3">
       <li v-for="evento in eventos" :key="evento.id" class="border-l-2 border-slate-200 pl-3 dark:border-slate-700">
@@ -8,10 +8,11 @@
       </li>
     </ol>
     <p v-else class="text-sm text-slate-500 dark:text-slate-400">Nenhum evento registrado.</p>
-  </section>
+  </SectionCard>
 </template>
 
 <script setup>
+import SectionCard from '@/Components/Atoms/Card/SectionCard.vue';
 import { formatarDataHora } from '@/utils/dateFormatter';
 import { rotuloAcaoAuditoria } from '@/Support/acessos';
 

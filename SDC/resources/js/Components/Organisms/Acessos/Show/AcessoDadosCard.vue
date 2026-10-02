@@ -1,5 +1,5 @@
 <template>
-  <section :class="CARTAO">
+  <SectionCard>
     <h2 class="mb-4 text-lg font-bold text-slate-900 dark:text-slate-100">Dados do cadastro</h2>
 
     <form v-if="podeEditar" class="space-y-6" @submit.prevent="salvar">
@@ -16,10 +16,11 @@
         <dd class="break-words text-slate-900 dark:text-slate-100">{{ cadastro[campo.key] || '—' }}</dd>
       </div>
     </dl>
-  </section>
+  </SectionCard>
 </template>
 
 <script setup>
+import SectionCard from '@/Components/Atoms/Card/SectionCard.vue';
 import { useForm } from '@inertiajs/vue3';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CadastroAcessoFields from '@/Components/Organisms/Acessos/CadastroAcessoFields.vue';
@@ -29,8 +30,6 @@ const props = defineProps({
   cadastro: { type: Object, required: true },
   podeEditar: { type: Boolean, default: false },
 });
-
-const CARTAO = 'rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60';
 
 const form = useForm(dadosFormularioAcesso(props.cadastro));
 

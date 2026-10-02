@@ -1,17 +1,7 @@
 <template>
   <Modal :show="show" max-width="lg" @close="fechar">
     <div class="p-4 sm:p-6">
-      <div class="flex items-center justify-between gap-3">
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Novo empréstimo</h3>
-        <button
-          type="button"
-          class="text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
-          aria-label="Fechar"
-          @click="fechar"
-        >
-          <XMarkIcon class="h-5 w-5" />
-        </button>
-      </div>
+      <ModalHeader title="Novo empréstimo" @close="fechar" />
 
       <form class="mt-4" @submit.prevent="salvar">
         <FormSection :cols="1">
@@ -36,8 +26,8 @@
 import { computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
-import { XMarkIcon } from '@heroicons/vue/24/outline';
 import Modal from '@/Components/Modal.vue';
+import ModalHeader from '@/Components/Molecules/Modal/ModalHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import FormSection from '@/Components/Organisms/FormSection.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
