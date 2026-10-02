@@ -8,7 +8,7 @@
         <td :class="td"><span class="block max-w-[12rem] truncate" :title="item.usuario_destino?.name">{{ item.usuario_destino?.name ?? '—' }}</span></td>
         <td :class="td"><StatusRemanejamentoBadge :status="item.status" :label="rotuloStatus(item.status)" /></td>
         <td class="px-3 py-2 text-right">
-          <Button v-if="podeDevolver && item.status === 'ativo'" variant="success" size="sm" @click="$emit('devolver', item)">Devolver</Button>
+          <Button v-if="podeDevolver && item.status === 'ativo'" :variant="ActionVariants.finalize" size="sm" @click="$emit('devolver', item)">Devolver</Button>
         </td>
       </tr>
     </template>
@@ -23,7 +23,7 @@
       </div>
       <p class="mt-2 truncate text-xs text-slate-600 dark:text-slate-300" :title="item.usuario_destino?.name">Com: {{ item.usuario_destino?.name ?? '—' }}</p>
       <div v-if="podeDevolver && item.status === 'ativo'" class="mt-3 flex justify-end">
-        <Button variant="success" size="sm" @click="$emit('devolver', item)">Devolver</Button>
+        <Button :variant="ActionVariants.finalize" size="sm" @click="$emit('devolver', item)">Devolver</Button>
       </div>
     </template>
   </ListaResponsiva>
@@ -31,6 +31,7 @@
 
 <script setup>
 import Button from '@/Components/Atoms/Button/Button.vue';
+import { ActionVariants } from '@/Components/Atoms/Button/ActionButton.vue';
 import ListaResponsiva from '@/Components/Molecules/List/ListaResponsiva.vue';
 import StatusRemanejamentoBadge from '@/Components/Atoms/Inventario/StatusRemanejamentoBadge.vue';
 import { formatarDataHora } from '@/utils/dateFormatter';
@@ -41,6 +42,7 @@ defineProps({
 });
 defineEmits(['devolver']);
 
+// Devolver encerra o emprestimo: e o `finalize` da convencao de acoes.
 // A avulsa chega crua do model (sem status_label), entao o rotulo sai daqui.
 const ROTULO = { ativo: 'Ativo', devolvido: 'Devolvido' };
 const rotuloStatus = (status) => ROTULO[status] ?? status;

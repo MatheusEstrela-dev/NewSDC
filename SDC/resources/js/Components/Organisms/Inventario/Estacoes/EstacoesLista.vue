@@ -12,7 +12,7 @@
             <ButtonIcon
               v-if="pode.editar"
               :icon="PencilSquareIcon"
-              variant="primary"
+              :variant="ActionIconVariants.edit"
               size="sm"
               title="Editar estação"
               aria-label="Editar estação"
@@ -21,7 +21,7 @@
             <ButtonIcon
               v-if="pode.remover"
               :icon="TrashIcon"
-              variant="danger"
+              :variant="ActionIconVariants.delete"
               size="sm"
               title="Remover estação"
               aria-label="Remover estação"
@@ -44,10 +44,10 @@
       <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Equipamentos: {{ item.equipamentos_count }}</p>
       <!-- Rotulo visivel e alvo de 40px: no toque o title nao aparece. -->
       <div v-if="temAcoes" class="mt-3 grid grid-cols-2 gap-2">
-        <Button v-if="pode.editar" variant="primary" size="md" :icon="PencilSquareIcon" class="min-h-10 w-full" @click="$emit('editar', item)">
+        <Button v-if="pode.editar" :variant="ActionVariants.edit" size="md" :icon="PencilSquareIcon" class="min-h-10 w-full" @click="$emit('editar', item)">
           Editar
         </Button>
-        <Button v-if="pode.remover" variant="danger" size="md" :icon="TrashIcon" class="min-h-10 w-full" @click="$emit('remover', item)">
+        <Button v-if="pode.remover" :variant="ActionVariants.delete" size="md" :icon="TrashIcon" class="min-h-10 w-full" @click="$emit('remover', item)">
           Remover
         </Button>
       </div>
@@ -61,6 +61,7 @@ import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
+import { ActionIconVariants, ActionVariants } from '@/Components/Atoms/Button/ActionButton.vue';
 import ListaResponsiva from '@/Components/Molecules/List/ListaResponsiva.vue';
 
 const props = defineProps({
