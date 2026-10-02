@@ -5,22 +5,27 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Jobs;
 
 use App\Modules\Acessos\Contracts\DiretorioCorporativo;
+use App\Modules\Acessos\DTOs\ReferenciaConta;
+use App\Modules\Acessos\Enums\CodigoErroDiretorio;
+use App\Modules\Acessos\Exceptions\DiretorioIndisponivel;
+use App\Modules\Acessos\Exceptions\DiretorioRecusou;
 use App\Modules\Demandas\Enums\AcaoHistoricoDemanda;
 use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Demandas\Services\HistoricoDemanda;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Chamada ao diretorio corporativo fora da requisicao. Idempotente pelo
- * operationId (Idempotency-Key no adaptador HTTP): retry nao desbloqueia duas
- * vezes. Resposta do AD nunca vai para historico ou log -- reset devolve senha.
+ * Chamada ao diretorio corporativo fora da requisicao, pela porta
+ * DiretorioCorporativo: resolve a conta pelo login e age sobre a referencia
+ * recem-lida. Ponte ate a automacao passar pelo caso de uso de Acessos (que
+ * traz guardas de escopo e entrega da senha). Resposta do AD nunca vai para
+ * historico ou log: so o CodigoErroDiretorio.
  *
  * Sob QUEUE_CONNECTION=sync o SyncQueue chama fail() (que chama failed())
  * antes de relancar a excecao para quem despachou o job; o historico ja tem
@@ -57,21 +62,15 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
     public function handle(DiretorioCorporativo $diretorio, HistoricoDemanda $historico): void
     {
         try {
-            match ($this->acao) {
-                'desbloquear' => $diretorio->solicitarDesbloqueio($this->login, $this->operationId),
-                'ativar' => $diretorio->solicitarAtivacao($this->login, $this->operationId),
-                'resetar' => $diretorio->solicitarReset($this->login, $this->operationId),
-            };
-        } catch (RequestException $erro) {
-            // 4xx e erro do cliente (login invalido/inexistente etc): tentar de novo
-            // nao muda o resultado, entao falha direto em vez de reenfileirar.
-            if ($erro->response->status() >= 400 && $erro->response->status() < 500) {
-                $this->fail($erro);
+            $conta = $diretorio->consultar($this->login)
+                ?? throw new DiretorioRecusou(CodigoErroDiretorio::CONTA_INEXISTENTE);
+            $this->executar($diretorio, $conta->referencia());
+        } catch (DiretorioRecusou $erro) {
+            // Recusa definitiva (conta inexistente, sem permissao etc): tentar
+            // de novo nao muda o resultado, entao falha direto sem reenfileirar.
+            $this->fail($erro);
 
-                return;
-            }
-
-            throw $erro;
+            return;
         }
 
         $demanda = Demanda::find($this->demandaId);
@@ -97,21 +96,29 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
         );
     }
 
+    private function executar(DiretorioCorporativo $diretorio, ReferenciaConta $conta): void
+    {
+        match ($this->acao) {
+            'desbloquear' => $diretorio->desbloquear($conta, $this->operationId),
+            'ativar' => $diretorio->habilitar($conta, $this->operationId),
+            // senha so na memoria do job, com troca obrigatoria no proximo logon
+            'resetar' => $diretorio->redefinirSenha(
+                $conta,
+                Str::password(max(14, (int) config('acessos.diretorio.senha_tamanho', 16))),
+                true,
+                $this->operationId,
+            ),
+        };
+    }
+
     /**
-     * Descricao segura da falha para o historico. A mensagem de excecao do
-     * cliente HTTP (getMessage) embute um resumo do corpo da resposta do
-     * diretorio, que pode conter dado de conta/credencial -- por isso nunca
-     * persistimos $erro->getMessage() em lugar nenhum, so fatos seguros
-     * (status HTTP, tipo de falha).
+     * Descricao segura da falha para o historico: so o texto fixo do codigo
+     * de erro do diretorio, nunca a mensagem de uma excecao qualquer.
      */
     private function descreverFalha(Throwable $erro): string
     {
-        if ($erro instanceof RequestException) {
-            return sprintf('diretório respondeu HTTP %d', $erro->response->status());
-        }
-
-        if ($erro instanceof ConnectionException) {
-            return 'diretório indisponível';
+        if ($erro instanceof DiretorioRecusou || $erro instanceof DiretorioIndisponivel) {
+            return $erro->codigo()->mensagem();
         }
 
         return 'erro ao falar com o diretório ('.class_basename($erro).')';
