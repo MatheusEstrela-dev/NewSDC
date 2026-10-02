@@ -3,7 +3,7 @@
     <PageHeader
       :title="editando ? 'Editar remanejamento' : 'Novo remanejamento'"
       description="Pessoas que mudam de estação levando seus equipamentos"
-      :icon="ArrowsRightLeftIcon"
+      :icon-image="moduleIcon('inventario')"
       variant="gradient"
       :espaco-inferior="false"
     >
@@ -60,8 +60,9 @@
 </template>
 
 <script setup>
+import { moduleIcon } from '@/Support/moduleIcons';
 import { computed, nextTick, ref } from 'vue';
-import { ArrowLeftIcon, ArrowsRightLeftIcon, PlusIcon } from '@heroicons/vue/24/outline';
+import { ArrowLeftIcon, PlusIcon } from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';

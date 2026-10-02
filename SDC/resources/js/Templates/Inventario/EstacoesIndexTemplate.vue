@@ -3,7 +3,7 @@
     <PageHeader
       title="Estações de trabalho"
       description="Locais, ocupação e ponto de rede"
-      :icon="ComputerDesktopIcon"
+      :icon-image="moduleIcon('inventario')"
       variant="gradient"
       :espaco-inferior="false"
     >
@@ -26,6 +26,7 @@
 </template>
 
 <script setup>
+import { moduleIcon } from '@/Support/moduleIcons';
 import { ref } from 'vue';
 import { ComputerDesktopIcon, PlusIcon } from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';

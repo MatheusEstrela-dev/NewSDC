@@ -3,7 +3,7 @@
     <PageHeader
       title="Inventario"
       description="Controle inicial de equipamentos, patrimonio e emprestimos"
-      :icon="ArchiveBoxIcon"
+      :icon-image="moduleIcon('inventario')"
       variant="gradient"
     >
       <template #actions>
@@ -62,6 +62,7 @@
 </template>
 
 <script setup>
+import { moduleIcon } from '@/Support/moduleIcons';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import InventarioFiltersSection from '@/Components/Organisms/Inventario/InventarioFiltersSection.vue';
 import InventarioGrid from '@/Components/Organisms/Inventario/InventarioGrid.vue';
@@ -71,7 +72,6 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import { useMobile } from '@/Composables/useMobile';
-import { ArchiveBoxIcon } from '@heroicons/vue/24/outline';
 import { ref, watch } from 'vue';
 
 const props = defineProps({

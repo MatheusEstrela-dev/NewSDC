@@ -21,13 +21,14 @@ import mountains from '../../images/modulos/mountains.svg?url';
 import notification from '../../images/modulos/notification.png?url';
 import user from '../../images/modulos/user.png?url';
 import trofeu from '../../images/modulos/trofeu.png?url';
+import inventario from '../../images/modulos/inventario.png?url';
 
 // Catalogo bruto (todas as artes disponiveis).
 export const ICONS = {
   apartment, box, chart, cistern, drop, file, house, hydrant,
   'office-building': officeBuilding, shield, 'tank-truck': tankTruck,
   'heart-attack': heartAttack, 'help-desk': helpDesk, bookshelf, certificate, clock, mountains,
-  notification, trofeu,
+  notification, trofeu, inventario,
 };
 
 // Mapa modulo -> icone (confirmado pelo usuario).
@@ -51,6 +52,8 @@ export const MODULE_ICONS = {
   pae: mountains,
   notificacoes: notification,
   permissionamento: user,
+  inventario,
+  acessos: inventario,
 };
 
 /** Retorna a URL do icone do modulo (ou null se nao mapeado). */
