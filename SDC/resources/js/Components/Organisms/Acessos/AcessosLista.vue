@@ -1,14 +1,14 @@
 <template>
-  <ListaResponsiva :itens="cadastros" :colunas="COLUNAS" rotulo-acoes="Ação" :vazio="VAZIO">
+  <ListaResponsiva :itens="cadastros" :colunas="COLUNAS" rotulo-acoes="Ação" acoes-fixas :vazio="VAZIO">
     <template #linha="{ item, td, tdForte }">
       <tr class="table-row-solid transition-colors">
-        <td :class="tdForte"><span class="block max-w-[16rem] truncate" :title="item.nome">{{ item.nome }}</span></td>
-        <td :class="td"><span class="block max-w-[10rem] truncate" :title="item.login_ad">{{ item.login_ad || '—' }}</span></td>
+        <td :class="tdForte"><span class="block max-w-[14rem] truncate" :title="item.nome">{{ item.nome }}</span></td>
+        <td :class="td"><span class="block max-w-[8rem] truncate" :title="item.login_ad">{{ item.login_ad || '—' }}</span></td>
         <td :class="td">•••{{ item.cpf_final }}</td>
-        <td :class="td"><span class="block max-w-[12rem] truncate" :title="item.setor">{{ item.setor || '—' }}</span></td>
-        <td :class="td"><span class="block max-w-[12rem] truncate" :title="item.cargo">{{ item.cargo || '—' }}</span></td>
+        <td :class="td"><span class="block max-w-[8rem] truncate" :title="item.setor">{{ item.setor || '—' }}</span></td>
+        <td :class="td"><span class="block max-w-[8rem] truncate" :title="item.cargo">{{ item.cargo || '—' }}</span></td>
         <td :class="td"><StatusAcessoBadge :status="item.status" /></td>
-        <td class="px-3 py-2 text-right">
+        <td class="table-actions-cell px-3 py-2 text-right">
           <Button :href="`/acessos/${item.id}`" variant="outline" size="sm" :title="`Abrir cadastro de ${item.nome}`">Abrir</Button>
         </td>
       </tr>
