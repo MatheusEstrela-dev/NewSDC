@@ -519,6 +519,8 @@ services:
   # --------------------------------------------------------------------------
   queue_diretorio:
     image: newsdc-swoole-dev:latest
+    # Opt-in ate a conexao `diretorio` existir (Task 5) e a imagem ter ext-ldap.
+    profiles: ["diretorio"]
     container_name: newsdc_homolog_queue_diretorio
     restart: unless-stopped
     mem_limit: 256m
@@ -526,7 +528,7 @@ services:
     command:
       - "sh"
       - "-c"
-      - "php artisan queue:work diretorio --queue=diretorio --sleep=3 --tries=3 --timeout=60"
+      - "php artisan queue:work diretorio --queue=diretorio --sleep=3 --tries=3 --timeout=60 --max-time=3600 --max-jobs=500"
     environment:
       <<: [*homolog-worker-env, *diretorio-env]
       APP_NAME: "SDC Homologacao Queue Diretorio"
@@ -549,7 +551,7 @@ services:
         condition: service_healthy
 
   # --------------------------------------------------------------------------
-  # Scheduler. Homolog nao tinha nenhum:ranking:materializar-periodos,
+  # Scheduler. Homolog nao tinha nenhum: ranking:materializar-periodos,
   # ranking:reconcile e ranking:snapshot nunca rodavam, e o despacho do outbox
   # nao existia em ambiente nenhum. E a peca que faz o placar se atualizar
   # sozinho - sem ela a "Atualizacao do saldo" congela na ultima projecao.
