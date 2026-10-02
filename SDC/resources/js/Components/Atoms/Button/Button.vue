@@ -1,7 +1,9 @@
 <template>
-  <button
-    :type="type"
-    :disabled="disabled || loading"
+  <!-- Com href vira link Inertia (navegacao) com a mesma aparencia; sem href e o <button> de sempre.
+       No link o clique e do Inertia, que sobrescreve o onClick: o evento click nao e emitido. -->
+  <component
+    :is="href ? Link : 'button'"
+    v-bind="atributosDoElemento"
     :class="buttonClasses"
     @click="$emit('click', $event)"
   >
@@ -14,11 +16,12 @@
     <component v-if="icon && !loading && iconPosition === 'left'" :is="icon" :class="iconClasses" />
     <slot />
     <component v-if="icon && !loading && iconPosition === 'right'" :is="icon" :class="iconClasses" />
-  </button>
+  </component>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
   variant: {
@@ -56,9 +59,18 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  href: {
+    type: String,
+    default: null,
+  },
 });
 
 defineEmits(['click']);
+
+// type e disabled so existem no <button>; no link vai so o destino.
+const atributosDoElemento = computed(() => (props.href
+  ? { href: props.href }
+  : { type: props.type, disabled: props.disabled || props.loading }));
 
 const variantClasses = {
   primary: 'bg-blue-600 hover:bg-blue-500 text-white',

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Demandas\Support;
+namespace App\Modules\Shared\Support;
 
 /**
- * Guarda unica contra formula injection nos exports CSV do modulo.
+ * Guarda unica contra formula injection em exports (CSV de Demandas, XLSX do Inventario).
  *
  * Um valor livre de cadastro (assunto, titulo, protocolo) que comece com
  * =, +, -, @ (ignorando espacos a esquerda) e interpretado como formula por

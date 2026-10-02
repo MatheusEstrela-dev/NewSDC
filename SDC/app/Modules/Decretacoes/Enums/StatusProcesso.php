@@ -16,6 +16,7 @@ enum StatusProcesso: string
     case RECONHECIDO_ESTADO_AG_UNIAO     = 'Reconhecido pelo Estado / Aguardando analise da Uniao';
     case RECONHECIDO_ESTADO_E_UNIAO      = 'Reconhecido pelo Estado e pela Uniao';
     case ENVIADO_PUBLICACAO              = 'Enviado para Publicacao';
+    case SOLICITAR_EXCLUSAO_MUNICIPIO    = 'Solicitar exclusao do municipio';
     case ENVIO_DIRETO_UNIAO              = 'Envio Direto para Uniao';
     case RECONHECIDO_SOMENTE_UNIAO       = 'Reconhecido somente pela Uniao';
     case RECONHECIDO_SOMENTE_ESTADO      = 'Reconhecido somente pelo Estado';

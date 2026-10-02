@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Services;
 
 use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
-use App\Modules\Demandas\Support\CsvSeguro;
+use App\Modules\Shared\Support\CsvSeguro;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class DemandaCsvExporter

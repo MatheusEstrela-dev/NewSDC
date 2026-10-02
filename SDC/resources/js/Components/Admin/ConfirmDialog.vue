@@ -2,13 +2,20 @@
   <Teleport to="body">
     <Transition name="dialog">
       <div v-if="isOpen" class="dialog-overlay" @click="onCancel">
-        <div class="dialog-container" @click.stop>
+        <div
+          class="dialog-container"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="idTitulo"
+          :aria-describedby="idMensagem"
+          @click.stop
+        >
           <div class="dialog-header" :class="variantClass">
             <div class="dialog-icon">
               <component :is="currentIcon" />
             </div>
-            <h3 class="dialog-title">{{ title }}</h3>
-            <button @click="onCancel" class="dialog-close">
+            <h3 :id="idTitulo" class="dialog-title">{{ title }}</h3>
+            <button type="button" @click="onCancel" class="dialog-close" aria-label="Fechar">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -16,7 +23,7 @@
           </div>
 
           <div class="dialog-body">
-            <p class="dialog-message">{{ message }}</p>
+            <p :id="idMensagem" class="dialog-message">{{ message }}</p>
             <p v-if="description" class="dialog-description">{{ description }}</p>
           </div>
 
@@ -38,7 +45,7 @@
 </template>
 
 <script setup>
-import { computed, h } from 'vue';
+import { computed, h, useId } from 'vue';
 
 const props = defineProps({
   isOpen: {
@@ -77,6 +84,11 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['confirm', 'cancel']);
+
+// Ids para o leitor de tela anunciar titulo e mensagem ao abrir o dialogo.
+const idBase = `confirm-dialog-${useId()}`;
+const idTitulo = `${idBase}-titulo`;
+const idMensagem = `${idBase}-mensagem`;
 
 const variantClass = computed(() => `variant-${props.variant}`);
 

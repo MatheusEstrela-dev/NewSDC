@@ -34,7 +34,7 @@
       @blur="$emit('blur', $event)"
       @focus="$emit('focus', $event)"
     />
-    <p v-if="error" class="mt-1 text-xs text-red-400">
+    <p v-if="error" class="mt-1 text-xs text-red-600 dark:text-red-400">
       {{ error }}
     </p>
     <p v-else-if="hint" class="mt-1 text-xs text-slate-500">
@@ -120,11 +120,18 @@ const props = defineProps({
     type: String,
     default: 'md',
   },
+  // Id explicito do input. Sem ele o id sai do label, e o mesmo campo
+  // repetido na tela gerava ids iguais: o label de um bloco focava o do primeiro.
+  id: {
+    type: String,
+    default: '',
+  },
 });
 
 defineEmits(['update:modelValue', 'blur', 'focus']);
 
 const inputId = computed(() => {
+  if (props.id) return props.id;
   return props.label ? `field-${props.label.toLowerCase().replace(/\s+/g, '-')}` : `field-${Math.random().toString(36).substr(2, 9)}`;
 });
 

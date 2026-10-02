@@ -617,6 +617,11 @@ return [
                 'return'   => 'inventario.emprestimos.return',
                 'export'   => 'inventario.emprestimos.export',
             ],
+            'Remanejamentos' => [
+                'create' => 'inventario.remanejamentos.create',
+                'edit'   => 'inventario.remanejamentos.edit',
+                'seplag' => 'inventario.remanejamentos.seplag',
+            ],
         ],
         'ACESSOS' => [
             'Cadastros' => [
@@ -926,6 +931,9 @@ return [
             'inventario.equipamentos.export',
             'inventario.emprestimos.view',
             'inventario.emprestimos.create',
+            'inventario.remanejamentos.create',
+            'inventario.remanejamentos.edit',
+            'inventario.remanejamentos.seplag',
             'inventario.emprestimos.approve',
             'inventario.emprestimos.return',
             'inventario.emprestimos.export',
@@ -1118,6 +1126,10 @@ return [
             'inventario.equipamentos.edit',
             'inventario.emprestimos.view',
             'inventario.emprestimos.create',
+            'inventario.emprestimos.return',
+            'inventario.remanejamentos.create',
+            'inventario.remanejamentos.edit',
+            'inventario.remanejamentos.seplag',
             'acessos.cadastros.view',
             'acessos.cadastros.create',
             'acessos.cadastros.edit',
@@ -1229,6 +1241,10 @@ return [
             'inventario.equipamentos.view',
             'inventario.emprestimos.view',
             'inventario.emprestimos.create',
+            'inventario.emprestimos.return',
+            'inventario.remanejamentos.create',
+            'inventario.remanejamentos.edit',
+            'inventario.remanejamentos.seplag',
             // Estoque - leitura e movimentacao operacional
             'estoque.produtos.view',
             'estoque.lotes.view',
