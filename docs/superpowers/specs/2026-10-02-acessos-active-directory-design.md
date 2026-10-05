@@ -527,6 +527,8 @@ Mesmo padrao das telas de Acessos ja refatoradas (Page fina -> Template -> Organ
 
 ## 16. Perguntas abertas (decisao do usuario)
 
+Decididas pelo usuario em 2026-10-02: P1 (B, fila no Postgres; pedir a liberacao da 5432 a Prodemge), P4 (proposta aprovada), P5 (incluir, desligavel por config se a TI nao delegar), P6 (acoes explicitas, sem efeito automatico do status local) e P7 (validar numa OU/conta de teste antes de ligar para todos). P2 e P3 seguem abertas.
+
 | # | Pergunta | Proposta desta spec |
 |---|---|---|
 | P1 | Transporte da fila entre o Azure e o worker on-prem (10.1). | B: fila `database` no Postgres do Azure, com saida 5432 liberada; C (agente HTTPS) se a Prodemge negar. |
