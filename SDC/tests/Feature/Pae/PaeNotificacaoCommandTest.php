@@ -64,7 +64,7 @@ class PaeNotificacaoCommandTest extends TestCase
         )->count());
     }
 
-    public function test_terceiro_ciclo_vencido_suspende_protocolo(): void
+    public function test_terceiro_ciclo_vencido_nao_suspende_protocolo(): void
     {
         Mail::fake();
 
@@ -73,9 +73,8 @@ class PaeNotificacaoCommandTest extends TestCase
         $user = User::factory()->create();
 
         $this->travelTo(now()->subDays(95), fn () => $service->emitir($protocolo, $user, ['num_sei' => 'SEI-1']));
-        $this->artisan('pae:verificar-notificacoes'); // emite ciclo 2 (retroativo, dt = hoje-0... ver nota)
+        $this->artisan('pae:verificar-notificacoes'); // emite ciclo 2
 
-        // Forcar vencimento dos ciclos 2 e 3 ajustando as datas diretamente:
         \App\Modules\Pae\Models\PaeNotificacao::query()->update([
             'dt_notificacao' => now()->subDays(40)->toDateString(),
         ]);
@@ -84,9 +83,10 @@ class PaeNotificacaoCommandTest extends TestCase
         \App\Modules\Pae\Models\PaeNotificacao::query()->update([
             'dt_notificacao' => now()->subDays(40)->toDateString(),
         ]);
-        $this->artisan('pae:verificar-notificacoes'); // suspende
+        $this->artisan('pae:verificar-notificacoes'); // sinaliza, nao suspende
 
-        $this->assertSame('suspenso', $protocolo->fresh()->status->value);
+        $this->assertSame('notificacao', $protocolo->fresh()->status->value);
+        $this->assertNotNull($protocolo->fresh()->ciclos_esgotados_em);
     }
 
     public function test_comando_e_idempotente_no_mesmo_dia(): void

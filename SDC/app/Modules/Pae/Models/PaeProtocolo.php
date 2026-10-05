@@ -7,10 +7,12 @@ namespace App\Modules\Pae\Models;
 use App\Modules\Notificacoes\Contracts\Rastreavel;
 use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
+use App\Modules\Pae\Support\PrazoAnalise;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\User;
 
@@ -39,6 +41,9 @@ class PaeProtocolo extends Model implements Rastreavel
         'ccpae',
         'obs',
         'empnto_search',
+        'dt_notificacao_feam',
+        'dt_notificacao_feam_estimada',
+        'ciclos_esgotados_em',
     ];
 
     protected $casts = [
@@ -47,6 +52,9 @@ class PaeProtocolo extends Model implements Rastreavel
         'dt_entrada' => 'date',
         'limite_analise' => 'date',
         'ccpae_venc' => 'date',
+        'dt_notificacao_feam' => 'date',
+        'dt_notificacao_feam_estimada' => 'boolean',
+        'ciclos_esgotados_em' => 'date',
     ];
 
     protected static function newFactory()
@@ -89,6 +97,21 @@ class PaeProtocolo extends Model implements Rastreavel
         return $this->hasMany(PaeTimeline::class, 'protocolo_id')->orderBy('created_at', 'asc');
     }
 
+    public function analise(): HasOne
+    {
+        return $this->hasOne(PaeAnalise::class, 'pae_protocolo_id');
+    }
+
+    public function ccpaes(): HasMany
+    {
+        return $this->hasMany(PaeCcpae::class, 'protocolo_id')->orderBy('id');
+    }
+
+    public function ccpaeVigente(): HasOne
+    {
+        return $this->hasOne(PaeCcpae::class, 'protocolo_id')->latestOfMany('id');
+    }
+
     public function validarTransicaoStatus(PaeProtocoloStatus $novo): bool
     {
         return $this->status->canTransitionTo($novo);
@@ -107,6 +130,17 @@ class PaeProtocolo extends Model implements Rastreavel
     public function scopePorStatus($query, PaeProtocoloStatus $status)
     {
         return $query->where('status', $status->value);
+    }
+
+    /** Prazo de analise (Art. 9) expirado em protocolo cuja analise nao terminou. */
+    public function scopeVencidos($query)
+    {
+        return $query->whereNotNull('limite_analise')
+            ->where('limite_analise', '<', now()->toDateString())
+            ->whereNotIn('status', array_map(
+                fn (PaeProtocoloStatus $s): string => $s->value,
+                PrazoAnalise::STATUS_ENCERRADOS,
+            ));
     }
 
     public function getAnaliseStatusAttribute(): ?string
@@ -191,6 +225,9 @@ class PaeProtocolo extends Model implements Rastreavel
             'analista_atual_id',
             // Coluna de apoio a busca, alimentada pelo sistema.
             'empnto_search',
+            // Calculadas pelo sistema (PaePrazoService e comando diario).
+            'limite_analise',
+            'ciclos_esgotados_em',
         ]);
     }
 }

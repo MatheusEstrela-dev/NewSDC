@@ -3,7 +3,6 @@
         <Head title="Protocolos PAE" />
 
         <PaeProtocolosIndexTemplate
-          :use-mock="false"
           :loading="false"
           :protocolos="protocolos"
           :statistics="statistics"

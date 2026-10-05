@@ -1,5 +1,5 @@
 <template>
-  <StatCardsGrid>
+  <StatCardsGrid :colunas="5">
     <StatCard
       title="Total de PAE"
       :value="stats.total"
@@ -23,6 +23,14 @@
       :icon="ExclamationTriangleIcon"
       clickable
       @click="$emit('vencidos')"
+    />
+    <StatCard
+      title="Ciclos esgotados"
+      :value="stats.ciclos_esgotados"
+      variant="danger"
+      :icon="ExclamationTriangleIcon"
+      clickable
+      @click="$emit('ciclos')"
     />
     <StatCard
       title="CCPAE"
@@ -51,10 +59,11 @@ defineProps({
       total: 0,
       historico: 0,
       vencidos: 0,
+      ciclos_esgotados: 0,
       ccpae: 0,
     }),
   },
 });
 
-defineEmits(['total', 'historico', 'vencidos', 'ccpae']);
+defineEmits(['total', 'historico', 'vencidos', 'ciclos', 'ccpae']);
 </script>

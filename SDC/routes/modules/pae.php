@@ -88,12 +88,24 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('protocolo.assign')
         ->middleware('can:pae.protocolos.atribuir');
 
+    Route::put('/protocolo/{paeProtocolo}/notificacao-feam', [PaeProtocoloController::class, 'atualizarNotificacaoFeam'])
+        ->name('protocolo.notificacao-feam')
+        ->middleware('can:pae.protocolos.edit');
+
+    Route::post('/protocolo/{paeProtocolo}/ccpae', [PaeProtocoloController::class, 'emitirCcpae'])
+        ->name('protocolo.ccpae.store')
+        ->middleware('can:pae.protocolos.edit');
+
     Route::post('/protocolo/{paeProtocolo}/notificacoes', [PaeNotificacaoController::class, 'store'])
         ->name('protocolo.notificacoes.store')
         ->middleware('can:pae.protocolos.edit');
 
     Route::post('/notificacoes/{paeNotificacao}/devolutiva', [PaeNotificacaoController::class, 'devolutiva'])
         ->name('notificacoes.devolutiva')
+        ->middleware('can:pae.protocolos.edit');
+
+    Route::post('/notificacoes/{paeNotificacao}/dilacoes', [PaeNotificacaoController::class, 'dilacao'])
+        ->name('notificacoes.dilacoes.store')
         ->middleware('can:pae.protocolos.edit');
 
     Route::delete('/protocolos/{paeProtocolo}', [PaeProtocoloController::class, 'destroy'])

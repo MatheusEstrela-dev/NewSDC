@@ -38,7 +38,7 @@
         <ClockIcon class="w-4 h-4 text-slate-500 dark:text-slate-400" />
         <span class="font-semibold text-slate-600 dark:text-slate-300">Limite Analise:</span>
         <span>{{ protocolo.limiteAnalise }}</span>
-        <PrazosPill :prazo="protocolo.prazo" class="ml-2" />
+        <PrazosPill :prazo="protocolo.prazo" :estimado="protocolo.prazoEstimado" class="ml-2" />
       </div>
     </div>
 

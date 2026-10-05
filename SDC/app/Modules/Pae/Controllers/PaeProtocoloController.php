@@ -5,8 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Pae\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Pae\DTOs\EmitirCcpaeDTO;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeProtocolo;
+use App\Modules\Pae\Requests\AtualizarNotificacaoFeamRequest;
+use App\Modules\Pae\Requests\EmitirCcpaeRequest;
+use App\Modules\Pae\Services\PaeCcpaeService;
+use App\Modules\Pae\Services\PaeNotificacaoService;
+use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
 use App\Services\Export\CsvExportService;
 use Illuminate\Http\Request;
@@ -20,13 +26,16 @@ class PaeProtocoloController extends Controller
 {
     public function __construct(
         private readonly PaeProtocoloService $service,
-        private readonly CsvExportService $csvExportService
+        private readonly CsvExportService $csvExportService,
+        private readonly PaePrazoService $prazos,
+        private readonly PaeCcpaeService $ccpae,
+        private readonly PaeNotificacaoService $notificacoes,
     ) {
     }
 
     public function index(Request $request): \Inertia\Response
     {
-        $filters = $request->only(['search', 'status', 'analista_id', 'data_inicio', 'data_fim']);
+        $filters = $request->only(['search', 'status', 'status_grupo', 'arquivado', 'analista_id', 'data_inicio', 'data_fim']);
 
         $user          = $request->user();
         $rolesGestores = ['Gestor', 'Administrador', 'admin', 'super-admin', 'Desenvolvedor'];
@@ -43,7 +52,7 @@ class PaeProtocoloController extends Controller
             $filters['restringir_ao_analista'] = $user->id;
         }
 
-        $protocolos = $this->service->list($filters);
+        $protocolos = $this->prazos->anotarListagem($this->service->list($filters));
         $statistics = $this->service->getStatistics($podeVerTodos ? null : $user->id);
 
         $analistas = DB::table('users')
@@ -111,6 +120,10 @@ class PaeProtocoloController extends Controller
             'notificacao'    => ['tipo' => 'notificacao',  'titulo' => 'Notificação Enviada'],
             'analise'        => ['tipo' => 'analise',      'titulo' => 'Análise Realizada'],
             'edicao'         => ['tipo' => 'edicao',       'titulo' => 'Protocolo Atualizado'],
+            'ciclos_esgotados' => ['tipo' => 'alerta',     'titulo' => 'Ciclos de Notificação Esgotados'],
+            'dilacao'          => ['tipo' => 'notificacao', 'titulo' => 'Dilação Registrada'],
+            'prazo'            => ['tipo' => 'edicao',      'titulo' => 'Prazo Atualizado'],
+            'ccpae'            => ['tipo' => 'analise',     'titulo' => 'CCPAE Emitido'],
         ];
 
         $timeline = $protocolo->timeline->map(function ($item) use ($eventoMap) {
@@ -135,22 +148,11 @@ class PaeProtocoloController extends Controller
             'descricao'   => $item->obs,
         ])->values();
 
-        $notificacoes = $protocolo->tramitacoes
-            ->where('status', PaeProtocoloStatus::NOTIFICACAO->value)
-            ->map(fn ($item) => [
-                'id'          => $item->id,
-                'titulo'      => 'Notificacao registrada',
-                'data'        => $item->dt_status?->format('d/m/Y, H:i'),
-                'responsavel' => $item->usuario?->name ?? 'Sistema',
-                'canal'       => 'Sistema',
-                'descricao'   => $item->obs,
-            ])
-            ->values();
-
         return response()->json([
             'protocolo'    => $protocolo->num_protocolo,
             'analises'     => $analises,
-            'notificacoes' => $notificacoes,
+            'notificacoes' => $this->notificacoes->listarPorProtocolo($protocolo),
+            'prazos'       => $this->prazos->resumo($protocolo),
             'timeline'     => $timeline,
         ]);
     }
@@ -196,6 +198,21 @@ class PaeProtocoloController extends Controller
         $this->service->atribuir($paeProtocolo, $analista, $request->user());
 
         return redirect()->back()->with('success', "Analista {$analista->name} atribuído com sucesso.");
+    }
+
+    public function atualizarNotificacaoFeam(AtualizarNotificacaoFeamRequest $request, PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
+    {
+        $this->prazos->definirNotificacaoFeam($paeProtocolo, $request->validated()['dt_notificacao_feam'], $request->user());
+
+        return back()->with('success', 'Data da notificacao da FEAM atualizada e prazo recalculado.');
+    }
+
+    public function emitirCcpae(EmitirCcpaeRequest $request, PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
+    {
+        $ccpae = $this->ccpae->emitir($paeProtocolo, EmitirCcpaeDTO::fromArray($request->validated()), $request->user());
+
+        return redirect()->route('pae.protocolos.index', ['status' => 'ccpae'])
+            ->with('success', "CCPAE {$ccpae->codigo} emitido, vigente ate {$ccpae->dt_vencimento->format('d/m/Y')}.");
     }
 
     public function relacionar(Request $request, PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse

@@ -74,7 +74,7 @@ class PaeNotificacaoTest extends TestCase
         $this->service()->emitir($protocolo, $user, ['num_sei' => 'SEI-2']);
     }
 
-    public function test_emitir_bloqueia_apos_3_ciclos(): void
+    public function test_emitir_manual_nao_tem_limite_de_ciclos(): void
     {
         $protocolo = $this->protocoloDelegado();
         $user = User::factory()->create();
@@ -84,9 +84,9 @@ class PaeNotificacaoTest extends TestCase
             $this->service()->registrarDevolutiva($n, $user, now()->toDateString());
         }
 
-        $this->expectException(ValidationException::class);
+        $quarta = $this->service()->emitir($protocolo, $user, ['num_sei' => 'SEI-4']);
 
-        $this->service()->emitir($protocolo, $user, ['num_sei' => 'SEI-4']);
+        $this->assertSame('SEI-4', $quarta->num_sei);
     }
 
     public function test_devolutiva_fecha_ciclo(): void

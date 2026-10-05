@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PaeNotificacao extends Model
@@ -45,5 +46,18 @@ class PaeNotificacao extends Model
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function dilacoes(): HasMany
+    {
+        return $this->hasMany(PaeDilacao::class, 'pae_notificacao_id')->orderBy('id');
+    }
+
+    /** Dias concedidos por dilacoes aprovadas; usa a relacao ja carregada quando houver. */
+    public function diasDilacao(): int
+    {
+        return (int) $this->dilacoes
+            ->where('status', PaeDilacao::STATUS_APROVADA)
+            ->sum('dias_adicionais');
     }
 }

@@ -12,7 +12,7 @@ use App\Core\Events\DomainEvent;
  *
  * Emitido por PaeNotificacaoService::registrarDevolutiva.
  *
- * `ciclo` e o ciclo real de notificacao (1..PaeNotificacaoService::MAX_CICLOS).
+ * `ciclo` e o ciclo real de notificacao (1..n; a renovacao automatica para em PaeNotificacaoService::MAX_CICLOS_AUTOMATICOS).
  * `prazo_em` e dt_notificacao + PRAZO_DIAS e `entregue_em` e dt_devolutiva:
  * as duas sao colunas de marco, nao updated_at.
  *
