@@ -39,5 +39,13 @@ defineProps({
         </div>
       </div>
     </div>
+    <!--
+      Resumo opcional abaixo do titulo (ex.: dados-chave do documento). A janela
+      de impressao nao carrega o CSS da aplicacao, entao o conteudo do slot deve
+      vir com estilo inline.
+    -->
+    <div v-if="$slots.default" style="margin-top: 10px;">
+      <slot />
+    </div>
   </div>
 </template>

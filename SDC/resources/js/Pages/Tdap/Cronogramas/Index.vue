@@ -154,6 +154,15 @@
                           @click="abrirHistorico(c)"
                         />
                         <ActionButton
+                          action="print"
+                          :allowed="true"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Imprimir cronograma"
+                          :loading="impressaoCarregandoId === c.id"
+                          @click="imprimir(c.id)"
+                        />
+                        <ActionButton
                           action="archive"
                           :allowed="canDelete"
                           :show-label="false"
@@ -238,6 +247,15 @@
         @click="abrirHistorico(c)"
         />
         <ActionButton
+        action="print"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Imprimir cronograma"
+        :loading="impressaoCarregandoId === c.id"
+        @click="imprimir(c.id)"
+        />
+        <ActionButton
         action="archive"
         :allowed="canDelete"
         :show-label="false"
@@ -279,6 +297,13 @@
       @cancel="cancelArchive"
     />
 
+    <PrintCronogramaModal
+      :show="impressaoOpen"
+      :loading="impressaoCarregandoId !== null"
+      :dados="impressaoDados"
+      @close="fecharImpressao"
+    />
+
     <CronogramaHistoricoModal
       :open="historicoOpen"
       :numero="historicoNumero"
@@ -307,6 +332,8 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHistoricoModal.vue';
+import PrintCronogramaModal from '@/Components/Organisms/Tdap/Print/PrintCronogramaModal.vue';
+import { useToast } from '@/Composables/useToast.js';
 import CronogramaViagensBar from '@/Components/Organisms/Tdap/CronogramaViagensBar.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import { useExport } from '@/Composables/data/useExport';
@@ -489,6 +516,36 @@ async function abrirHistorico(c) {
     }
   } catch (_) { /* silencioso: timeline vazia */ }
   historicoLoading.value = false;
+}
+
+// Impressao (fetch sob demanda + BasePrintModal, mesmo molde da ficha do PMDA):
+// a listagem nao traz caminhoes nem pontos de captacao.
+const { show: toast } = useToast();
+const impressaoOpen = ref(false);
+const impressaoCarregandoId = ref(null);
+const impressaoDados = ref(null);
+
+async function imprimir(id) {
+  impressaoCarregandoId.value = id;
+  impressaoDados.value = null;
+  impressaoOpen.value = true;
+  try {
+    const res = await fetch(route('tdap.cronogramas.impressao', id), {
+      headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    impressaoDados.value = await res.json();
+  } catch (_) {
+    toast('Não foi possível carregar o cronograma para impressão.', 'error');
+    impressaoOpen.value = false;
+  } finally {
+    impressaoCarregandoId.value = null;
+  }
+}
+
+function fecharImpressao() {
+  impressaoOpen.value = false;
+  impressaoDados.value = null;
 }
 
 // Arquivar / desarquivar (distinto do soft delete)

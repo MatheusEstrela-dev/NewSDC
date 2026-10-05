@@ -18,6 +18,7 @@ use App\Modules\Tdap\Resources\CronogramaIndexResource;
 use App\Modules\Tdap\Resources\CronogramaResource;
 use App\Modules\Tdap\Services\CronogramaService;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -133,12 +134,7 @@ class CronogramaController extends Controller
 
         return Inertia::render('Tdap/Cronogramas/Show', [
             'cronograma'       => CronogramaResource::make($cronograma),
-            // Ativado (ativo ou ja encerrado): o retrato gravado na ativacao.
-            // Rascunho, ou ativado antes do retrato existir: os vinculos de
-            // agora, cada um com o PMDA que o autorizou (nulo = legado).
-            'pontosCaptacao'   => $cronograma->stored_pmda_ponto !== null
-                ? $cronograma->stored_pmda_ponto
-                : $this->politicaPontos->apresentarVinculados($cronograma->pontosCaptacao),
+            'pontosCaptacao'   => $this->pontosParaExibir($cronograma),
             // As comunidades do municipio atendido, com a populacao que a
             // alocacao usa para calcular agua prevista e viagens. Sem elas o
             // modal so aceitaria os dois numeros digitados a mao.
@@ -157,6 +153,37 @@ class CronogramaController extends Controller
             'canAlocarCaminhao' => $request->user()?->can('tdap.cronogramas.edit') ?? false,
             'canValidarViagem' => $request->user()?->can('tdap.viagens.validar') ?? false,
         ]);
+    }
+
+    /**
+     * Dados do documento impresso do cronograma (BasePrintModal no front).
+     *
+     * JSON sob demanda, no mesmo molde da ficha do PMDA (pmda.planos.ficha): a
+     * listagem nao carrega caminhoes nem pontos, e buscar so ao clicar evita
+     * pesar a paginacao inteira por causa de um botao.
+     */
+    public function impressao(Cronograma $cronograma): JsonResponse
+    {
+        $cronograma = $this->service->obter($cronograma->id);
+
+        return response()->json([
+            'cronograma'      => CronogramaResource::make($cronograma)->resolve(),
+            'pontos_captacao' => $this->pontosParaExibir($cronograma),
+        ]);
+    }
+
+    /**
+     * Ativado (ativo ou ja encerrado): o retrato gravado na ativacao.
+     * Rascunho, ou ativado antes do retrato existir: os vinculos de agora,
+     * cada um com o PMDA que o autorizou (nulo = legado).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function pontosParaExibir(Cronograma $cronograma): array
+    {
+        return $cronograma->stored_pmda_ponto !== null
+            ? $cronograma->stored_pmda_ponto
+            : $this->politicaPontos->apresentarVinculados($cronograma->pontosCaptacao);
     }
 
     public function edit(Cronograma $cronograma): Response

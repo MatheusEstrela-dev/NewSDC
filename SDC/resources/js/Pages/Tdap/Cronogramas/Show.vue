@@ -21,6 +21,13 @@
           @click="abrirHistorico"
         />
         <ActionButton
+          action="print"
+          :allowed="true"
+          :show-label="false"
+          tooltip-text="Imprimir cronograma"
+          @click="impressaoOpen = true"
+        />
+        <ActionButton
           action="archive"
           :allowed="canDelete"
           :show-label="false"
@@ -242,6 +249,12 @@
       @close="showViagem = false"
     />
 
+    <PrintCronogramaModal
+      :show="impressaoOpen"
+      :dados="dadosImpressao"
+      @close="impressaoOpen = false"
+    />
+
     <CronogramaHistoricoModal
       :open="historicoOpen"
       :numero="c.numero"
@@ -275,6 +288,7 @@ import AlocarCaminhaoModal from '@/Components/Organisms/Tdap/AlocarCaminhaoModal
 import RegistrarViagemModal from '@/Components/Organisms/Tdap/RegistrarViagemModal.vue';
 import CronogramaComprovantesSection from '@/Components/Organisms/Tdap/CronogramaComprovantesSection.vue';
 import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHistoricoModal.vue';
+import PrintCronogramaModal from '@/Components/Organisms/Tdap/Print/PrintCronogramaModal.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -301,6 +315,11 @@ const props = defineProps({
 });
 
 const c = computed(() => props.cronograma.data ?? props.cronograma).value;
+
+// A ficha ja tem tudo o que o impresso usa: monta o mesmo formato do endpoint
+// tdap.cronogramas.impressao (usado pela listagem) sem nova requisicao.
+const impressaoOpen = ref(false);
+const dadosImpressao = computed(() => ({ cronograma: c, pontos_captacao: props.pontosCaptacao }));
 const ativando = ref(false);
 const showAlocar = ref(false);
 const showViagem = ref(false);

@@ -308,6 +308,8 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::get('/export', [CronogramaController::class, 'export'])->name('export');
             Route::get('/{cronograma}', [CronogramaController::class, 'show'])
                 ->name('show')->whereNumber('cronograma');
+            Route::get('/{cronograma}/impressao', [CronogramaController::class, 'impressao'])
+                ->name('impressao')->whereNumber('cronograma');
             Route::get('/{cronograma}/comprovantes/{comprovante}/download', [CronogramaComprovanteController::class, 'download'])
                 ->name('comprovantes.download')->whereNumber('cronograma')->whereNumber('comprovante');
         });
