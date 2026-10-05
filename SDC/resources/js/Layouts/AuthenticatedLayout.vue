@@ -140,32 +140,30 @@ provide('openSidebar', openSidebar);
       <!-- Footer -->
       <footer class="flex flex-col sm:flex-row justify-between items-center gap-4 px-4 sm:px-6 lg:px-8 py-6 mt-auto bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
         <div class="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
-          <picture class="dark:hidden">
+          <picture class="dark:hidden shrink-0">
             <source srcset="/imgs/logo-defesa-civil.webp" type="image/webp" />
             <img
               src="/imgs/logo-defesa-civil.png"
-              alt="MG Logo"
+              alt="Defesa Civil de Minas Gerais"
               width="120"
-              height="24"
-              class="h-5 sm:h-6 w-auto"
+              height="36"
+              class="block w-[120px] h-auto"
               loading="lazy"
               decoding="async"
-              style="aspect-ratio: 5/1;"
             />
           </picture>
           <!-- O texto azul-marinho do logo some no fundo escuro; no tema escuro
                entra a versao de texto laranja, a mesma do login. -->
-          <picture class="hidden dark:block">
+          <picture class="hidden dark:block shrink-0">
             <source srcset="/imgs/logo-defesa-civil-login.webp" type="image/webp" />
             <img
               src="/imgs/logo-defesa-civil-login.png"
-              alt="MG Logo"
+              alt="Defesa Civil de Minas Gerais"
               width="120"
-              height="24"
-              class="h-5 sm:h-6 w-auto"
+              height="36"
+              class="block w-[120px] h-auto"
               loading="lazy"
               decoding="async"
-              style="aspect-ratio: 5/1;"
             />
           </picture>
           <span class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 text-center sm:text-left">
