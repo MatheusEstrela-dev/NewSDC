@@ -21,7 +21,8 @@ class FabricaConexaoLdap
 
     private const FQDN = '/^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i';
 
-    private const ROTULO_FINAL_NUMERICO = '/\.[0-9]+$/';
+    // Rotulo final so de digitos ou hexadecimal (127.1, 127.0x1): inet_aton le como IP.
+    private const ROTULO_FINAL_NUMERICO = '/\.(0x[0-9a-f]+|[0-9]+)$/i';
 
     public function __construct(private readonly SegredoDiretorio $segredos) {}
 
