@@ -54,9 +54,10 @@ final class SegredoDiretorio
         return $conteudo;
     }
 
+    /** Valor cru: Env::get transformaria "true", "null" e "(empty)" de uma senha. */
     private function env(string $nome): ?string
     {
-        $valor = Env::get($nome);
+        $valor = Env::getRepository()->get($nome);
 
         return is_string($valor) && trim($valor) !== '' ? $valor : null;
     }

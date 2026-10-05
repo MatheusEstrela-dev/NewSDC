@@ -11,8 +11,10 @@ use App\Modules\Acessos\DTOs\ResultadoOperacao;
 use App\Modules\Acessos\Enums\CodigoErroDiretorio;
 use App\Modules\Acessos\Exceptions\DiretorioIndisponivel;
 use App\Modules\Acessos\Exceptions\DiretorioRecusou;
+use App\Modules\Acessos\Support\DnDiretorio;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use LdapRecord\Connection;
 use LdapRecord\LdapInterface;
 use LdapRecord\LdapRecordException;
@@ -61,7 +63,7 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
 
     private ?Connection $conexao = null;
 
-    /** @var array{guids: list<string>, dns: list<string>}|null conta de servico desta conexao */
+    /** @var array{guids: list<string>, dns: list<string>}|null conta de servico desta conexao (GUIDs canonicos, DNs como lidos) */
     private ?array $contaServico = null;
 
     public function __construct(
@@ -139,10 +141,12 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
         string $operationId,
     ): ResultadoOperacao {
         return $this->executar(function () use ($conta, $senha, $exigirTroca): ResultadoOperacao {
+            // convertida antes de qualquer chamada ao AD: senha invalida nao gera trafego
+            $unicodePwd = $this->unicodePwd($senha);
             [$atual] = $this->lerParaEscrita($conta);
 
-            // unicodePwd = UTF-16LE da senha entre aspas; um unico modify com pwdLastSet.
-            $mods = [$this->substituir('unicodePwd', iconv('UTF-8', 'UTF-16LE', '"'.$senha.'"'))];
+            // um unico modify com unicodePwd e, se pedido, pwdLastSet.
+            $mods = [$this->substituir('unicodePwd', $unicodePwd)];
             if ($exigirTroca) {
                 $mods[] = $this->substituir('pwdLastSet', '0');
             }
@@ -195,8 +199,7 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
 
     private function assegurarAlvo(ContaDiretorio $conta): void
     {
-        $dn = self::normalizarDn($conta->dn);
-        if (! str_ends_with($dn, ','.self::normalizarDn($this->searchBase()))) {
+        if (! DnDiretorio::estaDentroDe($conta->dn, $this->searchBase())) {
             throw new DiretorioRecusou(CodigoErroDiretorio::CONTA_FORA_DO_ESCOPO);
         }
 
@@ -206,9 +209,28 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
         }
 
         $servico = $this->contaServico();
-        if (in_array(mb_strtolower($conta->objectGuid), $servico['guids'], true) || in_array($dn, $servico['dns'], true)) {
+        if (in_array(mb_strtolower($conta->objectGuid), $servico['guids'], true)) {
             throw new DiretorioRecusou(CodigoErroDiretorio::CONTA_PROTEGIDA);
         }
+        foreach ($servico['dns'] as $dnServico) {
+            if (DnDiretorio::iguais($conta->dn, $dnServico)) {
+                throw new DiretorioRecusou(CodigoErroDiretorio::CONTA_PROTEGIDA);
+            }
+        }
+    }
+
+    /**
+     * Valor de unicodePwd: UTF-16LE da senha entre aspas. Senha que nao e
+     * UTF-8 valido e defeito do gerador: codigo fixo, sem a senha em mensagem.
+     */
+    private function unicodePwd(#[\SensitiveParameter] string $senha): string
+    {
+        $convertida = mb_check_encoding($senha, 'UTF-8') ? iconv('UTF-8', 'UTF-16LE', '"'.$senha.'"') : false;
+        if ($convertida === false || $convertida === '') {
+            throw new DiretorioRecusou(CodigoErroDiretorio::ERRO_INTERNO);
+        }
+
+        return $convertida;
     }
 
     /**
@@ -242,8 +264,8 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
         $guids = [];
         $dns = [];
         foreach ($entradas as $entrada) {
-            $guids[] = mb_strtolower((new Guid((string) $this->valor($entrada, 'objectguid')))->getValue());
-            $dns[] = self::normalizarDn($this->dnDe($entrada));
+            $guids[] = $this->guidDe($entrada);
+            $dns[] = $this->dnDe($entrada);
         }
 
         return $this->contaServico = ['guids' => $guids, 'dns' => $dns];
@@ -298,7 +320,7 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
         $computado = (int) $this->valor($entrada, 'msds-user-account-control-computed');
 
         return new ContaDiretorio(
-            objectGuid: mb_strtolower((new Guid((string) $this->valor($entrada, 'objectguid')))->getValue()),
+            objectGuid: $this->guidDe($entrada),
             login: (string) $this->valor($entrada, 'samaccountname'),
             upn: $this->valor($entrada, 'userprincipalname'),
             dn: $this->dnDe($entrada),
@@ -348,10 +370,25 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
         return (new EscapedValue($valor))->forFilter()->get();
     }
 
-    /** DN para comparacao: sem diferenca de caixa nem espacos em volta de `,` e `=`. */
-    private static function normalizarDn(string $dn): string
+    /**
+     * objectGUID binario da entrada na forma canonica. Entrada sem GUID (ou
+     * com um que nao decodifica) e resposta inesperada do servidor.
+     *
+     * @param array<string, mixed> $entrada
+     */
+    private function guidDe(array $entrada): string
     {
-        return (string) preg_replace(['/\s*,\s*/', '/\s*=\s*/'], [',', '='], mb_strtolower(trim($dn)));
+        $binario = $this->valor($entrada, 'objectguid');
+        try {
+            $guid = $binario === null ? null : (new Guid($binario))->getValue();
+        } catch (InvalidArgumentException) {
+            $guid = null;
+        }
+        if ($guid === null || ! Guid::isValid($guid)) {
+            throw new DiretorioRecusou(CodigoErroDiretorio::ERRO_INTERNO);
+        }
+
+        return mb_strtolower($guid);
     }
 
     private function searchBase(): string

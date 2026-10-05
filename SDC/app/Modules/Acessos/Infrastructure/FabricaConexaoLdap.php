@@ -21,6 +21,8 @@ class FabricaConexaoLdap
 
     private const FQDN = '/^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i';
 
+    private const ROTULO_FINAL_NUMERICO = '/\.[0-9]+$/';
+
     public function __construct(private readonly SegredoDiretorio $segredos) {}
 
     public function criar(): Connection
@@ -125,7 +127,10 @@ class FabricaConexaoLdap
     private function validarHost(string $host): string
     {
         $host = rtrim(trim($host), '.');
-        if (filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) !== false || preg_match(self::FQDN, $host) !== 1) {
+        // ultimo rotulo numerico (`127.1`, `10.0.0.1`) e IP abreviado, nao FQDN
+        if (filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) !== false
+            || preg_match(self::FQDN, $host) !== 1
+            || preg_match(self::ROTULO_FINAL_NUMERICO, $host) === 1) {
             throw $this->configAusente();
         }
 
