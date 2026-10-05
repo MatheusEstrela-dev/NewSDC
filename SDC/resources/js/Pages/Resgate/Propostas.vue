@@ -10,9 +10,7 @@
       variant="gradient"
     >
       <template #actions>
-        <Link :href="route('resgate.catalogo')" class="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
-          Voltar ao catálogo
-        </Link>
+        <Button :href="route('resgate.catalogo')" variant="sky" :icon="GiftIcon">Voltar ao catálogo</Button>
       </template>
     </PageHeader>
 
@@ -22,9 +20,11 @@
 
 <script setup>
 /** Fila de propostas do catalogo - pagina propria do SPA (quatro olhos). */
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
+import { GiftIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import PropostasPendentes from '@/Components/Organisms/Resgate/PropostasPendentes.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
