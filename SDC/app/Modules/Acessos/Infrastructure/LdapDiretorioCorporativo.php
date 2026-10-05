@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Acessos\Infrastructure;
 
 use App\Modules\Acessos\Contracts\DiretorioCorporativo;
+use App\Modules\Acessos\DTOs\ChecagemDiretorio;
 use App\Modules\Acessos\DTOs\ContaDiretorio;
 use App\Modules\Acessos\DTOs\ReferenciaConta;
 use App\Modules\Acessos\DTOs\ResultadoOperacao;
@@ -69,6 +70,7 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
     public function __construct(
         private readonly FabricaConexaoLdap $fabrica,
         private readonly TradutorErroLdap $tradutor,
+        private readonly SondaRedeDiretorio $sonda = new SondaRedeDiretorio(),
     ) {}
 
     public function consultar(string $login): ?ContaDiretorio
@@ -102,6 +104,109 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
                 ->rawFilter(self::FILTRO_CONTA)
                 ->paginate($this->tamanhoPagina()),
         )));
+    }
+
+    /**
+     * Diagnostico passo a passo (somente leitura): dns, tls, bind, search_base
+     * e resolucao da conta de servico. Cada passo depende do anterior; o
+     * detalhe e fixo ou o codigo de CodigoErroDiretorio, nunca a mensagem do
+     * servidor. Nao escreve no AD.
+     *
+     * @return list<ChecagemDiretorio>
+     */
+    public function diagnosticar(): array
+    {
+        $hosts = [];
+        $dns = $this->passo('dns', function () use (&$hosts): ChecagemDiretorio {
+            $hosts = $this->fabrica->hosts();
+            $semResposta = array_values(array_filter($hosts, fn (string $host): bool => ! $this->sonda->resolve($host)));
+
+            return $semResposta === []
+                ? ChecagemDiretorio::ok('dns', count($hosts).' host(s) resolvem')
+                : ChecagemDiretorio::falha('dns', 'nao resolvem: '.implode(', ', $semResposta));
+        });
+
+        $tls = $dns->estado === ChecagemDiretorio::OK
+            ? $this->passo('tls', fn (): ChecagemDiretorio => $this->checarTls($hosts))
+            : ChecagemDiretorio::ignorado('tls', 'etapa anterior falhou');
+
+        $bind = $dns->estado === ChecagemDiretorio::OK && $tls->passou()
+            ? $this->passo('bind', function (): ChecagemDiretorio {
+                $this->conexao()->connect();
+
+                return ChecagemDiretorio::ok('bind', 'conta de servico autenticada');
+            })
+            : ChecagemDiretorio::ignorado('bind', 'etapa anterior falhou');
+
+        $autenticado = $bind->estado === ChecagemDiretorio::OK;
+        $base = $autenticado
+            ? $this->passo('search_base', function (): ChecagemDiretorio {
+                $entrada = $this->busca($this->searchBase(), ['distinguishedname'])->read()->rawFilter('(objectClass=*)')->first();
+
+                return is_array($entrada)
+                    ? ChecagemDiretorio::ok('search_base', 'leitura da base permitida')
+                    : ChecagemDiretorio::falha('search_base', 'search_base_inexistente');
+            })
+            : ChecagemDiretorio::ignorado('search_base', 'bind nao executado com sucesso');
+        $servico = $autenticado
+            ? $this->passo('conta_servico', fn (): ChecagemDiretorio => ChecagemDiretorio::ok(
+                'conta_servico',
+                count($this->contaServico()['guids']).' conta(s) de servico protegida(s)',
+            ))
+            : ChecagemDiretorio::ignorado('conta_servico', 'bind nao executado com sucesso');
+
+        $this->descartarConexao();
+
+        return [$dns, $tls, $bind, $base, $servico];
+    }
+
+    /** @param list<string> $hosts */
+    private function checarTls(array $hosts): ChecagemDiretorio
+    {
+        if (config('acessos.diretorio.seguranca') === 'starttls') {
+            return ChecagemDiretorio::ignorado('tls', 'starttls: certificado validado no bind');
+        }
+
+        $ca = $this->configTexto('ca_cert');
+        if (! is_file($ca) || ! is_readable($ca)) {
+            throw new DiretorioIndisponivel(CodigoErroDiretorio::CERTIFICADO);
+        }
+        $porta = (int) config('acessos.diretorio.porta');
+        $timeout = max(1, (int) config('acessos.diretorio.timeout_conexao'));
+
+        $dias = [];
+        $falhas = [];
+        foreach ($hosts as $host) {
+            try {
+                $dias[] = $this->sonda->diasAteVencerCertificado($host, $porta, $ca, $timeout);
+            } catch (DiretorioIndisponivel $e) {
+                $falhas[] = $host.' ('.$e->codigo()->value.')';
+            }
+        }
+
+        return $falhas === []
+            ? ChecagemDiretorio::ok('tls', 'certificado valido; vence em '.min($dias).' dia(s)')
+            : ChecagemDiretorio::falha('tls', implode(', ', $falhas));
+    }
+
+    /** @param callable(): ChecagemDiretorio $passo */
+    private function passo(string $nome, callable $passo): ChecagemDiretorio
+    {
+        try {
+            return $passo();
+        } catch (LdapRecordException $e) {
+            $this->descartarConexao();
+
+            return ChecagemDiretorio::falhaComCodigo($nome, $this->tradutor->traduzir($e)->codigo());
+        } catch (DiretorioIndisponivel|DiretorioRecusou $e) {
+            $this->descartarConexao();
+
+            return ChecagemDiretorio::falhaComCodigo($nome, $e->codigo());
+        } catch (Throwable) {
+            $this->descartarConexao();
+
+            return ChecagemDiretorio::falhaComCodigo($nome, CodigoErroDiretorio::ERRO_INTERNO);
+        }
     }
 
     public function desbloquear(ReferenciaConta $conta, string $operationId): ResultadoOperacao

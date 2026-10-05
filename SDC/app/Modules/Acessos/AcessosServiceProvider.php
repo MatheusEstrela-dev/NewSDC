@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Acessos;
 
+use App\Modules\Acessos\Console\DiagnosticoDiretorioCommand;
 use App\Modules\Acessos\Console\ReconciliarOperacoesDiretorioCommand;
 use App\Modules\Acessos\Contracts\DiretorioCorporativo;
 use App\Modules\Acessos\Infrastructure\DiretorioDesligado;
@@ -31,7 +32,7 @@ class AcessosServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
-            $this->commands([ReconciliarOperacoesDiretorioCommand::class]);
+            $this->commands([ReconciliarOperacoesDiretorioCommand::class, DiagnosticoDiretorioCommand::class]);
         }
     }
 
