@@ -30,10 +30,6 @@ final class PaeCcpaeService
 
     public function emitir(PaeProtocolo $protocolo, EmitirCcpaeDTO $dados, User $user): PaeCcpae
     {
-        if (in_array($protocolo->status, [PaeProtocoloStatus::CCPAE, PaeProtocoloStatus::ATIVO_3_ANOS], true)) {
-            throw ValidationException::withMessages(['ccpae' => 'Este protocolo ja tem CCPAE emitido.']);
-        }
-
         try {
             $vencimento = VigenciaCcpae::vencimento($dados->dtEmissao, $dados->empreendimentoNovo, $dados->dtLicencaOperacao);
         } catch (\InvalidArgumentException $e) {
@@ -42,6 +38,12 @@ final class PaeCcpaeService
 
         try {
             return DB::transaction(function () use ($protocolo, $dados, $user, $vencimento): PaeCcpae {
+                $protocolo = PaeProtocolo::query()->lockForUpdate()->findOrFail($protocolo->getKey());
+                if (in_array($protocolo->status, [PaeProtocoloStatus::CCPAE, PaeProtocoloStatus::ATIVO_3_ANOS], true)
+                    || PaeCcpae::query()->where('protocolo_id', $protocolo->getKey())->exists()) {
+                    throw ValidationException::withMessages(['ccpae' => 'Este protocolo ja tem CCPAE emitido.']);
+                }
+
                 $this->workflow->transitar(
                     $protocolo,
                     PaeProtocoloStatus::CCPAE,

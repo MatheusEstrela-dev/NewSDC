@@ -37,6 +37,7 @@ return new class extends Migration
         });
 
         Schema::table('pae_ccpae', function (Blueprint $table) {
+            $table->unique('protocolo_id', 'pae_ccpae_protocolo_id_unique');
             if (! Schema::hasColumn('pae_ccpae', 'dt_licenca_operacao')) {
                 $table->date('dt_licenca_operacao')->nullable();
             }
@@ -63,6 +64,7 @@ return new class extends Migration
         DB::statement("ALTER TABLE pae_protocolos ALTER COLUMN status SET DEFAULT 'NOVO'");
 
         Schema::table('pae_ccpae', function (Blueprint $table) {
+            $table->dropUnique('pae_ccpae_protocolo_id_unique');
             $table->dropConstrainedForeignId('emitido_por');
             $table->dropColumn('dt_licenca_operacao');
         });
