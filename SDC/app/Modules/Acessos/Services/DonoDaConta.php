@@ -10,12 +10,13 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Ninguem age sobre a propria conta (spec 7.2 item 3): o alvo e do ator se o
- * cadastro e dele (user_id ou CPF) ou se o login e o login_ad de algum
- * cadastro dele.
+ * cadastro e dele (user_id ou CPF), se o login e o login_ad de algum cadastro
+ * dele ou, no worker, se o objectGUID resolvido e o de algum cadastro dele.
+ * CPF comparado so pelos digitos dos dois lados.
  */
 final class DonoDaConta
 {
-    public function eDoAtor(User $ator, ?CadastroAcesso $cadastro, string $login): bool
+    public function eDoAtor(User $ator, ?CadastroAcesso $cadastro, string $login, ?string $objectGuid = null): bool
     {
         $cpf = self::digitos($ator->cpf);
 
@@ -27,7 +28,8 @@ final class DonoDaConta
         }
 
         $login = mb_strtolower(trim($login));
-        if ($login === '') {
+        $objectGuid = $objectGuid === null ? '' : mb_strtolower(trim($objectGuid));
+        if ($login === '' && $objectGuid === '') {
             return false;
         }
 
@@ -35,10 +37,17 @@ final class DonoDaConta
             ->where(function (Builder $query) use ($ator, $cpf): void {
                 $query->where('user_id', $ator->getKey());
                 if ($cpf !== '') {
-                    $query->orWhere('cpf', $cpf);
+                    $query->orWhereRaw("regexp_replace(cpf, '[^0-9]', '', 'g') = ?", [$cpf]);
                 }
             })
-            ->whereRaw('lower(login_ad) = ?', [$login])
+            ->where(function (Builder $query) use ($login, $objectGuid): void {
+                if ($login !== '') {
+                    $query->orWhereRaw('lower(login_ad) = ?', [$login]);
+                }
+                if ($objectGuid !== '') {
+                    $query->orWhereRaw('lower(object_guid::text) = ?', [$objectGuid]);
+                }
+            })
             ->exists();
     }
 

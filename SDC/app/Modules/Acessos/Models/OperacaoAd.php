@@ -146,18 +146,46 @@ class OperacaoAd extends Model
         ]);
     }
 
+    /**
+     * Rede de seguranca contra forceFill/update fora dos metodos de transicao:
+     * toda operacao nasce `solicitado` e todo estado gravado respeita podeIrPara.
+     */
+    protected static function booted(): void
+    {
+        static::saving(static function (self $operacao): void {
+            if (! $operacao->exists) {
+                if ($operacao->estado !== EstadoOperacaoAd::SOLICITADO) {
+                    throw self::transicaoInvalida($operacao, null, $operacao->estado);
+                }
+
+                return;
+            }
+            if ($operacao->isDirty('estado')) {
+                $anterior = EstadoOperacaoAd::from((string) $operacao->getRawOriginal('estado'));
+                if (! $anterior->podeIrPara($operacao->estado)) {
+                    throw self::transicaoInvalida($operacao, $anterior, $operacao->estado);
+                }
+            }
+        });
+    }
+
     /** @param array<string, mixed> $atributos */
     private function transicionar(EstadoOperacaoAd $novo, array $atributos): void
     {
         if (! $this->estado->podeIrPara($novo)) {
-            throw new LogicException(sprintf(
-                'Transicao invalida da operacao %s: %s -> %s.',
-                $this->id,
-                $this->estado->value,
-                $novo->value,
-            ));
+            throw self::transicaoInvalida($this, $this->estado, $novo);
         }
 
         $this->forceFill(['estado' => $novo] + $atributos)->save();
+    }
+
+    private static function transicaoInvalida(self $operacao, ?EstadoOperacaoAd $de, EstadoOperacaoAd $para): LogicException
+    {
+        return new LogicException(sprintf(
+            'Transicao invalida da operacao %s: %s -> %s.',
+            $operacao->id ?? '(nova)',
+            $de->value ?? '(nova)',
+            $para->value,
+        ));
     }
 }

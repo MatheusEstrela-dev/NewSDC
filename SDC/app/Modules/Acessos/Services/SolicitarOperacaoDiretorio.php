@@ -12,7 +12,6 @@ use App\Modules\Acessos\Exceptions\OperacaoDiretorioProibida;
 use App\Modules\Acessos\Jobs\ExecutarOperacaoDiretorioJob;
 use App\Modules\Acessos\Models\CadastroAcesso;
 use App\Modules\Acessos\Models\OperacaoAd;
-use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
@@ -22,6 +21,10 @@ use Illuminate\Support\Facades\DB;
  * so transacao, grava a operacao, a auditoria e o job da fila `diretorio` (fila
  * database no mesmo Postgres, sem afterCommit). Duas solicitacoes iguais em voo
  * viram uma: a segunda recebe a operacao existente.
+ *
+ * Nao autoriza: o chamador (FormRequest, servico de Demandas) tem de conferir
+ * antes que o ator pode $acao->permissao(). Aqui ficam so as regras que valem
+ * para qualquer origem (formato do login, propria conta, conta protegida, motivo).
  */
 final class SolicitarOperacaoDiretorio
 {
@@ -40,15 +43,15 @@ final class SolicitarOperacaoDiretorio
         }
         $motivo = $this->validar($login, $acao, $ator, $cadastro, $motivo);
 
-        return $this->registrar(
-            $login, $acao, $ator, $cadastro, OrigemOperacaoAd::ACESSOS, null, $motivo,
-            static fn (): string => sprintf(
-                'acessos:%d:%s:%d',
-                $cadastro->getKey(),
-                $acao->value,
-                $cadastro->operacoesAd()->where('acao', $acao->value)->count() + 1,
-            ),
+        // Calculada uma vez: a recuperacao da corrida procura pela mesma chave.
+        $chave = sprintf(
+            'acessos:%d:%s:%d',
+            $cadastro->getKey(),
+            $acao->value,
+            $cadastro->operacoesAd()->where('acao', $acao->value)->count() + 1,
         );
+
+        return $this->registrar($login, $acao, $ator, $cadastro, OrigemOperacaoAd::ACESSOS, null, $motivo, $chave);
     }
 
     public function paraLogin(
@@ -63,7 +66,7 @@ final class SolicitarOperacaoDiretorio
         $cadastro = $this->cadastroDoLogin($login);
         $motivo = $this->validar($login, $acao, $ator, $cadastro, null);
 
-        return $this->registrar($login, $acao, $ator, $cadastro, $origem, $origemId, $motivo, static fn (): string => $chave);
+        return $this->registrar($login, $acao, $ator, $cadastro, $origem, $origemId, $motivo, $chave);
     }
 
     /** @return string|null motivo normalizado (null se vazio) */
@@ -87,7 +90,6 @@ final class SolicitarOperacaoDiretorio
         return $motivo === '' ? null : $motivo;
     }
 
-    /** @param Closure(): string $chave calculada dentro da transacao */
     private function registrar(
         string $login,
         AcaoDiretorio $acao,
@@ -96,18 +98,17 @@ final class SolicitarOperacaoDiretorio
         OrigemOperacaoAd $origem,
         ?int $origemId,
         ?string $motivo,
-        Closure $chave,
+        string $chave,
     ): OperacaoAd {
         try {
             return DB::transaction(function () use ($login, $acao, $ator, $cadastro, $origem, $origemId, $motivo, $chave): OperacaoAd {
-                $chaveIdempotencia = $chave();
-                $existente = $this->existente($login, $acao, $chaveIdempotencia);
+                $existente = $this->existente($login, $acao, $chave);
                 if ($existente !== null) {
                     return $existente;
                 }
 
                 $operacao = OperacaoAd::create([
-                    'chave_idempotencia' => $chaveIdempotencia,
+                    'chave_idempotencia' => $chave,
                     'cadastro_id' => $cadastro?->getKey(),
                     'login_ad' => $login,
                     'object_guid' => $cadastro?->object_guid,
@@ -117,7 +118,8 @@ final class SolicitarOperacaoDiretorio
                     'solicitado_por_id' => $ator->getKey(),
                     'motivo' => $motivo,
                 ]);
-                $operacao->registrarAuditoria('solicitado', $motivo === null ? [] : ['motivo' => $motivo]);
+                // O motivo fica so na operacao; a auditoria leva o operacao_id.
+                $operacao->registrarAuditoria('solicitado');
                 ExecutarOperacaoDiretorioJob::dispatch((string) $operacao->getKey());
 
                 return $operacao;
@@ -125,7 +127,7 @@ final class SolicitarOperacaoDiretorio
         } catch (UniqueConstraintViolationException $corrida) {
             // Outra requisicao gravou a mesma operacao entre a busca e o insert:
             // a transacao (com o job) foi desfeita; devolve a que venceu.
-            return $this->existente($login, $acao, $chave()) ?? throw $corrida;
+            return $this->existente($login, $acao, $chave) ?? throw $corrida;
         }
     }
 
