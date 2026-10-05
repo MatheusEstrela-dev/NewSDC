@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Acessos;
 
+use App\Modules\Acessos\Console\ReconciliarOperacoesDiretorioCommand;
 use App\Modules\Acessos\Contracts\DiretorioCorporativo;
 use App\Modules\Acessos\Infrastructure\DiretorioDesligado;
 use App\Modules\Acessos\Infrastructure\FakeDiretorioCorporativo;
@@ -25,6 +26,13 @@ class AcessosServiceProvider extends ServiceProvider
             'fake' => $app->isProduction() ? $this->fakeRecusadoEmProducao() : $app->make(FakeDiretorioCorporativo::class),
             default => new DiretorioDesligado(),
         });
+    }
+
+    public function boot(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([ReconciliarOperacoesDiretorioCommand::class]);
+        }
     }
 
     /** O fake aceita qualquer acao sem AD: em producao vale o desligado. */

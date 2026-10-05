@@ -83,6 +83,10 @@ return [
         // Retry e tamanho de senha tem padrao seguro: invalido vira o padrao, nunca 0.
         'tentativas' => $inteiro('DIRETORIO_TENTATIVAS', 3, 10) ?? 3,
         'backoff' => $segundos('DIRETORIO_BACKOFF', '10,30', 600) ?? [10, 30],
+        // Operacao em voo sem progresso por mais que isto vira falhou (indisponivel).
+        // Pior caso de um job vivo com o padrao: 3 tentativas x retry_after 120 s
+        // + backoff 10 + 30 s = 400 s (~7 min); 15 min da mais que o dobro de folga.
+        'reconciliar_minutos' => $inteiro('DIRETORIO_RECONCILIAR_MINUTOS', 15, 1440) ?? 15,
 
         'senha_tamanho' => max(14, $inteiro('DIRETORIO_SENHA_TAMANHO', 16, 128) ?? 16),
         'entrega_ttl_minutos' => $inteiro('DIRETORIO_ENTREGA_TTL_MINUTOS', 10),

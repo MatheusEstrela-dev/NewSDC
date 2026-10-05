@@ -48,7 +48,9 @@ return [
         // so o id da operacao. retry_after acima do timeout do job (30 s).
         'diretorio' => [
             'driver' => 'database',
-            'connection' => env('DIRETORIO_FILA_DB_CONNECTION', 'pgsql'),
+            // Tem de ser a mesma conexao de banco do app (atomicidade): sem a env,
+            // vale a DB_CONNECTION.
+            'connection' => env('DIRETORIO_FILA_DB_CONNECTION') ?: env('DB_CONNECTION', 'pgsql'),
             'table' => 'acessos_fila_diretorio',
             'queue' => 'diretorio',
             'retry_after' => 120,
