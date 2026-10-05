@@ -11,13 +11,13 @@
     >
       <template #actions>
         <div class="flex flex-wrap items-center justify-end gap-2">
-          <Link v-if="pendentesTotal > 0" :href="route('resgate.catalogo.propostas')" :class="LINK_DESTAQUE" data-link-propostas>
+          <Button v-if="pendentesTotal > 0" :href="route('resgate.catalogo.propostas')" variant="violet" :icon="LightBulbIcon" data-link-propostas>
             {{ numero(pendentesTotal) }} {{ pendentesTotal === 1 ? 'proposta aguardando' : 'propostas aguardando' }}
-          </Link>
-          <Link v-if="podePropor" :href="route('resgate.catalogo.propostas.nova')" :class="LINK" data-link-nova-proposta>Propor novo item</Link>
-          <Link :href="route('resgate.pedidos')" :class="LINK" data-link-pedidos>Pedidos</Link>
-          <Link :href="route('resgate.carteira')" :class="LINK">Carteira</Link>
-          <Link :href="route('ranking.index')" :class="LINK">Placar</Link>
+          </Button>
+          <Button v-if="podePropor" :href="route('resgate.catalogo.propostas.nova')" variant="primary" :icon="PlusIcon" data-link-nova-proposta>Propor novo item</Button>
+          <Button :href="route('resgate.pedidos')" variant="info" :icon="ClipboardDocumentListIcon" data-link-pedidos>Pedidos</Button>
+          <Button :href="route('resgate.carteira')" variant="success" :icon="WalletIcon">Carteira</Button>
+          <Button :href="route('ranking.index')" variant="warning" :icon="TrophyIcon">Placar</Button>
         </div>
       </template>
     </PageHeader>
@@ -41,9 +41,11 @@
  * Vitrine do catalogo de premios (Fase 2). Propostas, nova proposta e cadastro
  * de unidade sao paginas proprias do SPA, nao modais.
  */
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
+import { ClipboardDocumentListIcon, LightBulbIcon, PlusIcon, TrophyIcon, WalletIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import ItemCatalogoCard from '@/Components/Molecules/Resgate/ItemCatalogoCard.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
@@ -60,8 +62,6 @@ defineProps({
   podeSolicitar: { type: Boolean, default: false },
 });
 
-const LINK = 'inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700';
-const LINK_DESTAQUE = 'inline-flex items-center rounded-lg bg-amber-500 px-3 py-2 text-sm font-bold text-slate-900 transition hover:bg-amber-400';
 
 const formatador = new Intl.NumberFormat('pt-BR');
 const numero = (valor) => formatador.format(Number(valor ?? 0));
