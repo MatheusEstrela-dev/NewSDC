@@ -69,23 +69,27 @@ final class ExecutarAutomacaoDemanda
 
         try {
             return DB::transaction(function () use ($demanda, $userId, $ator, $acao, $acaoAd, $login): string {
+                // Trava a demanda: dois cliques simultaneos nao leem a mesma sequencia.
+                Demanda::query()->lockForUpdate()->findOrFail($demanda->getKey());
                 $sequencia = DemandaAuditLog::query()
                     ->where('task_id', $demanda->id)
                     ->where('acao', AcaoHistoricoDemanda::AUTOMACAO_SOLICITADA->value)
                     ->count() + 1;
                 $operationId = sprintf('demanda:%d:%s:%d', $demanda->id, $acao, $sequencia);
 
-                // Pedido igual ja em voo para o login: o caso de uso devolve a
-                // operacao existente, e o historico aponta para ela.
                 $operacao = $this->diretorio->paraLogin(
                     $login, $acaoAd, $ator, OrigemOperacaoAd::DEMANDA, $demanda->id, $operationId,
                 );
 
-                $this->historico->registrar(
-                    $demanda, $userId, AcaoHistoricoDemanda::AUTOMACAO_SOLICITADA,
-                    sprintf('Solicitado "%s" para o login %s.', $acao, $login),
-                    ['operation_id' => $operacao->chave_idempotencia],
-                );
+                // Pedido igual ja em voo: o caso de uso devolve a operacao
+                // existente. Sem historico novo, a sequencia nao e consumida.
+                if ($operacao->wasRecentlyCreated) {
+                    $this->historico->registrar(
+                        $demanda, $userId, AcaoHistoricoDemanda::AUTOMACAO_SOLICITADA,
+                        sprintf('Solicitado "%s" para o login %s.', $acao, $login),
+                        ['operation_id' => $operacao->chave_idempotencia],
+                    );
+                }
 
                 return $operacao->chave_idempotencia;
             });

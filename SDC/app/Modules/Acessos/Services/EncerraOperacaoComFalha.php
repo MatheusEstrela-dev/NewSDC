@@ -33,7 +33,7 @@ final class EncerraOperacaoComFalha
         });
 
         if ($encerrada) {
-            OperacaoDiretorioConcluida::dispatch($operacaoId);
+            OperacaoDiretorioConcluida::notificar($operacaoId);
         }
 
         return $encerrada;

@@ -237,16 +237,12 @@ class DemandaController extends Controller
         $demanda = $this->repository->findById($id) ?? abort(404);
         $this->authorize('automatizar', $demanda);
 
+        // O web so grava a operacao e o job da fila `diretorio`; o AD responde
+        // depois, no historico. Aqui so chegam recusas do pedido.
         try {
             $this->automacao->solicitar($demanda, (int) $request->user()->id);
         } catch (DomainException $e) {
             return redirect()->back()->withErrors(['automacao' => $e->getMessage()]);
-        } catch (\Throwable) {
-            // Fila sincrona (dev/teste): o SyncQueue chama failed() do job
-            // (que ja grava o automation_failed) antes de relancar a
-            // excecao ate aqui; o estado da demanda nao muda. So resta
-            // avisar o usuario com uma mensagem generica.
-            return redirect()->back()->withErrors(['automacao' => 'O diretório corporativo não respondeu. Tente novamente.']);
         }
 
         return redirect()->back()->with('success', 'Automação solicitada. Acompanhe no histórico.');

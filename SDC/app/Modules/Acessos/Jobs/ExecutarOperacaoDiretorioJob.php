@@ -147,7 +147,7 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
 
         $circuito->recordSuccess(self::CIRCUITO);
         $this->concluir($operacao, $resultado, $guarda, $espelho);
-        OperacaoDiretorioConcluida::dispatch($operacao->id);
+        OperacaoDiretorioConcluida::notificar($operacao->id);
     }
 
     /** Ultima tentativa esgotada ou recusa definitiva: operacao `falhou` com o codigo. */
