@@ -14,10 +14,13 @@ use App\Modules\Acessos\Exceptions\DiretorioRecusou;
 use App\Modules\Acessos\Models\OperacaoAd;
 use App\Modules\Acessos\Services\Acoes\HandlerAcaoDiretorio;
 use App\Modules\Acessos\Services\AplicaEspelhoAd;
+use App\Modules\Acessos\Services\DonoDaConta;
+use App\Modules\Acessos\Services\EncerraOperacaoComFalha;
 use App\Modules\Acessos\Services\GuardaDeAlvo;
 use App\Services\Webhook\CircuitBreakerService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\MaxAttemptsExceededException;
@@ -30,14 +33,18 @@ use Throwable;
 
 /**
  * Executa uma operacao no AD no worker on-prem (spec 6.2): trava e marca
- * `enviado`, resolve a conta por GUID (ou login), aplica a guarda de escopo nas
- * escritas, chama o handler da acao e grava espelho, resultado e auditoria
- * numa transacao. Falha transitoria repete (tries/backoff); recusa definitiva
- * encerra na hora.
+ * `enviado`, resolve a conta por GUID (ou login), recusa a propria conta do
+ * ator, aplica a guarda de escopo nas escritas, chama o handler da acao e grava
+ * espelho, resultado e auditoria numa transacao.
  *
- * As excecoes que saem daqui (fila, failed_jobs, failed()) sao sempre
- * recriadas neste metodo so com o codigo: o rastro da original, que pode ter
- * login ou DN nos argumentos, nao e persistido.
+ * Repete: falha transitoria do AD; falha do banco antes da escrita no AD;
+ * qualquer falha depois de a escrita comecar (a acao e convergente, spec 6.3
+ * item 4). Encerra na hora: recusa do AD ou da guarda, indisponibilidade nao
+ * transitoria e erro inesperado antes da escrita.
+ *
+ * As excecoes que saem daqui (fila, failed_jobs, failed()) sao sempre recriadas
+ * so com o codigo ou com texto fixo: o rastro da original, que pode ter login,
+ * DN ou SQL com valores, nao e persistido.
  */
 final class ExecutarOperacaoDiretorioJob implements ShouldQueue
 {
@@ -53,7 +60,9 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
 
     private const BACKOFF_PADRAO = [10, 30];
 
-    private const FALHA_AO_GRAVAR = 'Falha ao gravar o resultado da operacao no diretorio.';
+    private const FALHA_DE_BANCO = 'Falha do banco ao executar a operacao no diretorio.';
+
+    private const FALHA_DEPOIS_DA_ESCRITA = 'Falha depois da escrita no diretorio; a operacao sera repetida.';
 
     public int $timeout = 30;
 
@@ -63,7 +72,10 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
         $this->onQueue(config('acessos.diretorio.fila.nome'));
     }
 
-    /** A config ja valida; aqui so o padrao se ela vier sobrescrita com lixo. */
+    /**
+     * A config ja valida; aqui so o padrao se ela vier sobrescrita com lixo.
+     * Tentativas e backoff entram no payload no dispatch (lidos no web).
+     */
     public function tries(): int
     {
         $tentativas = config('acessos.diretorio.tentativas');
@@ -86,6 +98,7 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
         GuardaDeAlvo $guarda,
         AplicaEspelhoAd $espelho,
         CircuitBreakerService $circuito,
+        DonoDaConta $dono,
     ): void {
         $circuitoAberto = $circuito->isOpen(self::CIRCUITO);
         $operacao = $this->marcarEnviada(contarTentativa: ! $circuitoAberto);
@@ -98,9 +111,14 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
             return;
         }
 
+        $escritaIniciada = false;
         try {
             $conta = $this->resolverConta($diretorio, $operacao, $espelho);
-            $resultado = $this->executarAcao($operacao, $conta, $guarda, $espelho);
+            $this->recusarPropriaConta($dono, $operacao, $conta);
+            $this->prepararEscrita($operacao, $conta, $guarda, $espelho);
+            $handler = $this->handler($operacao);
+            $escritaIniciada = $operacao->acao->escreve();
+            $resultado = $handler->executar($operacao, $conta);
         } catch (DiretorioIndisponivel $erro) {
             $circuito->recordFailure(self::CIRCUITO);
             $saneado = new DiretorioIndisponivel($erro->codigo());
@@ -116,6 +134,12 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
             return;
         } catch (Throwable $erro) {
             $this->registrarErroInterno($erro);
+            if ($escritaIniciada) {
+                throw new RuntimeException(self::FALHA_DEPOIS_DA_ESCRITA);
+            }
+            if ($erro instanceof QueryException) {
+                throw new RuntimeException(self::FALHA_DE_BANCO); // nada mudou no AD: repete
+            }
             $this->fail(new DiretorioRecusou(CodigoErroDiretorio::ERRO_INTERNO));
 
             return;
@@ -136,34 +160,27 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
             default => CodigoErroDiretorio::ERRO_INTERNO,
         };
 
-        $operacao = DB::transaction(function () use ($codigo): ?OperacaoAd {
-            $operacao = OperacaoAd::query()->lockForUpdate()->find($this->operacaoId);
-            if ($operacao === null || $operacao->estaFinalizada()) {
-                return null;
-            }
-            $operacao->falhar($codigo);
-            $operacao->registrarAuditoria('falhou', ['codigo_erro' => $codigo->value]);
-
-            return $operacao;
-        });
-
-        if ($operacao !== null) {
-            OperacaoDiretorioConcluida::dispatch($operacao->id);
-        }
+        app(EncerraOperacaoComFalha::class)->encerrar($this->operacaoId, $codigo);
     }
 
     /** Transacao curta: o lock nao fica aberto durante a chamada ao AD. */
     private function marcarEnviada(bool $contarTentativa): ?OperacaoAd
     {
-        return DB::transaction(function () use ($contarTentativa): ?OperacaoAd {
-            $operacao = OperacaoAd::query()->lockForUpdate()->find($this->operacaoId);
-            if ($operacao === null || $operacao->estaFinalizada()) {
-                return null;
-            }
-            $operacao->marcarEnviada($contarTentativa);
+        try {
+            return DB::transaction(function () use ($contarTentativa): ?OperacaoAd {
+                $operacao = OperacaoAd::query()->lockForUpdate()->find($this->operacaoId);
+                if ($operacao === null || $operacao->estaFinalizada()) {
+                    return null;
+                }
+                $operacao->marcarEnviada($contarTentativa);
 
-            return $operacao;
-        });
+                return $operacao;
+            });
+        } catch (QueryException $erro) {
+            $this->registrarErroInterno($erro);
+
+            throw new RuntimeException(self::FALHA_DE_BANCO);
+        }
     }
 
     /** Por GUID (operacao ou cadastro) quando conhecido; senao pelo login na SearchBase. */
@@ -185,24 +202,46 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
     }
 
     /**
+     * A regra do pedido (spec 7.2 item 3) de novo, agora com a conta resolvida:
+     * o cadastro pode ter ganho user_id ou GUID depois do pedido, ou o login
+     * pode ter sido renomeado no AD. Recusa como conta protegida.
+     */
+    private function recusarPropriaConta(DonoDaConta $dono, OperacaoAd $operacao, ContaDiretorio $conta): void
+    {
+        $ator = $operacao->solicitante;
+        if ($ator === null) {
+            return;
+        }
+
+        if ($dono->eDoAtor($ator, $operacao->cadastro, $conta->login, $conta->objectGuid)
+            || $dono->eDoAtor($ator, null, $operacao->login_ad)) {
+            throw new DiretorioRecusou(CodigoErroDiretorio::CONTA_PROTEGIDA);
+        }
+    }
+
+    /**
      * Escrita: grava o espelho da leitura (GUID, status_ad) e so passa pela
      * guarda depois. Consulta: a guarda so classifica, no espelho final.
      */
-    private function executarAcao(OperacaoAd $operacao, ContaDiretorio $conta, GuardaDeAlvo $guarda, AplicaEspelhoAd $espelho): ResultadoOperacao
+    private function prepararEscrita(OperacaoAd $operacao, ContaDiretorio $conta, GuardaDeAlvo $guarda, AplicaEspelhoAd $espelho): void
     {
-        if ($operacao->acao->escreve()) {
-            if ($operacao->cadastro !== null) {
-                $espelho->aplicar($operacao->cadastro, $conta, $guarda->status($conta));
-            }
-            $guarda->assegurar($conta);
+        if (! $operacao->acao->escreve()) {
+            return;
         }
+        if ($operacao->cadastro !== null) {
+            $espelho->aplicar($operacao->cadastro, $conta, $guarda->status($conta));
+        }
+        $guarda->assegurar($conta);
+    }
 
+    private function handler(OperacaoAd $operacao): HandlerAcaoDiretorio
+    {
         $handler = app($operacao->acao->handler());
         if (! $handler instanceof HandlerAcaoDiretorio) {
             throw new LogicException('Handler invalido para a acao '.$operacao->acao->value);
         }
 
-        return $handler->executar($operacao, $conta);
+        return $handler;
     }
 
     /**
@@ -223,7 +262,7 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
         } catch (Throwable $erro) {
             $this->registrarErroInterno($erro);
 
-            throw new RuntimeException(self::FALHA_AO_GRAVAR);
+            throw new RuntimeException(self::FALHA_DEPOIS_DA_ESCRITA);
         }
     }
 
