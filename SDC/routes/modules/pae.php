@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Pae\Controllers\PaeFormularioController;
+use App\Modules\Pae\Controllers\PaeAdmissibilidadeController;
 use App\Modules\Pae\Controllers\PaeNotificacaoController;
 use App\Modules\Pae\Controllers\PaeProtocoloController;
 
@@ -75,6 +76,14 @@ Route::prefix('pae')->name('pae.')->group(function () {
     Route::get('/protocolo/{paeProtocolo}/historico', [PaeProtocoloController::class, 'historico'])
         ->name('protocolos.historico')
         ->middleware('can:pae.protocolos.view');
+
+    Route::get('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'show'])
+        ->name('protocolo.admissibilidade.show')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::put('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'salvar'])
+        ->name('protocolo.admissibilidade.salvar')
+        ->middleware('can:pae.protocolos.edit');
 
     Route::post('/protocolo/{paeProtocolo}/status', [PaeProtocoloController::class, 'changeStatus'])
         ->name('protocolos.status')

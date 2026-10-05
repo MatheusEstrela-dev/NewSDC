@@ -49,6 +49,14 @@
           <button
             type="button"
             class="modal-serie-aba pb-3 text-sm font-semibold flex items-center gap-2"
+            :class="{ 'is-ativa': activeTab === 'admissibilidade' }"
+            @click="activeTab = 'admissibilidade'"
+          >
+            Admissibilidade
+          </button>
+          <button
+            type="button"
+            class="modal-serie-aba pb-3 text-sm font-semibold flex items-center gap-2"
             :class="{ 'is-ativa': activeTab === 'analises' }"
             @click="activeTab = 'analises'"
           >
@@ -115,6 +123,16 @@
           />
         </div>
 
+        <div v-else-if="activeTab === 'admissibilidade'">
+          <PaeAdmissibilidadePainel
+            :protocolo-id="protocolo?.id"
+            :can-edit="canEdit"
+            :admissibilidade="historico?.admissibilidade"
+            :municipios-disponiveis="historico?.municipios_disponiveis || []"
+            @atualizado="$emit('atualizado')"
+          />
+        </div>
+
         <!-- Análises -->
         <div v-else-if="activeTab === 'analises'">
           <div v-if="analisesCount" class="space-y-3">
@@ -167,6 +185,7 @@ import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import BellIcon from '@/Components/Icons/BellIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import PaePrazosPainel from '@/Components/Organisms/Pae/Protocolos/PaePrazosPainel.vue';
+import PaeAdmissibilidadePainel from '@/Components/Organisms/Pae/Protocolos/PaeAdmissibilidadePainel.vue';
 import PaeNotificacoesPainel from '@/Components/Organisms/Pae/Protocolos/PaeNotificacoesPainel.vue';
 
 const props = defineProps({
