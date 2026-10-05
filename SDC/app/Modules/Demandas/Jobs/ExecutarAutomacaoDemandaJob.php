@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Jobs;
 
 use App\Modules\Acessos\Contracts\DiretorioCorporativo;
+use App\Modules\Acessos\DTOs\ContaDiretorio;
 use App\Modules\Acessos\DTOs\ReferenciaConta;
 use App\Modules\Acessos\Enums\CodigoErroDiretorio;
 use App\Modules\Acessos\Exceptions\DiretorioIndisponivel;
@@ -75,10 +76,17 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
         try {
             $conta = $diretorio->consultar($this->login)
                 ?? throw new DiretorioRecusou(CodigoErroDiretorio::CONTA_INEXISTENTE);
+            if ($this->protegida($conta)) {
+                throw new DiretorioRecusou(CodigoErroDiretorio::CONTA_PROTEGIDA);
+            }
             $this->executar($diretorio, $conta->referencia());
-        } catch (DiretorioRecusou $erro) {
-            // Recusa definitiva (conta inexistente, sem permissao etc): tentar
-            // de novo nao muda o resultado, entao falha direto sem reenfileirar.
+        } catch (DiretorioRecusou|DiretorioIndisponivel $erro) {
+            // So falha transitoria (rede/tempo) volta para a fila; recusa e
+            // indisponibilidade definitiva (config_ausente, certificado,
+            // credencial_servico) falham direto, sem reenfileirar (spec 9.1).
+            if ($erro->codigo()->transitorio()) {
+                throw $erro;
+            }
             $this->fail($erro);
 
             return;
@@ -105,6 +113,14 @@ class ExecutarAutomacaoDemandaJob implements ShouldQueue
             sprintf('"%s" falhou: %s', $this->acao, $this->descreverFalha($erro)),
             ['operation_id' => $this->operationId],
         );
+    }
+
+    /** adminCount=1 no AD ou login na lista de protegidas (que sempre traz a conta de servico). */
+    private function protegida(ContaDiretorio $conta): bool
+    {
+        $lista = array_map('mb_strtolower', (array) config('acessos.diretorio.contas_protegidas', []));
+
+        return $conta->protegida || in_array(mb_strtolower($conta->login), $lista, true);
     }
 
     private function executar(DiretorioCorporativo $diretorio, ReferenciaConta $conta): void

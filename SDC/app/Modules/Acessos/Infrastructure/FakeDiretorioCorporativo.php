@@ -11,7 +11,7 @@ use App\Modules\Acessos\DTOs\ResultadoOperacao;
 use App\Modules\Acessos\Enums\CodigoErroDiretorio;
 use App\Modules\Acessos\Exceptions\DiretorioIndisponivel;
 use App\Modules\Acessos\Exceptions\DiretorioRecusou;
-use DateTimeImmutable;
+use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -232,7 +232,7 @@ final class FakeDiretorioCorporativo implements DiretorioCorporativo
             }
             $efetivada = $efeito($estado['contas'][$guid]);
             if ($efetivada) {
-                $estado['contas'][$guid]['alteradaEm'] = (new DateTimeImmutable())->format(DATE_ATOM);
+                $estado['contas'][$guid]['alteradaEm'] = CarbonImmutable::now()->format(DATE_ATOM);
             }
 
             return new ResultadoOperacao(ContaDiretorio::fromArray($estado['contas'][$guid]), $efetivada);
