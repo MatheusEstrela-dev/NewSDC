@@ -7,14 +7,14 @@ namespace App\Modules\Pae\Services;
 use App\Core\Events\DomainEvent;
 use App\Core\Outbox\OutboxDispatcher;
 use App\Models\User;
-use App\Modules\Pae\Domain\Events\ParecerConcluidoV1;
 use App\Modules\Pae\Domain\Events\ProtocoloEnviadoV1;
+use App\Modules\Pae\Domain\Exceptions\TransicaoProibidaException;
+use App\Modules\Pae\Domain\Workflows\PaeProtocoloWorkflow;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeEmpnto;
 use App\Modules\Pae\Models\PaeProtocolo;
-use App\Modules\Pae\Models\PaeTramitacao;
-use App\Modules\Pae\Models\PaeTimeline;
 use App\Modules\Pae\Support\CicloProtocolo;
+use App\Modules\Pae\Support\TimelinePae;
 use App\Modules\Shared\BaseService;
 use App\Support\Database\PgCompat;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -25,6 +25,7 @@ class PaeProtocoloService extends BaseService
 {
     public function __construct(
         private readonly OutboxDispatcher $outbox,
+        private readonly PaeProtocoloWorkflow $workflow,
     ) {}
 
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
@@ -133,7 +134,7 @@ class PaeProtocoloService extends BaseService
                 }
             }
 
-            $this->registrarTimeline($protocolo, 'criacao', 'Protocolo criado no sistema SDC.', $user);
+            TimelinePae::registrar($protocolo, 'criacao', 'Protocolo criado no sistema SDC.', $user);
 
             $this->publicarProtocoloEnviado($protocolo, $user, 'protocolo');
 
@@ -178,148 +179,47 @@ class PaeProtocoloService extends BaseService
         User $user,
         string $obs = ''
     ): PaeProtocolo {
-        if ($protocolo->status === $novo) {
-            return $protocolo->fresh();
+        try {
+            return $this->workflow->transitar($protocolo, $novo, $user, $obs);
+        } catch (TransicaoProibidaException $e) {
+            throw ValidationException::withMessages(['status' => $e->getMessage()]);
         }
-
-        $podeConcluirParaCcpae = $novo === PaeProtocoloStatus::CCPAE
-            && in_array($protocolo->status, [
-                PaeProtocoloStatus::NOVO,
-                PaeProtocoloStatus::ENTRADA_PROCESSO,
-                PaeProtocoloStatus::CRIACAO_SDC,
-                PaeProtocoloStatus::GERENCIAMENTO,
-                PaeProtocoloStatus::NOTIFICACAO,
-                PaeProtocoloStatus::ANALISE,
-                PaeProtocoloStatus::APROVADO,
-                PaeProtocoloStatus::ESPERAR_TRATATIVA,
-                PaeProtocoloStatus::DILACAO,
-            ], true);
-
-        if (!$protocolo->validarTransicaoStatus($novo) && !$podeConcluirParaCcpae) {
-            throw ValidationException::withMessages([
-                'status' => "Transição inválida: {$protocolo->status->getLabel()} → {$novo->getLabel()}.",
-            ]);
-        }
-
-        $statusAnterior = $protocolo->status;
-        $estavaArquivado = (bool) $protocolo->arquivado;
-        $desarquivarAuto = $estavaArquivado && $novo === PaeProtocoloStatus::CCPAE;
-
-        $atributos = [
-            'status' => $novo->value,
-            'updated_by' => $user->id,
-        ];
-
-        // Validar (transitar para CCPAE) reativa um protocolo arquivado:
-        // ao validar para CCPAE, o protocolo volta para fluxo ativo.
-        if ($desarquivarAuto) {
-            $atributos['arquivado'] = false;
-        }
-
-        return DB::transaction(function () use ($protocolo, $novo, $user, $obs, $statusAnterior, $atributos, $desarquivarAuto): PaeProtocolo {
-            $protocolo->update($atributos);
-
-            $tramitacao = PaeTramitacao::create([
-                'protocolo_id' => $protocolo->id,
-                'user_id' => $user->id,
-                'status' => $novo->value,
-                'obs' => $obs ?: null,
-            ]);
-
-            $descricaoTimeline = "Status alterado de '{$statusAnterior->getLabel()}' para '{$novo->getLabel()}'. {$obs}";
-            if ($desarquivarAuto) {
-                $descricaoTimeline .= ' Protocolo desarquivado automaticamente pela transicao para CCPAE.';
-            }
-
-            $this->registrarTimeline(
-                $protocolo,
-                'status_alterado',
-                $descricaoTimeline,
-                $user
-            );
-
-            if ($statusAnterior === PaeProtocoloStatus::ANALISE
-                && in_array($novo, [PaeProtocoloStatus::APROVADO, PaeProtocoloStatus::REPROVADO], true)) {
-                $this->publicarParecerConcluido($protocolo, $statusAnterior, $novo, $user, $tramitacao);
-            }
-
-            return $protocolo->fresh();
-        });
     }
 
     /**
-     * ParecerConcluidoV1 no outbox, na MESMA transacao da transicao.
-     *
-     * A saida de ANALISE para APROVADO/REPROVADO e o unico ponto do codigo em
-     * que a analise se fecha com decisao: a coluna pae_analises.parecer existe
-     * mas nenhuma rota, controller ou service jamais escreve nela.
-     *
-     * O creditado e o PROPRIO analista que emitiu o parecer -- ato sem terceiro
-     * a premiar, por isso validador_user_id nao entra.
-     *
-     * Entrega comprovada pelo dt_status da tramitacao recem-gravada (default do
-     * banco, por isso o refresh) e prazo por limite_analise. Sem a tramitacao
-     * legivel, o evento sai sem data e o fato vai a apuracao -- updated_at nao
-     * substitui marco.
+     * Atribui o analista e leva o protocolo a NOTIFICACAO pelo caminho da
+     * maquina de estados. Antes gravava o status direto, pulando as etapas.
      */
-    private function publicarParecerConcluido(
-        PaeProtocolo $protocolo,
-        PaeProtocoloStatus $statusAnterior,
-        PaeProtocoloStatus $novo,
-        User $user,
-        PaeTramitacao $tramitacao,
-    ): void {
-        $this->outbox->persist(new ParecerConcluidoV1(
-            eventId:       DomainEvent::newId(),
-            aggregateType: 'pae_protocolo',
-            aggregateId:   (string) $protocolo->id,
-            occurredAt:    new \DateTimeImmutable(),
-            metadata: [
-                'protocolo_id'     => (int) $protocolo->id,
-                'num_protocolo'    => $protocolo->num_protocolo,
-                'ciclo'            => CicloProtocolo::de($protocolo->num_protocolo),
-                'decisao'          => $novo->value,
-                'status_anterior'  => $statusAnterior->value,
-                'actor_user_id'    => (int) $user->id,
-                'credited_user_id' => (int) $user->id,
-                'prazo_em'         => $protocolo->limite_analise?->toDateString(),
-                'entregue_em'      => $tramitacao->fresh()?->dt_status?->toIso8601String(),
-            ],
-        ));
-    }
-
     public function atribuir(PaeProtocolo $protocolo, User $analista, User $user): PaeProtocolo
     {
-        $analistaJaAtribuido = $protocolo->analista_atual_id === $analista->id;
-        $statusAnterior = $protocolo->status;
-        $statusJaNotificacao = $statusAnterior === PaeProtocoloStatus::NOTIFICACAO;
-
-        if ($analistaJaAtribuido) {
+        if ($protocolo->analista_atual_id === $analista->id) {
             return $protocolo;
         }
 
-        $protocolo->update([
-            'analista_atual_id' => $analista->id,
-            'status' => PaeProtocoloStatus::NOTIFICACAO->value,
-            'updated_by' => $user->id,
-        ]);
+        try {
+            return DB::transaction(function () use ($protocolo, $analista, $user): PaeProtocolo {
+                $statusAnterior = $protocolo->status;
+                $protocolo->update(['analista_atual_id' => $analista->id, 'updated_by' => $user->id]);
 
-        if (!$statusJaNotificacao) {
-            PaeTramitacao::create([
-                'protocolo_id' => $protocolo->id,
-                'user_id' => $user->id,
-                'status' => PaeProtocoloStatus::NOTIFICACAO->value,
-                'obs' => "Analista {$analista->name} atribuído.",
-            ]);
+                $this->workflow->conduzirAte(
+                    $protocolo,
+                    PaeProtocoloStatus::NOTIFICACAO,
+                    $user,
+                    "Analista {$analista->name} atribuído."
+                );
+
+                TimelinePae::registrar(
+                    $protocolo,
+                    'atribuicao',
+                    "Protocolo atribuído ao analista {$analista->name}. Status: {$statusAnterior->getLabel()} → Notificação.",
+                    $user
+                );
+
+                return $protocolo->fresh();
+            });
+        } catch (TransicaoProibidaException $e) {
+            throw ValidationException::withMessages(['status' => $e->getMessage()]);
         }
-
-        $descricao = $analistaJaAtribuido
-            ? "Analista reatribuído: {$analista->name}."
-            : "Protocolo atribuído ao analista {$analista->name}. Status: {$statusAnterior->getLabel()} → Notificação.";
-
-        $this->registrarTimeline($protocolo, 'atribuicao', $descricao, $user);
-
-        return $protocolo->fresh();
     }
 
     public function relacionar(PaeProtocolo $base, User $user): PaeProtocolo
@@ -340,13 +240,13 @@ class PaeProtocoloService extends BaseService
                 'protocolo_origem_id' => $base->id,
             ]);
 
-            $this->registrarTimeline(
+            TimelinePae::registrar(
                 $base,
                 'relacionamento',
                 "Versao {$novo->num_protocolo} criada a partir deste protocolo.",
                 $user
             );
-            $this->registrarTimeline(
+            TimelinePae::registrar(
                 $novo,
                 'criacao',
                 "Protocolo criado como versao relacionada de {$base->num_protocolo}.",
@@ -434,13 +334,4 @@ class PaeProtocoloService extends BaseService
         ];
     }
 
-    private function registrarTimeline(PaeProtocolo $protocolo, string $evento, string $descricao, User $user): void
-    {
-        PaeTimeline::create([
-            'protocolo_id' => $protocolo->id,
-            'evento' => $evento,
-            'descricao' => $descricao,
-            'user_id' => $user->id,
-        ]);
-    }
 }
