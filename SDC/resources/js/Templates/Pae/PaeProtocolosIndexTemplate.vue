@@ -62,6 +62,7 @@
       @total="handleTotalProtocolos"
       @historico="handleHistoricoProtocolos"
       @vencidos="handleVencidosProtocolos"
+      @ciclos="handleCiclosEsgotados"
       @ccpae="handleCcpaeFilter"
     />
 
@@ -137,7 +138,9 @@
       :protocolo="selectedProtocolo"
       :historico="historicoPayload"
       :external-view="isExternalView"
+      :can-edit="canEdit"
       @close="closeHistorico"
+      @atualizado="recarregarHistorico"
     />
 
     <PrintPaeProtocoloModal
@@ -176,22 +179,10 @@
       @cancel="cancelArchive"
     />
 
-    <!-- Modal de Confirmacao CCPAE -->
-    <ConfirmDialog
-      :is-open="showCcpaeConfirm"
-      :title="protocoloCcpaeArquivado ? 'Reativar e Concluir para CCPAE' : 'Concluir para CCPAE'"
-      :message="protocoloCcpaeArquivado
-        ? 'Este protocolo esta ARQUIVADO. Deseja reativa-lo e conclui-lo para o CCPAE?'
-        : 'Deseja concluir este protocolo para o CCPAE?'"
-      :description="protocoloCcpaeArquivado
-        ? 'O protocolo sera desarquivado automaticamente, seu status ira para CCPAE e a movimentacao sera registrada no historico.'
-        : 'Esta acao alterara o status do protocolo para CCPAE, registrando a movimentacao e mantendo o historico.'"
-      variant="success"
-      :confirm-text="protocoloCcpaeArquivado ? 'Reativar e Concluir' : 'Concluir'"
-      cancel-text="Cancelar"
-      :loading="ccpaeLoading"
-      @confirm="confirmCcpae"
-      @cancel="cancelCcpae"
+    <EmitirCcpaeModal
+      :show="showCcpaeModal"
+      :protocolo="protocoloCcpae"
+      @close="fecharCcpae"
     />
   </div>
 </template>
@@ -219,28 +210,15 @@ import PaeProtocolosGrid from '@/Components/Organisms/Pae/Protocolos/PaeProtocol
 import PaeProtocolosStatsCards from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosStatsCards.vue';
 import PaeProtocolosTable from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosTable.vue';
 import AssignAnalistaModal from '@/Components/Organisms/Pae/Protocolos/AssignAnalistaModal.vue';
+import EmitirCcpaeModal from '@/Components/Organisms/Pae/Protocolos/EmitirCcpaeModal.vue';
 
 import { GetPaeProtocoloHistorico } from '@/domain/pae/usecases/GetPaeProtocoloHistorico';
-import { ListPaeProtocolos } from '@/domain/pae/usecases/ListPaeProtocolos';
 import { ApiPaeProtocoloRepository } from '@/infrastructure/pae/ApiPaeProtocoloRepository';
-import { MockPaeProtocoloRepository } from '@/infrastructure/pae/MockPaeProtocoloRepository';
-
-import {
-    getMockPaeStats,
-    matchesPaeFilters,
-    paeAnalistas,
-    paeEmpreendedores,
-    paeSituacoes,
-} from '@/mocks/pae';
 
 import { useMobile } from '@/Composables/useMobile';
 
 const props = defineProps({
   loading: {
-    type: Boolean,
-    default: false,
-  },
-  useMock: {
     type: Boolean,
     default: false,
   },
@@ -284,15 +262,11 @@ const { isMobile } = useMobile();
 // Estado da visualização (mobile sempre será grade)
 const viewMode = ref('table');
 
-// ── Repositórios ─────────────────────────────────────────────
-const mockRepository = new MockPaeProtocoloRepository();
-const apiRepository = new ApiPaeProtocoloRepository();
-const repository = props.useMock ? mockRepository : apiRepository;
-const listUsecase = new ListPaeProtocolos(mockRepository);
-const historicoUsecase = new GetPaeProtocoloHistorico(repository);
+// Repositorio e dados da listagem enviados pelo servidor
+const historicoUsecase = new GetPaeProtocoloHistorico(new ApiPaeProtocoloRepository());
 const { toast } = useToast();
 
-const canAtribuirComputed = computed(() => props.useMock ? props.canEdit : props.canAtribuir);
+const canAtribuirComputed = computed(() => props.canAtribuir);
 const isExternalView = computed(() => (
   !props.canCreate &&
   !props.canEdit &&
@@ -301,204 +275,103 @@ const isExternalView = computed(() => (
   !props.canAtribuir
 ));
 
-const perPage = 15;
-const currentPage = ref(1);
-const mockFilters = ref({
-  buscar: '',
-  situacao: '',
-  analista: '',
-  empreendedor: '',
-  data_inicio: '',
-  data_fim: '',
-});
-
-const allProtocolos = ref([]);
-if (props.useMock) {
-  listUsecase.execute().then((rows) => {
-    allProtocolos.value = rows;
-  });
-}
-
-// ── Helpers para mapear dados reais ao shape esperado pelos componentes ──────
 function normalizeDateBR(dateStr) {
   if (!dateStr) return null;
   const d = new Date(dateStr);
-  return d.toLocaleDateString('pt-BR');
-}
-
-function calcPrazo(limiteISO, situacao) {
-  if (!limiteISO) return 'ok';
-  const terminados = ['aprovado', 'ccpae', 'ativo_3_anos', 'reprovado', 'revogado'];
-  if (terminados.includes(situacao)) return 'ok';
-  const diff = (new Date(limiteISO) - new Date()) / (1000 * 60 * 60 * 24);
-  if (diff < 0) return 'vencido';
-  if (diff <= 10) return 'proximo';
-  return 'ok';
+  return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 }
 
 function mapProtocolo(p) {
   const limiteISO = p.limite_analise ?? null;
   const arquivado = !!p.arquivado;
-  const situacao = arquivado ? 'arquivado' : (p.status ?? p.situacao ?? '');
   return {
     id: p.id,
-    protocoloNumero: p.num_protocolo ?? p.protocoloNumero ?? '',
-    empreendedor: p.empreendimento?.empdor?.nome ?? p.empreendedor ?? 'N/A',
-    estrutura: p.empreendimento?.nome ?? p.estrutura ?? '',
-    analista: p.analista_atual?.name ?? p.analistaAtual?.name ?? p.analista ?? 'Não atribuído',
-    situacao,
-    dataEntrada: normalizeDateBR(p.dt_entrada ?? p.dataEntrada),
-    limiteAnalise: normalizeDateBR(limiteISO ?? p.limiteAnalise),
+    protocoloNumero: p.num_protocolo ?? '',
+    empreendedor: p.empreendimento?.empdor?.nome ?? 'N/A',
+    estrutura: p.empreendimento?.nome ?? '',
+    analista: p.analista_atual?.name ?? 'Não atribuído',
+    analista_atual_id: p.analista_atual_id ?? null,
+    situacao: arquivado ? 'arquivado' : (p.status ?? ''),
+    dataEntrada: normalizeDateBR(p.dt_entrada),
+    limiteAnalise: normalizeDateBR(limiteISO),
     limiteAnaliseISO: limiteISO,
-    prazo: calcPrazo(limiteISO, situacao),
+    prazo: p.prazo_situacao ?? 'ok',
+    prazoEstimado: !!p.dt_notificacao_feam_estimada,
+    foraDoPrazo: !!p.fora_do_prazo,
     ccpae: !!p.ccpae,
     arquivado,
   };
 }
 
-// ── Dados computados (real ou mock) ──────────────────────────
-const situacoes = computed(() => {
-  if (!props.useMock && props.statusOptions) {
-    return [
-      { value: '', label: 'Todas as situações' },
-      ...Object.entries(props.statusOptions).map(([value, label]) => ({ value, label })),
-    ];
-  }
-  return paeSituacoes;
-});
-
-const analistas = computed(() => {
-  if (!props.useMock && props.analistas) return props.analistas;
-  return paeAnalistas;
-});
-
-const empreendedores = computed(() => {
-  if (!props.useMock && props.empreendedores) return props.empreendedores;
-  return paeEmpreendedores;
-});
-
-const filters = computed(() => {
-  if (props.useMock) return mockFilters.value;
-  return props.filters ?? {};
-});
-
-const filteredProtocolos = computed(() => {
-  if (props.useMock) {
-    return (allProtocolos.value || []).filter((p) => matchesPaeFilters(p, mockFilters.value));
-  }
-  return (props.protocolos?.data ?? []).map(mapProtocolo);
-});
+const situacoes = computed(() => [
+  { value: '', label: 'Todas as situações' },
+  ...Object.entries(props.statusOptions ?? {}).map(([value, label]) => ({ value, label })),
+]);
+const analistas = computed(() => props.analistas ?? []);
+const empreendedores = computed(() => props.empreendedores ?? []);
+const filters = computed(() => props.filters ?? {});
+const filteredProtocolos = computed(() => (props.protocolos?.data ?? []).map(mapProtocolo));
+const paginatedProtocolos = filteredProtocolos;
 
 const statsToUse = computed(() => {
-  if (!props.useMock && props.statistics) {
-    const s = props.statistics;
-    return {
-      total: s.total ?? 0,
-      historico: (s.aprovado ?? 0) + (s.ccpae ?? 0) + (s.ativo_3_anos ?? 0),
-      vencidos: s.vencidos ?? 0,
-      ccpae: s.ccpae ?? 0,
-    };
-  }
-  return getMockPaeStats(filteredProtocolos.value);
+  const s = props.statistics ?? {};
+  return {
+    total: s.total ?? 0,
+    historico: (s.aprovado ?? 0) + (s.ccpae ?? 0) + (s.ativo_3_anos ?? 0),
+    vencidos: s.vencidos ?? 0,
+    ciclos_esgotados: s.ciclos_esgotados ?? 0,
+    ccpae: s.ccpae ?? 0,
+  };
 });
 
-const paginationToUse = computed(() => {
-  if (!props.useMock && props.protocolos) {
-    return {
+const paginationToUse = computed(() => (props.protocolos
+  ? {
       current_page: props.protocolos.current_page,
       last_page: props.protocolos.last_page,
       per_page: props.protocolos.per_page,
       total: props.protocolos.total,
-    };
-  }
-  const total = filteredProtocolos.value.length;
-  const lastPage = Math.max(1, Math.ceil(total / perPage));
-  const safePage = Math.min(Math.max(1, currentPage.value), lastPage);
-  return { current_page: safePage, last_page: lastPage, per_page: perPage, total };
-});
+    }
+  : null));
 
-const paginatedProtocolos = computed(() => {
-  if (!props.useMock) return filteredProtocolos.value;
-  const start = (paginationToUse.value.current_page - 1) * perPage;
-  return filteredProtocolos.value.slice(start, start + perPage);
-});
+function visitar(params, preserveState = false) {
+  router.get(route('pae.protocolos.index'), params, { preserveState, replace: true });
+}
 
 function handleFilterChange(next) {
-  if (props.useMock) {
-    mockFilters.value = { ...mockFilters.value, ...(next || {}) };
-    currentPage.value = 1;
-  } else {
-    router.get(route('pae.protocolos.index'), { ...filters.value, ...(next || {}) }, { preserveState: true, replace: true });
-  }
+  visitar({ ...filters.value, ...(next || {}) }, true);
 }
 
 function handleFilterReset() {
-  if (props.useMock) {
-    mockFilters.value = { buscar: '', situacao: '', analista: '', empreendedor: '', data_inicio: '', data_fim: '' };
-    currentPage.value = 1;
-  } else {
-    router.get(route('pae.protocolos.index'), {}, { preserveState: false });
-  }
+  visitar({});
 }
 
 function handleCcpaeFilter() {
-  if (props.useMock) {
-    mockFilters.value = { ...mockFilters.value, situacao: 'ccpae', arquivado: false };
-    currentPage.value = 1;
-    return;
-  }
-
-  router.get(route('pae.protocolos.index'), { status: 'ccpae' }, { preserveState: false, replace: true });
+  visitar({ status: 'ccpae' });
 }
 
 function handleArquivadosFilter() {
-  if (props.useMock) {
-    mockFilters.value = { ...mockFilters.value, arquivado: true };
-    currentPage.value = 1;
-    return;
-  }
-
-  router.get(route('pae.protocolos.index'), { arquivado: 1 }, { preserveState: false, replace: true });
+  visitar({ arquivado: 1 });
 }
 
 function handleTotalProtocolos() {
-  if (props.useMock) {
-    mockFilters.value = { buscar: '', situacao: '', analista: '', empreendedor: '', data_inicio: '', data_fim: '' };
-    currentPage.value = 1;
-    return;
-  }
-
-  router.get(route('pae.protocolos.index'), {}, { preserveState: false, replace: true });
+  visitar({});
 }
 
 function handleHistoricoProtocolos() {
-  if (props.useMock) {
-    mockFilters.value = { ...mockFilters.value, situacao: 'historico' };
-    currentPage.value = 1;
-    return;
-  }
-
-  router.get(route('pae.protocolos.index'), { status_grupo: 'historico' }, { preserveState: false, replace: true });
+  visitar({ status_grupo: 'historico' });
 }
 
 function handleVencidosProtocolos() {
-  if (props.useMock) {
-    mockFilters.value = { ...mockFilters.value, situacao: 'vencido' };
-    currentPage.value = 1;
-    return;
-  }
+  visitar({ status_grupo: 'vencidos' });
+}
 
-  router.get(route('pae.protocolos.index'), { status_grupo: 'vencidos' }, { preserveState: false, replace: true });
+function handleCiclosEsgotados() {
+  visitar({ status_grupo: 'ciclos_esgotados' });
 }
 
 function handlePageChange(page) {
-  if (props.useMock) {
-    currentPage.value = page;
-  } else {
-    router.get(route('pae.protocolos.index'), { ...filters.value, page }, { preserveState: true, replace: true });
-  }
+  visitar({ ...filters.value, page }, true);
 }
-
 function handleView(id) {
   router.visit(route('pae.index', { protocolo_id: id, readonly: 1 }));
 }
@@ -520,10 +393,8 @@ const showArchiveConfirm = ref(false);
 const archiveLoading = ref(false);
 const protocoloIdToArchive = ref(null);
 const protocoloJaArquivado = ref(false);
-const showCcpaeConfirm = ref(false);
-const ccpaeLoading = ref(false);
-const protocoloIdToCcpae = ref(null);
-const protocoloCcpaeArquivado = ref(false);
+const showCcpaeModal = ref(false);
+const protocoloCcpae = ref(null);
 
 function handleArchive(id) {
   const protocolo = (filteredProtocolos.value || []).find((p) => p.id === id);
@@ -598,62 +469,13 @@ function handleOptions(_id) {
 }
 
 function handleCheck(id) {
-  const protocolo = (filteredProtocolos.value || []).find((p) => p.id === id);
-  if (!protocolo) return;
-
-  protocoloIdToCcpae.value = id;
-  protocoloCcpaeArquivado.value = Boolean(protocolo.arquivado);
-  showCcpaeConfirm.value = true;
+  protocoloCcpae.value = (filteredProtocolos.value || []).find((p) => p.id === id) || null;
+  showCcpaeModal.value = !!protocoloCcpae.value;
 }
 
-function getRequestErrorMessage(error) {
-  const data = error?.response?.data;
-  const firstValidationMessage = data?.errors
-    ? Object.values(data.errors).flat().find(Boolean)
-    : null;
-
-  return firstValidationMessage
-    || data?.message
-    || 'Erro ao concluir protocolo para CCPAE. Tente novamente.';
-}
-
-async function confirmCcpae() {
-  if (!protocoloIdToCcpae.value) return;
-
-  ccpaeLoading.value = true;
-
-  try {
-    const ax = window.axios || (await import('axios')).default;
-
-    await ax.post(route('pae.protocolos.status', protocoloIdToCcpae.value), {
-      novo_status: 'ccpae',
-      obs: 'Protocolo concluido para CCPAE.',
-    }, {
-      headers: { Accept: 'application/json' },
-    });
-
-    const eraArquivado = protocoloCcpaeArquivado.value;
-    showCcpaeConfirm.value = false;
-    protocoloIdToCcpae.value = null;
-    protocoloCcpaeArquivado.value = false;
-    toast(
-      eraArquivado
-        ? 'Protocolo reativado e concluido para CCPAE.'
-        : 'Protocolo concluido para CCPAE.',
-      'success'
-    );
-    router.get(route('pae.protocolos.index'), { ...filters.value, status: 'ccpae' }, { preserveState: false, replace: true });
-  } catch (error) {
-    toast(getRequestErrorMessage(error), 'error');
-  } finally {
-    ccpaeLoading.value = false;
-  }
-}
-
-function cancelCcpae() {
-  showCcpaeConfirm.value = false;
-  protocoloIdToCcpae.value = null;
-  protocoloCcpaeArquivado.value = false;
+function fecharCcpae() {
+  showCcpaeModal.value = false;
+  protocoloCcpae.value = null;
 }
 
 function handlePdf(id) {
@@ -694,6 +516,11 @@ async function handleHistory(id) {
   historicoModalOpen.value = true;
 }
 
+async function recarregarHistorico() {
+  if (!selectedProtocolo.value) return;
+  historicoPayload.value = await historicoUsecase.execute(selectedProtocolo.value.id);
+}
+
 function closeHistorico() {
   historicoModalOpen.value = false;
   selectedProtocolo.value = null;
@@ -727,7 +554,6 @@ function openNovoProtocolo() {
     novoForm.post(route('pae.protocolos.store'), {
         onError: (errors) => {
             console.error('Validation errors:', errors);
-            const { toast } = useToast();
             toast('Erro ao criar protocolo. Verifique os dados.', 'error');
         },
     });

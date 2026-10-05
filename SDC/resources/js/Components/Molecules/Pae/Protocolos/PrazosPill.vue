@@ -1,24 +1,26 @@
 <template>
   <!-- rounded (e nao rounded-full) e size sm: esta pill e menor que as de status,
        porque aparece encostada na data dentro da celula. -->
-  <Badge
-    v-if="prazoLabel"
-    :variant="variant"
-    size="sm"
-    :rounded="false"
-    :class="props.class"
-  >
-    {{ prazoLabel }}
-  </Badge>
+  <span v-if="prazoLabel || estimado" class="inline-flex flex-wrap items-center gap-1" :class="props.class">
+    <Badge v-if="prazoLabel" :variant="variant" size="sm" :rounded="false">
+      {{ prazoLabel }}
+    </Badge>
+    <Badge
+      v-if="estimado"
+      variant="neutral"
+      size="sm"
+      :rounded="false"
+      title="Data da notificacao da FEAM estimada pela data de entrada. Informe a data real no historico do protocolo."
+    >
+      Estimado
+    </Badge>
+  </span>
 </template>
 
 <script setup>
 /**
- * Aviso de prazo do protocolo PAE: proximo do vencimento ou vencido.
- *
- * Estado puro, entao usa a semantica do Badge. A receita de pill vinha escrita a mao
- * aqui. O texto era text-[11px] e passa a 12px (text-xs do size sm): a diferenca de
- * um pixel nao justifica um token de tamanho exclusivo para um componente.
+ * Situacao do prazo de analise do protocolo PAE (Art. 9), calculada no servidor.
+ * "Estimado" marca a data da FEAM inferida no backfill.
  */
 import { computed } from 'vue';
 import Badge from '../../../Atoms/Badge/Badge.vue';
@@ -26,7 +28,11 @@ import Badge from '../../../Atoms/Badge/Badge.vue';
 const props = defineProps({
   prazo: {
     type: String,
-    default: 'ok', // ok|proximo|vencido
+    default: 'ok', // ok|proximo|vencido|pausado|sem_data
+  },
+  estimado: {
+    type: Boolean,
+    default: false,
   },
   class: {
     type: String,
@@ -37,6 +43,8 @@ const props = defineProps({
 const map = {
   proximo: { label: 'Próximo', variant: 'warning' },
   vencido: { label: 'Vencido', variant: 'danger' },
+  pausado: { label: 'Pausado', variant: 'info' },
+  sem_data: { label: 'Sem data FEAM', variant: 'neutral' },
 };
 
 const prazoLabel = computed(() => map[props.prazo]?.label || '');

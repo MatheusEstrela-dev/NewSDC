@@ -43,7 +43,7 @@
               </div>
               <div class="text-xs text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-2">
                 <span class="font-medium">Limite:</span> {{ protocolo.limiteAnalise }}
-                <PrazosPill :prazo="protocolo.prazo" class="scale-90 origin-left" />
+                <PrazosPill :prazo="protocolo.prazo" :estimado="protocolo.prazoEstimado" class="scale-90 origin-left" />
               </div>
             </td>
 

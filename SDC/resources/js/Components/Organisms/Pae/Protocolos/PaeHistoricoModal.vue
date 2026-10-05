@@ -40,6 +40,15 @@
           <button
             type="button"
             class="modal-serie-aba pb-3 text-sm font-semibold flex items-center gap-2"
+            :class="{ 'is-ativa': activeTab === 'prazos' }"
+            @click="activeTab = 'prazos'"
+          >
+            Prazos
+            <Badge v-if="historico?.prazos?.situacao === 'vencido'" variant="danger" size="sm">!</Badge>
+          </button>
+          <button
+            type="button"
+            class="modal-serie-aba pb-3 text-sm font-semibold flex items-center gap-2"
             :class="{ 'is-ativa': activeTab === 'analises' }"
             @click="activeTab = 'analises'"
           >
@@ -97,6 +106,15 @@
           </div>
         </div>
 
+        <div v-else-if="activeTab === 'prazos'">
+          <PaePrazosPainel
+            :prazos="historico?.prazos"
+            :protocolo-id="protocolo?.id"
+            :can-edit="canEdit"
+            @atualizado="$emit('atualizado')"
+          />
+        </div>
+
         <!-- Análises -->
         <div v-else-if="activeTab === 'analises'">
           <div v-if="analisesCount" class="space-y-3">
@@ -123,26 +141,13 @@
 
         <!-- Notificações -->
         <div v-else>
-          <div v-if="notificacoesCount" class="space-y-3">
-            <div
-              v-for="n in historico.notificacoes"
-              :key="n.id"
-              class="modal-serie-cartao rounded-xl p-4"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <h4 class="text-base font-semibold modal-serie-titulo">{{ n.titulo }}</h4>
-                  <p class="text-sm modal-serie-apoio mt-1">
-                    {{ n.data }} • <span class="modal-serie-valor">{{ n.responsavel }}</span>
-                  </p>
-                </div>
-                <Badge variant="warning" size="sm">{{ n.canal }}</Badge>
-              </div>
-            </div>
-          </div>
-          <div v-else class="text-center py-10 modal-serie-apoio">
-            Nenhuma notificação registrada.
-          </div>
+          <PaeNotificacoesPainel
+            :notificacoes="historico?.notificacoes || []"
+            :protocolo-id="protocolo?.id"
+            :can-edit="canEdit"
+            :ciclos-esgotados-em="historico?.prazos?.ciclos_esgotados_em || null"
+            @atualizado="$emit('atualizado')"
+          />
         </div>
       </div>
     </div>
@@ -161,6 +166,8 @@ import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import BellIcon from '@/Components/Icons/BellIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
+import PaePrazosPainel from '@/Components/Organisms/Pae/Protocolos/PaePrazosPainel.vue';
+import PaeNotificacoesPainel from '@/Components/Organisms/Pae/Protocolos/PaeNotificacoesPainel.vue';
 
 const props = defineProps({
   open: {
@@ -179,9 +186,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['close']);
+defineEmits(['close', 'atualizado']);
 
 const activeTab = ref('timeline');
 const showTimelineTab = computed(() => !props.externalView);
@@ -213,6 +224,8 @@ function eventLabel(tipo) {
     notificacao: 'Notificação',
     analise: 'Análise',
     criacao: 'Criação',
+    alerta: 'Alerta',
+    status: 'Status',
   };
   return map[tipo] || 'Evento';
 }
@@ -223,6 +236,8 @@ function eventBadgeVariant(tipo) {
     notificacao: 'warning',
     analise: 'info',
     criacao: 'success',
+    alerta: 'danger',
+    status: 'info',
   };
   return map[tipo] || 'default';
 }
@@ -233,6 +248,8 @@ function eventColor(tipo) {
     notificacao: 'bg-yellow-500/90 text-white',
     analise: 'bg-cyan-500/90 text-white',
     criacao: 'bg-blue-600/90 text-white',
+    alerta: 'bg-red-600/90 text-white',
+    status: 'bg-indigo-500/90 text-white',
   };
   return map[tipo] || 'bg-slate-600 text-white';
 }
@@ -243,6 +260,8 @@ function eventIcon(tipo) {
     notificacao: BellIcon,
     analise: DocumentTextIcon,
     criacao: CheckCircleIcon,
+    alerta: ExclamationTriangleIcon,
+    status: DocumentTextIcon,
   };
   return map[tipo] || ExclamationTriangleIcon;
 }
