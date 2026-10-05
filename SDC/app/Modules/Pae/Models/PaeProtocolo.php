@@ -44,6 +44,7 @@ class PaeProtocolo extends Model implements Rastreavel
         'dt_notificacao_feam',
         'dt_notificacao_feam_estimada',
         'ciclos_esgotados_em',
+        'admissibilidade_legada_sem_triagem',
     ];
 
     protected $casts = [
@@ -55,6 +56,7 @@ class PaeProtocolo extends Model implements Rastreavel
         'dt_notificacao_feam' => 'date',
         'dt_notificacao_feam_estimada' => 'boolean',
         'ciclos_esgotados_em' => 'date',
+        'admissibilidade_legada_sem_triagem' => 'boolean',
     ];
 
     protected static function newFactory()
@@ -110,6 +112,26 @@ class PaeProtocolo extends Model implements Rastreavel
     public function ccpaeVigente(): HasOne
     {
         return $this->hasOne(PaeCcpae::class, 'protocolo_id')->latestOfMany('id');
+    }
+
+    public function municipiosImpactados(): HasMany
+    {
+        return $this->hasMany(PaeMunicipioImpactado::class, 'protocolo_id');
+    }
+
+    public function itensAdmissibilidade(): HasMany
+    {
+        return $this->hasMany(PaeAdmissibilidadeItem::class, 'protocolo_id');
+    }
+
+    public function decisoesAdmissibilidade(): HasMany
+    {
+        return $this->hasMany(PaeAdmissibilidadeDecisao::class, 'protocolo_id')->orderByDesc('id');
+    }
+
+    public function comunicacoes(): HasMany
+    {
+        return $this->hasMany(PaeComunicacao::class, 'protocolo_id')->orderByDesc('id');
     }
 
     public function validarTransicaoStatus(PaeProtocoloStatus $novo): bool
