@@ -118,18 +118,19 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
     {
         $hosts = [];
         $dns = $this->passo('dns', function () use (&$hosts): ChecagemDiretorio {
-            $hosts = $this->fabrica->hosts();
-            $semResposta = array_values(array_filter($hosts, fn (string $host): bool => ! $this->sonda->resolve($host)));
+            $falhas = [];
+            foreach ($this->fabrica->hosts() as $host) {
+                $this->sonda->resolve($host) ? $hosts[] = $host : $falhas[] = $host.' ('.CodigoErroDiretorio::INDISPONIVEL->value.')';
+            }
 
-            return $semResposta === []
-                ? ChecagemDiretorio::ok('dns', count($hosts).' host(s) resolvem')
-                : ChecagemDiretorio::falha('dns', 'nao resolvem: '.implode(', ', $semResposta));
+            return $hosts === []
+                ? ChecagemDiretorio::falha('dns', implode(', ', $falhas))
+                : ChecagemDiretorio::ok('dns', count($hosts).' host(s) resolvem'.($falhas === [] ? '' : '; falhas: '.implode(', ', $falhas)));
         });
 
         $tls = $dns->estado === ChecagemDiretorio::OK
             ? $this->passo('tls', fn (): ChecagemDiretorio => $this->checarTls($hosts))
             : ChecagemDiretorio::ignorado('tls', 'etapa anterior falhou');
-
         $bind = $dns->estado === ChecagemDiretorio::OK && $tls->passou()
             ? $this->passo('bind', function (): ChecagemDiretorio {
                 $this->conexao()->connect();
@@ -148,12 +149,12 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
                     : ChecagemDiretorio::falha('search_base', 'search_base_inexistente');
             })
             : ChecagemDiretorio::ignorado('search_base', 'bind nao executado com sucesso');
-        $servico = $autenticado
+        $servico = $base->estado === ChecagemDiretorio::OK
             ? $this->passo('conta_servico', fn (): ChecagemDiretorio => ChecagemDiretorio::ok(
                 'conta_servico',
                 count($this->contaServico()['guids']).' conta(s) de servico protegida(s)',
             ))
-            : ChecagemDiretorio::ignorado('conta_servico', 'bind nao executado com sucesso');
+            : ChecagemDiretorio::ignorado('conta_servico', 'search_base nao executada com sucesso');
 
         $this->descartarConexao();
 
@@ -184,9 +185,9 @@ final class LdapDiretorioCorporativo implements DiretorioCorporativo
             }
         }
 
-        return $falhas === []
-            ? ChecagemDiretorio::ok('tls', 'certificado valido; vence em '.min($dias).' dia(s)')
-            : ChecagemDiretorio::falha('tls', implode(', ', $falhas));
+        return $dias === []
+            ? ChecagemDiretorio::falha('tls', implode(', ', $falhas))
+            : ChecagemDiretorio::ok('tls', 'certificado valido; vence em '.min($dias).' dia(s)'.($falhas === [] ? '' : '; falhas: '.implode(', ', $falhas)));
     }
 
     /** @param callable(): ChecagemDiretorio $passo */

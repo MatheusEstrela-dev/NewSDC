@@ -46,11 +46,12 @@ final class DiagnosticoDiretorioCommand extends Command
         $driver = (string) config('acessos.diretorio.driver');
 
         $banco = $this->checarBanco();
+        $config = $this->checarConfig($driver, $segredos);
         $checagens = [
             $banco,
             $this->checarEsquema($banco),
-            $this->checarConfig($driver, $segredos),
-            ...$this->checarRede($driver),
+            $config,
+            ...$this->checarRede($driver, $config),
             $this->checarFila($banco),
         ];
 
@@ -148,8 +149,11 @@ final class DiagnosticoDiretorioCommand extends Command
     }
 
     /** @return list<ChecagemDiretorio> */
-    private function checarRede(string $driver): array
+    private function checarRede(string $driver, ChecagemDiretorio $config): array
     {
+        if (! $config->passou()) {
+            return array_map(static fn (string $nome): ChecagemDiretorio => ChecagemDiretorio::ignorado($nome, 'config com falha'), self::CHECAGENS_DE_REDE);
+        }
         if ($driver === 'ldap') {
             return app(LdapDiretorioCorporativo::class)->diagnosticar();
         }

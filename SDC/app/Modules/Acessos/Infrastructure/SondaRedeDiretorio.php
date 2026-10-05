@@ -15,6 +15,10 @@ class SondaRedeDiretorio
 {
     public function resolve(string $host): bool
     {
+        if (filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) !== false) {
+            return true;
+        }
+
         $registros = @dns_get_record($host, DNS_A | DNS_AAAA);
 
         return (is_array($registros) && $registros !== []) || @gethostbyname($host) !== $host;
