@@ -42,6 +42,21 @@ return [
             'after_commit' => false,
         ],
 
+        // Fila do Active Directory (Acessos): database no Postgres compartilhado
+        // para a operacao e o job entrarem na mesma transacao (after_commit
+        // false de proposito). Consumida so pelo worker on-prem; o payload leva
+        // so o id da operacao. retry_after acima do timeout do job (30 s).
+        'diretorio' => [
+            'driver' => 'database',
+            // Tem de ser a mesma conexao de banco do app (atomicidade): sem a env,
+            // vale a DB_CONNECTION.
+            'connection' => env('DIRETORIO_FILA_DB_CONNECTION') ?: env('DB_CONNECTION', 'pgsql'),
+            'table' => 'acessos_fila_diretorio',
+            'queue' => 'diretorio',
+            'retry_after' => 120,
+            'after_commit' => false,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => 'localhost',

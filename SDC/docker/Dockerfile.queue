@@ -24,6 +24,7 @@ RUN apk add --no-cache \
     libxml2 \
     libzip \
     postgresql-libs \
+    libldap \
     icu-libs \
     mysql-client \
     postgresql-client \
@@ -37,6 +38,7 @@ RUN apk add --no-cache \
     libxml2-dev \
     libzip-dev \
     postgresql-dev \
+    openldap-dev \
     icu-dev \
     linux-headers \
     $PHPIZE_DEPS \
@@ -57,6 +59,7 @@ RUN apk add --no-cache \
         intl \
         opcache \
         sockets \
+        ldap \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del .build-deps

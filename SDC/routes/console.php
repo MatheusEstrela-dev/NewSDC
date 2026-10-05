@@ -161,3 +161,11 @@ Schedule::command('medalhao:rollup')
     ->dailyAt('04:00')
     ->onOneServer()
     ->runInBackground();
+
+// Acessos/AD: operacao em voo sem progresso (worker morto, job perdido) vira
+// falhou com codigo indisponivel. Leve: le so as operacoes em voo antigas.
+Schedule::command('acessos:diretorio:reconciliar')
+    ->everyFiveMinutes()
+    ->onOneServer()
+    ->withoutOverlapping(10)
+    ->runInBackground();
