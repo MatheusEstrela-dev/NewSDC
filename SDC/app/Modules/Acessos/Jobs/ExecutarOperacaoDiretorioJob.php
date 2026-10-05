@@ -49,6 +49,8 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
 
     private const ESPERA_CIRCUITO_ABERTO = 60;
 
+    private const TENTATIVAS_PADRAO = 3;
+
     private const BACKOFF_PADRAO = [10, 30];
 
     private const FALHA_AO_GRAVAR = 'Falha ao gravar o resultado da operacao no diretorio.';
@@ -61,17 +63,22 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
         $this->onQueue(config('acessos.diretorio.fila.nome'));
     }
 
+    /** A config ja valida; aqui so o padrao se ela vier sobrescrita com lixo. */
     public function tries(): int
     {
-        return max(1, (int) config('acessos.diretorio.tentativas', 3));
+        $tentativas = config('acessos.diretorio.tentativas');
+
+        return is_int($tentativas) && $tentativas >= 1 ? $tentativas : self::TENTATIVAS_PADRAO;
     }
 
     /** @return list<int> */
     public function backoff(): array
     {
-        $backoff = (array) config('acessos.diretorio.backoff', []);
+        $backoff = config('acessos.diretorio.backoff');
+        $valido = is_array($backoff) && $backoff !== []
+            && array_filter($backoff, static fn (mixed $segundos): bool => ! is_int($segundos) || $segundos < 0) === [];
 
-        return $backoff === [] ? self::BACKOFF_PADRAO : array_values(array_map('intval', $backoff));
+        return $valido ? array_values($backoff) : self::BACKOFF_PADRAO;
     }
 
     public function handle(

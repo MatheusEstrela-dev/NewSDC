@@ -28,6 +28,18 @@ $inteiro = static function (string $env, int $padrao, int $maximo = PHP_INT_MAX)
 
     return $numero >= 1 && $numero <= $maximo ? $numero : null;
 };
+// Lista de segundos (0 vale: espera nenhuma); lista vazia, item nao numerico ou
+// acima do teto = null.
+$segundos = static function (string $env, string $padrao, int $maximo) use ($texto, $lista): ?array {
+    $itens = $lista($texto($env, $padrao));
+    foreach ($itens as $item) {
+        if (preg_match('/^\d+$/', $item) !== 1 || (int) $item > $maximo) {
+            return null;
+        }
+    }
+
+    return $itens === [] ? null : array_map('intval', $itens);
+};
 
 $seguranca = $texto('DIRETORIO_SEGURANCA', 'ldaps') === 'starttls' ? 'starttls' : 'ldaps';
 $usuario = $texto('DIRETORIO_USUARIO');
@@ -68,10 +80,11 @@ return [
             'conexao' => $texto('DIRETORIO_FILA_CONEXAO', 'diretorio'),
             'nome' => 'diretorio',
         ],
-        'tentativas' => (int) ($texto('DIRETORIO_TENTATIVAS') ?? 3),
-        'backoff' => array_map('intval', $lista($texto('DIRETORIO_BACKOFF', '10,30'))),
+        // Retry e tamanho de senha tem padrao seguro: invalido vira o padrao, nunca 0.
+        'tentativas' => $inteiro('DIRETORIO_TENTATIVAS', 3, 10) ?? 3,
+        'backoff' => $segundos('DIRETORIO_BACKOFF', '10,30', 600) ?? [10, 30],
 
-        'senha_tamanho' => max(14, (int) ($texto('DIRETORIO_SENHA_TAMANHO') ?? 16)),
+        'senha_tamanho' => max(14, $inteiro('DIRETORIO_SENHA_TAMANHO', 16, 128) ?? 16),
         'entrega_ttl_minutos' => $inteiro('DIRETORIO_ENTREGA_TTL_MINUTOS', 10),
 
         'sincronizar' => [
