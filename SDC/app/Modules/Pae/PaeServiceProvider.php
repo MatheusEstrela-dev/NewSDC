@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Pae;
 
 use App\Core\Outbox\OutboxDispatcher;
+use App\Modules\Pae\Console\VerificarNotificacoesPae;
 use App\Modules\Pae\Domain\Events\FormularioValidadoV1;
 use App\Modules\Pae\Domain\Events\ParecerConcluidoV1;
 use App\Modules\Pae\Domain\Events\ProtocoloEnviadoV1;
@@ -14,7 +15,9 @@ use App\Modules\Pae\Domain\Workflows\PaeProtocoloWorkflow;
 use App\Modules\Pae\Services\EmpreendimentoApiService;
 use App\Modules\Pae\Services\PaeFormularioService;
 use App\Modules\Pae\Services\PaeNotificacaoService;
+use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
+use App\Support\Calendario\CalendarioDiasUteis;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -35,6 +38,9 @@ class PaeServiceProvider extends ServiceProvider
         $this->app->singleton(PaeFormularioService::class);
         $this->app->singleton(PaeNotificacaoService::class);
         $this->app->singleton(EmpreendimentoApiService::class);
+        $this->app->singleton(CalendarioDiasUteis::class, fn () => CalendarioDiasUteis::padrao());
+        $this->app->singleton(PaePrazoService::class);
+        $this->app->singleton(PaeCcpaeService::class);
 
         // Guards da maquina de estados: cada subprojeto acrescenta o seu na tag,
         // sem mexer no workflow (o B traz o de admissibilidade).
@@ -51,5 +57,12 @@ class PaeServiceProvider extends ServiceProvider
                 ->register('pae.revisao.aceita', 1, RevisaoAceitaV1::class)
                 ->register('pae.parecer.concluido', 1, ParecerConcluidoV1::class);
         });
+    }
+
+    public function boot(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([VerificarNotificacoesPae::class]);
+        }
     }
 }

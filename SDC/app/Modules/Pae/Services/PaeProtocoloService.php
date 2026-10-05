@@ -31,7 +31,13 @@ class PaeProtocoloService extends BaseService
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = PaeProtocolo::query()
-            ->with(['analistaAtual:id,name', 'empreendimento:id,pae_empdor_id,nome', 'empreendimento.empdor:id,nome']);
+            ->with([
+                'analistaAtual:id,name',
+                'empreendimento:id,pae_empdor_id,nome',
+                'empreendimento.empdor:id,nome',
+                'analise:id,pae_protocolo_id',
+                'analise.notificacoes:id,pae_analise_id,dt_notificacao,dt_devolutiva',
+            ]);
 
         $mostrarArquivados = filter_var($filters['arquivado'] ?? false, FILTER_VALIDATE_BOOL);
         $mostrarArquivados
@@ -48,6 +54,22 @@ class PaeProtocoloService extends BaseService
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
+        }
+
+        switch ($filters['status_grupo'] ?? null) {
+            case 'vencidos':
+                $query->vencidos();
+                break;
+            case 'historico':
+                $query->whereIn('status', [
+                    PaeProtocoloStatus::APROVADO->value,
+                    PaeProtocoloStatus::CCPAE->value,
+                    PaeProtocoloStatus::ATIVO_3_ANOS->value,
+                ]);
+                break;
+            case 'ciclos_esgotados':
+                $query->whereNotNull('ciclos_esgotados_em');
+                break;
         }
 
         if (!empty($filters['analista_id'])) {
@@ -320,17 +342,8 @@ class PaeProtocoloService extends BaseService
             'aprovado' => $base()->where('status', PaeProtocoloStatus::APROVADO->value)->count(),
             'ccpae' => $base()->where('status', PaeProtocoloStatus::CCPAE->value)->count(),
             'ativo_3_anos' => $base()->where('status', PaeProtocoloStatus::ATIVO_3_ANOS->value)->count(),
-            'vencidos' => $base()
-                ->whereNotNull('limite_analise')
-                ->where('limite_analise', '<', now()->toDateString())
-                ->whereNotIn('status', [
-                    PaeProtocoloStatus::APROVADO->value,
-                    PaeProtocoloStatus::CCPAE->value,
-                    PaeProtocoloStatus::ATIVO_3_ANOS->value,
-                    PaeProtocoloStatus::REPROVADO->value,
-                    PaeProtocoloStatus::REVOGADO->value,
-                ])
-                ->count(),
+            'vencidos' => $base()->vencidos()->count(),
+            'ciclos_esgotados' => $base()->whereNotNull('ciclos_esgotados_em')->count(),
         ];
     }
 

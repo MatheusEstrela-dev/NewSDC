@@ -9,7 +9,9 @@ use App\Modules\Pae\Models\PaeNotificacao;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Requests\EmitirNotificacaoRequest;
 use App\Modules\Pae\Requests\RegistrarDevolutivaRequest;
+use App\Modules\Pae\Requests\RegistrarDilacaoRequest;
 use App\Modules\Pae\Services\PaeNotificacaoService;
+use App\Modules\Pae\Support\PrazoNotificacao;
 use Illuminate\Http\RedirectResponse;
 
 class PaeNotificacaoController extends Controller
@@ -22,7 +24,20 @@ class PaeNotificacaoController extends Controller
     {
         $notificacao = $this->service->emitir($paeProtocolo, $request->user(), $request->validated());
 
-        return back()->with('success', "Notificacao SEI {$notificacao->num_sei} emitida com prazo de 30 dias.");
+        return back()->with('success', "Notificacao SEI {$notificacao->num_sei} emitida com prazo de ".PrazoNotificacao::PRAZO_DIAS.' dias.');
+    }
+
+    public function dilacao(RegistrarDilacaoRequest $request, PaeNotificacao $paeNotificacao): RedirectResponse
+    {
+        $dados = $request->validated();
+        $this->service->registrarDilacao(
+            $paeNotificacao,
+            (int) $dados['dias_adicionais'],
+            $dados['justificativa'],
+            $request->user()
+        );
+
+        return back()->with('success', 'Dilacao registrada e prazo recalculado.');
     }
 
     public function devolutiva(RegistrarDevolutivaRequest $request, PaeNotificacao $paeNotificacao): RedirectResponse
