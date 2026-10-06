@@ -50,6 +50,9 @@
             <!-- Situação -->
             <td class="px-4 py-3">
               <StatusPill :situacao="protocolo.situacao" />
+              <div v-if="protocolo.comunicacoesPendentes" class="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                {{ protocolo.comunicacoesPendentes }} comunicação(ões) pendente(s)
+              </div>
             </td>
 
             <!-- Acoes -->

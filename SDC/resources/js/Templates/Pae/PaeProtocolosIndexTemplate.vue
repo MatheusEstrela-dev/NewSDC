@@ -299,6 +299,7 @@ function mapProtocolo(p) {
     prazoEstimado: !!p.dt_notificacao_feam_estimada,
     foraDoPrazo: !!p.fora_do_prazo,
     ccpae: !!p.ccpae,
+    comunicacoesPendentes: Number(p.comunicacoes_pendentes_count || 0),
     arquivado,
   };
 }

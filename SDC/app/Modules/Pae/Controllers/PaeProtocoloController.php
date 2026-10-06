@@ -13,6 +13,7 @@ use App\Modules\Pae\Requests\AtualizarNotificacaoFeamRequest;
 use App\Modules\Pae\Requests\EmitirCcpaeRequest;
 use App\Modules\Pae\Services\PaeCcpaeService;
 use App\Modules\Pae\Services\PaeAdmissibilidadeService;
+use App\Modules\Pae\Services\PaeComunicacaoService;
 use App\Modules\Pae\Services\PaeNotificacaoService;
 use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
@@ -33,6 +34,7 @@ class PaeProtocoloController extends Controller
         private readonly PaeCcpaeService $ccpae,
         private readonly PaeNotificacaoService $notificacoes,
         private readonly PaeAdmissibilidadeService $admissibilidade,
+        private readonly PaeComunicacaoService $comunicacoes,
     ) {
     }
 
@@ -157,6 +159,7 @@ class PaeProtocoloController extends Controller
             'notificacoes' => $this->notificacoes->listarPorProtocolo($protocolo),
             'prazos'       => $this->prazos->resumo($protocolo),
             'admissibilidade' => $this->admissibilidade->resumo($protocolo),
+            'comunicacoes' => $this->comunicacoes->resumo($protocolo),
             'municipios_disponiveis' => Municipio::catalogo(),
             'timeline'     => $timeline,
         ]);

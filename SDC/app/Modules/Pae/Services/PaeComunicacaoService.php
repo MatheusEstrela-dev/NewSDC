@@ -4,9 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Services;
 
+use App\Models\User;
 use App\Modules\Pae\Models\PaeComunicacao;
 use App\Modules\Pae\Models\PaeProtocolo;
+use App\Modules\Pae\Support\TimelinePae;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use RuntimeException;
+use Throwable;
 
 final class PaeComunicacaoService
 {
@@ -42,6 +52,58 @@ final class PaeComunicacaoService
         }
     }
 
+    public function registrar(
+        PaeComunicacao $comunicacao,
+        CarbonImmutable $data,
+        string $sei,
+        UploadedFile $comprovante,
+        User $user,
+    ): PaeComunicacao {
+        $sei = trim($sei);
+        if ($sei === '' || $data->startOfDay()->isAfter(CarbonImmutable::today())) {
+            throw ValidationException::withMessages(['comunicacao' => 'Informe data de envio válida e número SEI.']);
+        }
+
+        $path = null;
+        try {
+            return DB::transaction(function () use ($comunicacao, $data, $sei, $comprovante, $user, &$path): PaeComunicacao {
+                $locked = PaeComunicacao::query()->whereKey($comunicacao->id)->lockForUpdate()->firstOrFail();
+                $protocolo = PaeProtocolo::query()->whereKey($locked->protocolo_id)->firstOrFail();
+                if ($locked->status === 'registrada') {
+                    return $locked;
+                }
+
+                $diretorio = "comunicacoes/{$protocolo->id}/{$locked->id}";
+                $nome = (string) \Illuminate\Support\Str::uuid().'.'.($comprovante->guessExtension() ?: 'bin');
+                $path = "{$diretorio}/{$nome}";
+                if (Storage::disk('pae')->putFileAs($diretorio, $comprovante, $nome) !== $path) {
+                    throw new RuntimeException('Não foi possível guardar o comprovante de envio.');
+                }
+
+                $locked->update([
+                    'status' => 'registrada',
+                    'dt_envio' => $data->toDateString(),
+                    'num_sei' => $sei,
+                    'comprovante_path' => $path,
+                    'comprovante_nome_original' => $comprovante->getClientOriginalName(),
+                    'comprovante_mime' => $comprovante->getMimeType(),
+                    'comprovante_tamanho_bytes' => $comprovante->getSize(),
+                    'registrado_por' => $user->id,
+                    'registrado_em' => now(),
+                ]);
+                TimelinePae::registrar($protocolo, 'comunicacao_registrada',
+                    "Comunicação oficial {$locked->destinatario_tipo} registrada. SEI {$sei}.", $user);
+
+                return $locked;
+            });
+        } catch (Throwable $e) {
+            if ($path !== null) {
+                Storage::disk('pae')->delete($path);
+            }
+            throw $e;
+        }
+    }
+
     public function resumo(PaeProtocolo $protocolo): array
     {
         $comunicacoes = $protocolo->comunicacoes()->with('municipio:id,nome,uf', 'registrador:id,name')->get();
@@ -64,8 +126,44 @@ final class PaeComunicacaoService
             ])->all(),
             'pendentes' => $comunicacoes->where('status', 'pendente')->count(),
             'registradas' => $comunicacoes->where('status', 'registrada')->count(),
-            'enderecamento_pendente' => ! $protocolo->municipiosImpactados()
-                ->where('na_zas', true)->whereNotNull('confirmado_em')->exists(),
+            'enderecamento_pendente' => $this->enderecamentoPendente($protocolo, $comunicacoes),
         ];
+    }
+
+    private function enderecamentoPendente(PaeProtocolo $protocolo, Collection $comunicacoes): bool
+    {
+        $origens = $comunicacoes->map(fn (PaeComunicacao $item): array => [
+            'tipo' => $item->origem_tipo, 'id' => (int) $item->origem_id,
+        ]);
+        $analise = $protocolo->analise()->first();
+        if ($analise !== null) {
+            foreach ($analise->notificacoes()->pluck('id') as $notificacaoId) {
+                $origens->push(['tipo' => 'notificacao', 'id' => (int) $notificacaoId]);
+            }
+        }
+        $origens = $origens->unique(fn (array $origem): string => $origem['tipo'].':'.$origem['id']);
+        if ($origens->isEmpty()) {
+            return false;
+        }
+
+        $zasIds = $protocolo->municipiosImpactados()->where('na_zas', true)
+            ->whereNotNull('confirmado_em')->pluck('municipio_id');
+        if ($zasIds->isEmpty()) {
+            return true;
+        }
+
+        foreach ($origens as $origem) {
+            foreach ($zasIds as $municipioId) {
+                if (! $comunicacoes->contains(fn (PaeComunicacao $item): bool =>
+                    $item->origem_tipo === $origem['tipo']
+                    && (int) $item->origem_id === $origem['id']
+                    && $item->destinatario_tipo === 'compdec'
+                    && (int) $item->municipio_id === (int) $municipioId)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

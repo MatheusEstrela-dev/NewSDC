@@ -66,6 +66,15 @@
           <button
             type="button"
             class="modal-serie-aba pb-3 text-sm font-semibold flex items-center gap-2"
+            :class="{ 'is-ativa': activeTab === 'comunicacoes' }"
+            @click="activeTab = 'comunicacoes'"
+          >
+            Comunicações
+            <Badge v-if="historico?.comunicacoes?.pendentes" variant="warning" size="sm">{{ historico.comunicacoes.pendentes }}</Badge>
+          </button>
+          <button
+            type="button"
+            class="modal-serie-aba pb-3 text-sm font-semibold flex items-center gap-2"
             :class="{ 'is-ativa': activeTab === 'notificacoes' }"
             @click="activeTab = 'notificacoes'"
           >
@@ -133,6 +142,14 @@
           />
         </div>
 
+        <div v-else-if="activeTab === 'comunicacoes'">
+          <PaeComunicacoesPainel
+            :comunicacoes="historico?.comunicacoes"
+            :can-edit="canEdit"
+            @atualizado="$emit('atualizado')"
+          />
+        </div>
+
         <!-- Análises -->
         <div v-else-if="activeTab === 'analises'">
           <div v-if="analisesCount" class="space-y-3">
@@ -186,6 +203,7 @@ import BellIcon from '@/Components/Icons/BellIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import PaePrazosPainel from '@/Components/Organisms/Pae/Protocolos/PaePrazosPainel.vue';
 import PaeAdmissibilidadePainel from '@/Components/Organisms/Pae/Protocolos/PaeAdmissibilidadePainel.vue';
+import PaeComunicacoesPainel from '@/Components/Organisms/Pae/Protocolos/PaeComunicacoesPainel.vue';
 import PaeNotificacoesPainel from '@/Components/Organisms/Pae/Protocolos/PaeNotificacoesPainel.vue';
 
 const props = defineProps({

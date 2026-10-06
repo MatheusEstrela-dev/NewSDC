@@ -40,6 +40,9 @@
         <span>{{ protocolo.limiteAnalise }}</span>
         <PrazosPill :prazo="protocolo.prazo" :estimado="protocolo.prazoEstimado" class="ml-2" />
       </div>
+      <div v-if="protocolo.comunicacoesPendentes" class="text-sm font-semibold text-amber-700 dark:text-amber-300">
+        Comunicações pendentes: {{ protocolo.comunicacoesPendentes }}
+      </div>
     </div>
 
     <div class="mt-5 flex items-center justify-between gap-2">

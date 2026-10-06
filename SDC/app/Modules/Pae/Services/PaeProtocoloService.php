@@ -31,6 +31,7 @@ class PaeProtocoloService extends BaseService
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = PaeProtocolo::query()
+            ->withCount(['comunicacoes as comunicacoes_pendentes_count' => fn ($q) => $q->where('status', 'pendente')])
             ->with([
                 'analistaAtual:id,name',
                 'empreendimento:id,pae_empdor_id,nome',
