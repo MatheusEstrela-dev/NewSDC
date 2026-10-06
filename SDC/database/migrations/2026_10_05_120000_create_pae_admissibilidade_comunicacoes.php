@@ -20,6 +20,10 @@ return new class extends Migration
 
         DB::table('pae_protocolos')->update(['admissibilidade_legada_sem_triagem' => true]);
 
+        Schema::table('pae_notificacoes', function (Blueprint $table): void {
+            $table->boolean('copia_compdec_zas_obrigatoria')->default(false);
+        });
+
         Schema::create('pae_protocolo_municipios', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('protocolo_id')->constrained('pae_protocolos')->cascadeOnDelete();
@@ -94,6 +98,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::table('pae_protocolos')->where('status', 'reprovado_sumariamente')->exists()
+            || DB::table('pae_tramit_prot')->where('status', 'reprovado_sumariamente')->exists()) {
+            throw new \RuntimeException('Concilie os protocolos e trâmites de reprovação sumária antes do rollback da admissibilidade.');
+        }
+
         Schema::dropIfExists('pae_comunicacoes');
         Schema::dropIfExists('pae_admissibilidade_decisoes');
         Schema::dropIfExists('pae_admissibilidade_itens');
@@ -101,6 +110,10 @@ return new class extends Migration
 
         Schema::table('pae_protocolos', function (Blueprint $table): void {
             $table->dropColumn(['admissibilidade_legada_sem_triagem', 'admissibilidade_triagem_versao']);
+        });
+
+        Schema::table('pae_notificacoes', function (Blueprint $table): void {
+            $table->dropColumn('copia_compdec_zas_obrigatoria');
         });
 
         DB::statement('ALTER TABLE pae_tramit_prot ALTER COLUMN status TYPE VARCHAR(20)');

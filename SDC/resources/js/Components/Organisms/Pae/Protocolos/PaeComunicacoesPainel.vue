@@ -10,6 +10,7 @@
         <div>
           <h4 class="font-semibold modal-serie-titulo">{{ destinatario(comunicacao) }}</h4>
           <p class="mt-1 modal-serie-apoio">{{ origem(comunicacao.origem_tipo) }}</p>
+          <p v-if="comunicacao.origem_referencia" class="mt-1 modal-serie-apoio">{{ comunicacao.origem_referencia }}</p>
         </div>
         <span :class="comunicacao.status === 'registrada' ? 'text-emerald-300' : 'text-amber-300'" class="font-semibold">
           {{ comunicacao.status === 'registrada' ? 'Envio registrado' : 'Envio pendente' }}

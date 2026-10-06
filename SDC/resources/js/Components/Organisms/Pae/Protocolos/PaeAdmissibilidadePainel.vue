@@ -4,6 +4,9 @@
       <p v-if="dados.legado_sem_triagem && !dados.decisao_vigente" class="rounded-lg border border-amber-400/40 p-3 text-sm text-amber-200">
         Triagem não registrada no sistema para este protocolo anterior à implantação.
       </p>
+      <p v-if="dados.correcao_vencida" class="rounded-lg border border-red-400/50 p-3 text-sm text-red-200">
+        Prazo de correção transitória vencido. A CEDEC deve avaliar o caso; não há reprovação automática.
+      </p>
 
       <div v-if="dados.decisao_vigente" class="modal-serie-cartao rounded-xl p-4 text-sm modal-serie-valor">
         Decisão vigente: <strong>{{ rotuloDecisao(dados.decisao_vigente.tipo) }}</strong>
@@ -13,19 +16,20 @@
         <section class="modal-serie-cartao rounded-xl p-4">
           <h4 class="font-semibold modal-serie-titulo">Municípios abrangidos pela ZAS e ZSS</h4>
           <p class="mt-1 text-xs modal-serie-apoio">Marque ambas as zonas quando o município integrar as duas áreas.</p>
+          <p v-if="podeEditarMunicipiosLegados" class="mt-1 text-xs modal-serie-apoio">Neste protocolo anterior à implantação, esta atualização também cria as pendências oficiais para os eventos já registrados no PAE.</p>
 
           <div v-if="form.municipios.length" class="mt-3 space-y-2">
             <div v-for="(municipio, indice) in form.municipios" :key="municipio.municipio_id" class="flex flex-wrap items-center gap-3 rounded-lg border border-slate-600/40 p-2 text-sm modal-serie-valor">
               <span class="min-w-0 flex-1">{{ nomeMunicipio(municipio.municipio_id) }}</span>
-              <label class="inline-flex items-center gap-1"><input v-model="municipio.na_zas" type="checkbox" :disabled="!podeEditar" /> ZAS</label>
-              <label class="inline-flex items-center gap-1"><input v-model="municipio.na_zss" type="checkbox" :disabled="!podeEditar" /> ZSS</label>
-              <button v-if="podeEditar" type="button" class="text-red-300 hover:underline" @click="form.municipios.splice(indice, 1)">Remover</button>
+              <label class="inline-flex items-center gap-1"><input v-model="municipio.na_zas" type="checkbox" :disabled="!podeEditarMunicipios" /> ZAS</label>
+              <label class="inline-flex items-center gap-1"><input v-model="municipio.na_zss" type="checkbox" :disabled="!podeEditarMunicipios" /> ZSS</label>
+              <button v-if="podeEditarMunicipios" type="button" class="text-red-300 hover:underline" @click="form.municipios.splice(indice, 1)">Remover</button>
               <p v-if="form.errors[`municipios.${indice}.na_zas`]" class="w-full text-xs text-red-300">{{ form.errors[`municipios.${indice}.na_zas`] }}</p>
             </div>
           </div>
           <p v-else class="mt-3 text-sm modal-serie-apoio">Nenhum município cadastrado.</p>
 
-          <div v-if="podeEditar" class="mt-3 flex flex-wrap gap-2">
+          <div v-if="podeEditarMunicipios" class="mt-3 flex flex-wrap gap-2">
             <select v-model="municipioSelecionado" aria-label="Município para adicionar" class="min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white">
               <option value="">Selecione um município</option>
               <option v-for="municipio in municipiosDisponiveis" :key="municipio.id" :value="municipio.id">{{ municipio.nome }} / {{ municipio.uf }}</option>
@@ -53,8 +57,8 @@
           </div>
         </section>
 
-        <button v-if="podeEditar" type="submit" :disabled="form.processing" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-          {{ form.processing ? 'Salvando...' : 'Salvar triagem' }}
+        <button v-if="podeEditarMunicipios" type="submit" :disabled="form.processing" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          {{ form.processing ? 'Salvando...' : (podeEditar ? 'Salvar triagem' : 'Salvar municípios ZAS/ZSS') }}
         </button>
       </form>
 
@@ -144,6 +148,8 @@ const decisao = useForm({
 });
 
 const podeEditar = computed(() => props.canEdit && dados.value?.pode_editar);
+const podeEditarMunicipiosLegados = computed(() => props.canEdit && dados.value?.pode_editar_municipios_legados);
+const podeEditarMunicipios = computed(() => podeEditar.value || podeEditarMunicipiosLegados.value);
 const rotulos = computed(() => Object.fromEntries((dados.value?.itens || []).map((item) => [item.chave, item.rotulo])));
 
 watch(() => props.admissibilidade, (valor) => {
@@ -169,10 +175,11 @@ function rotuloDecisao(tipo) {
 }
 
 function salvar() {
-  form.transform((dadosForm) => ({
-    municipios: dadosForm.municipios,
-    itens: dadosForm.itens.filter((item) => item.resultado),
-  })).put(route('pae.protocolo.admissibilidade.salvar', props.protocoloId), {
+  const legado = podeEditarMunicipiosLegados.value;
+  form.transform((dadosForm) => legado
+    ? { municipios: dadosForm.municipios }
+    : { municipios: dadosForm.municipios, itens: dadosForm.itens.filter((item) => item.resultado) }
+  ).put(route(legado ? 'pae.protocolo.admissibilidade.municipios' : 'pae.protocolo.admissibilidade.salvar', props.protocoloId), {
     preserveScroll: true,
     preserveState: true,
     onSuccess: () => emit('atualizado'),

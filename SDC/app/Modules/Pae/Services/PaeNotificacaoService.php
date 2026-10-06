@@ -85,6 +85,7 @@ class PaeNotificacaoService extends BaseService
                 'dt_notificacao' => now()->toDateString(),
                 'prorrogacao'    => false,
                 'obs'            => $dados['obs'] ?? null,
+                'copia_compdec_zas_obrigatoria' => true,
             ]);
 
             // Nova notificacao tira o protocolo da fila "ciclos esgotados" e abre nova pausa.

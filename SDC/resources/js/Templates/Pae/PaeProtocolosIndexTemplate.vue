@@ -300,6 +300,7 @@ function mapProtocolo(p) {
     foraDoPrazo: !!p.fora_do_prazo,
     ccpae: !!p.ccpae,
     comunicacoesPendentes: Number(p.comunicacoes_pendentes_count || 0),
+    correcaoPrazoVencido: !!p.correcao_prazo_vencido,
     arquivado,
   };
 }

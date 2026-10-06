@@ -32,10 +32,7 @@ final class PaeAdmissibilidadeService
     public static function regrasTriagem(): array
     {
         return [
-            'municipios' => ['present', 'array'],
-            'municipios.*.municipio_id' => ['required', 'integer', 'distinct', 'exists:municipios,id'],
-            'municipios.*.na_zas' => ['required', 'boolean'],
-            'municipios.*.na_zss' => ['required', 'boolean'],
+            ...self::regrasMunicipios(),
             'itens' => ['present', 'array', 'max:9'],
             'itens.*.chave' => ['required', 'string', 'distinct', Rule::in(PaeAnexoJ::CHAVES)],
             'itens.*.resultado' => ['required', Rule::in(['sim', 'nao', 'nao_aplicavel'])],
@@ -43,15 +40,31 @@ final class PaeAdmissibilidadeService
         ];
     }
 
-    public static function validarComplementos(LaravelValidator $validator, array $municipios, array $itens): void
+    public static function regrasMunicipios(): array
     {
-        $validator->after(static function (LaravelValidator $validator) use ($municipios, $itens): void {
+        return [
+            'municipios' => ['present', 'array'],
+            'municipios.*.municipio_id' => ['required', 'integer', 'distinct', 'exists:municipios,id'],
+            'municipios.*.na_zas' => ['required', 'boolean'],
+            'municipios.*.na_zss' => ['required', 'boolean'],
+        ];
+    }
+
+    public static function validarMunicipios(LaravelValidator $validator, array $municipios): void
+    {
+        $validator->after(static function (LaravelValidator $validator) use ($municipios): void {
             foreach ($municipios as $indice => $municipio) {
                 if (! ($municipio['na_zas'] ?? false) && ! ($municipio['na_zss'] ?? false)) {
                     $validator->errors()->add("municipios.{$indice}.na_zas", 'Informe ZAS, ZSS ou ambas.');
                 }
             }
+        });
+    }
 
+    public static function validarComplementos(LaravelValidator $validator, array $municipios, array $itens): void
+    {
+        self::validarMunicipios($validator, $municipios);
+        $validator->after(static function (LaravelValidator $validator) use ($itens): void {
             foreach ($itens as $indice => $item) {
                 if (in_array($item['resultado'] ?? null, ['nao', 'nao_aplicavel'], true)
                     && trim((string) ($item['justificativa'] ?? '')) === '') {
@@ -73,20 +86,7 @@ final class PaeAdmissibilidadeService
                 throw ValidationException::withMessages(['protocolo' => 'A triagem só pode ser alterada na entrada do processo.']);
             }
 
-            $municipioIds = [];
-            foreach ($municipios as $municipio) {
-                $municipioIds[] = (int) $municipio['municipio_id'];
-                $locked->municipiosImpactados()->updateOrCreate(
-                    ['municipio_id' => $municipio['municipio_id']],
-                    [
-                        'na_zas' => (bool) $municipio['na_zas'],
-                        'na_zss' => (bool) $municipio['na_zss'],
-                        'confirmado_por' => $user->id,
-                        'confirmado_em' => now(),
-                    ],
-                );
-            }
-            $this->removerAusentes($locked->municipiosImpactados(), 'municipio_id', $municipioIds);
+            $this->persistirMunicipios($locked, $municipios, $user);
 
             $chaves = [];
             foreach ($itens as $item) {
@@ -105,6 +105,44 @@ final class PaeAdmissibilidadeService
             $locked->increment('admissibilidade_triagem_versao');
             TimelinePae::registrar($locked, 'admissibilidade_triagem', 'Municípios ZAS/ZSS e checklist do Anexo J atualizados.', $user);
         });
+    }
+
+    public function salvarMunicipiosLegados(PaeProtocolo $protocolo, array $municipios, User $user): void
+    {
+        $validator = Validator::make(['municipios' => $municipios], self::regrasMunicipios());
+        self::validarMunicipios($validator, $municipios);
+        $validator->validate();
+
+        DB::transaction(function () use ($protocolo, $municipios, $user): void {
+            $locked = PaeProtocolo::query()->whereKey($protocolo->id)->lockForUpdate()->firstOrFail();
+            if (! $locked->admissibilidade_legada_sem_triagem
+                || in_array($locked->status, [PaeProtocoloStatus::NOVO, PaeProtocoloStatus::ENTRADA_PROCESSO], true)) {
+                throw ValidationException::withMessages(['protocolo' => 'Use a triagem de entrada para este protocolo.']);
+            }
+
+            $this->persistirMunicipios($locked, $municipios, $user);
+            $this->comunicacoes->reconciliar($locked);
+            TimelinePae::registrar($locked, 'municipios_zas_zss',
+                'Municípios ZAS/ZSS do protocolo legado confirmados e comunicações pendentes conciliadas.', $user);
+        });
+    }
+
+    private function persistirMunicipios(PaeProtocolo $protocolo, array $municipios, User $user): void
+    {
+        $municipioIds = [];
+        foreach ($municipios as $municipio) {
+            $municipioIds[] = (int) $municipio['municipio_id'];
+            $protocolo->municipiosImpactados()->updateOrCreate(
+                ['municipio_id' => $municipio['municipio_id']],
+                [
+                    'na_zas' => (bool) $municipio['na_zas'],
+                    'na_zss' => (bool) $municipio['na_zss'],
+                    'confirmado_por' => $user->id,
+                    'confirmado_em' => now(),
+                ],
+            );
+        }
+        $this->removerAusentes($protocolo->municipiosImpactados(), 'municipio_id', $municipioIds);
     }
 
     private function removerAusentes($relacao, string $coluna, array $chaves): void
@@ -238,7 +276,7 @@ final class PaeAdmissibilidadeService
 
             if ($decisao->tipo === 'reprovado_sumariamente') {
                 $this->workflow->transitar($locked, PaeProtocoloStatus::REPROVADO_SUMARIAMENTE, $user,
-                    $decisao->fundamentacao, ContextoTransicao::decisaoAdmissibilidade());
+                    "Reprovação sumária da admissibilidade; decisão #{$decisao->id}.", ContextoTransicao::decisaoAdmissibilidade());
                 $this->comunicacoes->abrir($locked, 'reprovacao_sumaria', $decisao->id, $decisao->fundamentacao);
             }
 
@@ -263,6 +301,7 @@ final class PaeAdmissibilidadeService
         }
 
         $usuario = auth()->user();
+        $decisaoVigente = $protocolo->decisoesAdmissibilidade->first();
 
         return [
             'municipios' => $protocolo->municipiosImpactados->map(fn ($municipio) => [
@@ -273,12 +312,17 @@ final class PaeAdmissibilidadeService
                 'na_zss' => $municipio->na_zss,
             ])->values()->all(),
             'itens' => $itens,
-            'decisao_vigente' => $protocolo->decisoesAdmissibilidade->first(),
+            'decisao_vigente' => $decisaoVigente,
+            'correcao_vencida' => $decisaoVigente?->tipo === 'correcao_solicitada'
+                && $decisaoVigente->prazo_correcao_em?->isBefore(CarbonImmutable::today()),
             'decisoes' => $protocolo->decisoesAdmissibilidade->values()->all(),
             'fundamentos_disponiveis' => PaeFundamentosSumarios::ROTULOS,
             'legado_sem_triagem' => $protocolo->admissibilidade_legada_sem_triagem,
             'pode_editar' => $usuario?->can('pae.protocolos.edit')
                 && in_array($protocolo->status, [PaeProtocoloStatus::NOVO, PaeProtocoloStatus::ENTRADA_PROCESSO], true),
+            'pode_editar_municipios_legados' => $usuario?->can('pae.protocolos.edit')
+                && $protocolo->admissibilidade_legada_sem_triagem
+                && ! in_array($protocolo->status, [PaeProtocoloStatus::NOVO, PaeProtocoloStatus::ENTRADA_PROCESSO], true),
             'pode_decidir' => $usuario?->can('pae.protocolos.validar')
                 && $protocolo->status === PaeProtocoloStatus::ENTRADA_PROCESSO,
         ];

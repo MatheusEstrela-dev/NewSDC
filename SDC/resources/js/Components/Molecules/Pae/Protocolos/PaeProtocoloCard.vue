@@ -43,6 +43,9 @@
       <div v-if="protocolo.comunicacoesPendentes" class="text-sm font-semibold text-amber-700 dark:text-amber-300">
         Comunicações pendentes: {{ protocolo.comunicacoesPendentes }}
       </div>
+      <div v-if="protocolo.correcaoPrazoVencido" class="text-sm font-semibold text-red-700 dark:text-red-300">
+        Correção transitória vencida: avaliação da CEDEC pendente
+      </div>
     </div>
 
     <div class="mt-5 flex items-center justify-between gap-2">

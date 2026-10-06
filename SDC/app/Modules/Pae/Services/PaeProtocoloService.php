@@ -13,6 +13,7 @@ use App\Modules\Pae\Domain\Workflows\PaeProtocoloWorkflow;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeEmpnto;
 use App\Modules\Pae\Models\PaeProtocolo;
+use Carbon\CarbonImmutable;
 use App\Modules\Pae\Support\CicloProtocolo;
 use App\Modules\Pae\Support\TimelinePae;
 use App\Modules\Shared\BaseService;
@@ -38,6 +39,12 @@ class PaeProtocoloService extends BaseService
                 'empreendimento.empdor:id,nome',
                 'analise:id,pae_protocolo_id',
                 'analise.notificacoes:id,pae_analise_id,dt_notificacao,dt_devolutiva',
+                'decisaoAdmissibilidadeVigente' => fn ($consulta) => $consulta->select(
+                    'pae_admissibilidade_decisoes.id',
+                    'pae_admissibilidade_decisoes.protocolo_id',
+                    'pae_admissibilidade_decisoes.tipo',
+                    'pae_admissibilidade_decisoes.prazo_correcao_em',
+                ),
             ]);
 
         $mostrarArquivados = filter_var($filters['arquivado'] ?? false, FILTER_VALIDATE_BOOL);
@@ -87,7 +94,15 @@ class PaeProtocoloService extends BaseService
             $query->where('dt_entrada', '<=', $filters['data_fim']);
         }
 
-        return $query->orderBy('dt_entrada', 'desc')->paginate($perPage);
+        $pagina = $query->orderBy('dt_entrada', 'desc')->paginate($perPage);
+        $hoje = CarbonImmutable::today();
+        $pagina->getCollection()->each(static function (PaeProtocolo $protocolo) use ($hoje): void {
+            $decisao = $protocolo->decisaoAdmissibilidadeVigente;
+            $protocolo->setAttribute('correcao_prazo_vencido', $decisao?->tipo === 'correcao_solicitada'
+                && $decisao->prazo_correcao_em?->isBefore($hoje));
+        });
+
+        return $pagina;
     }
 
     public function findById(int $id): ?PaeProtocolo

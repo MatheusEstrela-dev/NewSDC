@@ -86,6 +86,10 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('protocolo.admissibilidade.salvar')
         ->middleware('can:pae.protocolos.edit');
 
+    Route::put('/protocolo/{paeProtocolo}/municipios-zas-zss', [PaeAdmissibilidadeController::class, 'salvarMunicipiosLegados'])
+        ->name('protocolo.admissibilidade.municipios')
+        ->middleware('can:pae.protocolos.edit');
+
     Route::post('/protocolo/{paeProtocolo}/admissibilidade/decisoes', [PaeAdmissibilidadeController::class, 'decidir'])
         ->name('protocolo.admissibilidade.decidir')
         ->middleware('can:pae.protocolos.validar');

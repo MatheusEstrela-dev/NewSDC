@@ -6,6 +6,7 @@ namespace App\Modules\Pae\Services;
 
 use App\Models\User;
 use App\Modules\Pae\Models\PaeComunicacao;
+use App\Modules\Pae\Models\PaeNotificacao;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Support\TimelinePae;
 use Carbon\CarbonImmutable;
@@ -49,6 +50,28 @@ final class PaeComunicacaoService
             PaeComunicacao::query()->firstOrCreate($base + [
                 'destinatario_tipo' => 'compdec', 'municipio_id' => $municipioId,
             ], $novos);
+        }
+    }
+
+    public function reconciliar(PaeProtocolo $protocolo): void
+    {
+        $origens = $protocolo->comunicacoes()
+            ->get(['origem_tipo', 'origem_id', 'motivos'])
+            ->map(fn (PaeComunicacao $comunicacao): array => [
+                'tipo' => $comunicacao->origem_tipo,
+                'id' => (int) $comunicacao->origem_id,
+                'motivos' => $comunicacao->motivos,
+            ]);
+
+        $analise = $protocolo->analise()->first();
+        if ($analise !== null) {
+            foreach ($analise->notificacoes()->where('copia_compdec_zas_obrigatoria', true)->pluck('id') as $id) {
+                $origens->push(['tipo' => 'notificacao', 'id' => (int) $id, 'motivos' => null]);
+            }
+        }
+
+        foreach ($origens->unique(fn (array $origem): string => $origem['tipo'].':'.$origem['id']) as $origem) {
+            $this->abrir($protocolo, $origem['tipo'], $origem['id'], $origem['motivos']);
         }
     }
 
@@ -107,12 +130,16 @@ final class PaeComunicacaoService
     public function resumo(PaeProtocolo $protocolo): array
     {
         $comunicacoes = $protocolo->comunicacoes()->with('municipio:id,nome,uf', 'registrador:id,name')->get();
+        $notificacoes = PaeNotificacao::query()
+            ->whereIn('id', $comunicacoes->where('origem_tipo', 'notificacao')->pluck('origem_id')->unique())
+            ->get(['id', 'num_sei', 'dt_notificacao'])->keyBy('id');
 
         return [
             'comunicacoes' => $comunicacoes->map(fn (PaeComunicacao $comunicacao): array => [
                 'id' => $comunicacao->id,
                 'origem_tipo' => $comunicacao->origem_tipo,
                 'origem_id' => $comunicacao->origem_id,
+                'origem_referencia' => $this->referenciaOrigem($comunicacao, $notificacoes),
                 'destinatario_tipo' => $comunicacao->destinatario_tipo,
                 'municipio_id' => $comunicacao->municipio_id,
                 'municipio' => $comunicacao->municipio?->nome,
@@ -130,6 +157,20 @@ final class PaeComunicacaoService
         ];
     }
 
+    private function referenciaOrigem(PaeComunicacao $comunicacao, Collection $notificacoes): ?string
+    {
+        if ($comunicacao->origem_tipo !== 'notificacao') {
+            return null;
+        }
+
+        $notificacao = $notificacoes->get($comunicacao->origem_id);
+        if ($notificacao === null) {
+            return "Notificação #{$comunicacao->origem_id}";
+        }
+
+        return "Notificação #{$notificacao->id} · SEI {$notificacao->num_sei} · {$notificacao->dt_notificacao->format('d/m/Y')}";
+    }
+
     private function enderecamentoPendente(PaeProtocolo $protocolo, Collection $comunicacoes): bool
     {
         $origens = $comunicacoes->map(fn (PaeComunicacao $item): array => [
@@ -137,7 +178,7 @@ final class PaeComunicacaoService
         ]);
         $analise = $protocolo->analise()->first();
         if ($analise !== null) {
-            foreach ($analise->notificacoes()->pluck('id') as $notificacaoId) {
+            foreach ($analise->notificacoes()->where('copia_compdec_zas_obrigatoria', true)->pluck('id') as $notificacaoId) {
                 $origens->push(['tipo' => 'notificacao', 'id' => (int) $notificacaoId]);
             }
         }

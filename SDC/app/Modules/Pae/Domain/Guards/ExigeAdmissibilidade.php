@@ -23,12 +23,17 @@ final class ExigeAdmissibilidade implements GuardaTransicaoPae
             return;
         }
 
-        if (! in_array($novo, [PaeProtocoloStatus::CRIACAO_SDC, PaeProtocoloStatus::CCPAE], true)
-            || $protocolo->admissibilidade_legada_sem_triagem) {
+        if (! in_array($novo, [PaeProtocoloStatus::CRIACAO_SDC, PaeProtocoloStatus::CCPAE], true)) {
             return;
         }
 
         $decisao = $protocolo->decisoesAdmissibilidade()->first();
+        if ($protocolo->admissibilidade_legada_sem_triagem
+            && $protocolo->admissibilidade_triagem_versao === 0
+            && $decisao === null) {
+            return;
+        }
+
         if ($decisao?->tipo !== 'admitido') {
             throw new TransicaoProibidaException('Registre a admissão antes de avançar o PAE.');
         }
