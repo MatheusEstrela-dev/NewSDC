@@ -14,6 +14,7 @@ enum PaeProtocoloStatus: string
     case ANALISE = 'analise';
     case APROVADO = 'aprovado';
     case REPROVADO = 'reprovado';
+    case REPROVADO_SUMARIAMENTE = 'reprovado_sumariamente';
     case CCPAE = 'ccpae';
     case ATIVO_3_ANOS = 'ativo_3_anos';
     case SUSPENSO = 'suspenso';
@@ -32,6 +33,7 @@ enum PaeProtocoloStatus: string
             self::ANALISE => 'Análise',
             self::APROVADO => 'Aprovado',
             self::REPROVADO => 'Reprovado',
+            self::REPROVADO_SUMARIAMENTE => 'Reprovado Sumariamente',
             self::CCPAE => 'CCPAE',
             self::ATIVO_3_ANOS => 'Ativo (3 anos)',
             self::SUSPENSO => 'Suspenso',
@@ -55,7 +57,7 @@ enum PaeProtocoloStatus: string
             self::NOTIFICACAO => 'bg-amber-100 text-amber-800',
             self::ANALISE => 'bg-indigo-100 text-indigo-800',
             self::APROVADO => 'bg-green-100 text-green-800',
-            self::REPROVADO, self::REVOGADO => 'bg-red-100 text-red-800',
+            self::REPROVADO, self::REPROVADO_SUMARIAMENTE, self::REVOGADO => 'bg-red-100 text-red-800',
             self::CCPAE, self::ATIVO_3_ANOS => 'bg-emerald-100 text-emerald-800',
             self::SUSPENSO => 'bg-yellow-100 text-yellow-800',
             self::ESPERAR_TRATATIVA, self::DILACAO => 'bg-orange-100 text-orange-800',
@@ -80,6 +82,7 @@ enum PaeProtocoloStatus: string
             ],
             self::ENTRADA_PROCESSO => [
                 self::CRIACAO_SDC,
+                self::REPROVADO_SUMARIAMENTE,
             ],
             self::CRIACAO_SDC => [
                 self::GERENCIAMENTO,
@@ -118,13 +121,13 @@ enum PaeProtocoloStatus: string
                 self::ATIVO_3_ANOS,
                 self::REVOGADO,
             ],
-            self::REPROVADO, self::REVOGADO => [],
+            self::REPROVADO, self::REPROVADO_SUMARIAMENTE, self::REVOGADO => [],
         };
     }
 
     public function isTerminal(): bool
     {
-        return in_array($this, [self::REPROVADO, self::REVOGADO], true);
+        return in_array($this, [self::REPROVADO, self::REPROVADO_SUMARIAMENTE, self::REVOGADO], true);
     }
 
     public function isActive(): bool

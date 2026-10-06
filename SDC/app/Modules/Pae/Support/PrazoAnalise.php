@@ -35,6 +35,7 @@ final class PrazoAnalise
         PaeProtocoloStatus::CCPAE,
         PaeProtocoloStatus::ATIVO_3_ANOS,
         PaeProtocoloStatus::REPROVADO,
+        PaeProtocoloStatus::REPROVADO_SUMARIAMENTE,
         PaeProtocoloStatus::REVOGADO,
     ];
 

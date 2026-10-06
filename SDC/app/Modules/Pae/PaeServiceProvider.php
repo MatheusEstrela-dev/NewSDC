@@ -10,13 +10,16 @@ use App\Modules\Pae\Domain\Events\FormularioValidadoV1;
 use App\Modules\Pae\Domain\Events\ParecerConcluidoV1;
 use App\Modules\Pae\Domain\Events\ProtocoloEnviadoV1;
 use App\Modules\Pae\Domain\Events\RevisaoAceitaV1;
+use App\Modules\Pae\Domain\Events\CcpaeEmitidoV1;
 use App\Modules\Pae\Domain\Guards\ExigeEmissaoCcpae;
+use App\Modules\Pae\Domain\Guards\ExigeAdmissibilidade;
 use App\Modules\Pae\Domain\Workflows\PaeProtocoloWorkflow;
 use App\Modules\Pae\Services\EmpreendimentoApiService;
 use App\Modules\Pae\Services\PaeFormularioService;
 use App\Modules\Pae\Services\PaeNotificacaoService;
 use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
+use App\Modules\Pae\Services\PaeComunicacaoService;
 use App\Support\Calendario\CalendarioDiasUteis;
 use Illuminate\Support\ServiceProvider;
 
@@ -41,10 +44,11 @@ class PaeServiceProvider extends ServiceProvider
         $this->app->singleton(CalendarioDiasUteis::class, fn () => CalendarioDiasUteis::padrao());
         $this->app->singleton(PaePrazoService::class);
         $this->app->singleton(PaeCcpaeService::class);
+        $this->app->singleton(PaeComunicacaoService::class);
 
         // Guards da maquina de estados: cada subprojeto acrescenta o seu na tag,
         // sem mexer no workflow (o B traz o de admissibilidade).
-        $this->app->tag([ExigeEmissaoCcpae::class], 'pae.guardas_transicao');
+        $this->app->tag([ExigeEmissaoCcpae::class, ExigeAdmissibilidade::class], 'pae.guardas_transicao');
         $this->app->when(PaeProtocoloWorkflow::class)
             ->needs('$guardas')
             ->giveTagged('pae.guardas_transicao');
@@ -55,7 +59,8 @@ class PaeServiceProvider extends ServiceProvider
                 ->register('pae.protocolo.enviado', 1, ProtocoloEnviadoV1::class)
                 ->register('pae.formulario.validado', 1, FormularioValidadoV1::class)
                 ->register('pae.revisao.aceita', 1, RevisaoAceitaV1::class)
-                ->register('pae.parecer.concluido', 1, ParecerConcluidoV1::class);
+                ->register('pae.parecer.concluido', 1, ParecerConcluidoV1::class)
+                ->register('pae.ccpae.emitido', 1, CcpaeEmitidoV1::class);
         });
     }
 

@@ -299,6 +299,8 @@ function mapProtocolo(p) {
     prazoEstimado: !!p.dt_notificacao_feam_estimada,
     foraDoPrazo: !!p.fora_do_prazo,
     ccpae: !!p.ccpae,
+    comunicacoesPendentes: Number(p.comunicacoes_pendentes_count || 0),
+    correcaoPrazoVencido: !!p.correcao_prazo_vencido,
     arquivado,
   };
 }
@@ -317,7 +319,8 @@ const statsToUse = computed(() => {
   const s = props.statistics ?? {};
   return {
     total: s.total ?? 0,
-    historico: (s.aprovado ?? 0) + (s.ccpae ?? 0) + (s.ativo_3_anos ?? 0),
+    historico: (s.aprovado ?? 0) + (s.ccpae ?? 0) + (s.ativo_3_anos ?? 0)
+      + (s.reprovado ?? 0) + (s.reprovado_sumariamente ?? 0),
     vencidos: s.vencidos ?? 0,
     ciclos_esgotados: s.ciclos_esgotados ?? 0,
     ccpae: s.ccpae ?? 0,

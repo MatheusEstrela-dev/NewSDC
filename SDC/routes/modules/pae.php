@@ -1,6 +1,8 @@
 <?php
 
 use App\Modules\Pae\Controllers\PaeFormularioController;
+use App\Modules\Pae\Controllers\PaeAdmissibilidadeController;
+use App\Modules\Pae\Controllers\PaeComunicacaoController;
 use App\Modules\Pae\Controllers\PaeNotificacaoController;
 use App\Modules\Pae\Controllers\PaeProtocoloController;
 
@@ -74,6 +76,30 @@ Route::prefix('pae')->name('pae.')->group(function () {
 
     Route::get('/protocolo/{paeProtocolo}/historico', [PaeProtocoloController::class, 'historico'])
         ->name('protocolos.historico')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::get('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'show'])
+        ->name('protocolo.admissibilidade.show')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::put('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'salvar'])
+        ->name('protocolo.admissibilidade.salvar')
+        ->middleware('can:pae.protocolos.edit');
+
+    Route::put('/protocolo/{paeProtocolo}/municipios-zas-zss', [PaeAdmissibilidadeController::class, 'salvarMunicipiosLegados'])
+        ->name('protocolo.admissibilidade.municipios')
+        ->middleware('can:pae.protocolos.edit');
+
+    Route::post('/protocolo/{paeProtocolo}/admissibilidade/decisoes', [PaeAdmissibilidadeController::class, 'decidir'])
+        ->name('protocolo.admissibilidade.decidir')
+        ->middleware('can:pae.protocolos.validar');
+
+    Route::post('/comunicacoes/{paeComunicacao}/registro', [PaeComunicacaoController::class, 'registrar'])
+        ->name('comunicacoes.registrar')
+        ->middleware('can:pae.protocolos.edit');
+
+    Route::get('/comunicacoes/{paeComunicacao}/comprovante', [PaeComunicacaoController::class, 'comprovante'])
+        ->name('comunicacoes.comprovante')
         ->middleware('can:pae.protocolos.view');
 
     Route::post('/protocolo/{paeProtocolo}/status', [PaeProtocoloController::class, 'changeStatus'])

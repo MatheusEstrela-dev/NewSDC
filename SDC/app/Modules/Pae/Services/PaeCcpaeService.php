@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Pae\Services;
 
 use App\Models\User;
+use App\Core\Events\DomainEvent;
+use App\Core\Outbox\OutboxDispatcher;
 use App\Modules\Pae\DTOs\EmitirCcpaeDTO;
 use App\Modules\Pae\Domain\ContextoTransicao;
+use App\Modules\Pae\Domain\Events\CcpaeEmitidoV1;
 use App\Modules\Pae\Domain\Exceptions\TransicaoProibidaException;
 use App\Modules\Pae\Domain\Workflows\PaeProtocoloWorkflow;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
@@ -26,6 +29,8 @@ final class PaeCcpaeService
 {
     public function __construct(
         private readonly PaeProtocoloWorkflow $workflow,
+        private readonly PaeComunicacaoService $comunicacoes,
+        private readonly OutboxDispatcher $outbox,
     ) {}
 
     public function emitir(PaeProtocolo $protocolo, EmitirCcpaeDTO $dados, User $user): PaeCcpae
@@ -76,6 +81,20 @@ final class PaeCcpaeService
                     "CCPAE {$dados->codigo} emitido em {$dados->dtEmissao->format('d/m/Y')}, vigente ate {$vencimento->format('d/m/Y')}: {$base}.",
                     $user
                 );
+
+                $this->comunicacoes->abrir($protocolo, 'ccpae', $ccpae->id);
+                $this->outbox->persist(new CcpaeEmitidoV1(
+                    eventId: DomainEvent::newId(),
+                    aggregateType: 'pae_protocolo',
+                    aggregateId: (string) $protocolo->id,
+                    occurredAt: new \DateTimeImmutable(),
+                    metadata: [
+                        'protocolo_id' => $protocolo->id,
+                        'ccpae_id' => $ccpae->id,
+                        'codigo' => $ccpae->codigo,
+                        'actor_user_id' => $user->id,
+                    ],
+                ));
 
                 return $ccpae;
             });

@@ -25,12 +25,14 @@ class PaeNotificacao extends Model
         'prorrogacao',
         'dt_devolutiva',
         'obs',
+        'copia_compdec_zas_obrigatoria',
     ];
 
     protected $casts = [
         'dt_notificacao' => 'date',
         'dt_devolutiva'  => 'date',
         'prorrogacao'    => 'boolean',
+        'copia_compdec_zas_obrigatoria' => 'boolean',
     ];
 
     protected static function newFactory()

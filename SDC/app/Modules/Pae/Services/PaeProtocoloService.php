@@ -13,6 +13,7 @@ use App\Modules\Pae\Domain\Workflows\PaeProtocoloWorkflow;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeEmpnto;
 use App\Modules\Pae\Models\PaeProtocolo;
+use Carbon\CarbonImmutable;
 use App\Modules\Pae\Support\CicloProtocolo;
 use App\Modules\Pae\Support\TimelinePae;
 use App\Modules\Shared\BaseService;
@@ -31,12 +32,19 @@ class PaeProtocoloService extends BaseService
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = PaeProtocolo::query()
+            ->withCount(['comunicacoes as comunicacoes_pendentes_count' => fn ($q) => $q->where('status', 'pendente')])
             ->with([
                 'analistaAtual:id,name',
                 'empreendimento:id,pae_empdor_id,nome',
                 'empreendimento.empdor:id,nome',
                 'analise:id,pae_protocolo_id',
                 'analise.notificacoes:id,pae_analise_id,dt_notificacao,dt_devolutiva',
+                'decisaoAdmissibilidadeVigente' => fn ($consulta) => $consulta->select(
+                    'pae_admissibilidade_decisoes.id',
+                    'pae_admissibilidade_decisoes.protocolo_id',
+                    'pae_admissibilidade_decisoes.tipo',
+                    'pae_admissibilidade_decisoes.prazo_correcao_em',
+                ),
             ]);
 
         $mostrarArquivados = filter_var($filters['arquivado'] ?? false, FILTER_VALIDATE_BOOL);
@@ -65,6 +73,8 @@ class PaeProtocoloService extends BaseService
                     PaeProtocoloStatus::APROVADO->value,
                     PaeProtocoloStatus::CCPAE->value,
                     PaeProtocoloStatus::ATIVO_3_ANOS->value,
+                    PaeProtocoloStatus::REPROVADO->value,
+                    PaeProtocoloStatus::REPROVADO_SUMARIAMENTE->value,
                 ]);
                 break;
             case 'ciclos_esgotados':
@@ -84,7 +94,15 @@ class PaeProtocoloService extends BaseService
             $query->where('dt_entrada', '<=', $filters['data_fim']);
         }
 
-        return $query->orderBy('dt_entrada', 'desc')->paginate($perPage);
+        $pagina = $query->orderBy('dt_entrada', 'desc')->paginate($perPage);
+        $hoje = CarbonImmutable::today();
+        $pagina->getCollection()->each(static function (PaeProtocolo $protocolo) use ($hoje): void {
+            $decisao = $protocolo->decisaoAdmissibilidadeVigente;
+            $protocolo->setAttribute('correcao_prazo_vencido', $decisao?->tipo === 'correcao_solicitada'
+                && $decisao->prazo_correcao_em?->isBefore($hoje));
+        });
+
+        return $pagina;
     }
 
     public function findById(int $id): ?PaeProtocolo
@@ -342,6 +360,8 @@ class PaeProtocoloService extends BaseService
             'aprovado' => $base()->where('status', PaeProtocoloStatus::APROVADO->value)->count(),
             'ccpae' => $base()->where('status', PaeProtocoloStatus::CCPAE->value)->count(),
             'ativo_3_anos' => $base()->where('status', PaeProtocoloStatus::ATIVO_3_ANOS->value)->count(),
+            'reprovado' => $base()->where('status', PaeProtocoloStatus::REPROVADO->value)->count(),
+            'reprovado_sumariamente' => $base()->where('status', PaeProtocoloStatus::REPROVADO_SUMARIAMENTE->value)->count(),
             'vencidos' => $base()->vencidos()->count(),
             'ciclos_esgotados' => $base()->whereNotNull('ciclos_esgotados_em')->count(),
         ];

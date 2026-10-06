@@ -50,6 +50,12 @@
             <!-- Situação -->
             <td class="px-4 py-3">
               <StatusPill :situacao="protocolo.situacao" />
+              <div v-if="protocolo.comunicacoesPendentes" class="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                {{ protocolo.comunicacoesPendentes }} comunicação(ões) pendente(s)
+              </div>
+              <div v-if="protocolo.correcaoPrazoVencido" class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
+                Correção transitória vencida: avaliar
+              </div>
             </td>
 
             <!-- Acoes -->
@@ -61,7 +67,7 @@
                   :actions="[
                     { action: 'view',    handler: () => $emit('view', protocolo.id) },
                     { action: 'edit',    handler: () => $emit('edit', protocolo.id),    allowed: canEdit },
-                    { action: 'history', handler: () => $emit('history', protocolo.id) },
+                    { action: 'history', aliasOverride: 'view', handler: () => $emit('history', protocolo.id) },
                     { action: 'archive', handler: () => $emit('archive', protocolo.id) },
                     { action: 'delete',  handler: () => $emit('delete', protocolo.id),  allowed: canDelete },
                     { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo.id),  allowed: canCheck },
