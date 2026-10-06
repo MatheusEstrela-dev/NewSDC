@@ -9,7 +9,6 @@ use App\Core\Outbox\OutboxDispatcher;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
 use App\Modules\Tdap\Models\Cronograma;
-use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Carbon\Carbon;
@@ -43,10 +42,7 @@ class CronogramaService
             // alocados; sem o withSum o accessor faria um SELECT por linha.
             ->withSum('caminhoes', 'agua_prevista')
             ->withSum('caminhoes', 'agua_entregue')
-            // viagens_previstas/viagens_realizadas, mesmo motivo: sem os
-            // aggregates os accessors fariam 2 SELECTs extras por linha.
-            ->withSum('caminhoes', 'num_viagens')
-            ->withCount(['viagens as viagens_realizadas_count' => fn ($q) => $q->where('validado', CronoViagem::STATUS_APROVADA)])
+            ->comExecucaoDeViagens()
             ->when(
                 ($filtros['estado'] ?? null) === 'arquivado',
                 fn ($q) => $q->arquivado(),
@@ -90,10 +86,7 @@ class CronogramaService
             // alocados; sem o withSum o accessor faria um SELECT por linha.
             ->withSum('caminhoes', 'agua_prevista')
             ->withSum('caminhoes', 'agua_entregue')
-            // viagens_previstas/viagens_realizadas, mesmo motivo: sem os
-            // aggregates os accessors fariam 2 SELECTs extras por linha.
-            ->withSum('caminhoes', 'num_viagens')
-            ->withCount(['viagens as viagens_realizadas_count' => fn ($q) => $q->where('validado', CronoViagem::STATUS_APROVADA)])
+            ->comExecucaoDeViagens()
             ->when(
                 ($filtros['estado'] ?? null) === 'arquivado',
                 fn ($q) => $q->arquivado(),
@@ -526,11 +519,19 @@ class CronogramaService
     }
 
     /**
+     * Cards da listagem de Cronogramas -- e os do dashboard, que chamam este
+     * mesmo metodo para os dois mostrarem o mesmo numero.
+     *
+     * Sem os arquivados: a tabela abaixo dos cards tambem os esconde por padrao.
+     * `$municipioId` recorta pelo municipio (null = estado inteiro).
+     *
      * @return array<string, int|float>
      */
-    public function obterEstatisticas(): array
+    public function obterEstatisticas(?int $municipioId = null): array
     {
         $row = Cronograma::query()
+            ->naoArquivado()
+            ->when($municipioId !== null, fn ($q) => $q->doMunicipio($municipioId))
             ->selectRaw('
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE ativo = TRUE AND encerrado_em IS NULL) AS ativos,
@@ -549,6 +550,8 @@ class CronogramaService
             ->whereNull('c.deleted_at')
             ->where('c.ativo', true)
             ->whereNull('c.encerrado_em')
+            ->whereNull('c.arquivado_em')
+            ->when($municipioId !== null, fn ($q) => $q->where('c.municipio_id', $municipioId))
             ->selectRaw('
                 COALESCE(SUM(cc.agua_prevista), 0) AS previsto,
                 COALESCE(SUM(cc.agua_entregue), 0) AS entregue

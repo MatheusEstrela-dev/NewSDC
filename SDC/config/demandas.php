@@ -15,10 +15,4 @@ return [
         'disk' => env('DEMANDAS_LEGADO_DISK', 'legado_demandas'),
         'lote' => 200,
     ],
-
-    'automacao' => [
-        'timeout_segundos' => 15,
-        'tentativas' => 2,
-        'backoff_segundos' => [10, 30],
-    ],
 ];

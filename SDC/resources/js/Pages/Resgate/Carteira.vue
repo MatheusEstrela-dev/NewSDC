@@ -11,12 +11,8 @@
     >
       <template #actions>
         <div class="flex flex-wrap items-center justify-end gap-2">
-          <Link :href="route('resgate.catalogo')" class="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
-            Catálogo de prêmios
-          </Link>
-          <Link :href="route('ranking.index')" class="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
-          Voltar ao placar
-        </Link>
+          <Button :href="route('resgate.catalogo')" variant="sky" :icon="GiftIcon">Catálogo de prêmios</Button>
+          <Button :href="route('ranking.index')" variant="warning" :icon="TrophyIcon">Voltar ao placar</Button>
         </div>
       </template>
     </PageHeader>
@@ -58,9 +54,11 @@
  * temporada FECHADA (decisao D2), a atual aparece so como referencia.
  */
 import { reactive } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import { GiftIcon, TrophyIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';

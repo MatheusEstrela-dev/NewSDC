@@ -98,18 +98,17 @@
                   <tr v-for="v in vistorias.data" :key="v.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                     <td class="px-4 py-3">{{ fmtDate(v.data) }}</td>
                     <td class="px-4 py-3">
-                      <Link :href="route('tdap.frota.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
+                      <Link :href="route('tdap.frota.vistorias.show', v.id)" class="font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
                       <p v-if="v.caminhao_modelo" class="text-xs text-slate-500">{{ v.caminhao_modelo }}</p>
                     </td>
                     <td class="px-4 py-3">
                       <p>{{ v.nome }}</p>
                       <p v-if="v.prestador_nome" class="text-xs text-slate-500">{{ v.prestador_nome }}</p>
                     </td>
-                    <td class="px-4 py-3 font-mono text-xs">{{ v.ficha || '—' }}</td>
-                    <td class="px-4 py-3 font-mono text-xs">{{ v.lacre || '—' }}</td>
+                    <td class="px-4 py-3 text-xs">{{ v.ficha || '—' }}</td>
+                    <td class="px-4 py-3 text-xs">{{ v.lacre || '—' }}</td>
                     <td class="px-4 py-3">
-                      <span :class="v.parecer === 'aprovada'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                      <span :class="v.parecer === 'aprovada' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
                         : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'"
                         class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
                         {{ v.parecer_label }}
@@ -159,7 +158,7 @@
       </template>
 
       <template #mobile-c1="{ item: v }">
-        <Link :href="route('tdap.frota.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
+        <Link :href="route('tdap.frota.vistorias.show', v.id)" class="font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
         <p v-if="v.caminhao_modelo" class="text-xs text-slate-500">{{ v.caminhao_modelo }}</p>
       </template>
 
@@ -169,8 +168,7 @@
       </template>
 
       <template #mobile-c5="{ item: v }">
-        <span :class="v.parecer === 'aprovada'
-        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+        <span :class="v.parecer === 'aprovada' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
         : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'"
         class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
         {{ v.parecer_label }}
@@ -261,6 +259,7 @@ import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 import NovaVistoriaCaminhaoModal from '@/Components/Organisms/Tdap/NovaVistoriaCaminhaoModal.vue';
+import { formatarDia } from '@/Support/dataLocal';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -335,13 +334,8 @@ function onExport(params) {
   handleExport(params, queryFiltros());
 }
 
-// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
-// fuso do Brasil, exibia o dia anterior.
 function fmtDate(d) {
-  if (!d) return '—';
-  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
-
-  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
+  return formatarDia(d) || '—';
 }
 
 // Pagina mantendo os filtros da tela (os refs, nao o snapshot de props: o

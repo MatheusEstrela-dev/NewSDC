@@ -46,9 +46,4 @@ return [
         'api_base_url' => env('TELEGRAM_API_BASE_URL', 'https://api.telegram.org'),
     ],
 
-    'corporate_directory' => [
-        'url' => env('CORPORATE_DIRECTORY_URL'),
-        'token' => env('CORPORATE_DIRECTORY_TOKEN'),
-    ],
-
 ];

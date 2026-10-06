@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import BasePrintModal from '@/Components/Organisms/Print/BasePrintModal.vue';
 import PrintHeader from '@/Components/Organisms/Print/Sections/PrintHeader.vue';
 import PrintSection from '@/Components/Organisms/Print/Sections/PrintSection.vue';
+import { formatDate } from '@/utils/dateFormatter';
 
 /**
  * Documento impresso do cronograma TDAP.
@@ -75,12 +76,6 @@ const resumoHeader = computed(() => {
     ],
   ];
 });
-
-function formatDate(date) {
-  if (!date) return '';
-  const d = new Date(`${String(date).slice(0, 10)}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-BR');
-}
 
 function periodo(inicio, fim) {
   return inicio || fim ? `${formatDate(inicio) || '—'} a ${formatDate(fim) || '—'}` : '—';

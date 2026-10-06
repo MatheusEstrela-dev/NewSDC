@@ -52,10 +52,10 @@
       <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-800/70">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
-            <h3 class="truncate text-sm font-bold text-slate-900 dark:text-slate-100">Prestadores</h3>
+            <h3 class="truncate text-sm font-semibold text-slate-900 sm:text-base dark:text-slate-100">Prestadores</h3>
             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Cadastro e situacao das empresas contratadas</p>
           </div>
-          <span class="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/15 dark:text-blue-300">
+          <span class="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/15 dark:text-blue-300">
             {{ prestadores.meta?.total ?? prestadores.data.length }}
           </span>
         </div>
@@ -71,13 +71,13 @@
     >
       <template #table>
         <table class="w-full text-sm">
-                  <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
+                  <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th class="px-4 py-3 text-left">CNPJ</th>
-                      <th class="px-4 py-3 text-left">Razão Social</th>
-                      <th class="px-4 py-3 text-left">Cidade/UF</th>
-                      <th class="px-4 py-3 text-left">Caminhões</th>
-                      <th class="px-4 py-3 text-left">Status</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">CNPJ</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Razão Social</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Cidade/UF</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Caminhões</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Status</th>
                       <th class="w-28 px-4 py-3 text-right">Ações</th>
                     </tr>
                   </thead>
@@ -87,7 +87,7 @@
                       :key="prestador.id"
                       class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
                     >
-                      <td class="whitespace-nowrap px-4 py-4 font-mono text-slate-700 dark:text-slate-300">
+                      <td class="whitespace-nowrap px-4 py-4 text-slate-700 dark:text-slate-300">
                         {{ prestador.cnpj_formatado }}
                       </td>
                       <td class="px-4 py-4">

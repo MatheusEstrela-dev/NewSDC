@@ -16,6 +16,19 @@
 
 name: newsdc-dev
 
+# Variaveis do modulo Acessos (integracao com o Active Directory), UMA vez so,
+# herdadas por app, queue_diretorio e scheduler. O app semeia o diretorio fake
+# e o worker o consome: os dois PRECISAM concordar em driver e arquivo, e o
+# arquivo vive no volume de storage compartilhado. Em dev o driver e sempre
+# fake: nenhum ambiente de desenvolvimento fala com o AD real. A chave de
+# entrega (cifra da senha temporaria) vem do docker/.env, nunca do repositorio.
+x-diretorio-env: &diretorio-env
+  DIRETORIO_DRIVER: fake
+  DIRETORIO_SEARCH_BASE: OU=SDC,DC=dev,DC=local
+  DIRETORIO_BASE_DN: DC=dev,DC=local
+  DIRETORIO_CHAVE_ENTREGA: ${DIRETORIO_CHAVE_ENTREGA}
+  DIRETORIO_FAKE_ARQUIVO: /var/www/storage/app/diretorio-fake.json
+
 services:
   app:
     build:
@@ -60,6 +73,8 @@ services:
     environment:
       WORKDIR: /var/www
       APP_NAME: "SDC Dev"
+      # Acessos/AD: ver a ancora x-diretorio-env no topo do arquivo.
+      <<: *diretorio-env
       APP_ENV: local
       APP_DEBUG: "true"
       # Broadcast. O app tambem PUBLICA eventos, entao precisa das mesmas
@@ -610,6 +625,33 @@ services:
     stop_grace_period: 180s
     command: ["sh", "/queue-worker.sh", "redis", "--queue=notificacoes_urgente,notificacoes", "--tries=3", "--timeout=120", "--max-time=3600", "--sleep=1"]
 
+  # Worker da fila do diretorio (Acessos/AD). Conexao `diretorio`: driver
+  # database no Postgres compartilhado (tabela acessos_fila_diretorio), com
+  # backoff proprio. Roda isolado dos demais workers: uma chamada lenta ao AD
+  # nao pode segurar notificacao nem auditoria. Em dev o driver do diretorio e
+  # fake (ver x-diretorio-env). Mesma imagem do app, command sobrescrito (sem
+  # /start.sh), via queue-worker.sh como os demais workers.
+  queue_diretorio:
+    <<: *queue-worker
+    # Opt-in ate a conexao `diretorio` existir (Task 5) e a imagem ter ext-ldap.
+    profiles: ["diretorio"]
+    container_name: newsdc_dev_queue_diretorio
+    hostname: queue-diretorio
+    environment:
+      <<: [*queue-env, *diretorio-env]
+      APP_NAME: "SDC Dev Queue diretorio"
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      BROADCAST_CONNECTION: "null"
+    stop_grace_period: 90s
+    command: ["sh", "/queue-worker.sh", "diretorio", "--queue=diretorio", "--sleep=3", "--tries=3", "--timeout=60", "--max-time=3600", "--max-jobs=500"]
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work diretorio' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   # Scheduler. NAO existia em dev: o laravel-scheduler so estava no supervisor,
   # que e usado nas imagens de producao. O efeito era que NENHUM agendamento do
   # projeto rodava aqui -- nem o medalhao:ingerir, nem o sdc:check-user-inactivity,
@@ -633,7 +675,7 @@ services:
       - "host.docker.internal:host-gateway"
 
     environment:
-      <<: *queue-env
+      <<: [*queue-env, *diretorio-env]
       APP_NAME: "SDC Dev Scheduler"
 
     volumes: *queue-volumes

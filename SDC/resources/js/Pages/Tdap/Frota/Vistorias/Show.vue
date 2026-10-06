@@ -19,34 +19,34 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Identificação</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Identificação</h3>
           <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div><dt class="text-slate-500">Vistoriador</dt><dd>{{ v.nome }}</dd></div>
-            <div><dt class="text-slate-500">Data</dt><dd>{{ fmtDate(v.data) }}</dd></div>
-            <div><dt class="text-slate-500">Ficha</dt><dd class="font-mono">{{ v.ficha || '—' }}</dd></div>
-            <div><dt class="text-slate-500">Edital</dt><dd>{{ v.edital || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Vistoriador</dt><dd>{{ v.nome }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Data</dt><dd>{{ fmtDate(v.data) }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Ficha</dt><dd class="">{{ v.ficha || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Edital</dt><dd>{{ v.edital || '—' }}</dd></div>
             <!-- Lacre do tanque no lugar do antigo "Lote" (que repetia o lote da ata). -->
-            <div><dt class="text-slate-500">Número do lacre</dt><dd class="font-mono">{{ v.lacre || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Número do lacre</dt><dd class="">{{ v.lacre || '—' }}</dd></div>
           </dl>
         </div>
 
         <div v-if="v.caminhao" class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Caminhão vistoriado</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Caminhão vistoriado</h3>
           <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <dt class="text-slate-500">Placa</dt>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Placa</dt>
               <dd>
-                <Link :href="route('tdap.frota.show', v.caminhao.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">
+                <Link :href="route('tdap.frota.show', v.caminhao.id)" class="font-semibold text-blue-600 hover:text-blue-800">
                   {{ v.caminhao.placa }}
                 </Link>
               </dd>
             </div>
-            <div><dt class="text-slate-500">Modelo</dt><dd>{{ v.modelo || v.caminhao.modelo || '—' }}</dd></div>
-            <div><dt class="text-slate-500">Capacidade</dt><dd class="font-mono">{{ Number(v.capacidade).toFixed(2) }} m³</dd></div>
-            <div><dt class="text-slate-500">Cor</dt><dd>{{ v.cor || '—' }}</dd></div>
-            <div><dt class="text-slate-500">Ano</dt><dd>{{ v.ano || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Modelo</dt><dd>{{ v.modelo || v.caminhao.modelo || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Capacidade</dt><dd class="">{{ Number(v.capacidade).toFixed(2) }} m³</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Cor</dt><dd>{{ v.cor || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Ano</dt><dd>{{ v.ano || '—' }}</dd></div>
             <div v-if="v.caminhao.prestador">
-              <dt class="text-slate-500">Prestador</dt>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Prestador</dt>
               <dd>
                 <Link :href="route('tdap.prestadores.show', v.caminhao.prestador.id)" class="text-blue-600 hover:text-blue-800">
                   {{ v.caminhao.prestador.nome }}
@@ -75,7 +75,7 @@
         />
 
         <div v-if="v.observacoes" class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Observações</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Observações</h3>
           <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{{ v.observacoes }}</p>
         </div>
       </div>
@@ -83,8 +83,7 @@
       <aside class="space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
           <p class="text-sm text-slate-500 mb-2">Parecer</p>
-          <span :class="v.parecer === 'aprovada'
-            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+          <span :class="v.parecer === 'aprovada' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
             : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'"
             class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold">
             {{ v.parecer_label }}
@@ -125,6 +124,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import { formatarDia } from '@/Support/dataLocal';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -150,12 +150,7 @@ function excluir() {
   router.delete(route('tdap.frota.vistorias.destroy', v.value.id));
 }
 
-// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
-// fuso do Brasil, exibia o dia anterior.
 function fmtDate(d) {
-  if (!d) return '—';
-  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
-
-  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
+  return formatarDia(d) || '—';
 }
 </script>

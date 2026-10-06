@@ -24,26 +24,26 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Identificação</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Identificação</h3>
           <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div><dt class="text-slate-500">Número</dt><dd class="font-mono font-semibold text-slate-900 dark:text-slate-100">{{ l.numero }}</dd></div>
-            <div><dt class="text-slate-500">Nome</dt><dd class="text-slate-900 dark:text-slate-100">{{ l.nome || '—' }}</dd></div>
-            <div><dt class="text-slate-500">Contrato</dt><dd class="font-mono text-slate-900 dark:text-slate-100">{{ l.contrato || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Número</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ l.numero }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Nome</dt><dd class="text-slate-900 dark:text-slate-100">{{ l.nome || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Contrato</dt><dd class="text-slate-900 dark:text-slate-100">{{ l.contrato || '—' }}</dd></div>
           </dl>
         </div>
 
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Vínculos</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Vínculos</h3>
           <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <dt class="text-slate-500">Ata</dt>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Ata</dt>
               <dd v-if="l.ata">
-                <Link :href="route('tdap.atas.show', l.ata.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ l.ata.numero }}</Link>
+                <Link :href="route('tdap.atas.show', l.ata.id)" class="font-semibold text-blue-600 hover:text-blue-800">{{ l.ata.numero }}</Link>
                 <p class="text-xs text-slate-500">{{ formatDate(l.ata.dt_inicio) }} — {{ formatDate(l.ata.dt_final) }}</p>
               </dd>
             </div>
             <div>
-              <dt class="text-slate-500">Municípios ({{ municipios.length }})</dt>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Municípios ({{ municipios.length }})</dt>
               <dd class="mt-1 flex flex-wrap gap-1">
                 <span
                   v-for="m in municipios"
@@ -56,26 +56,26 @@
               </dd>
             </div>
             <div>
-              <dt class="text-slate-500">Prestador</dt>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Prestador</dt>
               <dd v-if="l.prestador">
                 <Link :href="route('tdap.prestadores.show', l.prestador.id)" class="text-blue-600 hover:text-blue-800">{{ l.prestador.nome }}</Link>
-                <p class="text-xs text-slate-500 font-mono">{{ l.prestador.cnpj }}</p>
+                <p class="text-xs text-slate-500">{{ l.prestador.cnpj }}</p>
               </dd>
             </div>
           </dl>
         </div>
 
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Quantidade e Valor</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Quantidade e Valor</h3>
           <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div><dt class="text-slate-500">Volume contratado</dt><dd class="font-mono text-lg text-slate-900 dark:text-slate-100">{{ Number(l.qtd_agua_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }} m³</dd></div>
-            <div><dt class="text-slate-500">Valor unitário</dt><dd class="font-mono text-lg text-slate-900 dark:text-slate-100">R$ {{ Number(l.valor_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}/m³</dd></div>
-            <div><dt class="text-slate-500">Valor total</dt><dd class="font-mono text-lg font-semibold text-blue-600">R$ {{ Number(l.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Volume contratado</dt><dd class="text-lg text-slate-900 dark:text-slate-100">{{ Number(l.qtd_agua_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }} m³</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Valor unitário</dt><dd class="text-lg text-slate-900 dark:text-slate-100">R$ {{ Number(l.valor_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}/m³</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Valor total</dt><dd class="text-lg font-semibold text-blue-600">R$ {{ Number(l.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</dd></div>
           </dl>
         </div>
 
         <div v-if="l.observacoes" class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Observações</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Observações</h3>
           <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{{ l.observacoes }}</p>
         </div>
       </div>
@@ -103,6 +103,7 @@ import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vu
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import MapIcon from '@/Components/Icons/MapIcon.vue';
+import { formatarDia } from '@/Support/dataLocal';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -138,12 +139,7 @@ function excluir() {
   router.delete(route('tdap.lotes.destroy', l.value.id));
 }
 
-// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
-// fuso do Brasil, exibia o dia anterior.
 function formatDate(d) {
-  if (!d) return '—';
-  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
-
-  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
+  return formatarDia(d) || '—';
 }
 </script>

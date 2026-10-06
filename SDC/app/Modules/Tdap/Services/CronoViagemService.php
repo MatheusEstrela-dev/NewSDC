@@ -13,7 +13,9 @@ use App\Modules\Tdap\DTOs\CronoViagemDTO;
 use App\Modules\Tdap\Models\CronoCaminhao;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Domain\Exceptions\ViagemForaDoLimiteException;
+use App\Modules\Tdap\Support\EscopoDeLeitura;
 use App\Modules\Tdap\Support\LimiteDoCronograma;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -47,7 +49,9 @@ class CronoViagemService
     }
 
     /**
-     * Municipio ao qual o usuario esta restrito, ou null quando e estadual.
+     * Municipio de quem DECIDE no fluxo do COMPDEC (confirmar/reprovar), ou
+     * null quando e estadual. A leitura da fila de validacao usa
+     * EscopoDeLeitura, que deixa o administrador do modulo ver o estado todo.
      *
      * Reusa OrgaoDeLotacao, a mesma regra que AjudaHumanitaria, PMDA e a
      * PedidoAhPolicy ja usam -- inclusive a cadeia de fallback (orgao
@@ -60,6 +64,18 @@ class CronoViagemService
     private function municipioDoUsuario(?User $user): ?int
     {
         return $user !== null ? OrgaoDeLotacao::municipioId($user) : null;
+    }
+
+    /**
+     * Viagens aguardando validacao no escopo de quem olha (null = estadual):
+     * unica definicao da fila, para lista, cards e dashboard contarem a mesma
+     * coisa.
+     */
+    public function filaDeValidacao(?int $municipioId): Builder
+    {
+        return CronoViagem::query()
+            ->pendenteDeValidacao()
+            ->when($municipioId !== null, fn ($q) => $q->doMunicipio($municipioId));
     }
 
     /**
@@ -80,18 +96,13 @@ class CronoViagemService
      */
     public function listarPendentesValidacao(int $perPage = 25, array $filtros = [], ?User $usuario = null): LengthAwarePaginator
     {
-        $municipioDoUsuario = $this->municipioDoUsuario($usuario);
-
-        return CronoViagem::query()
-            ->when($municipioDoUsuario !== null, fn ($q) => $q->doMunicipio($municipioDoUsuario))
+        return $this->filaDeValidacao(EscopoDeLeitura::municipioId($usuario))
             ->with([
                 'cronoCaminhao.cronograma.municipio:id,nome,uf',
                 'cronoCaminhao.cronograma.prestador:id,nome',
                 'cronoCaminhao.cronograma.lote:id,numero,valor_m3',
                 'cronoCaminhao.caminhao:id,placa,marca,modelo,capacidade_m3,ativo',
             ])
-            ->pendente()
-            ->whereHas('cronoCaminhao')
             ->when($filtros['search'] ?? null, function ($q, $termo): void {
                 $termo = '%'.mb_strtoupper((string) $termo).'%';
 
@@ -267,18 +278,17 @@ class CronoViagemService
      */
     public function obterEstatisticas(?User $usuario = null): array
     {
-        $municipioDoUsuario = $this->municipioDoUsuario($usuario);
-
-        $linha = DB::table('tdap_crono_viagens as v')
-            ->join('tdap_crono_caminhoes as cc', 'cc.id', '=', 'v.crono_caminhao_id')
+        // Mesma fila da listagem: antes o join cru nao olhava alocacao nem
+        // cronograma excluidos, e o card podia contar viagem que a tabela abaixo
+        // nao mostrava.
+        $linha = $this->filaDeValidacao(EscopoDeLeitura::municipioId($usuario))
+            ->join('tdap_crono_caminhoes as cc', 'cc.id', '=', 'tdap_crono_viagens.crono_caminhao_id')
             ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
-            ->whereNull('v.deleted_at')
-            ->whereNull('v.validado')
-            ->when($municipioDoUsuario !== null, fn ($q) => $q->where('c.municipio_id', $municipioDoUsuario))
             ->selectRaw('count(*) as pendentes')
-            ->selectRaw("count(*) FILTER (WHERE v.data_registro < now() - interval '7 days') as aguardando_mais_de_7d")
+            ->selectRaw("count(*) FILTER (WHERE tdap_crono_viagens.data_registro < now() - interval '7 days') as aguardando_mais_de_7d")
             ->selectRaw('count(*) FILTER (WHERE c.encerrado_em is not null) as de_cronograma_encerrado')
             ->selectRaw('count(DISTINCT c.municipio_id) as municipios')
+            ->toBase()
             ->first();
 
         return [

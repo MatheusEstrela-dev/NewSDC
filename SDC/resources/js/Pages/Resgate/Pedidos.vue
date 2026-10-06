@@ -10,7 +10,7 @@
       variant="gradient"
     >
       <template #actions>
-        <Link :href="route('resgate.catalogo')" class="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">Catálogo</Link>
+        <Button :href="route('resgate.catalogo')" variant="sky" :icon="GiftIcon">Catálogo</Button>
       </template>
     </PageHeader>
 
@@ -51,8 +51,10 @@
 <script setup>
 /** Pedidos de resgate - pagina propria do SPA; decisao no proprio card. */
 import { Head, Link } from '@inertiajs/vue3';
+import { GiftIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import StatusPedidoBadge from '@/Components/Atoms/Resgate/StatusPedidoBadge.vue';
 import DecisaoPedido from '@/Components/Organisms/Resgate/DecisaoPedido.vue';

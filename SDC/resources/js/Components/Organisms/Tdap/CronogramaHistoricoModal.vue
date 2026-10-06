@@ -11,7 +11,7 @@
               <h3 class="text-lg font-semibold text-white truncate">Série Histórica do Cronograma</h3>
               <p class="text-sm text-slate-200/80 truncate">
                 Cronograma
-                <span class="font-mono">{{ numero || '—' }}</span>
+                <span class="">{{ numero || '—' }}</span>
               </p>
             </div>
           </div>
@@ -47,7 +47,7 @@
                   <h4 class="text-base font-semibold modal-serie-titulo truncate">{{ event.titulo }}</h4>
                   <div class="mt-1 flex flex-wrap items-center gap-2 text-xs modal-serie-apoio">
                     <Badge :variant="eventBadgeVariant(event.tipo)" size="sm">{{ eventLabel(event.tipo) }}</Badge>
-                    <span class="font-mono modal-serie-apoio">{{ event.data }}</span>
+                    <span class="modal-serie-apoio">{{ event.data }}</span>
                   </div>
                 </div>
               </div>

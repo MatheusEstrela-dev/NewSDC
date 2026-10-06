@@ -1,7 +1,7 @@
 <template>
   <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
         Comprovantes ({{ comprovantes.length }})
       </h3>
     </div>
@@ -56,9 +56,9 @@
       </div>
 
       <div class="flex justify-end">
-        <PrimaryButton type="submit" :disabled="form.processing || form.comprovantes.length === 0">
+        <Button variant="primary" size="md" type="submit" :disabled="form.processing || form.comprovantes.length === 0">
           {{ form.processing ? 'Enviando...' : 'Anexar comprovante(s)' }}
-        </PrimaryButton>
+        </Button>
       </div>
     </form>
   </div>
@@ -69,7 +69,7 @@ import { ref } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
 import TextInput from '@/Components/TextInput.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 
 const props = defineProps({
   cronogramaId: { type: [Number, String], required: true },

@@ -15,6 +15,7 @@ use App\Modules\Tdap\Requests\StoreCronoViagemRequest;
 use App\Modules\Tdap\Requests\ValidarCronoViagemRequest;
 use App\Modules\Tdap\Resources\CronoViagemResource;
 use App\Modules\Tdap\Services\CronoViagemService;
+use App\Modules\Tdap\Support\EscopoDeLeitura;
 use App\Support\Perfil\OrgaoDeLotacao;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,20 +53,10 @@ class CronoViagemController extends Controller
             // cujo resultado sempre volta vazio confunde mais que ajuda -- e
             // ainda revela onde ha operacao acontecendo.
             'municipios'   => fn () => Municipio::query()
-                ->whereIn('id', function ($sub) use ($request): void {
-                    $sub->select('c.municipio_id')
-                        ->from('tdap_cronogramas as c')
-                        ->join('tdap_crono_caminhoes as cc', 'cc.cronograma_id', '=', 'c.id')
-                        ->join('tdap_crono_viagens as v', 'v.crono_caminhao_id', '=', 'cc.id')
-                        ->whereNull('v.validado')
-                        ->whereNull('v.deleted_at');
-
-                    $municipioDoUsuario = OrgaoDeLotacao::municipioId($request->user());
-
-                    if ($municipioDoUsuario !== null) {
-                        $sub->where('c.municipio_id', $municipioDoUsuario);
-                    }
-                })
+                ->whereIn('id', $this->service->filaDeValidacao(EscopoDeLeitura::municipioId($request->user()))
+                    ->join('tdap_crono_caminhoes as cc', 'cc.id', '=', 'tdap_crono_viagens.crono_caminhao_id')
+                    ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
+                    ->select('c.municipio_id'))
                 ->orderBy('nome')
                 ->get(['id', 'nome']),
 

@@ -3,11 +3,11 @@
     <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
       <div
         class="h-full rounded-full transition-all"
-        :class="CORES_BARRA[variant] ?? CORES_BARRA.neutral"
+        :class="CORES_BARRA[estadoVisual]"
         :style="{ width: `${percentualClamp}%` }"
       ></div>
     </div>
-    <p class="mt-1 text-[11px] font-medium leading-none" :class="CORES_TEXTO[variant] ?? CORES_TEXTO.neutral">
+    <p class="mt-1 text-xs font-medium leading-tight" :class="CORES_TEXTO[estadoVisual]">
       {{ rotulo }}
     </p>
   </div>
@@ -15,11 +15,14 @@
 
 <script setup>
 /**
- * Barra horizontal de progresso generica: percentual + rotulo, em 4 variantes
- * de cor. Extraida de VistoriaProgressoBar (Tdap/Frota) para o mesmo desenho
- * servir a coluna de execucao de viagens em Cronogramas -- o calculo do
- * percentual e do rotulo e responsabilidade de quem chama, este componente so
- * desenha.
+ * Barra horizontal de progresso generica: percentual + rotulo. O calculo do
+ * percentual e do rotulo e de quem chama; a COR e decidida aqui, numa regra so
+ * para o modulo inteiro:
+ *
+ *   sem dados  -> cinza
+ *   concluido  -> verde     (vence o atraso: terminou, ainda que depois do prazo)
+ *   atrasado   -> vermelho  (passou do prazo sem concluir)
+ *   andamento  -> azul
  */
 import { computed } from 'vue';
 
@@ -27,26 +30,35 @@ const props = defineProps({
   /** 0-100. Fora da faixa e ajustado (clamp) para a barra nunca estourar. */
   percentual: { type: Number, default: 0 },
   rotulo: { type: String, default: '' },
-  /** success | warning | danger | neutral */
-  variant: { type: String, default: 'neutral' },
   title: { type: String, default: '' },
+  concluido: { type: Boolean, default: false },
+  atrasado: { type: Boolean, default: false },
+  semDados: { type: Boolean, default: false },
 });
 
 const percentualClamp = computed(() => Math.min(Math.max(props.percentual, 0), 100));
 
+const estadoVisual = computed(() => {
+  if (props.semDados) return 'sem_dados';
+  if (props.concluido) return 'concluido';
+  if (props.atrasado) return 'atrasado';
+
+  return 'andamento';
+});
+
 // Classes por extenso: string dinamica (`bg-${cor}-500`) some no purge do
 // Tailwind. Mesma razao documentada em VistoriaSituacaoBadge.vue.
 const CORES_BARRA = {
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  danger: 'bg-red-500',
-  neutral: 'bg-slate-300 dark:bg-slate-600',
+  andamento: 'bg-blue-500',
+  concluido: 'bg-emerald-500',
+  atrasado: 'bg-red-500',
+  sem_dados: 'bg-slate-300 dark:bg-slate-600',
 };
 
 const CORES_TEXTO = {
-  success: 'text-emerald-600 dark:text-emerald-400',
-  warning: 'text-amber-600 dark:text-amber-400',
-  danger: 'text-red-600 dark:text-red-400',
-  neutral: 'text-slate-400 dark:text-slate-500',
+  andamento: 'text-blue-600 dark:text-blue-400',
+  concluido: 'text-emerald-600 dark:text-emerald-400',
+  atrasado: 'text-red-600 dark:text-red-400',
+  sem_dados: 'text-slate-400 dark:text-slate-500',
 };
 </script>

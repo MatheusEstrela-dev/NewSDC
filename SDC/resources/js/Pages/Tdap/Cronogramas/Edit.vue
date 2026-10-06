@@ -29,6 +29,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import CronogramaForm from '@/Components/Organisms/Tdap/CronogramaForm.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import { formatDate as fmtDate } from '@/utils/dateFormatter';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -70,10 +71,4 @@ const form = useForm({
 
 function submit() { form.put(route('tdap.cronogramas.update', c.id)); }
 function cancelar() { router.visit(route('tdap.cronogramas.show', c.id)); }
-
-function fmtDate(d) {
-  if (!d) return '';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
-}
 </script>

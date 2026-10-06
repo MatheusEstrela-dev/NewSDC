@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas;
 
+use App\Modules\Acessos\Events\OperacaoDiretorioConcluida;
 use App\Modules\Demandas\Console\ImportarLegadoCommand;
 use App\Modules\Demandas\Console\SlaVerificadorCommand;
 use App\Modules\Demandas\Domain\Contracts\DemandaRepository;
@@ -14,10 +15,12 @@ use App\Modules\Demandas\Importacao\Etapas\ImportarComentarios;
 use App\Modules\Demandas\Importacao\Etapas\ImportarHistorico;
 use App\Modules\Demandas\Importacao\Etapas\ImportarUsuarios;
 use App\Modules\Demandas\Infrastructure\Persistence\EloquentDemandaRepository;
+use App\Modules\Demandas\Listeners\RegistraResultadoAutomacao;
 use App\Modules\Demandas\Models\Demanda;
 use App\Modules\Demandas\Observers\DemandaNotificacaoObserver;
 use App\Modules\Demandas\Observers\DemandaTempoRealObserver;
 use App\Modules\Demandas\Support\ContextoImportacao;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -54,6 +57,10 @@ class DemandasServiceProvider extends ServiceProvider
 
         // Tempo real: avisa listagens abertas que uma demanda mudou.
         Demanda::observe(DemandaTempoRealObserver::class);
+
+        // Automacao do AD: o worker de Acessos conclui a operacao e o
+        // historico da demanda registra o resultado.
+        Event::listen(OperacaoDiretorioConcluida::class, RegistraResultadoAutomacao::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([SlaVerificadorCommand::class, ImportarLegadoCommand::class]);

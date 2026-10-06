@@ -5,120 +5,46 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Tdap\Models\Cronograma;
-use App\Modules\Tdap\Models\CronoCaminhao;
-use App\Modules\Tdap\Models\CronoViagem;
-use App\Modules\Tdap\Models\Historico;
-use App\Modules\Tdap\Models\Prestador;
+use App\Models\Municipio;
+use App\Modules\Tdap\Enums\PeriodoEntregas;
+use App\Modules\Tdap\Services\TdapDashboardService;
+use App\Modules\Tdap\Support\EscopoDeLeitura;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TdapDashboardController extends Controller
 {
-    public function index(): Response
+    private const LIMITE_EVENTOS = 5;
+
+    private const LIMITE_CRONOGRAMAS = 5;
+
+    public function __construct(private readonly TdapDashboardService $dashboard) {}
+
+    public function index(Request $request): Response
     {
+        // Valor fora do enum cai no padrao em vez de 422: e so a aba do grafico.
+        $periodo = PeriodoEntregas::tryFrom((string) $request->query('periodo')) ?? PeriodoEntregas::padrao();
+
+        // Mesmo recorte da fila de validacao: ver EscopoDeLeitura.
+        $municipioId = EscopoDeLeitura::municipioId($request->user());
+
+        // O historico e trilha de auditoria: so vai para quem pode abrir a tela
+        // de auditoria, e nao para todo mundo que ve o dashboard.
+        $podeVerHistorico = $request->user()->can('tdap.historico.view');
+
         return Inertia::render('Tdap/Dashboard', [
-            'kpis'             => fn () => $this->calcularKpis(),
-            'eventosRecentes'  => fn () => $this->listarEventosRecentes(),
-            'cronogramasAtivos' => fn () => $this->listarCronogramasAtivos(),
+            'kpis'              => fn () => $this->dashboard->kpis($municipioId),
+            'eventosRecentes'   => fn () => $podeVerHistorico ? $this->dashboard->eventosRecentes(self::LIMITE_EVENTOS) : [],
+            'cronogramasAtivos' => fn () => $this->dashboard->cronogramasAtivos($municipioId, self::LIMITE_CRONOGRAMAS),
+            'entregas'          => fn () => $this->dashboard->entregas($municipioId, $periodo),
+            'cobertura'         => fn () => $this->dashboard->cobertura($municipioId),
+            // A tela diz de onde sao os numeros e leva o mesmo recorte para os
+            // links (Cronogramas filtrado pelo municipio bate com o card).
+            'escopo'            => $municipioId === null ? null : [
+                'municipio_id'   => $municipioId,
+                'municipio_nome' => Municipio::query()->whereKey($municipioId)->value('nome'),
+            ],
         ]);
-    }
-
-    /**
-     * @return array<string, int|float>
-     */
-    private function calcularKpis(): array
-    {
-        $inicioMes = now()->startOfMonth();
-
-        $cronogramaStats = Cronograma::query()
-            ->selectRaw('
-                COUNT(*) FILTER (WHERE ativo = TRUE AND encerrado_em IS NULL) AS ativos,
-                COUNT(*) FILTER (WHERE encerrado_em IS NOT NULL) AS encerrados,
-                COUNT(*) FILTER (WHERE ativo = FALSE AND encerrado_em IS NULL) AS rascunhos
-            ')
-            ->first();
-
-        // O global scope de SoftDeletes so cobre a tabela do MODEL: as duas
-        // tabelas do JOIN precisam do filtro explicito, senao viagem e caminhao
-        // excluidos continuavam somando m3 no KPI do mes.
-        $aguaEntreguesMes = (float) CronoCaminhao::query()
-            ->join('tdap_crono_viagens', 'tdap_crono_caminhoes.id', '=', 'tdap_crono_viagens.crono_caminhao_id')
-            ->join('tdap_caminhoes', 'tdap_crono_caminhoes.caminhao_id', '=', 'tdap_caminhoes.id')
-            ->whereNull('tdap_crono_viagens.deleted_at')
-            ->whereNull('tdap_caminhoes.deleted_at')
-            ->where('tdap_crono_viagens.validado', 1)
-            ->where('tdap_crono_viagens.data_aprovacao', '>=', $inicioMes)
-            ->sum('tdap_caminhoes.capacidade_m3');
-
-        $prestadoresAtivos = (int) Prestador::query()
-            ->ativo()
-            ->whereExists(function ($q) {
-                $q->selectRaw('1')
-                    ->from('tdap_cronogramas')
-                    ->whereColumn('tdap_cronogramas.prestador_id', 'tdap_prestadores.id')
-                    ->where('tdap_cronogramas.ativo', true)
-                    ->whereNull('tdap_cronogramas.encerrado_em')
-                    ->whereNull('tdap_cronogramas.deleted_at');
-            })
-            ->count();
-
-        $viagensPendentes = (int) CronoViagem::query()->pendente()->whereHas('cronoCaminhao')->count();
-
-        return [
-            'cronogramas_ativos'        => (int) ($cronogramaStats->ativos ?? 0),
-            'cronogramas_encerrados'    => (int) ($cronogramaStats->encerrados ?? 0),
-            'cronogramas_rascunhos'     => (int) ($cronogramaStats->rascunhos ?? 0),
-            'm3_entregues_mes'          => $aguaEntreguesMes,
-            'prestadores_ativos'        => $prestadoresAtivos,
-            'viagens_pendentes_validar' => $viagensPendentes,
-        ];
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function listarEventosRecentes(int $limite = 10): array
-    {
-        return Historico::query()
-            ->with('user:id,name')
-            ->orderByDesc('data_evento')
-            ->limit($limite)
-            ->get()
-            ->map(fn ($h) => [
-                'id'           => $h->id,
-                'data_evento'  => $h->data_evento?->toIso8601String(),
-                'tipo_evento'  => $h->tipo_evento,
-                'entity_type'  => $h->entity_type,
-                'entity_id'    => $h->entity_id,
-                'obs'          => $h->obs,
-                'user_name'    => $h->user?->name,
-            ])
-            ->toArray();
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function listarCronogramasAtivos(int $limite = 5): array
-    {
-        return Cronograma::query()
-            ->ativo()
-            ->with(['municipio:id,nome,uf', 'prestador:id,nome'])
-            ->withCount(['caminhoes'])
-            ->orderByDesc('dt_inicio')
-            ->limit($limite)
-            ->get()
-            ->map(fn ($c) => [
-                'id'              => $c->id,
-                'numero'          => $c->numero,
-                'dt_inicio'       => $c->dt_inicio?->toDateString(),
-                'dt_final'        => $c->dt_final?->toDateString(),
-                'municipio_nome'  => $c->municipio?->nome,
-                'municipio_uf'    => $c->municipio?->uf,
-                'prestador_nome'  => $c->prestador?->nome,
-                'caminhoes_count' => (int) $c->caminhoes_count,
-            ])
-            ->toArray();
     }
 }

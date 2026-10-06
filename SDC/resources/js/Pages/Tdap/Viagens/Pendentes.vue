@@ -87,11 +87,11 @@
                   <Link
                     v-if="v.cronograma_id"
                     :href="route('tdap.cronogramas.show', v.cronograma_id)"
-                    class="font-mono font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                    class="font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400"
                   >
                     {{ v.cronograma_numero }}
                   </Link>
-                  <span v-else class="font-mono font-semibold">{{ v.cronograma_numero }}</span>
+                  <span v-else class="font-semibold">{{ v.cronograma_numero }}</span>
                   <EstadoBadge v-if="v.cronograma_estado" :estado="v.cronograma_estado" class="ml-2" />
                 </td>
 
@@ -103,7 +103,7 @@
                 </td>
 
                 <td class="px-4 py-3">
-                  <div class="font-mono">{{ v.caminhao_placa }}</div>
+                  <div class="">{{ v.caminhao_placa }}</div>
                   <div class="text-xs text-slate-500">
                     {{ [v.caminhao_marca, v.caminhao_modelo].filter(Boolean).join(' ') || '—' }}
                     <span v-if="v.caminhao_ativo === false" class="text-red-600 font-medium">· inativo</span>
@@ -111,7 +111,7 @@
                 </td>
 
                 <td class="px-4 py-3 text-right whitespace-nowrap">
-                  <div class="font-mono font-semibold">{{ fmtNum(v.m3_da_viagem) }} m³</div>
+                  <div class="font-semibold">{{ fmtNum(v.m3_da_viagem) }} m³</div>
                   <div class="text-xs text-slate-500">{{ fmtMoeda(v.valor_da_viagem) }}</div>
                 </td>
 

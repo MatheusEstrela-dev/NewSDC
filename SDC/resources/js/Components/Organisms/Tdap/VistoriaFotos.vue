@@ -2,7 +2,7 @@
   <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
     <div class="flex items-center justify-between gap-3 mb-4">
       <div>
-        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Fotos da vistoria</h3>
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Fotos da vistoria</h3>
         <p class="text-xs text-slate-400 mt-0.5">
           {{ fotos.length }} {{ fotos.length === 1 ? 'foto anexada' : 'fotos anexadas' }}
         </p>
@@ -60,7 +60,7 @@
           />
         </a>
 
-        <figcaption class="px-2 py-1.5 text-[11px] text-slate-500 dark:text-slate-400 truncate" :title="foto.nome_original">
+        <figcaption class="px-2 py-1.5 text-xs text-slate-500 dark:text-slate-400 truncate" :title="foto.nome_original">
           {{ foto.nome_original }}
         </figcaption>
 

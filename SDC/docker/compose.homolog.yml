@@ -69,6 +69,20 @@ x-ranking-env: &ranking-env
   RESGATE_PERMITIR_DEMONSTRACAO: "true"
   RANKING_SOURCE_SSLMODE: disable
 
+# Variaveis do modulo Acessos (integracao com o Active Directory), UMA vez so,
+# herdadas por app, queue_diretorio e scheduler. App e worker PRECISAM concordar
+# em driver e arquivo: o app semeia o diretorio fake e o worker o consome, pelo
+# volume de storage compartilhado. Em homologacao o driver e fake ate a
+# validacao em OU/conta de teste (decisao P7); trocar para o AD real e mudar
+# estas variaveis, nunca o codigo. A chave de entrega (cifra da senha
+# temporaria) vem do docker/.env, nunca do repositorio.
+x-diretorio-env: &diretorio-env
+  DIRETORIO_DRIVER: fake
+  DIRETORIO_SEARCH_BASE: OU=SDC,DC=homolog,DC=local
+  DIRETORIO_BASE_DN: DC=homolog,DC=local
+  DIRETORIO_CHAVE_ENTREGA: ${DIRETORIO_CHAVE_ENTREGA}
+  DIRETORIO_FAKE_ARQUIVO: /var/www/storage/app/diretorio-fake.json
+
 services:
   # --------------------------------------------------------------------------
   # Balanceador. Em producao o Swarm distribui pelo VIP do servico; aqui, sem
@@ -216,7 +230,7 @@ services:
       DB_SSLMODE: disable
 
       # Ranking: ver a ancora x-ranking-env no topo do arquivo.
-      <<: *ranking-env
+      <<: [*ranking-env, *diretorio-env]
       DB_POOLER_MODE: ${DB_POOLER_MODE:-}
 
       # Lidos pelo guardrail do entrypoint quando DB_POOLER_MODE esta setado.
@@ -495,6 +509,48 @@ services:
         condition: service_healthy
 
   # --------------------------------------------------------------------------
+  # Worker da fila do diretorio (Acessos/AD). Conexao `diretorio`: driver
+  # database no Postgres compartilhado (tabela acessos_fila_diretorio), com
+  # backoff proprio. Isolado dos demais workers: uma chamada lenta ao AD nao
+  # pode segurar notificacao nem auditoria. Um processo basta: o volume e o de
+  # acoes explicitas de um operador (reset, criar, habilitar). O command
+  # sobrescreve o /start.sh; --timeout (60s) fica abaixo do retry_after da
+  # conexao, como manda a regra de config/queue.php.
+  # --------------------------------------------------------------------------
+  queue_diretorio:
+    image: newsdc-swoole-dev:latest
+    # Opt-in ate a conexao `diretorio` existir (Task 5) e a imagem ter ext-ldap.
+    profiles: ["diretorio"]
+    container_name: newsdc_homolog_queue_diretorio
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.25
+    command:
+      - "sh"
+      - "-c"
+      - "php artisan queue:work diretorio --queue=diretorio --sleep=3 --tries=3 --timeout=60 --max-time=3600 --max-jobs=500"
+    environment:
+      <<: [*homolog-worker-env, *diretorio-env]
+      APP_NAME: "SDC Homologacao Queue Diretorio"
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      BROADCAST_CONNECTION: "null"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work diretorio' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      - homolog_storage:/var/www/storage/app
+      - homolog_logs:/var/www/storage/logs
+    networks:
+      - homolog
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
   # Scheduler. Homolog nao tinha nenhum: ranking:materializar-periodos,
   # ranking:reconcile e ranking:snapshot nunca rodavam, e o despacho do outbox
   # nao existia em ambiente nenhum. E a peca que faz o placar se atualizar
@@ -525,7 +581,7 @@ services:
       - "-c"
       - "php artisan schedule:work"
     environment:
-      <<: [*homolog-worker-env, *ranking-env]
+      <<: [*homolog-worker-env, *ranking-env, *diretorio-env]
       APP_NAME: "SDC Homologacao Scheduler"
       OUTBOX_AGENDAR_DESPACHO: "true"
     healthcheck:

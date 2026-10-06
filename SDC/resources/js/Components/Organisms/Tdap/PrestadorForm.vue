@@ -10,7 +10,7 @@
             v-model="cnpjMascarado"
             type="text"
             inputmode="numeric"
-            class="mt-1 block w-full font-mono"
+            class="mt-1 block w-full"
             placeholder="00.000.000/0000-00"
             maxlength="18"
             autocomplete="off"
@@ -159,10 +159,10 @@
     </section>
 
     <div class="flex items-center justify-end gap-3">
-      <SecondaryButton type="button" @click="$emit('cancel')">Cancelar</SecondaryButton>
-      <PrimaryButton type="submit" :disabled="form.processing">
+      <Button type="button" variant="secondary" @click="$emit('cancel')">Cancelar</Button>
+      <Button variant="primary" size="md" type="submit" :disabled="form.processing">
         {{ form.processing ? 'Salvando...' : submitLabel }}
-      </PrimaryButton>
+      </Button>
     </div>
   </form>
 </template>
@@ -171,8 +171,7 @@
 import { computed } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { apenasDigitos, cep as mascaraCep, cnpj as mascaraCnpj } from '@/utils/inputMasks';
 import { applyPhoneMask } from '@/utils/phoneMask';

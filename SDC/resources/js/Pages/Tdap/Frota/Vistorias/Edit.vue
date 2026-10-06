@@ -32,6 +32,7 @@ import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vu
 import VistoriaFichaForm from '@/Components/Organisms/Tdap/VistoriaFichaForm.vue';
 import VistoriaFotos from '@/Components/Organisms/Tdap/VistoriaFotos.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import { formatarDia as fmtDate } from '@/Support/dataLocal';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -72,14 +73,4 @@ form.transform(({ data_vistoria: dataVistoria, ...resto }) => ({ ...resto, data:
 
 function submit() { form.put(route('tdap.frota.vistorias.update', v.id)); }
 function cancelar() { router.visit(route('tdap.frota.vistorias.show', v.id)); }
-
-// Datas vem como 'YYYY-MM-DD' (date puro). `new Date('2026-05-01')` e lido como
-// meia-noite UTC e, no fuso do Brasil, exibia o dia anterior.
-function fmtDate(d) {
-  if (!d) return '';
-  const iso = String(d).slice(0, 10);
-  const [ano, mes, dia] = iso.split('-');
-
-  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '';
-}
 </script>

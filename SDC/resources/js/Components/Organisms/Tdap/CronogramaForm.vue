@@ -74,14 +74,14 @@
         <div>
           <InputLabel value="Prestador (auto)" />
           <div class="mt-1 px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 text-sm text-slate-700 dark:text-slate-300 min-h-[2.5rem]" :class="fieldCls(loteSelecionado?.prestador?.id, form.errors.prestador_id)">
-            <span v-if="loteSelecionado?.prestador">{{ loteSelecionado.prestador.nome }} <span class="text-xs text-slate-500 font-mono">({{ loteSelecionado.prestador.cnpj }})</span></span>
+            <span v-if="loteSelecionado?.prestador">{{ loteSelecionado.prestador.nome }} <span class="text-xs text-slate-500">({{ loteSelecionado.prestador.cnpj }})</span></span>
             <span v-else class="text-slate-400">—</span>
           </div>
           <InputError :message="form.errors.prestador_id" class="mt-2" />
         </div>
         <div>
           <InputLabel value="Valor Unitário (auto)" />
-          <div class="mt-1 px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 text-sm font-mono text-slate-700 dark:text-slate-300 min-h-[2.5rem]" :class="valorUnitario !== null ? '!border-2 !border-emerald-500/60' : ''">
+          <div class="mt-1 px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 text-sm text-slate-700 dark:text-slate-300 min-h-[2.5rem]" :class="valorUnitario !== null ? '!border-2 !border-emerald-500/60' : ''">
             <span v-if="valorUnitario !== null">{{ fmtMoeda(valorUnitario) }} / m³</span>
             <span v-else class="text-slate-400">—</span>
           </div>
@@ -156,11 +156,11 @@
         <div class="flex flex-col gap-2">
           <div class="w-full rounded-md border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 px-3 py-2">
             <p class="text-xs text-blue-700 dark:text-blue-300">Fator aplicado</p>
-            <p class="text-lg font-mono font-semibold text-blue-700 dark:text-blue-200">{{ fmtNum(fatorAplicado) }} m³</p>
+            <p class="text-lg font-semibold text-blue-700 dark:text-blue-200">{{ fmtNum(fatorAplicado) }} m³</p>
           </div>
           <div class="w-full rounded-md border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2">
             <p class="text-xs text-emerald-700 dark:text-emerald-300">Valor por fator</p>
-            <p class="text-lg font-mono font-semibold text-emerald-700 dark:text-emerald-200">{{ valorDoFator !== null ? fmtMoeda(valorDoFator) : '—' }}</p>
+            <p class="text-lg font-semibold text-emerald-700 dark:text-emerald-200">{{ valorDoFator !== null ? fmtMoeda(valorDoFator) : '—' }}</p>
           </div>
           <p class="text-xs text-slate-500 dark:text-slate-400">
             O volume contratado é a soma da água prevista dos caminhões, definida
@@ -203,10 +203,10 @@
     </div>
 
     <div class="flex items-center justify-end gap-3">
-      <SecondaryButton type="button" @click="$emit('cancel')">Cancelar</SecondaryButton>
-      <PrimaryButton type="submit" :disabled="form.processing">
+      <Button type="button" variant="secondary" @click="$emit('cancel')">Cancelar</Button>
+      <Button variant="primary" size="md" type="submit" :disabled="form.processing">
         {{ form.processing ? 'Salvando...' : submitLabel }}
-      </PrimaryButton>
+      </Button>
     </div>
   </form>
 </template>
@@ -215,11 +215,11 @@
 import { computed, watch } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/TextInput.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
 import PontosCaptacaoSelector from '@/Components/Organisms/Tdap/PontosCaptacaoSelector.vue';
+import { formatarDia as fmtDate } from '@/Support/dataLocal';
 
 const props = defineProps({
   form:           { type: Object, required: true },
@@ -332,12 +332,6 @@ function onLoteChange() {
 function onMunicipioChange() {
   // Ponto de captacao e por municipio.
   limparPontos();
-}
-
-function fmtDate(d) {
-  if (!d) return '';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
 }
 
 function fmtNum(v) {

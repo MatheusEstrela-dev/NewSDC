@@ -16,6 +16,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import AtaForm from '@/Components/Organisms/Tdap/AtaForm.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
+import { formatDate } from '@/utils/dateFormatter';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -36,10 +37,4 @@ const form = useForm({
 
 function submit() { form.put(route('tdap.atas.update', a.id)); }
 function cancelar() { router.visit(route('tdap.atas.show', a.id)); }
-
-function formatDate(d) {
-  if (!d) return '';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
-}
 </script>

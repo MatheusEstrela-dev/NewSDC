@@ -1,3 +1,17 @@
+import { dataDeISO } from '@/Support/dataLocal';
+
+const SO_DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Converte a entrada em Date. 'YYYY-MM-DD' (data sem hora) vira meia-noite
+ * LOCAL: `new Date('2025-10-30')` le como UTC e, no fuso de Brasilia, exibia
+ * 29/10. Datetime com hora/fuso segue no parse nativo.
+ */
+function paraData(date) {
+  if (typeof date !== 'string') return date;
+  return SO_DIA.test(date) ? dataDeISO(date) : new Date(date);
+}
+
 /**
  * Formata uma data para o formato brasileiro
  * @param {Date|string} date - Data a ser formatada
@@ -6,7 +20,7 @@
 export function formatDateTime(date) {
   if (!date) return '';
   
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = paraData(date);
   
   if (isNaN(d.getTime())) return '';
   
@@ -27,7 +41,7 @@ export function formatDateTime(date) {
 export function formatDate(date) {
   if (!date) return '';
   
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = paraData(date);
   
   if (isNaN(d.getTime())) return '';
   

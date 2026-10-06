@@ -100,6 +100,30 @@ class CronoViagem extends Model
         return $query->where('validado', 0);
     }
 
+    /**
+     * Viagem que ainda pertence a uma alocacao e a um cronograma nao excluidos.
+     *
+     * O SoftDeletes so filtra a tabela do proprio model: sem esta checagem,
+     * viagem de alocacao ou cronograma excluido continuava somando em fila,
+     * contagem e m3 -- e cada tela filtrava um pedaco diferente.
+     */
+    public function scopeVinculada(Builder $query): Builder
+    {
+        return $query->whereHas('cronoCaminhao.cronograma');
+    }
+
+    /** Fila de validacao: o que a tela "Viagens pendentes" lista e conta. */
+    public function scopePendenteDeValidacao(Builder $query): Builder
+    {
+        return $query->pendente()->vinculada();
+    }
+
+    /** Agua entregue: aprovada e vinculada (a confirmacao do municipio nao entra). */
+    public function scopeEntregue(Builder $query): Builder
+    {
+        return $query->aprovada()->vinculada();
+    }
+
     public function scopeDoCaminhao(Builder $query, int $cronoCaminhaoId): Builder
     {
         return $query->where('crono_caminhao_id', $cronoCaminhaoId);

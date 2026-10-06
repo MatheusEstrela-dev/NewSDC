@@ -24,6 +24,7 @@ RUN apk add --no-cache \
     libxml2 \
     libzip \
     postgresql-libs \
+    libldap \
     icu-libs \
     jemalloc \
     openssl \
@@ -36,6 +37,7 @@ RUN apk add --no-cache \
     libxml2-dev \
     libzip-dev \
     postgresql-dev \
+    openldap-dev \
     icu-dev \
     openssl-dev \
     linux-headers \
@@ -58,7 +60,8 @@ RUN docker-php-ext-configure gd \
     zip \
     intl \
     opcache \
-    sockets
+    sockets \
+    ldap
 
 # Extensoes PECL: swoole (coroutines), igbinary, redis.
 # swoole DEVE ser compilado com:

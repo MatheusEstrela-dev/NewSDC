@@ -15,7 +15,7 @@ const props = defineProps({
 });
 
 const badgeClasses = computed(() => {
-  const base = 'inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold';
+  const base = 'inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium';
 
   if (props.active) {
     return `${base} border border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300`;
