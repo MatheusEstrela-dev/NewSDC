@@ -30,10 +30,14 @@
         ></span>
         <span class="relative mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white dark:ring-slate-900" :class="acaoDoEvento(ev.tipo_evento).ponto"></span>
 
-        <div class="min-w-0 flex-1">
+        <!-- O painel so aparece com tdap.historico.view, a mesma permissao da ficha. -->
+        <Link
+          :href="route('tdap.historicos.show', ev.id)"
+          class="group -mx-1.5 min-w-0 flex-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
+        >
           <div class="flex items-start justify-between gap-3">
             <div class="flex min-w-0 flex-wrap items-center gap-2">
-              <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ rotuloDoEvento(ev.tipo_evento) }}</p>
+              <p class="text-sm font-semibold text-slate-900 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400">{{ rotuloDoEvento(ev.tipo_evento) }}</p>
               <span class="rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide" :class="acaoDoEvento(ev.tipo_evento).badge">
                 {{ acaoDoEvento(ev.tipo_evento).rotulo }}
               </span>
@@ -45,7 +49,7 @@
           <p class="truncate text-xs text-slate-500 dark:text-slate-400" :title="ev.obs">
             {{ ev.obs || '—' }}<span v-if="ev.user_name"> · {{ ev.user_name }}</span>
           </p>
-        </div>
+        </Link>
       </li>
     </ol>
 
@@ -67,6 +71,7 @@
 </template>
 
 <script setup>
+import { Link } from '@inertiajs/vue3';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import TdapPainel from '@/Components/Molecules/Tdap/TdapPainel.vue';

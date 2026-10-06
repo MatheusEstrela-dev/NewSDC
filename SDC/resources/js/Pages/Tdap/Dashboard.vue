@@ -112,6 +112,7 @@ import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import CubeIcon from '@/Components/Icons/CubeIcon.vue';
 import { usePermissions } from '@/Composables/usePermissions';
+import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -159,6 +160,15 @@ function linkCronogramas(estado) {
 }
 
 const m3 = (valor) => Number(valor || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+
+// Tempo real: qualquer mudanca no modulo (viagem, alocacao, cronograma,
+// prestador, historico) avisa o canal e o painel se rebusca pelo controller --
+// mesmo recorte, mesmas permissoes. O reload mantem o ?periodo= da URL.
+useAtualizacaoAoVivo({
+  canal: 'listagem.tdap',
+  evento: '.RecursoAtualizado',
+  props: ['kpis', 'eventosRecentes', 'cronogramasAtivos', 'entregas', 'cobertura'],
+});
 
 const carregandoEntregas = ref(false);
 

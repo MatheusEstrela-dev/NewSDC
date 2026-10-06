@@ -53,6 +53,18 @@ final class CanaisDeListagem
         // routes/modules/inventario.php -> can:inventario.emprestimos.view
         // (movimentacoes.index, que lista os lotes de remanejamento).
         'inventario-remanejamentos' => 'inventario.emprestimos.view',
+
+        // routes/modules/tdap.php -> can:tdap.dashboard.view (dashboard do TDAP).
+        //
+        // Global, e nao escopado, apesar do recorte por lotacao do dashboard
+        // (EscopoDeLeitura): o painel mistura dado recortado (cronogramas,
+        // viagens) com dado estadual que todo leitor ve (prestadores, historico),
+        // e mudanca de prestador ou vistoria nao tem municipio para escolher
+        // canal. O aviso nao carrega dado, so "recarregue"; o recorte continua
+        // no controller. Quem tem a permissao ja le as listagens estaduais de
+        // Cronogramas e Historico, entao saber que "algo mudou no TDAP" nao
+        // revela nada que a pessoa nao veja.
+        'tdap' => 'tdap.dashboard.view',
     ];
 
     /**

@@ -72,8 +72,11 @@ class RecalcularEntregasTdapCommand extends Command
 
         DB::transaction(function () use ($divergentes, $historico): void {
             foreach ($divergentes->groupBy(fn (array $d) => $d['alocacao']->cronograma_id) as $doCronograma) {
+                // saveQuietly: em massa, um aviso de tempo real por alocacao
+                // seriam centenas; o historico abaixo, um por cronograma, ja
+                // avisa o dashboard (DashboardTempoRealObserver).
                 foreach ($doCronograma as $d) {
-                    $d['alocacao']->forceFill($d['depois'])->save();
+                    $d['alocacao']->forceFill($d['depois'])->saveQuietly();
                 }
 
                 $cronograma = $doCronograma->first()['alocacao']->cronograma;
