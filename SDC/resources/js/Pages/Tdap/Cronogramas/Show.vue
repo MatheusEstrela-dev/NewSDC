@@ -123,9 +123,16 @@
         <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
           <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Caminhões alocados ({{ c.caminhoes_count }})</h3>
-            <PrimaryButton v-if="canAlocarCaminhao && c.estado !== 'encerrado'" size="sm" @click="abrirAlocar">
-              + Alocar Caminhão
-            </PrimaryButton>
+            <Button
+              v-if="canAlocarCaminhao && c.estado !== 'encerrado'"
+              variant="primary"
+              size="sm"
+              :icon="PlusIcon"
+              icon-position="left"
+              @click="abrirAlocar"
+            >
+              Alocar Caminhão
+            </Button>
           </div>
           <ResponsiveTable
       v-if="c.caminhoes && c.caminhoes.length > 0"
@@ -291,7 +298,9 @@ import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHist
 import PrintCronogramaModal from '@/Components/Organisms/Tdap/Print/PrintCronogramaModal.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';

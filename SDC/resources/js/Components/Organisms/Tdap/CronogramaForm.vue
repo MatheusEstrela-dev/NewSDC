@@ -203,10 +203,10 @@
     </div>
 
     <div class="flex items-center justify-end gap-3">
-      <SecondaryButton type="button" @click="$emit('cancel')">Cancelar</SecondaryButton>
-      <PrimaryButton type="submit" :disabled="form.processing">
+      <Button type="button" variant="secondary" @click="$emit('cancel')">Cancelar</Button>
+      <Button variant="primary" size="md" type="submit" :disabled="form.processing">
         {{ form.processing ? 'Salvando...' : submitLabel }}
-      </PrimaryButton>
+      </Button>
     </div>
   </form>
 </template>
@@ -215,8 +215,7 @@
 import { computed, watch } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/TextInput.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
 import PontosCaptacaoSelector from '@/Components/Organisms/Tdap/PontosCaptacaoSelector.vue';

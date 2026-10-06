@@ -175,7 +175,7 @@
     <slot name="antes-das-acoes" />
 
     <div class="flex items-center justify-end gap-3">
-      <Button variant="outline" size="md" type="button" @click="$emit('cancel')">
+      <Button variant="secondary" size="md" type="button" @click="$emit('cancel')">
         Cancelar
       </Button>
       <Button

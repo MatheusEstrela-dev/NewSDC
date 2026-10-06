@@ -10,9 +10,16 @@
         <Link v-if="canEdit" :href="route('tdap.atas.edit', a.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
-        <Link v-if="canLote" :href="route('tdap.lotes.create', { ata_id: a.id })">
-          <PrimaryButton>Adicionar Lote</PrimaryButton>
-        </Link>
+        <Button
+          v-if="canLote"
+          :href="route('tdap.lotes.create', { ata_id: a.id })"
+          variant="primary"
+          size="md"
+          :icon="PlusIcon"
+          icon-position="left"
+        >
+          Adicionar Lote
+        </Button>
         <DangerButton v-if="canDelete && (a.lotes_count ?? 0) === 0" @click="excluir">
           Excluir
         </DangerButton>
@@ -42,9 +49,16 @@
         <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
           <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Lotes ({{ a.lotes_count ?? 0 }})</h3>
-            <Link v-if="canLote" :href="route('tdap.lotes.create', { ata_id: a.id })">
-              <PrimaryButton size="sm">Adicionar</PrimaryButton>
-            </Link>
+            <Button
+              v-if="canLote"
+              :href="route('tdap.lotes.create', { ata_id: a.id })"
+              variant="primary"
+              size="sm"
+              :icon="PlusIcon"
+              icon-position="left"
+            >
+              Adicionar
+            </Button>
           </div>
           <ResponsiveTable
       v-if="a.lotes && a.lotes.length > 0"
@@ -154,7 +168,9 @@ import { computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';

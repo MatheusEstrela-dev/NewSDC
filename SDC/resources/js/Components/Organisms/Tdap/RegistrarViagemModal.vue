@@ -30,10 +30,10 @@
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-          <SecondaryButton type="button" @click="$emit('close')">Cancelar</SecondaryButton>
-          <PrimaryButton type="submit" :disabled="form.processing">
+          <Button type="button" variant="secondary" @click="$emit('close')">Cancelar</Button>
+          <Button variant="primary" size="md" type="submit" :disabled="form.processing">
             {{ form.processing ? 'Registrando...' : 'Registrar' }}
-          </PrimaryButton>
+          </Button>
         </div>
       </form>
     </div>
@@ -46,8 +46,7 @@ import { useForm } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
 
 const props = defineProps({
