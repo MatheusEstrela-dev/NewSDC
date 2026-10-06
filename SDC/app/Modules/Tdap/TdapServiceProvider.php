@@ -10,13 +10,16 @@ use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
 use App\Modules\Tdap\Listeners\EnviarEmailCronogramaListener;
 use App\Modules\Tdap\Listeners\RegistrarHistoricoProcessoListener;
 use App\Modules\Tdap\Models\Caminhao;
+use App\Modules\Tdap\Models\CronoCaminhao;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\CronoViagem;
+use App\Modules\Tdap\Models\Historico;
 use App\Modules\Tdap\Models\Prestador;
 use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Observers\CaminhaoObserver;
 use App\Modules\Tdap\Observers\CronogramaObserver;
 use App\Modules\Tdap\Observers\CronoViagemObserver;
+use App\Modules\Tdap\Observers\DashboardTempoRealObserver;
 use App\Modules\Tdap\Observers\PrestadorObserver;
 use App\Modules\Tdap\Observers\VistoriaObserver;
 use App\Modules\Tdap\Services\AtaService;
@@ -97,6 +100,12 @@ class TdapServiceProvider extends ServiceProvider
         // nenhum observer -- trocar placa ou desativar veiculo nao deixava
         // rastro, e as duas coisas mudam quem pode rodar.
         Caminhao::observe(CaminhaoObserver::class);
+
+        // Tempo real do dashboard: os models que alimentam o painel avisam o
+        // canal `listagem.tdap` (ver DashboardTempoRealObserver).
+        foreach ([CronoViagem::class, CronoCaminhao::class, Cronograma::class, Prestador::class, Historico::class] as $model) {
+            $model::observe(DashboardTempoRealObserver::class);
+        }
 
         // Listeners do Outbox (Fase 6) - via Event::listen
         $this->registrarEventListeners();

@@ -117,7 +117,9 @@ class TdapDashboardService
                 'id'                 => $c->id,
                 'numero'             => $c->numero,
                 'dt_inicio'          => $c->dt_inicio?->toDateString(),
-                'dt_final'           => $c->dt_final?->toDateString(),
+                // Final EFETIVO (ja com prorrogacao): o mesmo que pinta a barra
+                // de vermelho via dias_restantes -- data e cor nao podem divergir.
+                'dt_final'           => $c->dt_final_efetiva?->toDateString(),
                 'municipio_nome'     => $c->municipio?->nome,
                 'municipio_uf'       => $c->municipio?->uf,
                 'prestador_nome'     => $c->prestador?->nome,
