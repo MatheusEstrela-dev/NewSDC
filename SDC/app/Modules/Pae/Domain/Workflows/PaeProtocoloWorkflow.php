@@ -16,6 +16,7 @@ use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTramitacao;
 use App\Modules\Pae\Support\CicloProtocolo;
 use App\Modules\Pae\Support\TimelinePae;
+use App\Modules\Pae\Services\PaeComunicacaoService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -49,6 +50,7 @@ final class PaeProtocoloWorkflow
      */
     public function __construct(
         private readonly OutboxDispatcher $outbox,
+        private readonly PaeComunicacaoService $comunicacoes,
         private readonly iterable $guardas,
     ) {}
 
@@ -99,6 +101,10 @@ final class PaeProtocoloWorkflow
                 $descricao .= ' Protocolo desarquivado automaticamente pela transicao para CCPAE.';
             }
             TimelinePae::registrar($protocolo, 'status_alterado', $descricao, $user);
+
+            if ($anterior === PaeProtocoloStatus::ANALISE && $novo === PaeProtocoloStatus::REPROVADO) {
+                $this->comunicacoes->abrir($protocolo, 'reprovacao_analise', $tramitacao->id, $obs);
+            }
 
             if ($anterior === PaeProtocoloStatus::ANALISE
                 && in_array($novo, [PaeProtocoloStatus::APROVADO, PaeProtocoloStatus::REPROVADO], true)) {

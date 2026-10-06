@@ -40,66 +40,71 @@ class PaeNotificacaoService extends BaseService
     public function __construct(
         private readonly OutboxDispatcher $outbox,
         private readonly PaePrazoService $prazos,
+        private readonly PaeComunicacaoService $comunicacoes,
     ) {}
 
     public function emitir(PaeProtocolo $protocolo, User $user, array $dados, bool $automatica = false): PaeNotificacao
     {
-        $this->assertPodeEmitir($protocolo);
+        return DB::transaction(function () use ($protocolo, $user, $dados, $automatica): PaeNotificacao {
+            $protocolo = PaeProtocolo::query()->lockForUpdate()->findOrFail($protocolo->getKey());
+            $this->assertPodeEmitir($protocolo);
 
-        $analise = PaeAnalise::firstOrCreate(
-            ['pae_protocolo_id' => $protocolo->id],
-            [
-                'user_id' => $protocolo->analista_atual_id,
-                'status'  => 'EM_ANDAMENTO',
-                'parecer' => '',
-            ]
-        );
+            $analise = PaeAnalise::firstOrCreate(
+                ['pae_protocolo_id' => $protocolo->id],
+                [
+                    'user_id' => $protocolo->analista_atual_id,
+                    'status'  => 'EM_ANDAMENTO',
+                    'parecer' => '',
+                ]
+            );
 
-        $ciclo = $analise->notificacoes()->count() + 1;
+            $ciclo = $analise->notificacoes()->count() + 1;
 
-        if ($automatica && $ciclo > self::MAX_CICLOS_AUTOMATICOS) {
-            throw ValidationException::withMessages([
-                'notificacao' => 'A renovacao automatica para no '.self::MAX_CICLOS_AUTOMATICOS.'o ciclo: a proxima notificacao e decisao da CEDEC.',
+            if ($automatica && $ciclo > self::MAX_CICLOS_AUTOMATICOS) {
+                throw ValidationException::withMessages([
+                    'notificacao' => 'A renovacao automatica para no '.self::MAX_CICLOS_AUTOMATICOS.'o ciclo: a proxima notificacao e decisao da CEDEC.',
+                ]);
+            }
+
+            // A emissao automatica (processarVencimentos) so acontece exatamente
+            // porque o ultimo ciclo esta vencido sem devolutiva; nesse caso o
+            // ciclo em aberto e a PROPRIA razao da renovacao, entao o bloqueio
+            // abaixo se aplica somente a emissao manual. Olha so a ULTIMA
+            // notificacao: a renovacao automatica deixa as anteriores sem
+            // devolutiva para sempre.
+            $ultima = $analise->notificacoes()->reorder()->orderByDesc('dt_notificacao')->orderByDesc('id')->first();
+            if (! $automatica && $ultima !== null && $ultima->dt_devolutiva === null) {
+                throw ValidationException::withMessages([
+                    'notificacao' => 'Existe uma notificacao com prazo em aberto. Registre a devolutiva antes de emitir outra.',
+                ]);
+            }
+
+            $notificacao = $analise->notificacoes()->create([
+                'num_sei'        => $dados['num_sei'],
+                'user_id'        => $user->id,
+                'dt_notificacao' => now()->toDateString(),
+                'prorrogacao'    => false,
+                'obs'            => $dados['obs'] ?? null,
             ]);
-        }
 
-        // A emissao automatica (processarVencimentos) so acontece exatamente
-        // porque o ultimo ciclo esta vencido sem devolutiva; nesse caso o
-        // ciclo em aberto e a PROPRIA razao da renovacao, entao o bloqueio
-        // abaixo se aplica somente a emissao manual. Olha so a ULTIMA
-        // notificacao: a renovacao automatica deixa as anteriores sem
-        // devolutiva para sempre.
-        $ultima = $analise->notificacoes()->reorder()->orderByDesc('dt_notificacao')->orderByDesc('id')->first();
-        if (! $automatica && $ultima !== null && $ultima->dt_devolutiva === null) {
-            throw ValidationException::withMessages([
-                'notificacao' => 'Existe uma notificacao com prazo em aberto. Registre a devolutiva antes de emitir outra.',
-            ]);
-        }
+            // Nova notificacao tira o protocolo da fila "ciclos esgotados" e abre nova pausa.
+            PaeProtocolo::query()->whereKey($protocolo->getKey())->update(['ciclos_esgotados_em' => null]);
+            $this->prazos->recalcular($protocolo);
 
-        $notificacao = $analise->notificacoes()->create([
-            'num_sei'        => $dados['num_sei'],
-            'user_id'        => $user->id,
-            'dt_notificacao' => now()->toDateString(),
-            'prorrogacao'    => false,
-            'obs'            => $dados['obs'] ?? null,
-        ]);
+            $origem = $automatica ? 'automaticamente por vencimento do ciclo anterior' : "por {$user->name}";
+            TimelinePae::registrar(
+                $protocolo,
+                'notificacao',
+                "Notificacao {$ciclo} emitida {$origem}. SEI {$notificacao->num_sei}. Prazo de " . PrazoNotificacao::PRAZO_DIAS . ' dias para devolutiva.',
+                $user
+            );
 
-        // Nova notificacao tira o protocolo da fila "ciclos esgotados" e abre nova pausa.
-        PaeProtocolo::query()->whereKey($protocolo->getKey())->update(['ciclos_esgotados_em' => null]);
-        $this->prazos->recalcular($protocolo);
+            $this->comunicacoes->abrir($protocolo, 'notificacao', $notificacao->id);
+            $this->enviarEmail($protocolo, $notificacao, $ciclo, $user);
+            $this->avisarAnalistaNoInbox($protocolo, $ciclo, $automatica);
 
-        $origem = $automatica ? 'automaticamente por vencimento do ciclo anterior' : "por {$user->name}";
-        TimelinePae::registrar(
-            $protocolo,
-            'notificacao',
-            "Notificacao {$ciclo} emitida {$origem}. SEI {$notificacao->num_sei}. Prazo de " . PrazoNotificacao::PRAZO_DIAS . ' dias para devolutiva.',
-            $user
-        );
-
-        $this->enviarEmail($protocolo, $notificacao, $ciclo, $user);
-        $this->avisarAnalistaNoInbox($protocolo, $ciclo, $automatica);
-
-        return $notificacao;
+            return $notificacao;
+        });
     }
 
     /**
@@ -140,7 +145,7 @@ class PaeNotificacaoService extends BaseService
                 acaoTexto: 'Ver protocolo',
             ),
             [(int) $analista],
-        );
+        )->afterCommit();
     }
 
     /** Aviso unico quando a ultima renovacao automatica vence sem devolutiva. */
@@ -459,6 +464,6 @@ class PaeNotificacaoService extends BaseService
             numSei: $notificacao->num_sei,
             dtNotificacao: $notificacao->dt_notificacao->toDateString(),
             prazoFinal: PrazoNotificacao::vencimento($notificacao->dt_notificacao)->toDateString(),
-        ));
+        )->afterCommit());
     }
 }

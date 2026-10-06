@@ -22,7 +22,10 @@ use Illuminate\Validation\Validator as LaravelValidator;
 
 final class PaeAdmissibilidadeService
 {
-    public function __construct(private readonly PaeProtocoloWorkflow $workflow)
+    public function __construct(
+        private readonly PaeProtocoloWorkflow $workflow,
+        private readonly PaeComunicacaoService $comunicacoes,
+    )
     {
     }
 
@@ -236,6 +239,7 @@ final class PaeAdmissibilidadeService
             if ($decisao->tipo === 'reprovado_sumariamente') {
                 $this->workflow->transitar($locked, PaeProtocoloStatus::REPROVADO_SUMARIAMENTE, $user,
                     $decisao->fundamentacao, ContextoTransicao::decisaoAdmissibilidade());
+                $this->comunicacoes->abrir($locked, 'reprovacao_sumaria', $decisao->id, $decisao->fundamentacao);
             }
 
             return $decisao;
