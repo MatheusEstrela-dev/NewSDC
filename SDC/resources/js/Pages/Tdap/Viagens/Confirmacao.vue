@@ -100,18 +100,18 @@
                 </td>
 
                 <td class="px-4 py-3">
-                  <span class="font-mono font-semibold">{{ v.cronograma_numero }}</span>
+                  <span class="font-semibold">{{ v.cronograma_numero }}</span>
                   <EstadoBadge v-if="v.cronograma_estado" :estado="v.cronograma_estado" class="ml-2" />
                 </td>
 
                 <td class="px-4 py-3">
-                  <div class="font-mono">{{ v.caminhao_placa }}</div>
+                  <div class="">{{ v.caminhao_placa }}</div>
                   <div class="text-xs text-slate-500">
                     {{ [v.caminhao_marca, v.caminhao_modelo].filter(Boolean).join(' ') || '—' }}
                   </div>
                 </td>
 
-                <td class="px-4 py-3 text-right font-mono font-semibold whitespace-nowrap">
+                <td class="px-4 py-3 text-right font-semibold whitespace-nowrap">
                   {{ fmtNum(v.m3_da_viagem) }} m³
                 </td>
 

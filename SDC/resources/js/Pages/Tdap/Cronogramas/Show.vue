@@ -44,32 +44,32 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Dados do Cronograma</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Dados do Cronograma</h3>
           <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div><dt class="text-slate-500">Número</dt><dd class="font-mono font-semibold text-slate-900 dark:text-slate-100">{{ c.numero }}</dd></div>
-            <div><dt class="text-slate-500">Empenho</dt><dd class="text-slate-900 dark:text-slate-100">{{ c.empenho || '—' }}</dd></div>
-            <div><dt class="text-slate-500">Nota de empenho</dt><dd class="text-slate-900 dark:text-slate-100">{{ c.nota_empenho || '—' }}</dd></div>
-            <div><dt class="text-slate-500">Vigência</dt><dd>{{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}</dd></div>
-            <div v-if="c.dt_inicio_prorrogacao"><dt class="text-slate-500">Prorrogação</dt><dd>{{ fmtDate(c.dt_inicio_prorrogacao) }} — {{ fmtDate(c.dt_final_prorrogacao) }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Número</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ c.numero }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Empenho</dt><dd class="text-slate-900 dark:text-slate-100">{{ c.empenho || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Nota de empenho</dt><dd class="text-slate-900 dark:text-slate-100">{{ c.nota_empenho || '—' }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Vigência</dt><dd>{{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}</dd></div>
+            <div v-if="c.dt_inicio_prorrogacao"><dt class="font-medium text-slate-500 dark:text-slate-400">Prorrogação</dt><dd>{{ fmtDate(c.dt_inicio_prorrogacao) }} — {{ fmtDate(c.dt_final_prorrogacao) }}</dd></div>
             <!-- Contratado = soma da agua prevista dos caminhoes alocados;
                  entregue = viagens validadas x capacidade. Nenhum dos dois e o
                  `fator`, que aparece abaixo com o proprio nome. -->
-            <div><dt class="text-slate-500">Volume contratado</dt><dd class="font-mono text-blue-600 font-semibold">{{ fmtM3(c.volume_contratado_m3) }} m³</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Volume contratado</dt><dd class="text-blue-600 font-semibold">{{ fmtM3(c.volume_contratado_m3) }} m³</dd></div>
             <div>
-              <dt class="text-slate-500">Volume entregue</dt>
-              <dd class="font-mono text-emerald-600 font-semibold">
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Volume entregue</dt>
+              <dd class="text-emerald-600 font-semibold">
                 {{ fmtM3(c.volume_entregue_m3) }} m³
                 <span class="ml-1 text-xs text-slate-500">({{ Number(c.execucao_percentual ?? 0).toFixed(2) }}%)</span>
               </dd>
             </div>
-            <div><dt class="text-slate-500">Consumo diário</dt><dd class="font-mono">{{ Number(c.consumo_diario).toFixed(2) }} L</dd></div>
-            <div><dt class="text-slate-500">Dias</dt><dd>{{ c.dias }}</dd></div>
-            <div><dt class="text-slate-500">Fator (m³)</dt><dd>{{ Number(c.fator).toFixed(2) }}<span v-if="c.usar_fator_manual" class="ml-1 text-xs text-amber-600">(manual)</span></dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Consumo diário</dt><dd class="">{{ Number(c.consumo_diario).toFixed(2) }} L</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Dias</dt><dd>{{ c.dias }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Fator (m³)</dt><dd>{{ Number(c.fator).toFixed(2) }}<span v-if="c.usar_fator_manual" class="ml-1 text-xs text-amber-600">(manual)</span></dd></div>
           </dl>
         </div>
 
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Pontos de captação ({{ pontosCaptacao.length }})</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Pontos de captação ({{ pontosCaptacao.length }})</h3>
           <ul v-if="pontosCaptacao.length" class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
             <li v-for="p in pontosCaptacao" :key="p.id" class="flex flex-wrap items-center justify-between gap-2 py-2">
               <div>
@@ -94,27 +94,27 @@
         </div>
 
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Vínculos</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Vínculos</h3>
           <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <dt class="text-slate-500">Ata</dt>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Ata</dt>
               <dd v-if="c.ata">
-                <Link :href="route('tdap.atas.show', c.ata.id)" class="font-mono text-blue-600 hover:text-blue-800">{{ c.ata.numero }}</Link>
+                <Link :href="route('tdap.atas.show', c.ata.id)" class="text-blue-600 hover:text-blue-800">{{ c.ata.numero }}</Link>
               </dd>
             </div>
             <div>
-              <dt class="text-slate-500">Lote</dt>
-              <dd v-if="c.lote"><span class="font-mono">{{ c.lote.numero }}</span><span v-if="c.lote.nome" class="text-xs text-slate-500"> — {{ c.lote.nome }}</span></dd>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Lote</dt>
+              <dd v-if="c.lote"><span class="">{{ c.lote.numero }}</span><span v-if="c.lote.nome" class="text-xs text-slate-500"> — {{ c.lote.nome }}</span></dd>
             </div>
             <div>
-              <dt class="text-slate-500">Município</dt>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Município</dt>
               <dd v-if="c.municipio">{{ c.municipio.nome }}<span v-if="c.municipio.uf">/{{ c.municipio.uf }}</span></dd>
             </div>
             <div>
-              <dt class="text-slate-500">Prestador</dt>
+              <dt class="font-medium text-slate-500 dark:text-slate-400">Prestador</dt>
               <dd v-if="c.prestador">
                 <Link :href="route('tdap.prestadores.show', c.prestador.id)" class="text-blue-600 hover:text-blue-800">{{ c.prestador.nome }}</Link>
-                <p class="text-xs text-slate-500 font-mono">{{ c.prestador.cnpj }}</p>
+                <p class="text-xs text-slate-500">{{ c.prestador.cnpj }}</p>
               </dd>
             </div>
           </dl>
@@ -122,7 +122,7 @@
 
         <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
           <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Caminhões alocados ({{ c.caminhoes_count }})</h3>
+            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Caminhões alocados ({{ c.caminhoes_count }})</h3>
             <Button
               v-if="canAlocarCaminhao && c.estado !== 'encerrado'"
               variant="primary"
@@ -143,7 +143,7 @@
     >
       <template #table>
         <table v-if="c.caminhoes && c.caminhoes.length > 0" class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-                    <thead class="bg-slate-50 dark:bg-slate-800/40">
+                    <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                       <tr>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Placa</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Veículo</th>
@@ -156,12 +156,12 @@
                     </thead>
                     <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                       <tr v-for="cc in c.caminhoes" :key="cc.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                        <td class="px-4 py-3 font-mono font-semibold">{{ cc.placa }}</td>
+                        <td class="px-4 py-3 font-semibold">{{ cc.placa }}</td>
                         <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ cc.marca_modelo || '—' }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ Number(cc.capacidade_m3).toFixed(2) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ Number(cc.agua_prevista).toFixed(2) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ Number(cc.agua_entregue).toFixed(2) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ cc.percentual }}%</td>
+                        <td class="px-4 py-3 text-right">{{ Number(cc.capacidade_m3).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right">{{ Number(cc.agua_prevista).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right">{{ Number(cc.agua_entregue).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right">{{ cc.percentual }}%</td>
                         <td class="px-4 py-3 text-right space-x-2">
                           <button v-if="c.estado === 'ativo'" @click="abrirRegistrarViagem(cc)" class="text-blue-600 hover:text-blue-800 text-sm">
                             + Viagem
@@ -206,12 +206,12 @@
         </div>
 
         <div v-if="c.justificativa" class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Justificativa</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Justificativa</h3>
           <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{{ c.justificativa }}</p>
         </div>
 
         <div v-if="c.observacao" class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Observação</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Observação</h3>
           <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{{ c.observacao }}</p>
         </div>
 
@@ -305,6 +305,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
+import { formatDate as formatarData } from '@/utils/dateFormatter';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -456,9 +457,7 @@ function cancelArchive() {
 }
 
 function fmtDate(d) {
-  if (!d) return '—';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
+  return formatarData(d) || '—';
 }
 
 function fmtDateTime(d) {

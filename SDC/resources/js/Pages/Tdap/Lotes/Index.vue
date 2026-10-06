@@ -92,12 +92,12 @@
                 </thead>
                 <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                   <tr v-for="l in lotes.data" :key="l.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                    <td class="px-4 py-3 text-sm font-mono">
+                    <td class="px-4 py-3 text-sm">
                       <Link :href="route('tdap.lotes.show', l.id)" class="text-blue-600 hover:text-blue-800">{{ l.numero }}</Link>
                       <span v-if="l.nome" class="block text-xs text-slate-500">{{ l.nome }}</span>
                       <span v-if="l.contrato" class="block text-xs text-slate-400">Contrato {{ l.contrato }}</span>
                     </td>
-                    <td class="px-4 py-3 text-sm font-mono text-slate-700 dark:text-slate-300">{{ l.ata_numero }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ l.ata_numero }}</td>
                     <!--
                       Um lote atende varios municipios (relacao N:N). Listar todos em
                       chips estourava a linha nos lotes grandes (ha lote com mais de 30
@@ -129,8 +129,8 @@
                       <span v-else class="text-slate-400">—</span>
                     </td>
                     <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ l.prestador_nome }}</td>
-                    <td class="px-4 py-3 text-sm text-right font-mono">{{ Number(l.qtd_agua_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
-                    <td class="px-4 py-3 text-sm text-right font-mono">{{ Number(l.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
+                    <td class="px-4 py-3 text-sm text-right">{{ Number(l.qtd_agua_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
+                    <td class="px-4 py-3 text-sm text-right">{{ Number(l.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
                     <td class="px-4 py-3 text-sm">
                       <span :class="l.ativo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
                         {{ l.ativo ? 'Ativo' : 'Inativo' }}

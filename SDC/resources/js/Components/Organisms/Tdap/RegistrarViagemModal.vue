@@ -3,7 +3,7 @@
     <div class="p-6">
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Registrar viagem</h3>
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
-        Caminhão <span class="font-mono font-semibold">{{ placa }}</span>
+        Caminhão <span class="font-semibold">{{ placa }}</span>
       </p>
 
       <form @submit.prevent="submit" class="space-y-4">
@@ -48,6 +48,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
+import { formatarDia as fmtData } from '@/Support/dataLocal';
 
 const props = defineProps({
   show:            { type: Boolean, default: false },
@@ -56,11 +57,6 @@ const props = defineProps({
   /** YYYY-MM-DD: fim efetivo do cronograma (ja com prorrogacao). */
   dataLimite:      { type: String, default: null },
 });
-
-function fmtData(iso) {
-  const [ano, mes, dia] = String(iso).slice(0, 10).split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
 const emit = defineEmits(['close', 'success']);
 

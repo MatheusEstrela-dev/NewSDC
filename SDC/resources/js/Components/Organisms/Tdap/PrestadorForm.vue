@@ -10,7 +10,7 @@
             v-model="cnpjMascarado"
             type="text"
             inputmode="numeric"
-            class="mt-1 block w-full font-mono"
+            class="mt-1 block w-full"
             placeholder="00.000.000/0000-00"
             maxlength="18"
             autocomplete="off"

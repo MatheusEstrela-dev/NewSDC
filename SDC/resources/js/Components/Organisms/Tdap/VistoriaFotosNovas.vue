@@ -2,7 +2,7 @@
   <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
     <div class="flex items-center justify-between gap-3 mb-4">
       <div>
-        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Fotos da vistoria</h3>
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Fotos da vistoria</h3>
         <p class="text-xs text-slate-400 mt-0.5">
           <template v-if="itens.length">
             {{ itens.length }} de {{ maximo }} selecionada{{ itens.length === 1 ? '' : 's' }} — sobem ao registrar a vistoria
@@ -56,7 +56,7 @@
       >
         <img :src="item.preview" :alt="item.arquivo.name" class="w-full aspect-square object-cover" />
 
-        <figcaption class="px-2 py-1.5 text-[11px] text-slate-500 dark:text-slate-400 truncate" :title="item.arquivo.name">
+        <figcaption class="px-2 py-1.5 text-xs text-slate-500 dark:text-slate-400 truncate" :title="item.arquivo.name">
           {{ item.arquivo.name }}
         </figcaption>
 

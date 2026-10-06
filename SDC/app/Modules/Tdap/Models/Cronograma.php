@@ -386,9 +386,26 @@ class Cronograma extends Model
         return $query->whereNull('arquivado_em');
     }
 
+    /** Mesmo recorte de CronoViagem::scopeDoMunicipio, a partir do cronograma. */
+    public function scopeDoMunicipio(Builder $query, int $municipioId): Builder
+    {
+        return $query->where('tdap_cronogramas.municipio_id', $municipioId);
+    }
+
     public function scopeDoPrestador(Builder $query, int $prestadorId): Builder
     {
         return $query->where('prestador_id', $prestadorId);
+    }
+
+    /**
+     * Agregados de viagens_previstas/viagens_realizadas: sem eles os accessors
+     * fariam 2 SELECTs extras por linha em qualquer listagem.
+     */
+    public function scopeComExecucaoDeViagens(Builder $query): Builder
+    {
+        return $query
+            ->withSum('caminhoes', 'num_viagens')
+            ->withCount(['viagens as viagens_realizadas_count' => fn ($q) => $q->where('validado', CronoViagem::STATUS_APROVADA)]);
     }
 
     public function scopeBuscar(Builder $query, ?string $termo): Builder

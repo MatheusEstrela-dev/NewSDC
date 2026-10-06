@@ -2,7 +2,7 @@
   <Modal :show="show" @close="$emit('close')">
     <div class="p-6">
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Alocar Caminhão ao Cronograma</h3>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Cronograma <span class="font-mono font-semibold">{{ cronogramaNumero }}</span></p>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Cronograma <span class="font-semibold">{{ cronogramaNumero }}</span></p>
 
       <form @submit.prevent="submit" class="space-y-4">
         <div>

@@ -29,26 +29,26 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Dados da Ata</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Dados da Ata</h3>
           <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div><dt class="text-slate-500">Número</dt><dd class="font-mono font-semibold text-slate-900 dark:text-slate-100">{{ a.numero }}</dd></div>
-            <div><dt class="text-slate-500">Vigência</dt><dd class="text-slate-900 dark:text-slate-100">{{ formatDate(a.dt_inicio) }} — {{ formatDate(a.dt_final) }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Número</dt><dd class="font-semibold text-slate-900 dark:text-slate-100">{{ a.numero }}</dd></div>
+            <div><dt class="font-medium text-slate-500 dark:text-slate-400">Vigência</dt><dd class="text-slate-900 dark:text-slate-100">{{ formatDate(a.dt_inicio) }} — {{ formatDate(a.dt_final) }}</dd></div>
           </dl>
         </div>
 
         <div v-if="a.historico" class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Histórico</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Histórico</h3>
           <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{{ a.historico }}</p>
         </div>
 
         <div v-if="a.observacoes" class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Observações</h3>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Observações</h3>
           <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{{ a.observacoes }}</p>
         </div>
 
         <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
           <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Lotes ({{ a.lotes_count ?? 0 }})</h3>
+            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Lotes ({{ a.lotes_count ?? 0 }})</h3>
             <Button
               v-if="canLote"
               :href="route('tdap.lotes.create', { ata_id: a.id })"
@@ -69,7 +69,7 @@
     >
       <template #table>
         <table v-if="a.lotes && a.lotes.length > 0" class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-                    <thead class="bg-slate-50 dark:bg-slate-800/40">
+                    <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                       <tr>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Lote</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Municípios</th>
@@ -80,7 +80,7 @@
                     </thead>
                     <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                       <tr v-for="l in a.lotes" :key="l.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                        <td class="px-4 py-3 font-mono">
+                        <td class="px-4 py-3">
                           <Link :href="route('tdap.lotes.show', l.id)" class="text-blue-600 hover:text-blue-800">{{ l.numero }}</Link>
                         </td>
                         <!--
@@ -101,8 +101,8 @@
                           <span v-else class="text-slate-400">—</span>
                         </td>
                         <td class="px-4 py-3">{{ l.prestador_nome }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ Number(l.qtd_agua_m3).toFixed(2) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ Number(l.valor_m3).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right">{{ Number(l.qtd_agua_m3).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right">{{ Number(l.valor_m3).toFixed(2) }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -174,6 +174,7 @@ import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
+import { formatarDia } from '@/Support/dataLocal';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -223,13 +224,8 @@ function listaMunicipios(lote) {
     .join(', ');
 }
 
-// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
-// fuso do Brasil, exibia o dia anterior.
 function formatDate(d) {
-  if (!d) return '—';
-  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
-
-  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
+  return formatarDia(d) || '—';
 }
 
 /**

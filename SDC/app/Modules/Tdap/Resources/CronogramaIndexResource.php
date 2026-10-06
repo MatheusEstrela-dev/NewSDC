@@ -41,6 +41,8 @@ class CronogramaIndexResource extends JsonResource
             'viagens_previstas'    => $this->viagens_previstas,
             'viagens_realizadas'   => $this->viagens_realizadas,
             'viagens_percentual'   => $this->percentual_viagens,
+            // Prazo da barra de execucao (vermelha quando vencido sem concluir).
+            'dias_restantes'       => $this->dias_restantes,
         ];
     }
 }

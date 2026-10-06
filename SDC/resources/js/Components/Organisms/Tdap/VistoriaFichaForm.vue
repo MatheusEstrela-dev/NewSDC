@@ -96,7 +96,7 @@
         -->
         <div>
           <InputLabel value="Placa" />
-          <p class="mt-1 flex items-center rounded-md border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 font-mono font-semibold text-slate-900 dark:text-slate-100">
+          <p class="mt-1 flex items-center rounded-md border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 font-semibold text-slate-900 dark:text-slate-100">
             {{ caminhaoSelecionado?.placa || '—' }}
           </p>
         </div>
@@ -151,8 +151,7 @@
             v-for="p in pareceres"
             :key="p.value"
             class="cursor-pointer rounded-lg border-2 p-4 flex items-center gap-3 transition"
-            :class="form.parecer === p.value
-              ? (p.value === 'aprovada' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-500 bg-red-50 dark:bg-red-900/20')
+            :class="form.parecer === p.value ? (p.value === 'aprovada' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-500 bg-red-50 dark:bg-red-900/20')
               : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30 hover:border-slate-400'"
           >
             <input type="radio" name="parecer" :value="p.value" v-model="form.parecer" class="text-blue-600 focus:ring-blue-500" />

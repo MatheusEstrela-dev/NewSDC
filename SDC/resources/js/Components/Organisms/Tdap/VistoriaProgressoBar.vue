@@ -1,5 +1,5 @@
 <template>
-  <ProgressoBar :percentual="percentual" :rotulo="rotulo" :variant="variant" :title="titulo" />
+  <ProgressoBar :percentual="percentual" :rotulo="rotulo" :title="titulo" :sem-dados="semDados" :atrasado="vencida" />
 </template>
 
 <script setup>
@@ -13,6 +13,9 @@
  * O ciclo e sempre 12 meses (~365d): sem a data exata da proxima vigencia no
  * payload, 365 e aproximacao suficiente para uma barra visual -- a diferenca
  * de 1 dia bissexto nao muda um pixel.
+ *
+ * Cor pela regra unica de ProgressoBar: azul enquanto vale, vermelho vencida.
+ * Vigencia nao "conclui" -- ciclo cheio e vencimento --, entao nunca fica verde.
  */
 import { computed } from 'vue';
 import ProgressoBar from '@/Components/Atoms/Progress/ProgressoBar.vue';
@@ -36,13 +39,7 @@ const percentual = computed(() => {
   return Math.round(Math.min(Math.max(decorridos, 0), VIGENCIA_DIAS) / VIGENCIA_DIAS * 100);
 });
 
-const variant = computed(() => {
-  if (semDados.value) return 'neutral';
-  if (props.diasRestantes < 0) return 'danger';
-  if (props.diasRestantes <= 30) return 'warning';
-
-  return 'success';
-});
+const vencida = computed(() => !semDados.value && props.diasRestantes < 0);
 
 const rotulo = computed(() => {
   if (semDados.value) return 'Sem vistoria';

@@ -11,7 +11,7 @@
               <h3 class="text-lg font-semibold text-white truncate">Série Histórica de Vistorias</h3>
               <p class="text-sm text-slate-200/80 truncate">
                 Caminhão
-                <span class="font-mono">{{ caminhao?.placa || '—' }}</span>
+                <span class="">{{ caminhao?.placa || '—' }}</span>
                 <span v-if="descricaoDoVeiculo" class="text-slate-200/60"> · {{ descricaoDoVeiculo }}</span>
               </p>
             </div>
@@ -79,7 +79,7 @@
                       <Badge :variant="varianteDoParecer(vistoria.parecer)" size="sm">
                         {{ vistoria.parecer_label || 'Sem parecer' }}
                       </Badge>
-                      <span class="font-mono modal-serie-apoio">{{ fmtDate(vistoria.data) }}</span>
+                      <span class="modal-serie-apoio">{{ fmtDate(vistoria.data) }}</span>
                       <!-- Vigencia no lugar de "aprovada" solta: o que decide
                            se o caminhao roda hoje e a data, nao o carimbo. -->
                       <Badge v-if="vistoria.vigente" variant="success" size="sm">
@@ -112,11 +112,11 @@
                   </span>
                   <span v-if="vistoria.ficha" class="inline-flex items-center gap-2 modal-serie-pilula px-3 py-1 rounded-full">
                     <span class="modal-serie-apoio">Ficha:</span>
-                    <span class="font-mono modal-serie-valor">{{ vistoria.ficha }}</span>
+                    <span class="modal-serie-valor">{{ vistoria.ficha }}</span>
                   </span>
                   <span v-if="vistoria.lacre" class="inline-flex items-center gap-2 modal-serie-pilula px-3 py-1 rounded-full">
                     <span class="modal-serie-apoio">Lacre:</span>
-                    <span class="font-mono modal-serie-valor">{{ vistoria.lacre }}</span>
+                    <span class="modal-serie-valor">{{ vistoria.lacre }}</span>
                   </span>
                 </div>
               </div>
@@ -179,6 +179,7 @@ import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import { formatarDia } from '@/Support/dataLocal';
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -251,11 +252,7 @@ watch(
 );
 
 function fmtDate(valor) {
-  if (! valor) return '—';
-
-  const [ano, mes, dia] = String(valor).slice(0, 10).split('-');
-
-  return `${dia}/${mes}/${ano}`;
+  return formatarDia(valor) || '—';
 }
 
 function rotuloDeVigencia(vistoria) {

@@ -15,7 +15,10 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                // Inter e a fonte que app.blade.php carrega (fonts.bunny.net).
+                // Antes estava 'Figtree', que nada carregava: o app inteiro
+                // caia na fonte do sistema.
+                sans: ['Inter', ...defaultTheme.fontFamily.sans],
             },
             screens: {
                 // Telefone estreito (Galaxy S8/SE e afins). Abaixo daqui nao

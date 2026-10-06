@@ -25,7 +25,7 @@
       <StatCard title="Ativos" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" clickable @click="filtrarPorEstado('ativo')" />
       <StatCard title="Rascunhos" :value="estatisticas.rascunhos ?? 0" :icon="DocumentTextIcon" variant="warning" clickable @click="filtrarPorEstado('rascunho')" />
       <StatCard title="Encerrados" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="info" clickable @click="filtrarPorEstado('encerrado')" />
-      <StatCard title="Volume ativo (m³)" :value="Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0})" :icon="CubeIcon" variant="info" :format-number="false" />
+      <StatCard title="Volume ativo (m³)" :value="Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0})" :subtitle="`${Number(estatisticas.volume_entregue_m3 || 0).toLocaleString('pt-BR', {maximumFractionDigits:0})} entregues`" :icon="CubeIcon" variant="info" :format-number="false" />
     </div>
 
     <FilterSection title="Filtros de Pesquisa" :columns="4" :default-collapsed="true">
@@ -86,19 +86,19 @@
                 </thead>
                 <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                   <tr v-for="c in cronogramas.data" :key="c.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                    <td class="px-4 py-3 text-sm font-mono">
+                    <td class="px-4 py-3 text-sm">
                       <Link :href="route('tdap.cronogramas.show', c.id)" class="text-blue-600 hover:text-blue-800 font-semibold">{{ c.numero }}</Link>
                     </td>
                     <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}</td>
                     <td class="px-4 py-3 text-sm">
-                      <p class="font-mono">{{ c.ata_numero }}</p>
-                      <p class="text-xs text-slate-500 font-mono">{{ c.lote_numero }}</p>
+                      <p class="">{{ c.ata_numero }}</p>
+                      <p class="text-xs text-slate-500">{{ c.lote_numero }}</p>
                     </td>
                     <td class="px-4 py-3 text-sm">
                       <p>{{ c.municipio_nome }}<span v-if="c.municipio_uf" class="text-slate-400">/{{ c.municipio_uf }}</span></p>
                       <p class="text-xs text-slate-500">{{ c.prestador_nome }}</p>
                     </td>
-                    <td class="px-4 py-3 text-sm text-right font-mono">
+                    <td class="px-4 py-3 text-sm text-right">
                       {{ Number(c.volume_contratado_m3 ?? 0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}
                       <span v-if="(c.volume_contratado_m3 ?? 0) > 0" class="block text-xs text-slate-500">
                         {{ Number(c.execucao_percentual ?? 0).toFixed(1) }}% entregue
@@ -106,7 +106,7 @@
                     </td>
                     <td class="px-4 py-3 text-sm text-center">{{ c.caminhoes_count }}</td>
                     <td class="px-4 py-3 text-sm">
-                      <CronogramaViagensBar :previstas="c.viagens_previstas" :realizadas="c.viagens_realizadas" />
+                      <CronogramaViagensBar :previstas="c.viagens_previstas" :realizadas="c.viagens_realizadas" :dias-restantes="c.dias_restantes" />
                     </td>
                     <td class="px-4 py-3 text-sm">
                       <EstadoBadge :estado="c.estado" />
@@ -197,7 +197,7 @@
       </template>
 
       <template #mobile-viagens="{ item: c }">
-        <CronogramaViagensBar :previstas="c.viagens_previstas" :realizadas="c.viagens_realizadas" />
+        <CronogramaViagensBar :previstas="c.viagens_previstas" :realizadas="c.viagens_realizadas" :dias-restantes="c.dias_restantes" />
       </template>
 
       <template #mobile-c6="{ item: c }">
@@ -352,6 +352,7 @@ import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
+import { formatDate as formatarData } from '@/utils/dateFormatter';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -576,9 +577,7 @@ function cancelArchive() {
 }
 
 function fmtDate(d) {
-  if (!d) return '—';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
+  return formatarData(d) || '—';
 }
 function irParaPagina(page) {
   router.get(route('tdap.cronogramas.index'), { ...props.filtros, page }, { preserveState: true, replace: true });

@@ -20,15 +20,15 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
         <p class="text-sm text-slate-500">Total de eventos</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
+        <p class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
       </div>
       <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
         <p class="text-sm text-slate-500">Este mês</p>
-        <p class="text-2xl font-semibold text-blue-600">{{ estatisticas.mes_atual }}</p>
+        <p class="text-2xl font-bold text-blue-600">{{ estatisticas.mes_atual }}</p>
       </div>
       <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
         <p class="text-sm text-slate-500">Cronogramas envolvidos</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ estatisticas.cronogramas_envolvidos }}</p>
+        <p class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ estatisticas.cronogramas_envolvidos }}</p>
       </div>
     </div>
 
@@ -70,9 +70,9 @@
                   <tr v-for="h in historicos.data" :key="h.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-300 text-xs">{{ fmtDateTime(h.data_evento) }}</td>
                     <td class="px-4 py-3">
-                      <span :class="badgeTipo(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs font-mono">{{ h.tipo_evento }}</span>
+                      <span :class="classeBadgeDoEvento(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs">{{ h.tipo_evento }}</span>
                     </td>
-                    <td class="px-4 py-3 text-xs font-mono">{{ h.entity_type }}#{{ h.entity_id }}</td>
+                    <td class="px-4 py-3 text-xs">{{ h.entity_type }}#{{ h.entity_id }}</td>
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.obs || '—' }}</td>
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.user?.name || 'Sistema' }}</td>
                     <td class="px-4 py-3 text-right">
@@ -98,7 +98,7 @@
       </template>
 
       <template #mobile-c1="{ item: h }">
-        <span :class="badgeTipo(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs font-mono">{{ h.tipo_evento }}</span>
+        <span :class="classeBadgeDoEvento(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs">{{ h.tipo_evento }}</span>
       </template>
 
       <template #mobile-c2="{ item: h }">
@@ -155,6 +155,7 @@ import DatePicker from '@/Components/Form/DatePicker.vue';
 import { useExport } from '@/Composables/data/useExport';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
+import { classeBadgeDoEvento } from '@/Support/historicoTdap';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -188,15 +189,6 @@ function onExport(params) {
     de:          filtroDe.value || undefined,
     ate:         filtroAte.value || undefined,
   });
-}
-
-function badgeTipo(tipo) {
-  if (!tipo) return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
-  if (tipo.includes('ativad') || tipo.includes('aprov')) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
-  if (tipo.includes('encerrad') || tipo.includes('reprov') || tipo.includes('rejeit')) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
-  if (tipo.includes('criad') || tipo.includes('registrad')) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
-  if (tipo.includes('prorrog')) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
-  return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
 }
 
 function fmtDateTime(d) {

@@ -42,13 +42,13 @@ function fmtCapacidade(v) {
       :class="error ? 'border-2 border-red-500/70' : (modelValue.length ? 'border-2 border-emerald-500/60' : 'border-slate-200')"
     >
       <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700/50">
-        <thead class="bg-slate-50 dark:bg-slate-800/40">
+        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr class="text-left text-slate-500 dark:text-slate-400">
             <th class="w-10 px-4 py-2"><span class="sr-only">Selecionar</span></th>
-            <th class="px-4 py-2 font-medium">Ponto</th>
-            <th class="px-4 py-2 font-medium">Tipo</th>
-            <th class="px-4 py-2 text-right font-medium">Capacidade</th>
-            <th class="px-4 py-2 font-medium">Origem</th>
+            <th class="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ponto</th>
+            <th class="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Tipo</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Capacidade</th>
+            <th class="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Origem</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -72,7 +72,7 @@ function fmtCapacidade(v) {
             </td>
             <td class="px-4 py-2.5 font-medium">{{ p.nome }}</td>
             <td class="px-4 py-2.5">{{ p.tipo_nome }}</td>
-            <td class="px-4 py-2.5 text-right font-mono">{{ fmtCapacidade(p.capacidade) }}</td>
+            <td class="px-4 py-2.5 text-right">{{ fmtCapacidade(p.capacidade) }}</td>
             <td class="px-4 py-2.5">
               <span
                 v-if="p.no_pmda"

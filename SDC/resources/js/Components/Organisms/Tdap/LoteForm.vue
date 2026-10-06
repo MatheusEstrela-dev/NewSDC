@@ -32,7 +32,7 @@
             <option v-for="a in atas" :key="a.id" :value="a.id">
               {{ a.numero }}
               <template v-if="a.dt_inicio && a.dt_final">
-                ({{ formatDate(a.dt_inicio) }} – {{ formatDate(a.dt_final) }})
+                ({{ formatarDia(a.dt_inicio) }} – {{ formatarDia(a.dt_final) }})
               </template>
             </option>
           </select>
@@ -141,7 +141,7 @@
         <div class="flex items-end">
           <div class="w-full rounded-md border border-slate-200 dark:border-slate-700/40 bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
             <p class="text-xs text-slate-500">Valor total estimado</p>
-            <p class="text-lg font-mono font-semibold text-slate-900 dark:text-slate-100">
+            <p class="text-lg font-semibold text-slate-900 dark:text-slate-100">
               R$ {{ valorTotal }}
             </p>
           </div>
@@ -185,6 +185,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { formatarDia } from '@/Support/dataLocal';
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -233,10 +234,4 @@ const valorTotal = computed(() => {
   const vu = Number(props.form.valor_m3 || 0);
   return (qtd * vu).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 });
-
-function formatDate(d) {
-  if (!d) return '';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
-}
 </script>

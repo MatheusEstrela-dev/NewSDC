@@ -51,8 +51,7 @@
               :key="chip.valor"
               type="button"
               class="shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition"
-              :class="situacao === chip.valor
-                ? 'border-blue-400 bg-blue-500/20 text-white'
+              :class="situacao === chip.valor ? 'border-blue-400 bg-blue-500/20 text-white'
                 : 'border-slate-700/50 text-slate-200/80 hover:border-slate-500 hover:text-white'"
               @click="situacao = chip.valor"
             >
@@ -77,7 +76,7 @@
             >
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="font-mono text-sm font-bold modal-serie-titulo">{{ caminhao.placa }}</span>
+                  <span class="text-sm font-semibold modal-serie-titulo">{{ caminhao.placa }}</span>
                   <VistoriaSituacaoBadge
                     v-if="caminhao.situacao_vistoria"
                     :situacao="caminhao.situacao_vistoria"

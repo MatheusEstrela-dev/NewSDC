@@ -82,7 +82,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                   <tr v-for="a in atas.data" :key="a.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                    <td class="px-4 py-3 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">
+                    <td class="px-4 py-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
                       <Link :href="route('tdap.atas.show', a.id)" class="hover:text-blue-600">{{ a.numero }}</Link>
                     </td>
                     <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
@@ -229,6 +229,7 @@ import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
+import { formatDate as formatarData } from '@/utils/dateFormatter';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -339,9 +340,7 @@ function onExport(params) {
 }
 
 function formatDate(d) {
-  if (!d) return '—';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
+  return formatarData(d) || '—';
 }
 function irParaPagina(page) {
   router.get(route('tdap.atas.index'), { ...props.filtros, page }, { preserveState: true, replace: true });

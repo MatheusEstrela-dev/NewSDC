@@ -116,10 +116,10 @@
       <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-800/70">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
-            <h3 class="truncate text-sm font-bold text-slate-900 dark:text-slate-100">Caminhões-tanque</h3>
+            <h3 class="truncate text-sm font-semibold text-slate-900 sm:text-base dark:text-slate-100">Caminhões-tanque</h3>
             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Placas, prestadores e capacidade operacional</p>
           </div>
-          <span class="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/15 dark:text-blue-300">
+          <span class="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/15 dark:text-blue-300">
             {{ caminhoes.meta?.total ?? caminhoes.data.length }}
           </span>
         </div>
@@ -134,14 +134,14 @@
     >
       <template #table>
         <table class="w-full text-sm">
-                  <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
+                  <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th class="px-4 py-3 text-left">Placa</th>
-                      <th class="px-4 py-3 text-left">Prestador</th>
-                      <th class="px-4 py-3 text-left">Marca / Modelo</th>
-                      <th class="px-4 py-3 text-right">Capacidade (m³)</th>
-                      <th class="px-4 py-3 text-left">Vistoria</th>
-                      <th class="px-4 py-3 text-left">Status</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Placa</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Prestador</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Marca / Modelo</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-right">Capacidade (m³)</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Vistoria</th>
+                      <th class="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-left">Status</th>
                       <th class="w-36 px-4 py-3 text-right">Ações</th>
                     </tr>
                   </thead>
@@ -154,14 +154,14 @@
                       <td class="whitespace-nowrap px-4 py-4">
                         <Link
                           :href="route('tdap.frota.show', caminhao.id)"
-                          class="font-mono font-bold text-slate-900 transition hover:text-blue-600 dark:text-slate-100"
+                          class="font-medium text-slate-800 transition hover:text-blue-600 dark:text-slate-200"
                         >
                           {{ caminhao.placa }}
                         </Link>
                       </td>
                       <td class="px-4 py-4">
                         <p class="font-semibold text-slate-900 dark:text-slate-100">{{ caminhao.prestador_nome }}</p>
-                        <p class="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ caminhao.prestador_cnpj }}</p>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ caminhao.prestador_cnpj }}</p>
                       </td>
                       <td class="px-4 py-4 text-slate-600 dark:text-slate-300">
                         <span v-if="caminhao.marca || caminhao.modelo">
@@ -170,7 +170,7 @@
                         </span>
                         <span v-else class="text-slate-400">-</span>
                       </td>
-                      <td class="whitespace-nowrap px-4 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
+                      <td class="whitespace-nowrap px-4 py-4 text-right text-slate-700 dark:text-slate-300">
                         {{ Number(caminhao.capacidade_m3 || 0).toFixed(2) }}
                       </td>
                       <td class="px-4 py-4">
@@ -203,7 +203,7 @@
 
       <template #mobile-c1="{ item: caminhao }">
         <p class="font-semibold text-slate-900 dark:text-slate-100">{{ caminhao.prestador_nome }}</p>
-        <p class="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ caminhao.prestador_cnpj }}</p>
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ caminhao.prestador_cnpj }}</p>
       </template>
 
       <template #mobile-c2="{ item: caminhao }">
@@ -305,6 +305,7 @@ import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import VistoriaHistoricoModal from '@/Components/Organisms/Tdap/VistoriaHistoricoModal.vue';
 import NovaVistoriaCaminhaoModal from '@/Components/Organisms/Tdap/NovaVistoriaCaminhaoModal.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import { formatarDia } from '@/Support/dataLocal';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -481,11 +482,7 @@ function confirmarExclusao() {
 }
 
 function fmtDate(valor) {
-  if (! valor) return '-';
-
-  const [ano, mes, dia] = String(valor).slice(0, 10).split('-');
-
-  return `${dia}/${mes}/${ano}`;
+  return formatarDia(valor) || '-';
 }
 
 // Exportacao CSV (mesmo padrao do Cronograma)

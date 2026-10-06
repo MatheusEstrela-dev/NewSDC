@@ -1,7 +1,7 @@
 <template>
   <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+      <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
         Comprovantes ({{ comprovantes.length }})
       </h3>
     </div>

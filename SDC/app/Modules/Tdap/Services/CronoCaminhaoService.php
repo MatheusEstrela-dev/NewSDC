@@ -163,6 +163,44 @@ class CronoCaminhaoService
     }
 
     /**
+     * Relacoes que entregaCalculada le. withTrashed: caminhao excluido depois
+     * nao zera a agua que ele ja levou (mesma regra do m3 do dashboard).
+     *
+     * @return array<int|string, mixed>
+     */
+    public static function relacoesDaEntrega(): array
+    {
+        return [
+            'caminhao' => fn ($q) => $q->withTrashed()->select('id', 'capacidade_m3'),
+            'cronograma.lote:id,valor_m3',
+        ];
+    }
+
+    /**
+     * Formula unica da entrega: viagens APROVADAS x capacidade do caminhao, e
+     * o valor pelo preco do m3 do lote. Usada pelo recalculo a cada validacao
+     * e pela correcao em massa (tdap:recalcular-entregas).
+     *
+     * @return array{agua_entregue: float, vr_total: float}
+     */
+    public function entregaCalculada(CronoCaminhao $cc): array
+    {
+        // withCount('viagensValidadas') de quem carrega em lote (a correcao em
+        // massa); sem ele, a contagem propria de sempre.
+        $viagensValidadas = (int) ($cc->viagens_validadas_count ?? CronoViagem::query()
+            ->where('crono_caminhao_id', $cc->id)
+            ->where('validado', CronoViagem::STATUS_APROVADA)
+            ->count());
+
+        $aguaEntregue = round($viagensValidadas * (float) ($cc->caminhao?->capacidade_m3 ?? 0), 2);
+
+        return [
+            'agua_entregue' => $aguaEntregue,
+            'vr_total'      => round($aguaEntregue * (float) ($cc->cronograma?->lote?->valor_m3 ?? 0), 2),
+        ];
+    }
+
+    /**
      * Recalcula agua_entregue e vr_total com base nas viagens validadas.
      * Chamado pelo CronoViagemService apos validar/rejeitar.
      */
@@ -170,7 +208,7 @@ class CronoCaminhaoService
     {
         DB::transaction(function () use ($cronoCaminhaoId): void {
             $cc = CronoCaminhao::query()
-                ->with(['caminhao:id,capacidade_m3', 'cronograma.lote:id,valor_m3'])
+                ->with(self::relacoesDaEntrega())
                 ->lockForUpdate()
                 ->find($cronoCaminhaoId);
 
@@ -179,23 +217,9 @@ class CronoCaminhaoService
                 return;
             }
 
-            $viagensValidadas = (int) CronoViagem::query()
-                ->where('crono_caminhao_id', $cronoCaminhaoId)
-                ->where('validado', CronoViagem::STATUS_APROVADA)
-                ->count();
-
-            $capacidade = (float) ($cc->caminhao?->capacidade_m3 ?? 0);
-            $valorM3 = (float) ($cc->cronograma?->lote?->valor_m3 ?? 0);
-
-            $aguaEntregue = $viagensValidadas * $capacidade;
-            $vrTotal = $aguaEntregue * $valorM3;
-
             // forceFill: agua_entregue e vr_total nao estao em $fillable
             // (sao derivados — somente este Service pode escreve-los).
-            $cc->forceFill([
-                'agua_entregue' => $aguaEntregue,
-                'vr_total'      => $vrTotal,
-            ])->save();
+            $cc->forceFill($this->entregaCalculada($cc))->save();
         });
     }
 }
