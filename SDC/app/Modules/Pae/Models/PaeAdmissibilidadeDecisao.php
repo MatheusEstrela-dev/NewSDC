@@ -13,8 +13,8 @@ final class PaeAdmissibilidadeDecisao extends Model
     protected $table = 'pae_admissibilidade_decisoes';
 
     protected $fillable = [
-        'protocolo_id', 'tipo', 'fundamentacao', 'fundamentos',
-        'checklist_snapshot', 'submetido_em', 'transitorio_confirmado',
+        'protocolo_id', 'tipo', 'chave_idempotencia', 'fundamentacao', 'fundamentos',
+        'checklist_snapshot', 'triagem_versao', 'submetido_em', 'transitorio_confirmado',
         'notificado_em', 'prazo_correcao_em', 'num_sei',
         'decidido_por', 'decidido_em',
     ];
@@ -22,6 +22,7 @@ final class PaeAdmissibilidadeDecisao extends Model
     protected $casts = [
         'fundamentos' => 'array',
         'checklist_snapshot' => 'array',
+        'triagem_versao' => 'integer',
         'submetido_em' => 'date',
         'transitorio_confirmado' => 'boolean',
         'notificado_em' => 'date',

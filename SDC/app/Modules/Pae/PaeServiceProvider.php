@@ -11,6 +11,7 @@ use App\Modules\Pae\Domain\Events\ParecerConcluidoV1;
 use App\Modules\Pae\Domain\Events\ProtocoloEnviadoV1;
 use App\Modules\Pae\Domain\Events\RevisaoAceitaV1;
 use App\Modules\Pae\Domain\Guards\ExigeEmissaoCcpae;
+use App\Modules\Pae\Domain\Guards\ExigeAdmissibilidade;
 use App\Modules\Pae\Domain\Workflows\PaeProtocoloWorkflow;
 use App\Modules\Pae\Services\EmpreendimentoApiService;
 use App\Modules\Pae\Services\PaeFormularioService;
@@ -44,7 +45,7 @@ class PaeServiceProvider extends ServiceProvider
 
         // Guards da maquina de estados: cada subprojeto acrescenta o seu na tag,
         // sem mexer no workflow (o B traz o de admissibilidade).
-        $this->app->tag([ExigeEmissaoCcpae::class], 'pae.guardas_transicao');
+        $this->app->tag([ExigeEmissaoCcpae::class, ExigeAdmissibilidade::class], 'pae.guardas_transicao');
         $this->app->when(PaeProtocoloWorkflow::class)
             ->needs('$guardas')
             ->giveTagged('pae.guardas_transicao');

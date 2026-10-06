@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Municipio;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Requests\SalvarTriagemRequest;
+use App\Modules\Pae\Requests\DecidirAdmissibilidadeRequest;
 use App\Modules\Pae\Services\PaeAdmissibilidadeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -32,5 +33,12 @@ final class PaeAdmissibilidadeController extends Controller
         $this->admissibilidade->salvarTriagem($paeProtocolo, $dados['municipios'], $dados['itens'], $request->user());
 
         return back()->with('success', 'Triagem de admissibilidade atualizada.');
+    }
+
+    public function decidir(DecidirAdmissibilidadeRequest $request, PaeProtocolo $paeProtocolo): RedirectResponse
+    {
+        $this->admissibilidade->decidir($paeProtocolo, $request->validated(), $request->user());
+
+        return back()->with('success', 'Decisão de admissibilidade registrada.');
     }
 }

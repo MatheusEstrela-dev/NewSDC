@@ -11,8 +11,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        DB::statement('ALTER TABLE pae_tramit_prot ALTER COLUMN status TYPE VARCHAR(50)');
+
         Schema::table('pae_protocolos', function (Blueprint $table): void {
             $table->boolean('admissibilidade_legada_sem_triagem')->default(false);
+            $table->unsignedInteger('admissibilidade_triagem_versao')->default(0);
         });
 
         DB::table('pae_protocolos')->update(['admissibilidade_legada_sem_triagem' => true]);
@@ -46,9 +49,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('protocolo_id')->constrained('pae_protocolos')->cascadeOnDelete();
             $table->string('tipo', 40);
+            $table->uuid('chave_idempotencia');
             $table->text('fundamentacao');
             $table->jsonb('fundamentos')->nullable();
             $table->jsonb('checklist_snapshot');
+            $table->unsignedInteger('triagem_versao');
             $table->date('submetido_em')->nullable();
             $table->boolean('transitorio_confirmado')->default(false);
             $table->date('notificado_em')->nullable();
@@ -58,6 +63,7 @@ return new class extends Migration
             $table->timestampTz('decidido_em');
             $table->timestamps();
             $table->index(['protocolo_id', 'decidido_em'], 'pae_admissibilidade_decisao_protocolo_idx');
+            $table->unique(['protocolo_id', 'chave_idempotencia'], 'pae_admissibilidade_decisao_idempotencia_unique');
         });
         DB::statement("ALTER TABLE pae_admissibilidade_decisoes ADD CONSTRAINT pae_decisao_tipo_check CHECK (tipo IN ('admitido', 'correcao_solicitada', 'reprovado_sumariamente'))");
 
@@ -94,7 +100,9 @@ return new class extends Migration
         Schema::dropIfExists('pae_protocolo_municipios');
 
         Schema::table('pae_protocolos', function (Blueprint $table): void {
-            $table->dropColumn('admissibilidade_legada_sem_triagem');
+            $table->dropColumn(['admissibilidade_legada_sem_triagem', 'admissibilidade_triagem_versao']);
         });
+
+        DB::statement('ALTER TABLE pae_tramit_prot ALTER COLUMN status TYPE VARCHAR(20)');
     }
 };

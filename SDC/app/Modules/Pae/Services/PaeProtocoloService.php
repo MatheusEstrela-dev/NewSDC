@@ -65,6 +65,8 @@ class PaeProtocoloService extends BaseService
                     PaeProtocoloStatus::APROVADO->value,
                     PaeProtocoloStatus::CCPAE->value,
                     PaeProtocoloStatus::ATIVO_3_ANOS->value,
+                    PaeProtocoloStatus::REPROVADO->value,
+                    PaeProtocoloStatus::REPROVADO_SUMARIAMENTE->value,
                 ]);
                 break;
             case 'ciclos_esgotados':
@@ -342,6 +344,8 @@ class PaeProtocoloService extends BaseService
             'aprovado' => $base()->where('status', PaeProtocoloStatus::APROVADO->value)->count(),
             'ccpae' => $base()->where('status', PaeProtocoloStatus::CCPAE->value)->count(),
             'ativo_3_anos' => $base()->where('status', PaeProtocoloStatus::ATIVO_3_ANOS->value)->count(),
+            'reprovado' => $base()->where('status', PaeProtocoloStatus::REPROVADO->value)->count(),
+            'reprovado_sumariamente' => $base()->where('status', PaeProtocoloStatus::REPROVADO_SUMARIAMENTE->value)->count(),
             'vencidos' => $base()->vencidos()->count(),
             'ciclos_esgotados' => $base()->whereNotNull('ciclos_esgotados_em')->count(),
         ];

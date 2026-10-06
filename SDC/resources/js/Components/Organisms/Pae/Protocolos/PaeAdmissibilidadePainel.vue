@@ -57,6 +57,68 @@
           {{ form.processing ? 'Salvando...' : 'Salvar triagem' }}
         </button>
       </form>
+
+      <section v-if="dados.pode_decidir" class="modal-serie-cartao rounded-xl p-4">
+        <h4 class="font-semibold modal-serie-titulo">Decisão da CEDEC</h4>
+        <p class="mt-1 text-xs modal-serie-apoio">A decisão exige os nove itens avaliados e os municípios ZAS/ZSS confirmados.</p>
+        <form class="mt-4 space-y-3" @submit.prevent="decidir">
+          <label class="block text-sm modal-serie-valor" for="decisao-tipo">Resultado</label>
+          <select id="decisao-tipo" v-model="decisao.tipo" class="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white">
+            <option value="admitido">Admitir</option>
+            <option value="correcao_solicitada">Solicitar correção transitória</option>
+            <option value="reprovado_sumariamente">Reprovar sumariamente</option>
+          </select>
+
+          <div v-if="decisao.tipo === 'reprovado_sumariamente'" class="space-y-2 rounded-lg border border-slate-600/40 p-3">
+            <p class="text-sm modal-serie-valor">Fundamentos legais</p>
+            <label v-for="(rotulo, artigo) in dados.fundamentos_disponiveis" :key="artigo" class="flex items-start gap-2 text-sm modal-serie-valor">
+              <input v-model="decisao.fundamentos" type="checkbox" :value="Number(artigo)" />
+              <span>Art. {{ artigo }} — {{ rotulo }}</span>
+            </label>
+            <p v-if="decisao.errors.fundamentos" class="text-xs text-red-300">{{ decisao.errors.fundamentos }}</p>
+          </div>
+
+          <div v-if="decisao.tipo === 'correcao_solicitada'" class="space-y-3 rounded-lg border border-slate-600/40 p-3">
+            <p class="text-xs modal-serie-apoio">Use esta opção apenas quando a CEDEC confirmar documentalmente que o PAE foi submetido antes da publicação da resolução.</p>
+            <label class="flex items-start gap-2 text-sm modal-serie-valor">
+              <input v-model="decisao.transitorio_confirmado" type="checkbox" />
+              <span>Confirmo a submissão anterior à publicação oficial</span>
+            </label>
+            <label class="block text-sm modal-serie-valor">Data comprovada da submissão
+              <input v-model="decisao.submetido_em" type="date" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white" />
+            </label>
+            <label class="block text-sm modal-serie-valor">Data da notificação da correção
+              <input v-model="decisao.notificado_em" type="date" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white" />
+            </label>
+            <label class="block text-sm modal-serie-valor">Número SEI da comprovação
+              <input v-model="decisao.num_sei" type="text" maxlength="100" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white" />
+            </label>
+            <p v-for="campo in ['transitorio_confirmado', 'submetido_em', 'notificado_em', 'num_sei']" :key="campo" v-show="decisao.errors[campo]" class="text-xs text-red-300">{{ decisao.errors[campo] }}</p>
+          </div>
+
+          <label class="block text-sm modal-serie-valor">Fundamentação da decisão
+            <textarea v-model="decisao.fundamentacao" rows="3" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white" />
+          </label>
+          <p v-if="decisao.errors.fundamentacao" class="text-xs text-red-300">{{ decisao.errors.fundamentacao }}</p>
+          <p v-if="decisao.errors.triagem || decisao.errors.protocolo" class="text-xs text-red-300">{{ decisao.errors.triagem || decisao.errors.protocolo }}</p>
+          <button type="submit" :disabled="decisao.processing" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            {{ decisao.processing ? 'Registrando...' : 'Registrar decisão' }}
+          </button>
+        </form>
+      </section>
+
+      <section v-if="dados.decisoes?.length" class="modal-serie-cartao rounded-xl p-4">
+        <h4 class="font-semibold modal-serie-titulo">Histórico de decisões</h4>
+        <ol class="mt-3 space-y-3">
+          <li v-for="registro in dados.decisoes" :key="registro.id" class="rounded-lg border border-slate-600/40 p-3 text-sm modal-serie-valor">
+            <strong>{{ rotuloDecisao(registro.tipo) }}</strong>
+            <p class="mt-1">{{ registro.fundamentacao }}</p>
+            <p v-if="registro.fundamentos?.length" class="mt-1 text-xs modal-serie-apoio">Artigos: {{ registro.fundamentos.join(', ') }}</p>
+            <p v-if="registro.prazo_correcao_em" class="mt-1 text-xs modal-serie-apoio">Prazo de correção: {{ registro.prazo_correcao_em }}</p>
+            <p class="mt-1 text-xs modal-serie-apoio">{{ registro.decisor?.name || 'CEDEC' }} · {{ registro.decidido_em }}</p>
+          </li>
+        </ol>
+      </section>
     </template>
   </div>
 </template>
@@ -76,6 +138,10 @@ const dados = computed(() => props.admissibilidade);
 const municipiosDisponiveis = computed(() => props.municipiosDisponiveis);
 const municipioSelecionado = ref('');
 const form = useForm({ municipios: [], itens: [] });
+const decisao = useForm({
+  tipo: 'admitido', fundamentacao: '', fundamentos: [], transitorio_confirmado: false,
+  submetido_em: '', notificado_em: '', num_sei: '', chave_idempotencia: crypto.randomUUID(),
+});
 
 const podeEditar = computed(() => props.canEdit && dados.value?.pode_editar);
 const rotulos = computed(() => Object.fromEntries((dados.value?.itens || []).map((item) => [item.chave, item.rotulo])));
@@ -110,6 +176,25 @@ function salvar() {
     preserveScroll: true,
     preserveState: true,
     onSuccess: () => emit('atualizado'),
+  });
+}
+
+function decidir() {
+  decisao.transform((dadosForm) => ({
+    ...dadosForm,
+    fundamentos: dadosForm.tipo === 'reprovado_sumariamente' ? dadosForm.fundamentos : [],
+    transitorio_confirmado: dadosForm.tipo === 'correcao_solicitada' && dadosForm.transitorio_confirmado,
+    submetido_em: dadosForm.tipo === 'correcao_solicitada' ? dadosForm.submetido_em : null,
+    notificado_em: dadosForm.tipo === 'correcao_solicitada' ? dadosForm.notificado_em : null,
+    num_sei: dadosForm.tipo === 'correcao_solicitada' ? dadosForm.num_sei : null,
+  })).post(route('pae.protocolo.admissibilidade.decidir', props.protocoloId), {
+    preserveScroll: true,
+    preserveState: true,
+    onSuccess: () => {
+      decisao.reset();
+      decisao.chave_idempotencia = crypto.randomUUID();
+      emit('atualizado');
+    },
   });
 }
 </script>

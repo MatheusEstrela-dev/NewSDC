@@ -16,6 +16,8 @@ final class ContextoTransicao
 
     private const EMISSAO_CCPAE = 'emissao_ccpae';
 
+    private const DECISAO_ADMISSIBILIDADE = 'decisao_admissibilidade';
+
     private function __construct(private readonly string $origem) {}
 
     public static function manual(): self
@@ -32,5 +34,15 @@ final class ContextoTransicao
     public function ehEmissaoCcpae(): bool
     {
         return $this->origem === self::EMISSAO_CCPAE;
+    }
+
+    public static function decisaoAdmissibilidade(): self
+    {
+        return new self(self::DECISAO_ADMISSIBILIDADE);
+    }
+
+    public function ehDecisaoAdmissibilidade(): bool
+    {
+        return $this->origem === self::DECISAO_ADMISSIBILIDADE;
     }
 }

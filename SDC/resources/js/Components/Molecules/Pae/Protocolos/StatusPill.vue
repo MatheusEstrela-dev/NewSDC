@@ -38,6 +38,7 @@ const config = {
   analise: { label: 'Análise', cor: 'indigo' },
   aprovado: { label: 'Aprovado', cor: 'green' },
   reprovado: { label: 'Reprovado', cor: 'red' },
+  reprovado_sumariamente: { label: 'Reprovado Sumariamente', cor: 'red' },
   ccpae: { label: 'CCPAE', cor: 'emerald' },
   ativo_3_anos: { label: 'Ativo (3 anos)', cor: 'emerald' },
   suspenso: { label: 'Suspenso', cor: 'yellow' },

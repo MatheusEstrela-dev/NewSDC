@@ -85,6 +85,10 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('protocolo.admissibilidade.salvar')
         ->middleware('can:pae.protocolos.edit');
 
+    Route::post('/protocolo/{paeProtocolo}/admissibilidade/decisoes', [PaeAdmissibilidadeController::class, 'decidir'])
+        ->name('protocolo.admissibilidade.decidir')
+        ->middleware('can:pae.protocolos.validar');
+
     Route::post('/protocolo/{paeProtocolo}/status', [PaeProtocoloController::class, 'changeStatus'])
         ->name('protocolos.status')
         ->middleware('can:pae.protocolos.edit');

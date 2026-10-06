@@ -45,6 +45,7 @@ class PaeProtocolo extends Model implements Rastreavel
         'dt_notificacao_feam_estimada',
         'ciclos_esgotados_em',
         'admissibilidade_legada_sem_triagem',
+        'admissibilidade_triagem_versao',
     ];
 
     protected $casts = [
@@ -57,6 +58,7 @@ class PaeProtocolo extends Model implements Rastreavel
         'dt_notificacao_feam_estimada' => 'boolean',
         'ciclos_esgotados_em' => 'date',
         'admissibilidade_legada_sem_triagem' => 'boolean',
+        'admissibilidade_triagem_versao' => 'integer',
     ];
 
     protected static function newFactory()
