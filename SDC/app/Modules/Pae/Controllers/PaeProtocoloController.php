@@ -129,6 +129,7 @@ class PaeProtocoloController extends Controller
             'dilacao'          => ['tipo' => 'notificacao', 'titulo' => 'Dilação Registrada'],
             'prazo'            => ['tipo' => 'edicao',      'titulo' => 'Prazo Atualizado'],
             'ccpae'            => ['tipo' => 'analise',     'titulo' => 'CCPAE Emitido'],
+            'ficha_anexo_b'    => ['tipo' => 'edicao',      'titulo' => 'Ficha cadastral atualizada'],
         ];
 
         $timeline = $protocolo->timeline->map(function ($item) use ($eventoMap) {

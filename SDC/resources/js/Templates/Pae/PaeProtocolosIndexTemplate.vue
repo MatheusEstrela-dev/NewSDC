@@ -94,6 +94,7 @@
       @history="handleHistory"
       @check="handleCheck"
       @pdf="handlePdf"
+      @ficha="handleFicha"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -118,6 +119,7 @@
       @history="handleHistory"
       @check="handleCheck"
       @pdf="handlePdf"
+      @ficha="handleFicha"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -139,6 +141,7 @@
       :historico="historicoPayload"
       :external-view="isExternalView"
       :can-edit="canEdit"
+      :initial-tab="historicoInitialTab"
       @close="closeHistorico"
       @atualizado="recarregarHistorico"
     />
@@ -190,7 +193,7 @@
 <script setup>
 import { ArchiveBoxIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { router, useForm } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useToast } from '@/Composables/useToast';
 
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -383,6 +386,10 @@ function handleEdit(id) {
   router.visit(route('pae.index', { protocolo_id: id }));
 }
 
+function handleFicha(id) {
+  router.visit(route('pae.protocolo.ficha-anexo-b.show', id));
+}
+
 function handleRelate(id) {
   if (!confirm('Criar nova versao relacionada deste protocolo?')) return;
   router.post(route('pae.protocolo.relacionar', id));
@@ -512,12 +519,27 @@ function handleAssignedAction() {
 const historicoModalOpen = ref(false);
 const selectedProtocolo = ref(null);
 const historicoPayload = ref(null);
+const historicoInitialTab = ref(null);
 
-async function handleHistory(id) {
-  selectedProtocolo.value = (filteredProtocolos.value || []).find((p) => p.id === id) || null;
-  historicoPayload.value = await historicoUsecase.execute(id);
-  historicoModalOpen.value = true;
+async function handleHistory(id, initialTab = null) {
+  try {
+    historicoPayload.value = await historicoUsecase.execute(id);
+    selectedProtocolo.value = (filteredProtocolos.value || []).find((p) => p.id === id)
+      || { id, protocoloNumero: historicoPayload.value?.protocolo ?? '' };
+    historicoInitialTab.value = initialTab;
+    historicoModalOpen.value = true;
+  } catch {
+    toast('Não foi possível abrir o histórico do protocolo.', 'error');
+  }
 }
+
+onMounted(() => {
+  const parametro = new URLSearchParams(window.location.search).get('triagem');
+  const id = Number(parametro);
+  if (parametro && /^\d+$/.test(parametro) && Number.isSafeInteger(id) && id > 0) {
+    void handleHistory(id, 'admissibilidade');
+  }
+});
 
 async function recarregarHistorico() {
   if (!selectedProtocolo.value) return;
@@ -526,6 +548,7 @@ async function recarregarHistorico() {
 
 function closeHistorico() {
   historicoModalOpen.value = false;
+  historicoInitialTab.value = null;
   selectedProtocolo.value = null;
   historicoPayload.value = null;
 }

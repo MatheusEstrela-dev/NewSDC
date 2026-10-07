@@ -121,6 +121,11 @@ class PaeProtocolo extends Model implements Rastreavel
         return $this->hasMany(PaeMunicipioImpactado::class, 'protocolo_id');
     }
 
+    public function fichasAnexoB(): HasMany
+    {
+        return $this->hasMany(PaeFichaAnexoB::class, 'protocolo_id')->orderBy('versao');
+    }
+
     public function itensAdmissibilidade(): HasMany
     {
         return $this->hasMany(PaeAdmissibilidadeItem::class, 'protocolo_id');
