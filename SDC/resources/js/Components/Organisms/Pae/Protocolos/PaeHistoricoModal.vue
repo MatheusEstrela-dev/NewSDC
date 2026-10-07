@@ -227,6 +227,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  initialTab: {
+    type: String,
+    default: null,
+  },
 });
 
 defineEmits(['close', 'atualizado']);
@@ -238,7 +242,7 @@ const defaultTab = computed(() => (props.externalView ? 'analises' : 'timeline')
 watch(
   () => props.open,
   (v) => {
-    if (v) activeTab.value = defaultTab.value;
+    if (v) activeTab.value = props.initialTab || defaultTab.value;
   }
 );
 

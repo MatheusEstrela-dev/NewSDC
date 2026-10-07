@@ -72,6 +72,7 @@
                     { action: 'delete',  handler: () => $emit('delete', protocolo.id),  allowed: canDelete },
                     { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo.id),  allowed: canCheck },
                     { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo.id),    allowed: canPdf },
+                    { action: 'ficha',  placement: 'menu', aliasOverride: 'view', handler: () => $emit('ficha', protocolo.id) },
                     { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo.id), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
                     { action: 'relate', placement: 'menu', handler: () => $emit('relate', protocolo.id), allowed: canCreate },
                   ]"
@@ -129,5 +130,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'archive', 'delete', 'options', 'assign', 'relate']);
+defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'ficha', 'archive', 'delete', 'options', 'assign', 'relate']);
 </script>

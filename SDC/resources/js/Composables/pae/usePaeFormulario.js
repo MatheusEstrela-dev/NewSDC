@@ -33,7 +33,7 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     coordenador_mun_compdec: formulario?.coordenador_mun_compdec  ?? '',
     empreendedor_res:        formulario?.empreendedor_res         ?? empreendimento?.empreendedor?.nome ?? '',
     metodo_construtivo:      formulario?.metodo_construtivo       ?? empreendimento?.m_construcao      ?? '',
-    numero_zas:              formulario?.numero_zas               ?? empreendimento?.pop_zas            ?? '',
+    numero_zas:              formulario?.numero_zas               ?? '',
     nivel_emergencia:        formulario?.nivel_emergencia         ?? '',
   });
 

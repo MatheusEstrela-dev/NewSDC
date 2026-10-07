@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Pae\Controllers\PaeFormularioController;
+use App\Modules\Pae\Controllers\PaeFichaAnexoBController;
 use App\Modules\Pae\Controllers\PaeAdmissibilidadeController;
 use App\Modules\Pae\Controllers\PaeComunicacaoController;
 use App\Modules\Pae\Controllers\PaeNotificacaoController;
@@ -77,6 +78,14 @@ Route::prefix('pae')->name('pae.')->group(function () {
     Route::get('/protocolo/{paeProtocolo}/historico', [PaeProtocoloController::class, 'historico'])
         ->name('protocolos.historico')
         ->middleware('can:pae.protocolos.view');
+
+    Route::get('/protocolo/{paeProtocolo}/ficha-anexo-b', [PaeFichaAnexoBController::class, 'show'])
+        ->name('protocolo.ficha-anexo-b.show')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::put('/protocolo/{paeProtocolo}/ficha-anexo-b', [PaeFichaAnexoBController::class, 'salvar'])
+        ->name('protocolo.ficha-anexo-b.salvar')
+        ->middleware('can:pae.protocolos.edit');
 
     Route::get('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'show'])
         ->name('protocolo.admissibilidade.show')
