@@ -28,6 +28,8 @@ class PaeCcpae extends Model
         'status',
         'dt_licenca_operacao',
         'emitido_por',
+        'dco_avaliacao_id',
+        'dco_documento_id',
     ];
 
     protected $casts = [
@@ -44,5 +46,15 @@ class PaeCcpae extends Model
     public function emissor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'emitido_por');
+    }
+
+    public function avaliacaoDco(): BelongsTo
+    {
+        return $this->belongsTo(PaeDcoAvaliacao::class, 'dco_avaliacao_id');
+    }
+
+    public function documentoDco(): BelongsTo
+    {
+        return $this->belongsTo(PaeDcoDocumento::class, 'dco_documento_id');
     }
 }
