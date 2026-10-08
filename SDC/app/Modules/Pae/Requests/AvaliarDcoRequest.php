@@ -16,6 +16,16 @@ final class AvaliarDcoRequest extends FormRequest
 
     public function rules(): array
     {
+        return self::regras();
+    }
+
+    /**
+     * Fonte unica das regras, reutilizada pelo PaeDcoService fora do HTTP.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public static function regras(): array
+    {
         return [
             'resultado' => ['required', Rule::in(['aplicavel', 'nao_aplicavel'])],
             'fundamentacao' => ['required', 'string', 'max:5000'],
