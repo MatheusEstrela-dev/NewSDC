@@ -15,6 +15,7 @@
 @import './utilities/mobile.css';
 @import './utilities/touch-feedback.css';
 @import './utilities/table-sticky.css';
+@import './utilities/scrollbar.css';
 
 @tailwind base;
 @tailwind components;
