@@ -43,15 +43,17 @@
               <option value="aplicavel">Aplicável</option>
               <option value="nao_aplicavel">Não aplicável</option>
             </select>
+            <ErroCampo :mensagem="avaliacao.errors.resultado" />
           </label>
           <label class="block text-sm text-slate-700 dark:text-slate-200">Fundamentação
             <textarea v-model="avaliacao.fundamentacao" rows="3" maxlength="5000" required class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800" />
-            <span v-if="avaliacao.errors.fundamentacao" class="text-xs text-red-600">{{ avaliacao.errors.fundamentacao }}</span>
+            <ErroCampo :mensagem="avaliacao.errors.fundamentacao" />
           </label>
           <label class="block text-sm text-slate-700 dark:text-slate-200">Número SEI
             <input v-model="avaliacao.num_sei" required maxlength="100" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800" />
-            <span v-if="avaliacao.errors.num_sei" class="text-xs text-red-600">{{ avaliacao.errors.num_sei }}</span>
+            <ErroCampo :mensagem="avaliacao.errors.num_sei" />
           </label>
+          <p v-if="errosGerais(avaliacao, CAMPOS_AVALIACAO)" class="text-sm text-red-600 dark:text-red-300">{{ errosGerais(avaliacao, CAMPOS_AVALIACAO) }}</p>
           <button type="submit" :disabled="avaliacao.processing" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Registrar avaliação</button>
         </form>
 
@@ -72,29 +74,36 @@
         <form v-if="can_validar && resumo.avaliacao?.resultado === 'aplicavel'" class="mt-5 grid gap-3 border-b border-slate-200 pb-5 sm:grid-cols-2 dark:border-slate-700" @submit.prevent="registrarDocumento">
           <label class="block text-sm text-slate-700 dark:text-slate-200">Competência
             <input v-model.number="documento.competencia" type="number" min="2022" :max="resumo.competencia_anual" required class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800" />
+            <ErroCampo :mensagem="documento.errors.competencia" />
           </label>
           <label class="block text-sm text-slate-700 dark:text-slate-200">Resultado conferido
             <select v-model="documento.resultado" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800">
               <option value="positiva">Positiva</option>
               <option value="nao_conforme">Não conforme</option>
             </select>
+            <ErroCampo :mensagem="documento.errors.resultado" />
           </label>
           <label class="block text-sm text-slate-700 dark:text-slate-200">Data da DCO
             <input v-model="documento.dt_documento" type="date" required class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800" />
+            <ErroCampo :mensagem="documento.errors.dt_documento" />
           </label>
           <label class="block text-sm text-slate-700 dark:text-slate-200">Apresentada à CEDEC em
             <input v-model="documento.dt_apresentacao" type="date" required class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800" />
+            <ErroCampo :mensagem="documento.errors.dt_apresentacao" />
           </label>
           <label class="block text-sm text-slate-700 dark:text-slate-200">Número SEI
             <input v-model="documento.num_sei" required maxlength="100" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800" />
+            <ErroCampo :mensagem="documento.errors.num_sei" />
           </label>
           <label class="block text-sm text-slate-700 dark:text-slate-200">Arquivo PDF (até 20 MiB)
-            <input type="file" accept="application/pdf,.pdf" required class="mt-1 w-full text-sm" @change="documento.arquivo = $event.target.files?.[0] || null" />
+            <input ref="arquivoInput" type="file" accept="application/pdf,.pdf" required class="mt-1 w-full text-sm" @change="documento.arquivo = $event.target.files?.[0] || null" />
+            <ErroCampo :mensagem="documento.errors.arquivo" />
           </label>
           <label class="block text-sm text-slate-700 dark:text-slate-200 sm:col-span-2">Observação
             <textarea v-model="documento.observacao" rows="2" maxlength="5000" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-800" />
+            <ErroCampo :mensagem="documento.errors.observacao" />
           </label>
-          <p v-if="Object.keys(documento.errors).length" class="text-sm text-red-600 sm:col-span-2">{{ Object.values(documento.errors).join(' ') }}</p>
+          <p v-if="errosGerais(documento, CAMPOS_DOCUMENTO)" class="text-sm text-red-600 dark:text-red-300 sm:col-span-2">{{ errosGerais(documento, CAMPOS_DOCUMENTO) }}</p>
           <button type="submit" :disabled="documento.processing" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 sm:col-span-2">Registrar DCO</button>
         </form>
 
@@ -123,7 +132,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, h, ref } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -133,6 +142,24 @@ const props = defineProps({
   can_validar: { type: Boolean, default: false },
   can_view: { type: Boolean, default: false },
 });
+
+const CAMPOS_AVALIACAO = ['resultado', 'fundamentacao', 'num_sei'];
+const CAMPOS_DOCUMENTO = ['competencia', 'resultado', 'dt_documento', 'dt_apresentacao', 'num_sei', 'arquivo', 'observacao'];
+
+const ErroCampo = (componentProps) => (componentProps.mensagem
+  ? h('span', { class: 'mt-1 block text-xs text-red-600 dark:text-red-300' }, componentProps.mensagem)
+  : null);
+ErroCampo.props = ['mensagem'];
+
+// Junta os erros de chaves sem campo proprio no formulario (ex.: avaliacao, dco).
+function errosGerais(form, campos) {
+  return Object.entries(form.errors)
+    .filter(([campo]) => !campos.includes(campo))
+    .map(([, mensagem]) => mensagem)
+    .join(' ');
+}
+
+const arquivoInput = ref(null);
 
 const avaliacao = useForm({ resultado: 'aplicavel', fundamentacao: '', num_sei: '', chave_idempotencia: crypto.randomUUID() });
 const documento = useForm({ competencia: props.resumo.competencia_anual, resultado: 'positiva', dt_documento: '', dt_apresentacao: '', num_sei: '', observacao: '', arquivo: null, chave_idempotencia: crypto.randomUUID() });
@@ -148,9 +175,15 @@ const classeSituacao = computed(() => ({
   nao_conforme: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 }[props.resumo.situacao] || 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-100'));
 
+// Datas puras (YYYY-MM-DD) nao passam por Date, que deslocaria um dia; valores com horario viram data local.
 function formatarData(valor) {
   if (!valor) return '—';
-  const [ano, mes, dia] = String(valor).slice(0, 10).split('-');
+  const texto = String(valor);
+  if (texto.length > 10) {
+    const data = new Date(texto);
+    if (!Number.isNaN(data.getTime())) return data.toLocaleDateString('pt-BR');
+  }
+  const [ano, mes, dia] = texto.slice(0, 10).split('-');
   return `${dia}/${mes}/${ano}`;
 }
 
@@ -165,7 +198,7 @@ function registrarDocumento() {
   documento.post(route('pae.protocolo.dco.documentos.store', props.protocolo.id), {
     preserveScroll: true,
     forceFormData: true,
-    onSuccess: () => { documento.reset('dt_documento', 'dt_apresentacao', 'num_sei', 'observacao', 'arquivo'); documento.chave_idempotencia = crypto.randomUUID(); },
+    onSuccess: () => { documento.reset('dt_documento', 'dt_apresentacao', 'num_sei', 'observacao', 'arquivo'); if (arquivoInput.value) arquivoInput.value.value = ''; documento.chave_idempotencia = crypto.randomUUID(); },
   });
 }
 </script>

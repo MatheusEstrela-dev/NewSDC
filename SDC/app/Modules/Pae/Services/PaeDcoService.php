@@ -9,9 +9,13 @@ use App\Modules\Pae\Models\PaeCcpae;
 use App\Modules\Pae\Models\PaeDcoAvaliacao;
 use App\Modules\Pae\Models\PaeDcoDocumento;
 use App\Modules\Pae\Models\PaeProtocolo;
+use App\Modules\Pae\Requests\AvaliarDcoRequest;
+use App\Modules\Pae\Requests\RegistrarDcoRequest;
 use App\Modules\Pae\Support\PaeDcoCiclo;
 use App\Modules\Pae\Support\TimelinePae;
 use Carbon\CarbonImmutable;
+use DateTimeInterface;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -19,7 +23,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Throwable;
@@ -28,12 +31,7 @@ final class PaeDcoService
 {
     public function avaliar(PaeProtocolo $protocolo, array $dados, User $user): PaeDcoAvaliacao
     {
-        $dados = Validator::make($dados, [
-            'resultado' => ['required', Rule::in(['aplicavel', 'nao_aplicavel'])],
-            'fundamentacao' => ['required', 'string', 'max:5000'],
-            'num_sei' => ['required', 'string', 'max:100'],
-            'chave_idempotencia' => ['required', 'uuid'],
-        ])->validate();
+        $dados = Validator::make($dados, AvaliarDcoRequest::regras())->validate();
         $dados['fundamentacao'] = trim($dados['fundamentacao']);
         $dados['num_sei'] = trim($dados['num_sei']);
         if ($dados['fundamentacao'] === '' || $dados['num_sei'] === '') {
@@ -44,6 +42,8 @@ final class PaeDcoService
             $locked = PaeProtocolo::query()->whereKey($protocolo->id)->lockForUpdate()->firstOrFail();
             $existente = $locked->avaliacoesDco()->where('chave_idempotencia', $dados['chave_idempotencia'])->first();
             if ($existente !== null) {
+                $this->exigirMesmosDados($existente, $dados, ['resultado', 'fundamentacao', 'num_sei']);
+
                 return $existente;
             }
 
@@ -64,16 +64,11 @@ final class PaeDcoService
 
     public function registrarDocumento(PaeProtocolo $protocolo, array $dados, UploadedFile $arquivo, User $user): PaeDcoDocumento
     {
-        $dados = Validator::make($dados + ['arquivo' => $arquivo], [
-            'competencia' => ['required', 'integer', 'between:2022,'.CarbonImmutable::today()->year],
-            'resultado' => ['required', Rule::in(['positiva', 'nao_conforme'])],
-            'dt_documento' => ['required', 'date', 'before_or_equal:today'],
-            'dt_apresentacao' => ['required', 'date', 'before_or_equal:today'],
-            'num_sei' => ['required', 'string', 'max:100'],
-            'observacao' => ['nullable', 'string', 'max:5000'],
-            'chave_idempotencia' => ['required', 'uuid'],
-            'arquivo' => ['required', 'file', 'mimes:pdf', 'max:20480'],
-        ])->validate();
+        $dados = Validator::make(
+            $dados + ['arquivo' => $arquivo],
+            RegistrarDcoRequest::regras($dados['competencia'] ?? null),
+            RegistrarDcoRequest::mensagens(),
+        )->validate();
         $dados['num_sei'] = trim($dados['num_sei']);
         if ($dados['num_sei'] === '') {
             throw ValidationException::withMessages(['num_sei' => 'Informe o número SEI.']);
@@ -85,6 +80,10 @@ final class PaeDcoService
                 $locked = PaeProtocolo::query()->whereKey($protocolo->id)->lockForUpdate()->firstOrFail();
                 $existente = $locked->documentosDco()->where('chave_idempotencia', $dados['chave_idempotencia'])->first();
                 if ($existente !== null) {
+                    $this->exigirMesmosDados($existente, $dados, [
+                        'competencia', 'resultado', 'dt_documento', 'dt_apresentacao', 'num_sei',
+                    ]);
+
                     return $existente;
                 }
                 if ($locked->avaliacoesDco()->first()?->resultado !== 'aplicavel') {
@@ -127,6 +126,27 @@ final class PaeDcoService
             }
             throw $e;
         }
+    }
+
+    /**
+     * Mesma chave com dados de negocio diferentes e reuso indevido, nao repeticao.
+     *
+     * @param  list<string>  $campos
+     */
+    private function exigirMesmosDados(Model $existente, array $dados, array $campos): void
+    {
+        foreach ($campos as $campo) {
+            if ($this->normalizar($existente->getAttribute($campo)) !== $this->normalizar($dados[$campo])) {
+                throw ValidationException::withMessages([
+                    'chave_idempotencia' => 'Esta chave de idempotência já foi usada com outros dados.',
+                ]);
+            }
+        }
+    }
+
+    private function normalizar(mixed $valor): string
+    {
+        return $valor instanceof DateTimeInterface ? $valor->format('Y-m-d') : (string) $valor;
     }
 
     public function resumo(PaeProtocolo $protocolo, CarbonImmutable $hoje): array
