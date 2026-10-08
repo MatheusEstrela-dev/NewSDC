@@ -1,0 +1,60 @@
+/*
+ * Barra de rolagem padrao do sistema: fina e discreta, no mesmo desenho da
+ * sidebar, para qualquer area rolavel (paginas, tabelas, modais) de todos os
+ * modulos.
+ *
+ * Dois mecanismos, porque nenhum cobre todos os navegadores sozinho:
+ * - Padrao W3C (scrollbar-width/scrollbar-color): Firefox e Chromium 121+
+ *   (Chrome, Edge, Opera). Nesses, quando o padrao esta ativo o Chromium
+ *   ignora os pseudo-elementos ::-webkit-scrollbar.
+ * - ::-webkit-scrollbar: Safari e Chromium antigos, que nao suportam
+ *   scrollbar-color. O @supports garante que um nao anule o outro.
+ *
+ * Classes que escondem a barra (.scrollbar-hide, .hide-scrollbar,
+ * .tira-rolavel) seguem valendo: seletor de classe vence o universal.
+ */
+
+:root {
+  --sdc-scrollbar-size: 6px;
+  --sdc-scrollbar-thumb: rgb(100 116 139 / 0.35);
+  --sdc-scrollbar-thumb-hover: rgb(100 116 139 / 0.55);
+}
+
+/* Tema escuro e a sidebar, que e escura nos dois temas. */
+.dark,
+.sidebar-nav {
+  --sdc-scrollbar-thumb: rgb(255 255 255 / 0.2);
+  --sdc-scrollbar-thumb-hover: rgb(255 255 255 / 0.3);
+}
+
+@supports (scrollbar-color: auto) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sdc-scrollbar-thumb) transparent;
+  }
+}
+
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: var(--sdc-scrollbar-size);
+    height: var(--sdc-scrollbar-size);
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--sdc-scrollbar-thumb);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--sdc-scrollbar-thumb-hover);
+  }
+
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+}
