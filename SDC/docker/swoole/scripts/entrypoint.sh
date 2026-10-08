@@ -296,6 +296,20 @@ else
 fi
 CONN_PER_INSTANCE=$(((WORKERS * CONN_POR_WORKER) + TASK_WORKERS + QUEUE_WORKERS))
 CONN_PROJECTED=$((CONN_PER_INSTANCE * APP_INSTANCES + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE))
+
+# Cada membro pode virar primario. Reservar tambem as sessoes leitoras que
+# podem continuar abertas nele apos uma promocao, inclusive as de tasks/filas.
+READ_CONN_PROJECTED=0
+if [ "${DB_READ_ENABLED:-false}" = "true" ]; then
+    READ_HOST_COUNT=$(printf '%s' "${DB_READ_HOSTS:-}" | awk -F',' '{ n=0; for(i=1;i<=NF;i++) { gsub(/[[:space:]]/, "", $i); if(length($i)) n++ } print n }')
+    READ_CONN_POR_WORKER=1
+    if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+        READ_CONN_POR_WORKER="${SWOOLE_PG_READ_POOL_SIZE:-2}"
+        require_uint SWOOLE_PG_READ_POOL_SIZE "$READ_CONN_POR_WORKER"
+    fi
+    READ_CONN_PER_INSTANCE=$(((WORKERS * READ_CONN_POR_WORKER + TASK_WORKERS + QUEUE_WORKERS) * READ_HOST_COUNT))
+    READ_CONN_PROJECTED=$((READ_CONN_PER_INSTANCE * APP_INSTANCES + EXTERNAL_DB_CONSUMERS * READ_HOST_COUNT))
+fi
 echo "Modo de conexao: ${MODO_CONN}"
 
 # Com POOLER, o destino das conexoes do app muda e a conta acima deixa de ser
@@ -333,6 +347,11 @@ if [ -n "${POOLER_MODE}" ]; then
     echo "Conexoes PG projetadas: ${PGB_POOL_SIZE} do pool + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
 else
     echo "Conexoes PG projetadas: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
+fi
+
+if [ "$READ_CONN_PROJECTED" -gt 0 ]; then
+    CONN_PROJECTED=$((CONN_PROJECTED + READ_CONN_PROJECTED))
+    echo "Reserva de leitores por membro: ${READ_CONN_PROJECTED}; teto combinado: ${CONN_PROJECTED}"
 fi
 
 if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then

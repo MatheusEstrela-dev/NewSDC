@@ -1,0 +1,186 @@
+# Aplicar sobre compose.homolog.yml. Nunca montar volumes ativos em dois
+# containers Postgres.
+# A adocao de PGDATA existente exige backup, parada do Postgres antigo,
+# preparacao das roles/configuracao e PATRONI_ALLOW_EXISTING_DATA=true.
+x-ha-app-image: &ha-app-image ${HA_APP_IMAGE:-newsdc-swoole-ha:latest}
+
+x-ha-client-dependencies: &ha-client-dependencies
+  db:
+    condition: service_started
+  db_replica_1:
+    condition: service_started
+  db_replica_2:
+    condition: service_started
+  redis:
+    condition: service_started
+
+x-ha-client-environment: &ha-client-environment
+  DB_HOST: db,db_replica_1,db_replica_2
+  DB_PORT: 6434
+  DB_READ_ENABLED: "true"
+  DB_READ_HOSTS: ${DB_READ_HOSTS:-db,db_replica_1,db_replica_2}
+  DB_READ_PORT: ${DB_READ_PORT:-5432}
+  SWOOLE_PG_POOL_SIZE: 2
+  SWOOLE_PG_READ_POOL_SIZE: 1
+  DB_CONNECT_TIMEOUT: 2
+  PG_MAX_CONNECTIONS: 200
+  RANKING_DB_HOST: db,db_replica_1,db_replica_2
+  RANKING_DB_PORT: 6434
+  RANKING_SOURCE_HOST: db,db_replica_1,db_replica_2
+  RANKING_SOURCE_PORT: 6434
+
+x-patroni-environment: &patroni-environment
+  PATRONI_SCOPE: ${PATRONI_SCOPE:-sdc-homolog}
+  PATRONI_SUPERUSER_USERNAME: ${DB_USERNAME:-sdc}
+  PATRONI_SUPERUSER_PASSWORD: ${DB_PASSWORD:-sdc}
+  PATRONI_REPLICATION_USERNAME: replicator
+  PATRONI_REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replicator}
+  PATRONI_RESTAPI_USERNAME: patroni
+  PATRONI_RESTAPI_PASSWORD: ${PATRONI_API_PASSWORD:-patroni-homolog}
+  PATRONI_CTL_USERNAME: patroni
+  PATRONI_CTL_PASSWORD: ${PATRONI_API_PASSWORD:-patroni-homolog}
+  PATRONI_ALLOW_EXISTING_DATA: ${PATRONI_ALLOW_EXISTING_DATA:-false}
+  POSTGRES_DB: ${DB_DATABASE:-sdc}
+
+x-etcd-environment: &etcd-environment
+  ETCD_EMBEDDED: "true"
+  ETCD_DATA_DIR: /etcd-data
+  ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+  ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+  ETCD_INITIAL_CLUSTER: etcd_1=http://etcd_1:2380,etcd_2=http://etcd_2:2380,etcd_3=http://etcd_3:2380
+  ETCD_INITIAL_CLUSTER_TOKEN: ${PATRONI_SCOPE:-sdc-homolog}
+  ETCD_INITIAL_CLUSTER_STATE: new
+  ETCD_AUTO_COMPACTION_RETENTION: "1"
+
+services:
+  app:
+    image: *ha-app-image
+    environment: *ha-client-environment
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue:
+    image: *ha-app-image
+    environment: *ha-client-environment
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue_medalhao:
+    image: *ha-app-image
+    environment: *ha-client-environment
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue_ranking:
+    image: *ha-app-image
+    environment: *ha-client-environment
+    depends_on: !override
+      <<: *ha-client-dependencies
+  scheduler:
+    image: *ha-app-image
+    environment: *ha-client-environment
+    depends_on: !override
+      <<: *ha-client-dependencies
+  reverb:
+    image: *ha-app-image
+    environment: *ha-client-environment
+    depends_on: !override
+      <<: *ha-client-dependencies
+  pgbouncer:
+    environment:
+      DB_HOST: db,db_replica_1,db_replica_2
+      DB_PORT: 6434
+      SERVER_CONNECT_TIMEOUT: 2
+      SERVER_LOGIN_RETRY: 1
+      QUERY_WAIT_TIMEOUT: 15
+    depends_on: !override
+      db:
+        condition: service_started
+      db_replica_1:
+        condition: service_started
+      db_replica_2:
+        condition: service_started
+
+  db: &patroni-node
+    image: newsdc-postgis-patroni:18-3.6-4.1.5-etcd-proxy
+    build:
+      context: ./patroni
+      dockerfile: Dockerfile
+    entrypoint: !override [/usr/local/bin/entrypoint.sh]
+    command: !override [patroni, /run/patroni/patroni.yml]
+    # PID 1 precisa recolher orfaos. O Patroni sobe o postmaster com fork
+    # duplo, entao ele vira filho do PID 1; o supervise.py nao faz wait() em
+    # quem nao criou. Sem init, o postmaster parado vira zumbi, o Patroni
+    # espera para sempre ele sumir e o membro trava em "pg_rewind in
+    # progress" (aconteceu no db_replica_2 em 2026-10-07).
+    init: true
+    user: "0:0"
+    mem_limit: 4480m
+    cpus: 2.25
+    environment:
+      <<: [*patroni-environment, *etcd-environment]
+      PATRONI_NAME: db
+      ETCD_NAME: etcd_1
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd_1:2379
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd_1:2380
+      PATRONI_RESTAPI_CONNECT_ADDRESS: db:8008
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: db:5432
+      PATRONI_POSTGRESQL_DATA_DIR: /var/lib/postgresql/18/docker
+    volumes: !override
+      - homolog_pgdata:/var/lib/postgresql
+      - homolog_etcd_1:/etcd-data
+    networks: !override
+      homolog:
+        aliases: [etcd_1]
+    # Acesso administrativo local. Clientes internos usam os tres enderecos.
+    ports: !override
+      - "127.0.0.1:5435:6434"
+      - "127.0.0.1:5438:6435"
+    depends_on: !reset {}
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8008/readiness >/dev/null && etcdctl --endpoints=http://127.0.0.1:2379 --command-timeout=2s endpoint health >/dev/null 2>&1 && curl -fsS http://127.0.0.1:8404/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 60s
+    stop_grace_period: 90s
+
+  db_replica_1:
+    <<: *patroni-node
+    environment:
+      <<: [*patroni-environment, *etcd-environment]
+      PATRONI_NAME: db_replica_1
+      ETCD_NAME: etcd_2
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd_2:2379
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd_2:2380
+      PATRONI_RESTAPI_CONNECT_ADDRESS: db_replica_1:8008
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: db_replica_1:5432
+      PATRONI_POSTGRESQL_DATA_DIR: /var/lib/postgresql/pgdata
+    volumes: !override
+      - homolog_pgdata_replica_1:/var/lib/postgresql
+      - homolog_etcd_2:/etcd-data
+    networks: !override
+      homolog:
+        aliases: [etcd_2]
+    ports: !override []
+
+  db_replica_2:
+    <<: *patroni-node
+    environment:
+      <<: [*patroni-environment, *etcd-environment]
+      PATRONI_NAME: db_replica_2
+      ETCD_NAME: etcd_3
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd_3:2379
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd_3:2380
+      PATRONI_RESTAPI_CONNECT_ADDRESS: db_replica_2:8008
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: db_replica_2:5432
+      PATRONI_POSTGRESQL_DATA_DIR: /var/lib/postgresql/pgdata
+    volumes: !override
+      - homolog_pgdata_replica_2:/var/lib/postgresql
+      - homolog_etcd_3:/etcd-data
+    networks: !override
+      homolog:
+        aliases: [etcd_3]
+    ports: !override []
+
+volumes:
+  homolog_etcd_1:
+  homolog_etcd_2:
+  homolog_etcd_3:
