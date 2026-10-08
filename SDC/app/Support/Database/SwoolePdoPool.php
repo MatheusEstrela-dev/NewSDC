@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Database;
 
 use PDO;
+use Illuminate\Database\Connectors\PostgresConnector;
 use RuntimeException;
 use Swoole\Coroutine\Channel;
 
@@ -17,11 +18,9 @@ use Swoole\Coroutine\Channel;
  * Postgres corrompe. Este pool da a cada coroutine uma conexao propria,
  * emprestada e devolvida via Channel (bloqueio cooperativo, coroutine-safe).
  *
- * Decisao de design: NAO usamos Swoole\Database\PDOConfig porque ele nao expoe
- * sslmode de forma confiavel, e o Postgres da Azure exige TLS. Montamos o DSN
- * pgsql completo (com sslmode/sslrootcert) a partir do config do Laravel e
- * criamos PDO direto. ATTR_PERSISTENT e sempre removido (persistente + coroutine
- * = vazamento de conexao entre coroutines).
+ * O conector do Laravel preserva TLS, timezone, search_path e opcoes PDO tambem
+ * nos leitores. ATTR_PERSISTENT e sempre removido: a conexao pertence apenas
+ * a coroutine que a adquiriu.
  *
  * LIMITACOES (precisam de validacao em build Swoole real antes de producao):
  *  - hooking de pdo_pgsql sob coroutine depende da versao do Swoole; medir.
@@ -37,10 +36,7 @@ final class SwoolePdoPool
      * @param  array<int,mixed>  $options
      */
     private function __construct(
-        private readonly string $dsn,
-        private readonly ?string $username,
-        private readonly ?string $password,
-        private readonly array $options,
+        private readonly array $config,
         private readonly int $size,
         private readonly float $timeout,
     ) {
@@ -58,18 +54,13 @@ final class SwoolePdoPool
             throw new RuntimeException("SwoolePdoPool suporta apenas conexoes pgsql; '{$connection}' invalida.");
         }
 
-        $dsn = sprintf(
-            'pgsql:host=%s;port=%s;dbname=%s',
-            $config['host'] ?? '127.0.0.1',
-            $config['port'] ?? '5432',
-            $config['database'] ?? 'sdc',
-        );
+        return self::fromConfig($config, $size, $timeout);
+    }
 
-        if (! empty($config['sslmode'])) {
-            $dsn .= ';sslmode='.$config['sslmode'];
-        }
-        if (! empty($config['sslrootcert'])) {
-            $dsn .= ';sslrootcert='.$config['sslrootcert'];
+    public static function fromConfig(array $config, int $size = 16, float $timeout = 3.0): self
+    {
+        if (($config['driver'] ?? null) !== 'pgsql') {
+            throw new RuntimeException('SwoolePdoPool suporta apenas conexoes pgsql.');
         }
 
         $options = ($config['options'] ?? []) + [
@@ -78,12 +69,10 @@ final class SwoolePdoPool
         ];
         // Nunca persistente no pool: a conexao precisa pertencer a coroutine.
         unset($options[PDO::ATTR_PERSISTENT]);
+        $config['options'] = $options;
 
         return new self(
-            $dsn,
-            $config['username'] ?? null,
-            $config['password'] ?? null,
-            $options,
+            $config,
             max(1, $size),
             max(0.001, $timeout),
         );
@@ -121,7 +110,7 @@ final class SwoolePdoPool
         $fill = function (): void {
             while ($this->created < $this->size) {
                 try {
-                    $pdo = new \PDO($this->dsn, $this->username, $this->password, $this->options);
+                    $pdo = $this->connect();
                 } catch (\Throwable $e) {
                     break;
                 }
@@ -171,7 +160,7 @@ final class SwoolePdoPool
             $this->created++;
 
             try {
-                return new PDO($this->dsn, $this->username, $this->password, $this->options);
+                return $this->connect();
             } catch (\Throwable $e) {
                 // Rollback do contador: sem isso, falhas transitorias de conexao
                 // esgotam a capacidade ate created>=size e o pop() trava o pool.
@@ -195,6 +184,9 @@ final class SwoolePdoPool
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
+            if ($this->config['replica_routing'] ?? false) {
+                $pdo->exec('SET statement_timeout = DEFAULT; SET idle_in_transaction_session_timeout = DEFAULT');
+            }
         } catch (\Throwable $e) {
             $this->discard();
 
@@ -202,6 +194,14 @@ final class SwoolePdoPool
         }
 
         $this->channel->push($pdo);
+    }
+
+    private function connect(): PDO
+    {
+        $connector = ($this->config['read_only'] ?? false)
+            ? new ReadonlyPostgresConnector : new PostgresConnector;
+
+        return $connector->connect($this->config);
     }
 
     /**

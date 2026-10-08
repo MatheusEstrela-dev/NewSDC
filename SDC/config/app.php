@@ -191,6 +191,7 @@ return [
 
     'providers' => ServiceProvider::defaultProviders()->merge([
         App\Providers\AppServiceProvider::class,
+        App\Providers\ReplicaRoutingServiceProvider::class,
         App\Providers\FilesystemServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         // Necessario para tempo real: registra /broadcasting/auth e carrega

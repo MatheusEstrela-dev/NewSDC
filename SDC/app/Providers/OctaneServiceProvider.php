@@ -226,6 +226,24 @@ class OctaneServiceProvider extends ServiceProvider
             $timeout = (float) env('SWOOLE_PG_POOL_TIMEOUT', 3.0);
 
             $this->app->singleton('swoole.pgsql.pool', fn () => SwoolePdoPool::fromConnection('pgsql', $size, $timeout));
+            $this->app->singleton('swoole.pgsql.read.pools', function () use ($timeout): array {
+                $config = $this->app['config']['database.connections.pgsql'];
+                $pools = [];
+                if (! ($config['replica_routing'] ?? false)) {
+                    return $pools;
+                }
+
+                $read = array_replace($config, $config['read']);
+                foreach ((array) $read['host'] as $host) {
+                    $pools[$host] = SwoolePdoPool::fromConfig(
+                        array_replace($read, ['host' => $host]),
+                        (int) env('SWOOLE_PG_READ_POOL_SIZE', 2),
+                        $timeout,
+                    );
+                }
+
+                return $pools;
+            });
             if ($this->hooksEnabled()) {
                 $this->app->make('swoole.pgsql.pool')->warm();
             }

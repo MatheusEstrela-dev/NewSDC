@@ -28,6 +28,24 @@ use Illuminate\Support\Str;
 */
 $emularPrepares = filter_var(env('DB_EMULATE_PREPARES', false), FILTER_VALIDATE_BOOLEAN);
 
+$pgConnectTimeout = max(1, (int) env('DB_CONNECT_TIMEOUT', 2));
+$readHosts = array_values(array_filter(array_map('trim', explode(',', (string) env('DB_READ_HOSTS', '')))));
+$replicaRouting = filter_var(env('DB_READ_ENABLED', false), FILTER_VALIDATE_BOOLEAN) && $readHosts !== [];
+$readWriteConfig = $replicaRouting ? [
+    'replica_routing' => true,
+    'sticky' => true,
+    'read' => [
+        'host' => $readHosts,
+        'read_only' => true,
+        'port' => env('DB_READ_PORT', env('DB_PORT', '5432')),
+        'application_name' => env('APP_NAME', 'sdc-laravel').'-reader',
+    ],
+    'write' => [
+        'host' => env('DB_HOST', '127.0.0.1'),
+        'port' => env('DB_PORT', '5432'),
+    ],
+] : [];
+
 return [
 
     /*
@@ -232,6 +250,7 @@ return [
         // e em dev (db_ai container Docker com Citus + pgvector + PostGIS).
         'pgsql' => [
             'driver' => 'pgsql',
+            ...$readWriteConfig,
             'url' => env('DATABASE_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
@@ -260,6 +279,7 @@ return [
                 // conexao entre requests do worker e vaza estado/transacao.
                 // Ligar apenas via env em runtime nao-residente (ex.: FPM legado).
                 PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
+                PDO::ATTR_TIMEOUT => $pgConnectTimeout,
             ],
         ],
 
@@ -279,7 +299,7 @@ return [
             'timezone' => 'UTC',
             'sslmode' => env('RANKING_DB_SSLMODE', 'prefer'),
             'application_name' => 'sdc-ranking-writer',
-            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares],
+            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares, PDO::ATTR_TIMEOUT => $pgConnectTimeout],
         ],
 
         // Usuario leitor exclusivo das projecoes. Conceder SELECT no destino.
@@ -297,7 +317,7 @@ return [
             'timezone' => 'UTC',
             'sslmode' => env('RANKING_DB_SSLMODE', 'prefer'),
             'application_name' => 'sdc-ranking-reader',
-            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares],
+            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares, PDO::ATTR_TIMEOUT => $pgConnectTimeout],
         ],
 
         // Origem somente leitura, preferencialmente replica. O DBA deve
@@ -317,7 +337,7 @@ return [
             'timezone' => 'UTC',
             'sslmode' => env('RANKING_SOURCE_SSLMODE', 'prefer'),
             'application_name' => 'sdc-ranking-source-ro',
-            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares],
+            'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares, PDO::ATTR_TIMEOUT => $pgConnectTimeout],
         ],
 
         // Conexao isolada para jobs de webhook (ProcessWebhook, ProcessInboundWebhook).
@@ -345,6 +365,7 @@ return [
                 // false por padrao; true so ao ligar o PgBouncer. Ver o bloco no
                 // topo deste arquivo.
                 PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
+                PDO::ATTR_TIMEOUT => $pgConnectTimeout,
             ],
         ],
 
@@ -386,6 +407,7 @@ return [
                 PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
                 // Mesmo racional da conexao pgsql: persistente e inseguro sob Octane.
                 PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
+                PDO::ATTR_TIMEOUT => $pgConnectTimeout,
             ],
         ],
 

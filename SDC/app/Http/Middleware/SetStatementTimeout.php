@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Support\Database\ConsistentPostgresConnection;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,18 @@ class SetStatementTimeout
         if (config('resilience.db.pooler_mode') === 'transaction'
             || ! config('resilience.db.statement_timeout_per_route', true)) {
             return $next($request);
+        }
+
+        $connection = DB::connection();
+        if ($connection instanceof ConsistentPostgresConnection) {
+            $previousTimeout = $connection->getOperationTimeout();
+            try {
+                $connection->setOperationTimeout($timeoutMs);
+
+                return $next($request);
+            } finally {
+                $connection->setOperationTimeout($previousTimeout);
+            }
         }
 
         // SET LOCAL so funciona dentro de transacao explicita; fora dela

@@ -20,6 +20,10 @@ final class CoroutineDatabaseManager extends DatabaseManager
 {
     private const CTX_KEY = '__sdc_pgsql_coroutine_connection';
 
+    private const READERS_KEY = '__sdc_pgsql_coroutine_readers';
+
+    private const WRITER_KEY = '__sdc_pgsql_coroutine_writer';
+
     /**
      * Pool guardado na PRIMEIRA aquisicao, e nao resolvido na devolucao.
      *
@@ -32,6 +36,10 @@ final class CoroutineDatabaseManager extends DatabaseManager
      * devolucao independente do ciclo de vida do container.
      */
     private ?SwoolePdoPool $pool = null;
+
+    private array $readPools = [];
+
+    private ?int $nextReplica = null;
 
     public function connection($name = null)
     {
@@ -80,15 +88,28 @@ final class CoroutineDatabaseManager extends DatabaseManager
         } catch (\Throwable $e) {
         }
 
-        try {
-            $this->pool->release($conn->getPdo());
-        } catch (\Throwable $e) {
+        $writer = $ctx[self::WRITER_KEY] ?? null;
+        if ($writer instanceof \PDO) {
             try {
+                if ($conn->getRawPdo() === $writer) {
+                    $this->pool->release($writer);
+                } else {
+                    $this->pool->discard();
+                }
+            } catch (\Throwable) {
                 $this->pool->discard();
-            } catch (\Throwable $e) {
-                // Nada a fazer: ja estamos no caminho de limpeza.
             }
         }
+        unset($ctx[self::WRITER_KEY]);
+
+        foreach ($ctx[self::READERS_KEY] ?? [] as [$readPool, $readPdo]) {
+            try {
+                $readPool->release($readPdo);
+            } catch (\Throwable) {
+                $readPool->discard();
+            }
+        }
+        unset($ctx[self::READERS_KEY]);
 
         unset($ctx[self::CTX_KEY]);
     }
@@ -113,19 +134,63 @@ final class CoroutineDatabaseManager extends DatabaseManager
     {
         $pool = $this->app->make('swoole.pgsql.pool');
         $pdo = $pool->acquire();
+        $ctx = Coroutine::getContext();
+        $ctx[self::WRITER_KEY] = $pdo;
         $config = $this->app['config']['database.connections.pgsql'];
 
         // Instancia a PostgresConnection com o PDO emprestado (o construtor ja
         // aplica grammar/processor pgsql). configure() (do DatabaseManager pai)
         // injeta event dispatcher (DB::listen/circuit breaker), transaction
         // manager e reconnector — ConnectionFactory::createConnection e protected.
-        $connection = new \Illuminate\Database\PostgresConnection(
+        $class = ($config['replica_routing'] ?? false)
+            ? ConsistentPostgresConnection::class : \Illuminate\Database\PostgresConnection::class;
+        $connection = new $class(
             $pdo,
             $config['database'] ?? '',
             $config['prefix'] ?? '',
             $config
         );
 
-        return $this->configure($connection, 'write');
+        if ($connection instanceof ConsistentPostgresConnection) {
+            $this->readPools = $this->app->make('swoole.pgsql.read.pools');
+            $pools = $this->readPools;
+            $ctx = Coroutine::getContext();
+            $this->nextReplica ??= random_int(0, count($pools) - 1);
+            $connection->startReplicaAt($this->nextReplica++);
+            $connection->setReadPdoConfig(array_replace($config, $config['read']));
+            $connection->setReplicaPdoResolver(
+                static function (string $host) use ($pools, $ctx): \PDO {
+                    $readers = $ctx[self::READERS_KEY] ?? [];
+                    if (! isset($readers[$host])) {
+                        $readers[$host] = [$pools[$host], $pools[$host]->acquire()];
+                        $ctx[self::READERS_KEY] = $readers;
+                    }
+
+                    return $readers[$host][1];
+                },
+                static function (string $host) use ($ctx): void {
+                    $readers = $ctx[self::READERS_KEY] ?? [];
+                    if (isset($readers[$host])) {
+                        $readers[$host][0]->discard();
+                        unset($readers[$host]);
+                        $ctx[self::READERS_KEY] = $readers;
+                    }
+                },
+            );
+        }
+
+        $this->configure($connection, null);
+        $connection->setReconnector(static function (Connection $connection) use ($pool, $ctx): void {
+            if (isset($ctx[self::WRITER_KEY])) {
+                $pool->discard();
+                unset($ctx[self::WRITER_KEY]);
+            }
+            $pdo = $pool->acquire();
+            $ctx[self::WRITER_KEY] = $pdo;
+            $connection->setPdo($pdo);
+            $connection->setReadPdo(null);
+        });
+
+        return $connection;
     }
 }
