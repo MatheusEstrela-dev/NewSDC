@@ -14,10 +14,12 @@ use App\Modules\Pae\Requests\EmitirCcpaeRequest;
 use App\Modules\Pae\Services\PaeCcpaeService;
 use App\Modules\Pae\Services\PaeAdmissibilidadeService;
 use App\Modules\Pae\Services\PaeComunicacaoService;
+use App\Modules\Pae\Services\PaeDcoService;
 use App\Modules\Pae\Services\PaeNotificacaoService;
 use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
 use App\Services\Export\CsvExportService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +37,7 @@ class PaeProtocoloController extends Controller
         private readonly PaeNotificacaoService $notificacoes,
         private readonly PaeAdmissibilidadeService $admissibilidade,
         private readonly PaeComunicacaoService $comunicacoes,
+        private readonly PaeDcoService $dco,
     ) {
     }
 
@@ -57,7 +60,8 @@ class PaeProtocoloController extends Controller
             $filters['restringir_ao_analista'] = $user->id;
         }
 
-        $protocolos = $this->prazos->anotarListagem($this->service->list($filters));
+        $protocolos = $this->dco->anotarListagem(
+            $this->prazos->anotarListagem($this->service->list($filters)), CarbonImmutable::today());
         $statistics = $this->service->getStatistics($podeVerTodos ? null : $user->id);
 
         $analistas = DB::table('users')
@@ -130,6 +134,8 @@ class PaeProtocoloController extends Controller
             'prazo'            => ['tipo' => 'edicao',      'titulo' => 'Prazo Atualizado'],
             'ccpae'            => ['tipo' => 'analise',     'titulo' => 'CCPAE Emitido'],
             'ficha_anexo_b'    => ['tipo' => 'edicao',      'titulo' => 'Ficha cadastral atualizada'],
+            'dco_avaliacao'    => ['tipo' => 'analise',     'titulo' => 'Aplicabilidade da DCO avaliada'],
+            'dco_documento'    => ['tipo' => 'analise',     'titulo' => 'DCO registrada'],
         ];
 
         $timeline = $protocolo->timeline->map(function ($item) use ($eventoMap) {

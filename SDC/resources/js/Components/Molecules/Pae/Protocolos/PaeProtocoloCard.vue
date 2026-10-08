@@ -46,6 +46,9 @@
       <div v-if="protocolo.correcaoPrazoVencido" class="text-sm font-semibold text-red-700 dark:text-red-300">
         Correção transitória vencida: avaliação da CEDEC pendente
       </div>
+      <div v-if="protocolo.dcoSituacao" class="text-sm font-medium" :class="['atrasada', 'nao_conforme'].includes(protocolo.dcoSituacao) ? 'text-red-700 dark:text-red-300' : 'text-slate-600 dark:text-slate-300'">
+        DCO: {{ protocolo.dcoSituacao.replaceAll('_', ' ') }}
+      </div>
     </div>
 
     <div class="mt-5 flex items-center justify-between gap-2">
@@ -62,6 +65,7 @@
           { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo.id),  allowed: canCheck },
           { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo.id),    allowed: canPdf },
           { action: 'ficha',  placement: 'menu', aliasOverride: 'view', handler: () => $emit('ficha', protocolo.id) },
+          { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'DCO', handler: () => $emit('dco', protocolo.id) },
           { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo.id), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
           { action: 'relate', placement: 'menu', handler: () => $emit('relate', protocolo.id), allowed: canCreate },
         ]"
@@ -115,5 +119,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'check', 'pdf', 'ficha', 'archive', 'options', 'assign', 'relate']);
+defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'check', 'pdf', 'ficha', 'dco', 'archive', 'options', 'assign', 'relate']);
 </script>

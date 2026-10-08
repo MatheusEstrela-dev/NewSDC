@@ -4,6 +4,7 @@ use App\Modules\Pae\Controllers\PaeFormularioController;
 use App\Modules\Pae\Controllers\PaeFichaAnexoBController;
 use App\Modules\Pae\Controllers\PaeAdmissibilidadeController;
 use App\Modules\Pae\Controllers\PaeComunicacaoController;
+use App\Modules\Pae\Controllers\PaeDcoController;
 use App\Modules\Pae\Controllers\PaeNotificacaoController;
 use App\Modules\Pae\Controllers\PaeProtocoloController;
 
@@ -86,6 +87,22 @@ Route::prefix('pae')->name('pae.')->group(function () {
     Route::put('/protocolo/{paeProtocolo}/ficha-anexo-b', [PaeFichaAnexoBController::class, 'salvar'])
         ->name('protocolo.ficha-anexo-b.salvar')
         ->middleware('can:pae.protocolos.edit');
+
+    Route::get('/protocolo/{paeProtocolo}/dco', [PaeDcoController::class, 'show'])
+        ->name('protocolo.dco.show')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::post('/protocolo/{paeProtocolo}/dco/avaliacoes', [PaeDcoController::class, 'avaliar'])
+        ->name('protocolo.dco.avaliar')
+        ->middleware('can:pae.protocolos.validar');
+
+    Route::post('/protocolo/{paeProtocolo}/dco/documentos', [PaeDcoController::class, 'registrar'])
+        ->name('protocolo.dco.documentos.store')
+        ->middleware('can:pae.protocolos.validar');
+
+    Route::get('/protocolo/{paeProtocolo}/dco/documentos/{paeDcoDocumento}/download', [PaeDcoController::class, 'download'])
+        ->name('protocolo.dco.documentos.download')
+        ->middleware('can:pae.protocolos.view');
 
     Route::get('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'show'])
         ->name('protocolo.admissibilidade.show')

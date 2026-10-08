@@ -116,6 +116,16 @@ class PaeProtocolo extends Model implements Rastreavel
         return $this->hasOne(PaeCcpae::class, 'protocolo_id')->latestOfMany('id');
     }
 
+    public function avaliacoesDco(): HasMany
+    {
+        return $this->hasMany(PaeDcoAvaliacao::class, 'protocolo_id')->orderByDesc('id');
+    }
+
+    public function documentosDco(): HasMany
+    {
+        return $this->hasMany(PaeDcoDocumento::class, 'protocolo_id');
+    }
+
     public function municipiosImpactados(): HasMany
     {
         return $this->hasMany(PaeMunicipioImpactado::class, 'protocolo_id');

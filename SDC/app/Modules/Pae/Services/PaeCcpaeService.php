@@ -31,6 +31,7 @@ final class PaeCcpaeService
         private readonly PaeProtocoloWorkflow $workflow,
         private readonly PaeComunicacaoService $comunicacoes,
         private readonly OutboxDispatcher $outbox,
+        private readonly PaeDcoService $dco,
     ) {}
 
     public function emitir(PaeProtocolo $protocolo, EmitirCcpaeDTO $dados, User $user): PaeCcpae
@@ -49,6 +50,8 @@ final class PaeCcpaeService
                     throw ValidationException::withMessages(['ccpae' => 'Este protocolo ja tem CCPAE emitido.']);
                 }
 
+                $evidencia = $this->dco->evidenciaParaEmissao($protocolo, $dados->dtEmissao);
+
                 $this->workflow->transitar(
                     $protocolo,
                     PaeProtocoloStatus::CCPAE,
@@ -65,6 +68,8 @@ final class PaeCcpaeService
                     'status' => PaeCcpae::STATUS_ATIVO,
                     'dt_licenca_operacao' => $dados->dtLicencaOperacao?->toDateString(),
                     'emitido_por' => $user->id,
+                    'dco_avaliacao_id' => $evidencia['avaliacao']->id,
+                    'dco_documento_id' => $evidencia['documento']?->id,
                 ]);
 
                 PaeProtocolo::query()->whereKey($protocolo->getKey())->update([

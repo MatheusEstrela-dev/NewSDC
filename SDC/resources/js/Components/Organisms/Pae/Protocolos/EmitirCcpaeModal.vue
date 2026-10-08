@@ -31,7 +31,10 @@
         <p class="text-sm text-slate-600 dark:text-slate-300">
           Vigente ate: <span class="font-semibold">{{ vencimentoPrevisto || '—' }}</span>
         </p>
-        <InputError v-if="form.errors.status || form.errors.ccpae" :message="form.errors.status || form.errors.ccpae" />
+        <p class="text-sm text-slate-700 dark:text-slate-200">DCO: {{ (protocolo?.dcoSituacao || 'não avaliada').replaceAll('_', ' ') }}.</p>
+        <a v-if="protocolo" :href="route('pae.protocolo.dco.show', protocolo.id)" class="inline-block text-sm font-semibold text-blue-700 underline dark:text-blue-300">Conferir avaliação e declarações</a>
+        <p v-if="protocolo && !protocolo.dcoEmissaoPronta" class="text-sm text-amber-700 dark:text-amber-300">Na data de hoje não há DCO exigível comprovada. A emissão será conferida pela data informada.</p>
+        <InputError v-if="form.errors.status || form.errors.ccpae || form.errors.dco" :message="form.errors.status || form.errors.ccpae || form.errors.dco" />
       </div>
 
       <div class="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4 dark:border-slate-800 dark:bg-slate-950">

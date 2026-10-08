@@ -95,6 +95,7 @@
       @check="handleCheck"
       @pdf="handlePdf"
       @ficha="handleFicha"
+      @dco="handleDco"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -120,6 +121,7 @@
       @check="handleCheck"
       @pdf="handlePdf"
       @ficha="handleFicha"
+      @dco="handleDco"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -304,6 +306,8 @@ function mapProtocolo(p) {
     ccpae: !!p.ccpae,
     comunicacoesPendentes: Number(p.comunicacoes_pendentes_count || 0),
     correcaoPrazoVencido: !!p.correcao_prazo_vencido,
+    dcoSituacao: p.dco_situacao ?? null,
+    dcoEmissaoPronta: !!p.dco_emissao_pronta,
     arquivado,
   };
 }
@@ -388,6 +392,10 @@ function handleEdit(id) {
 
 function handleFicha(id) {
   router.visit(route('pae.protocolo.ficha-anexo-b.show', id));
+}
+
+function handleDco(id) {
+  router.visit(route('pae.protocolo.dco.show', id));
 }
 
 function handleRelate(id) {

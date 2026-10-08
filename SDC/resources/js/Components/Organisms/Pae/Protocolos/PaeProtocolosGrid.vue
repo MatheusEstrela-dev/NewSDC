@@ -39,6 +39,7 @@
         @check="$emit('check', $event)"
         @pdf="$emit('pdf', $event)"
         @ficha="$emit('ficha', $event)"
+        @dco="$emit('dco', $event)"
         @archive="$emit('archive', $event)"
         @delete="$emit('delete', $event)"
         @options="$emit('options', $event)"
@@ -95,7 +96,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'ficha', 'archive', 'delete', 'options', 'assign', 'relate']);
+defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'ficha', 'dco', 'archive', 'delete', 'options', 'assign', 'relate']);
 </script>
 
 
