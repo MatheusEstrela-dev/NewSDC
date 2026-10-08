@@ -5,6 +5,7 @@ use App\Modules\Pae\Controllers\PaeFichaAnexoBController;
 use App\Modules\Pae\Controllers\PaeAdmissibilidadeController;
 use App\Modules\Pae\Controllers\PaeComunicacaoController;
 use App\Modules\Pae\Controllers\PaeDcoController;
+use App\Modules\Pae\Controllers\PaeEvacuacaoController;
 use App\Modules\Pae\Controllers\PaeNotificacaoController;
 use App\Modules\Pae\Controllers\PaeProtocoloController;
 
@@ -103,6 +104,23 @@ Route::prefix('pae')->name('pae.')->group(function () {
     Route::get('/protocolo/{paeProtocolo}/dco/documentos/{paeDcoDocumento}/download', [PaeDcoController::class, 'download'])
         ->name('protocolo.dco.documentos.download')
         ->middleware('can:pae.protocolos.view');
+
+    Route::get('/protocolo/{paeProtocolo}/evacuacao', [PaeEvacuacaoController::class, 'show'])
+        ->name('protocolo.evacuacao.show')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::get('/protocolo/{paeProtocolo}/evacuacao/conferencias/{versao}', [PaeEvacuacaoController::class, 'show'])
+        ->whereNumber('versao')
+        ->name('protocolo.evacuacao.versao')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::post('/protocolo/{paeProtocolo}/evacuacao/simular', [PaeEvacuacaoController::class, 'simular'])
+        ->name('protocolo.evacuacao.simular')
+        ->middleware('can:pae.protocolos.edit');
+
+    Route::post('/protocolo/{paeProtocolo}/evacuacao/conferencias', [PaeEvacuacaoController::class, 'registrar'])
+        ->name('protocolo.evacuacao.registrar')
+        ->middleware('can:pae.protocolos.edit');
 
     Route::get('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'show'])
         ->name('protocolo.admissibilidade.show')
