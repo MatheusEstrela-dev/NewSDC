@@ -21,6 +21,7 @@ use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
 use App\Modules\Pae\Services\PaeComunicacaoService;
 use App\Modules\Pae\Services\PaeDcoService;
+use App\Modules\Pae\Services\PaeEvacuacaoService;
 use App\Support\Calendario\CalendarioDiasUteis;
 use Illuminate\Support\ServiceProvider;
 
@@ -47,6 +48,7 @@ class PaeServiceProvider extends ServiceProvider
         $this->app->singleton(PaeCcpaeService::class);
         $this->app->singleton(PaeComunicacaoService::class);
         $this->app->singleton(PaeDcoService::class);
+        $this->app->singleton(PaeEvacuacaoService::class);
 
         // Guards da maquina de estados: cada subprojeto acrescenta o seu na tag,
         // sem mexer no workflow (o B traz o de admissibilidade).
