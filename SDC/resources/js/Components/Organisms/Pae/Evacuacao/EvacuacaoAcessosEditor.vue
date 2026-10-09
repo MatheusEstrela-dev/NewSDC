@@ -53,5 +53,5 @@ const props = defineProps({
 
 defineEmits(['adicionar', 'remover']);
 
-const calculo = (acesso) => props.simulado ? props.resultado?.acessos?.[acesso.id] ?? null : null;
+const calculo = (acesso) => props.simulado ? (props.resultado?.acessos?.[acesso.id] ?? null) : null;
 </script>

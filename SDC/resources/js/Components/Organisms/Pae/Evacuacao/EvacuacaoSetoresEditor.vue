@@ -66,5 +66,5 @@ const props = defineProps({
 
 defineEmits(['adicionar', 'remover']);
 
-const calculo = (setor) => props.simulado ? props.resultado?.setores?.[setor.id] ?? null : null;
+const calculo = (setor) => props.simulado ? (props.resultado?.setores?.[setor.id] ?? null) : null;
 </script>

@@ -20,8 +20,8 @@
     <EvacuacaoResultadoPainel :resultado="resultado" :simulado="simulado" />
 
     <EvacuacaoSetoresEditor :itens="form.setores" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('setores')" @remover="remover('setores', $event)" />
-    <EvacuacaoRotasEditor :itens="form.rotas" :erros="erros" :resultado="resultado" :setores-disponiveis="idsSetores" :somente-leitura="!can_edit" @adicionar="adicionar('rotas')" @remover="remover('rotas', $event)" />
-    <EvacuacaoAcessosEditor :itens="form.acessos" :erros="erros" :resultado="resultado" :rotas-disponiveis="idsRotas" :somente-leitura="!can_edit" @adicionar="adicionar('acessos')" @remover="remover('acessos', $event)" />
+    <EvacuacaoRotasEditor :itens="form.rotas" :erros="erros" :resultado="resultado" :simulado="simulado" :setores-disponiveis="idsSetores" :somente-leitura="!can_edit" @adicionar="adicionar('rotas')" @remover="remover('rotas', $event)" />
+    <EvacuacaoAcessosEditor :itens="form.acessos" :erros="erros" :resultado="resultado" :simulado="simulado" :rotas-disponiveis="idsRotas" :somente-leitura="!can_edit" @adicionar="adicionar('acessos')" @remover="remover('acessos', $event)" />
     <EvacuacaoPontosEditor :itens="form.pontos_encontro" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('pontos_encontro')" @remover="remover('pontos_encontro', $event)" />
 
     <section v-if="conferencia && !can_edit" class="rounded-xl border border-slate-200 bg-white p-5 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900">

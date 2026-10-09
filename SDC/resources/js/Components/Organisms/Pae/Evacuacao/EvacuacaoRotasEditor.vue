@@ -56,5 +56,5 @@ const props = defineProps({
 
 defineEmits(['adicionar', 'remover']);
 
-const calculo = (rota) => props.simulado ? props.resultado?.rotas?.[rota.id] ?? null : null;
+const calculo = (rota) => props.simulado ? (props.resultado?.rotas?.[rota.id] ?? null) : null;
 </script>
