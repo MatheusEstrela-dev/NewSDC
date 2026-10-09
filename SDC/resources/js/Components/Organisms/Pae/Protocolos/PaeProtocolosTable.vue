@@ -9,10 +9,10 @@
           <tr>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Protocolo</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Empreendedor / Estrutura</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Histórico</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Analista</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Datas</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Situação</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Histórico</th>
             <th class="table-actions-head px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-44 min-w-44">Ações</th>
           </tr>
         </thead>
@@ -30,6 +30,11 @@
             <td class="px-4 py-3">
               <div class="font-medium text-slate-900 dark:text-white truncate max-w-[140px]" :title="protocolo.empreendedor">{{ protocolo.empreendedor }}</div>
               <div class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[140px]" :title="protocolo.estrutura">{{ protocolo.estrutura }}</div>
+            </td>
+
+            <!-- Historico -->
+            <td class="px-4 py-3">
+              <PaeHistoricoSituacoes :protocolo="protocolo" />
             </td>
 
             <!-- Analista -->
@@ -57,11 +62,6 @@
               <div v-if="protocolo.correcaoPrazoVencido" class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
                 Correção transitória vencida: avaliar
               </div>
-            </td>
-
-            <!-- Historico -->
-            <td class="px-4 py-3">
-              <PaeHistoricoSituacoes :protocolo="protocolo" />
             </td>
 
             <!-- Acoes -->
