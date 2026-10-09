@@ -32,6 +32,7 @@ final class PaeCcpaeService
         private readonly PaeComunicacaoService $comunicacoes,
         private readonly OutboxDispatcher $outbox,
         private readonly PaeDcoService $dco,
+        private readonly PaeSimuladoService $simulado,
     ) {}
 
     public function emitir(PaeProtocolo $protocolo, EmitirCcpaeDTO $dados, User $user): PaeCcpae
@@ -51,6 +52,7 @@ final class PaeCcpaeService
                 }
 
                 $evidencia = $this->dco->evidenciaParaEmissao($protocolo, $dados->dtEmissao);
+                $evidenciaSimulado = $this->simulado->evidenciaParaEmissao($protocolo, $dados->dtEmissao);
 
                 $this->workflow->transitar(
                     $protocolo,
@@ -70,6 +72,8 @@ final class PaeCcpaeService
                     'emitido_por' => $user->id,
                     'dco_avaliacao_id' => $evidencia['avaliacao']->id,
                     'dco_documento_id' => $evidencia['documento']?->id,
+                    'simulado_avaliacao_id' => $evidenciaSimulado['avaliacao']->id,
+                    'simulado_relatorio_id' => $evidenciaSimulado['relatorio']?->id,
                 ]);
 
                 PaeProtocolo::query()->whereKey($protocolo->getKey())->update([
