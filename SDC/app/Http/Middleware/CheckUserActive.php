@@ -3,16 +3,31 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\Auth\SessionVersionService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Valida o usuario autenticado a CADA requisicao (sem janela de cache):
+ *
+ * 1. conta ativa (active + status) -- vale para sessao web e token Sanctum;
+ * 2. versao de sessao (users.session_version) igual a gravada no login --
+ *    mudanca de cargo, permissao, senha, orgao ou e-mail exige novo login.
+ *
+ * O usuario ja vem do banco a cada requisicao (guard), entao nao ha query extra.
+ */
 class CheckUserActive
 {
+    public const MSG_DESATIVADO = 'Sua conta foi desativada. Entre em contato com o suporte ou com o gestor do sistema.';
+    public const MSG_ALTERADO = 'Seus dados de acesso foram alterados; entre novamente.';
+
+    public function __construct(private readonly SessionVersionService $versions)
+    {
+    }
+
     /**
-     * Handle an incoming request.
-     *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
@@ -27,44 +42,32 @@ class CheckUserActive
             return $next($request);
         }
 
-        if (!$request->hasSession()) {
-            if (!$user->active) {
-                return response()->json([
-                    'message' => 'Seu usuario esta desativado. Entre em contato com o suporte ou com o gestor do sistema.',
-                ], 403);
-            }
+        $webUser = $request->hasSession() ? Auth::guard('web')->user() : null;
+        $viaSession = $webUser instanceof User && $webUser->is($user);
 
-            return $next($request);
+        if (!$user->canAuthenticate()) {
+            return $this->rejeitar($request, self::MSG_DESATIVADO, $viaSession);
         }
 
-        if (Auth::check()) {
-            $shouldCheck = true;
-            $lastCheck = $request->session()->get('user_last_active_check');
-
-            if ($lastCheck instanceof \Carbon\Carbon) {
-                $shouldCheck = now()->diffInMinutes($lastCheck) > 5;
-            } elseif (is_int($lastCheck)) {
-                $shouldCheck = (time() - $lastCheck) > 300;
-            } else {
-                $request->session()->forget('user_last_active_check');
-            }
-
-            if ($shouldCheck) {
-                if (!$user->active) {
-                    Auth::logout();
-                    $request->session()->invalidate();
-                    $request->session()->regenerateToken();
-
-                    return redirect()->route('login')->withErrors([
-                        'cpf' => 'Seu usuario esta desativado. Entre em contato com o suporte ou com o gestor do sistema.',
-                    ]);
-                }
-
-                $request->session()->put('user_last_active_check', time());
-            }
+        if ($viaSession && !$this->versions->matches($request->session(), $user)) {
+            return $this->rejeitar($request, self::MSG_ALTERADO, true);
         }
 
         return $next($request);
     }
-}
 
+    private function rejeitar(Request $request, string $mensagem, bool $viaSession): Response
+    {
+        if ($viaSession) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        if (!$viaSession || ($request->expectsJson() && !$request->header('X-Inertia'))) {
+            return response()->json(['message' => $mensagem], $viaSession ? 401 : 403);
+        }
+
+        return redirect()->route('login')->setStatusCode(303)->withErrors(['cpf' => $mensagem]);
+    }
+}

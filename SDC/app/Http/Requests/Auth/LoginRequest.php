@@ -68,7 +68,7 @@ class LoginRequest extends FormRequest
             throw ValidationException::withMessages(['cpf' => trans('auth.failed')]);
         }
 
-        if (!$user->active || in_array($user->status, ['inactive', 'suspended', 'blocked'], true)) {
+        if (!$user->canAuthenticate()) {
             throw ValidationException::withMessages([
                 'cpf' => 'Seu usuário está desativado ou bloqueado. Entre em contato com o suporte ou com o gestor do sistema.',
             ]);
