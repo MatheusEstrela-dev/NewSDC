@@ -20,12 +20,13 @@
 
     <template #default="{ aba: ativa }">
       <form v-if="ativa === 'cadastro'" class="space-y-4" @submit.prevent="salvar">
+        <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true" :disabled="!podeEditar || form.processing">Salvar</button>
         <CollapsibleSection v-for="grupo in grupos" :key="grupo.titulo" namespace="pae" :section-id="`ficha-${grupo.chave}`" :title="grupo.titulo" :subtitle="grupo.ajuda" :icon="DocumentTextIcon">
           <div class="grid gap-4 sm:grid-cols-2">
             <template v-for="campo in grupo.campos" :key="campo.chave">
               <FormField v-if="campo.chave === 'municipio_sede_id' && !podeEditar" :model-value="ficha.municipio_sede_nome || 'Não informado'" :label="campo.rotulo" disabled />
               <FormSelect v-else-if="campo.chave === 'municipio_sede_id'" v-model="form.municipio_sede_id" :label="campo.rotulo" :options="opcoesMunicipios" placeholder="Não informado" :error="form.errors[campo.chave]" />
-              <FormTextarea v-else-if="campo.tipo === 'textarea'" v-model="form[campo.chave]" class="sm:col-span-2" :label="campo.rotulo" :rows="3" :disabled="!podeEditar" :error="form.errors[campo.chave]" />
+              <FormTextarea v-else-if="campo.tipo === 'textarea'" v-model="form[campo.chave]" class="sm:col-span-2" :label="campo.rotulo" :rows="3" :maxlength="campo.maxlength" :disabled="!podeEditar" :error="form.errors[campo.chave]" />
               <FormField v-else v-model="form[campo.chave]" :class="campo.largo ? 'sm:col-span-2' : ''" :type="campo.tipo" :step="campo.step" :maxlength="campo.maxlength" :label="campo.rotulo" :disabled="!podeEditar" :error="form.errors[campo.chave]" />
             </template>
           </div>
@@ -89,6 +90,7 @@
     </template>
 
     <template #rodape>
+      <PaeAviso v-if="camposComErro" tom="erro">{{ camposComErro }} campo(s) com erro na aba Cadastro</PaeAviso>
       <PaeAviso v-if="form.errors.base_versao || form.errors.protocolo" tom="erro">{{ form.errors.base_versao || form.errors.protocolo }}</PaeAviso>
       <div v-if="podeEditar" class="flex justify-end">
         <Button :loading="form.processing" @click="salvar">{{ form.processing ? 'Salvando...' : 'Salvar ficha cadastral' }}</Button>
@@ -139,7 +141,7 @@ const grupos = [
     { chave: 'longitude', rotulo: 'Longitude', tipo: 'number', step: '0.0000001' },
   ] },
   { chave: 'rejeito', titulo: 'Rejeito ou resíduo', campos: [
-    { chave: 'tipo_rejeito', rotulo: 'Tipo do rejeito ou resíduo', tipo: 'textarea', largo: true },
+    { chave: 'tipo_rejeito', rotulo: 'Tipo do rejeito ou resíduo', tipo: 'textarea', maxlength: 5000, largo: true },
     { chave: 'toxicidade', rotulo: 'Toxicidade conforme ABNT NBR 10004', tipo: 'text', maxlength: 255, largo: true },
   ] },
   { chave: 'zas', titulo: 'ZAS e ZSS', ajuda: 'Na população total da ZAS, considere moradores, trabalhadores e público flutuante.', campos: [
@@ -219,12 +221,14 @@ function errosDaLista(chave) {
   return Object.fromEntries(Object.entries(form.errors).filter(([campo]) => campo.startsWith(`${chave}.`)));
 }
 
+const camposComErro = computed(() => Object.keys(form.errors).filter(chave => chave !== 'base_versao' && chave !== 'protocolo').length);
+
 function salvar() {
   form.transform(dados => ({
     ...dados,
     ...Object.fromEntries(numericos.map(chave => [chave, dados[chave] === '' ? null : dados[chave]])),
     municipio_sede_id: dados.municipio_sede_id === '' ? null : dados.municipio_sede_id,
-  })).put(route('pae.protocolo.ficha-anexo-b.salvar', props.protocolo.id), { preserveScroll: true });
+  })).put(route('pae.protocolo.ficha-anexo-b.salvar', props.protocolo.id), { preserveScroll: true, onError: () => { aba.value = 'cadastro'; } });
 }
 
 function urlVersao(versao) {

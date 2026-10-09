@@ -11,6 +11,7 @@
       :readonly="readonly"
       :required="required"
       :rows="rows"
+      :maxlength="maxlength"
       :class="textareaClasses"
       @input="$emit('update:modelValue', $event.target.value)"
       @blur="$emit('blur', $event)"
@@ -65,6 +66,10 @@ const props = defineProps({
   hint: {
     type: String,
     default: '',
+  },
+  maxlength: {
+    type: [Number, String],
+    default: undefined,
   },
   labelSize: {
     type: String,
