@@ -72,7 +72,7 @@ A migration principal da fase, `SDC/database/migrations/2026_10_09_120000_create
 - `avaliar` e `registrarRelatorio` validam pelas regras de fonte única nos Requests, travam o protocolo com `lockForUpdate`, aplicam idempotência (mesma chave e mesmos dados devolve o existente; dados diferentes, recusa), gravam timeline (`simulado_avaliacao`, `simulado_relatorio`) na mesma transação e limpam o PDF se a transação falhar.
 - O relatório exige avaliação vigente `exigivel`; protocolo arquivado é somente leitura.
 - `evidenciaParaEmissao(protocoloBloqueado, dataEmissao)`: sem avaliação, erro; `dispensado`, devolve só a avaliação; `exigivel`, exige a última versão de um relatório validado com realização na janela de 12 meses da data de emissão, apresentação até essa data e arquivo existente; senão, erro de validação na chave `simulado`.
-- `resumo` e `anotarListagem` (lote, sem N+1) com a situação: `nao_avaliada`, `dispensado`, `em_dia`, `nao_validado` (último relatório da janela não validado), `vencido` (sem relatório validado na janela e com CCPAE), `pendente_emissao` (sem relatório validado na janela e sem CCPAE).
+- `resumo` e `anotarListagem` (lote, sem N+1) com a situação: `nao_avaliada`, `dispensado`, `em_dia`, `nao_validado` (há relatório na janela, mas nenhum simulado vigente validado; vigente é a última revisão de cada simulado), `vencido` (sem relatório vigente na janela e com CCPAE), `pendente_emissao` (sem relatório vigente na janela e sem CCPAE).
 
 ## Emissão e acompanhamento
 
