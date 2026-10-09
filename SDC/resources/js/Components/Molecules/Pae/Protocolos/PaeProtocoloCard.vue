@@ -46,15 +46,11 @@
       <div v-if="protocolo.correcaoPrazoVencido" class="text-sm font-semibold text-red-700 dark:text-red-300">
         Correção transitória vencida: avaliação da CEDEC pendente
       </div>
-      <div v-if="protocolo.dcoSituacao" class="text-sm font-medium" :class="['atrasada', 'nao_conforme'].includes(protocolo.dcoSituacao) ? 'text-red-700 dark:text-red-300' : 'text-slate-600 dark:text-slate-300'">
-        DCO: {{ protocolo.dcoSituacao.replaceAll('_', ' ') }}
-      </div>
-      <div v-if="protocolo.evacuacaoSituacao" class="text-sm font-medium" :class="classeSituacaoEvacuacao(protocolo.evacuacaoSituacao)">
-        Evacuação: {{ rotuloSituacaoEvacuacao(protocolo.evacuacaoSituacao) }}
-      </div>
-      <div v-if="protocolo.simuladoSituacao" class="text-sm font-medium" :class="classeSituacaoSimulado(protocolo.simuladoSituacao)">
-        Simulado: {{ rotuloSituacaoSimulado(protocolo.simuladoSituacao) }}
-      </div>
+    </div>
+
+    <div v-if="protocolo.dcoSituacao || protocolo.evacuacaoSituacao || protocolo.simuladoSituacao" class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+      <div class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Histórico</div>
+      <PaeHistoricoSituacoes :protocolo="protocolo" />
     </div>
 
     <div class="mt-5 flex items-center justify-between gap-2">
@@ -94,9 +90,8 @@ import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 
 import PrazosPill from './PrazosPill.vue';
 import StatusPill from './StatusPill.vue';
+import PaeHistoricoSituacoes from './PaeHistoricoSituacoes.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
-import { classeSituacaoEvacuacao, rotuloSituacaoEvacuacao } from '@/utils/paeEvacuacao';
-import { classeSituacaoSimulado, rotuloSituacaoSimulado } from '@/utils/paeSimulado';
 
 defineProps({
   protocolo: {

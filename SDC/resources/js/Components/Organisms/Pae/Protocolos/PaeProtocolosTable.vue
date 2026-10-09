@@ -12,6 +12,7 @@
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Analista</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Datas</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Situação</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Histórico</th>
             <th class="table-actions-head px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-44 min-w-44">Ações</th>
           </tr>
         </thead>
@@ -27,8 +28,8 @@
 
             <!-- Empreendedor / Estrutura -->
             <td class="px-4 py-3">
-              <div class="font-medium text-slate-900 dark:text-white truncate max-w-[200px]">{{ protocolo.empreendedor }}</div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[200px]">{{ protocolo.estrutura }}</div>
+              <div class="font-medium text-slate-900 dark:text-white truncate max-w-[140px]" :title="protocolo.empreendedor">{{ protocolo.empreendedor }}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[140px]" :title="protocolo.estrutura">{{ protocolo.estrutura }}</div>
             </td>
 
             <!-- Analista -->
@@ -56,15 +57,11 @@
               <div v-if="protocolo.correcaoPrazoVencido" class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
                 Correção transitória vencida: avaliar
               </div>
-              <div v-if="protocolo.dcoSituacao" class="mt-1 text-xs font-medium" :class="['atrasada', 'nao_conforme'].includes(protocolo.dcoSituacao) ? 'text-red-700 dark:text-red-300' : 'text-slate-600 dark:text-slate-300'">
-                DCO: {{ protocolo.dcoSituacao.replaceAll('_', ' ') }}
-              </div>
-              <div v-if="protocolo.evacuacaoSituacao" class="mt-1 text-xs font-medium" :class="classeSituacaoEvacuacao(protocolo.evacuacaoSituacao)">
-                Evacuação: {{ rotuloSituacaoEvacuacao(protocolo.evacuacaoSituacao) }}
-              </div>
-              <div v-if="protocolo.simuladoSituacao" class="mt-1 text-xs font-medium" :class="classeSituacaoSimulado(protocolo.simuladoSituacao)">
-                Simulado: {{ rotuloSituacaoSimulado(protocolo.simuladoSituacao) }}
-              </div>
+            </td>
+
+            <!-- Historico -->
+            <td class="px-4 py-3">
+              <PaeHistoricoSituacoes :protocolo="protocolo" />
             </td>
 
             <!-- Acoes -->
@@ -93,7 +90,7 @@
             </td>
           </tr>
           <tr v-if="protocolos.length === 0">
-            <td colspan="6" class="p-0">
+            <td colspan="7" class="p-0">
               <ListEmptyState title="Nenhum protocolo encontrado" />
             </td>
           </tr>
@@ -104,14 +101,13 @@
 
 <script setup>
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
+import PaeHistoricoSituacoes from '@/Components/Molecules/Pae/Protocolos/PaeHistoricoSituacoes.vue';
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
-import { classeSituacaoEvacuacao, rotuloSituacaoEvacuacao } from '@/utils/paeEvacuacao';
-import { classeSituacaoSimulado, rotuloSituacaoSimulado } from '@/utils/paeSimulado';
 
 defineProps({
   protocolos: {
