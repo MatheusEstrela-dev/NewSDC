@@ -33,3 +33,8 @@ export function erroDaLinha(erros, prefixo) {
 export function separarLista(texto) {
   return (texto ?? '').split(',').map((parte) => parte.trim()).filter(Boolean);
 }
+
+// O servidor normaliza os ids (aparados); a busca no resultado usa a mesma forma.
+export function idAparado(id) {
+  return String(id ?? '').trim();
+}

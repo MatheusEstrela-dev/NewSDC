@@ -17,7 +17,7 @@
           <tr v-for="(setor, i) in itens" :key="i" class="border-t border-slate-100 align-top dark:border-slate-800">
             <td class="min-w-[5rem] px-2 py-2"><FormField v-model="setor.id" size="sm" :aria-label="`Identificador do setor ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :error="erros[`setores.${i}.id`]" /></td>
             <td class="min-w-[7rem] px-2 py-2"><FormField v-model="setor.populacao" type="number" step="1" size="sm" :aria-label="`Moradores do setor ${i + 1}`" :disabled="somenteLeitura" :error="erros[`setores.${i}.populacao`]" /></td>
-            <td class="px-2 py-2"><ToggleInput v-model="setor.comercial" :aria-label="`Área comercial do setor ${i + 1}`" :class="somenteLeitura ? 'pointer-events-none opacity-60' : ''" /></td>
+            <td class="px-2 py-2"><ToggleInput v-model="setor.comercial" :aria-label="`Área comercial do setor ${i + 1}`" :disabled="somenteLeitura" :class="somenteLeitura ? 'opacity-60' : ''" /></td>
             <td class="min-w-[9rem] px-2 py-2"><FormSelect v-model="setor.via" size="sm" placeholder="" :options="OPCOES_VIA" :aria-label="`Tipo de via do setor ${i + 1}`" :disabled="somenteLeitura" /></td>
             <td class="min-w-[6rem] px-2 py-2"><FormField v-model="setor.largura" type="number" step="0.01" size="sm" :aria-label="`Largura do setor ${i + 1}`" :disabled="somenteLeitura" :error="erros[`setores.${i}.largura`]" /></td>
             <td class="min-w-[5rem] px-2 py-2">
@@ -48,7 +48,7 @@ import InputError from '@/Components/InputError.vue';
 import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
-import { SITUACOES_SETOR, numero } from '@/utils/paeEvacuacao';
+import { SITUACOES_SETOR, idAparado, numero } from '@/utils/paeEvacuacao';
 import { Squares2X2Icon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -65,5 +65,5 @@ const OPCOES_VIA = [{ value: 'calcada', label: 'Calçada' }, { value: 'rua_mao_u
 const OPCOES_LADOS = [{ value: 1, label: '1' }, { value: 2, label: '2' }];
 const OPCOES_TERRENO = [{ value: 'plano', label: 'Plano' }, { value: 'inclinado', label: 'Inclinado (> 5%)' }];
 
-const calculo = (setor) => props.simulado ? (props.resultado?.setores?.[setor.id] ?? null) : null;
+const calculo = (setor) => props.simulado ? (props.resultado?.setores?.[idAparado(setor.id)] ?? null) : null;
 </script>

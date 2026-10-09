@@ -35,7 +35,7 @@ import InputError from '@/Components/InputError.vue';
 import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
-import { erroDaLinha } from '@/utils/paeEvacuacao';
+import { erroDaLinha, idAparado } from '@/utils/paeEvacuacao';
 import { ArrowsPointingInIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -51,5 +51,5 @@ defineEmits(['adicionar', 'remover']);
 
 const OPCOES_TERRENO = [{ value: 'plano', label: 'Plano' }, { value: 'inclinado', label: 'Rampa ou escada' }];
 
-const calculo = (acesso) => props.simulado ? (props.resultado?.acessos?.[acesso.id] ?? null) : null;
+const calculo = (acesso) => props.simulado ? (props.resultado?.acessos?.[idAparado(acesso.id)] ?? null) : null;
 </script>

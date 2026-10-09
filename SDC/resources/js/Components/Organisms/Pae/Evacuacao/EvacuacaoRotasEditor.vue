@@ -38,7 +38,7 @@ import InputError from '@/Components/InputError.vue';
 import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
-import { MOTIVOS_ROTA, erroDaLinha } from '@/utils/paeEvacuacao';
+import { MOTIVOS_ROTA, erroDaLinha, idAparado } from '@/utils/paeEvacuacao';
 import { MapIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -54,5 +54,5 @@ defineEmits(['adicionar', 'remover']);
 
 const OPCOES_NIVEL = [{ value: 1, label: '1' }, { value: 2, label: '2' }, { value: 3, label: '3' }];
 
-const calculo = (rota) => props.simulado ? (props.resultado?.rotas?.[rota.id] ?? null) : null;
+const calculo = (rota) => props.simulado ? (props.resultado?.rotas?.[idAparado(rota.id)] ?? null) : null;
 </script>
