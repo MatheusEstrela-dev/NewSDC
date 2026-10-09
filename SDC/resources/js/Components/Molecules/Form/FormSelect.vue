@@ -12,6 +12,7 @@
       :required="required"
       :error="!!error"
       :size="size"
+      :aria-label="ariaLabel"
       @update:model-value="$emit('update:modelValue', $event)"
       @blur="$emit('blur', $event)"
       @focus="$emit('focus', $event)"
@@ -77,6 +78,11 @@ const props = defineProps({
   id: {
     type: String,
     default: '',
+  },
+  // Rotulo acessivel para campo sem Label visivel (celula de tabela).
+  ariaLabel: {
+    type: String,
+    default: undefined,
   },
 });
 
