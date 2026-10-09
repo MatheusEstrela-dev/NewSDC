@@ -75,7 +75,7 @@ provide('openSidebar', openSidebar);
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+  <div class="flex min-h-screen-mobile bg-slate-50 dark:bg-slate-950">
     <!-- Toast Notifications -->
     <ToastContainer />
     <FlashNotification />
@@ -122,7 +122,7 @@ provide('openSidebar', openSidebar);
       collapsed continua valendo, porque em lg+ a sidebar existe mesmo (80px).
     -->
     <div
-      class="flex-1 min-w-0 flex flex-col min-h-screen ml-0 lg:ml-[280px]"
+      class="flex-1 min-w-0 flex flex-col min-h-screen-mobile ml-0 lg:ml-[280px]"
       :class="{
         'lg:!ml-20': sidebarCollapsed
       }"
