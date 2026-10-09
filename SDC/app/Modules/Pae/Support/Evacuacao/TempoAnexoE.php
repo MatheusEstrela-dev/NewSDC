@@ -12,6 +12,9 @@ final class TempoAnexoE
 {
     private const SUFIXO = '_segundos';
 
+    /** Regra de validacao de tempo no formato mm:ss, compartilhada por todas as telas de tempo do PAE. */
+    public const REGRA_MM_SS = 'regex:/^\d{1,3}:[0-5]\d$/';
+
     public static function formatar(int|float|null $segundos): ?string
     {
         if ($segundos === null) {

@@ -10,10 +10,10 @@ use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Requests\AvaliarDcoRequest;
 use App\Modules\Pae\Requests\RegistrarDcoRequest;
 use App\Modules\Pae\Services\PaeDcoService;
+use App\Modules\Pae\Support\PaeArquivoPdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -59,9 +59,8 @@ final class PaeDcoController extends Controller
     public function download(PaeProtocolo $paeProtocolo, PaeDcoDocumento $paeDcoDocumento): StreamedResponse
     {
         abort_unless($paeDcoDocumento->protocolo_id === $paeProtocolo->id
-            && Storage::disk('pae')->exists($paeDcoDocumento->arquivo_path), 404);
+            && PaeArquivoPdf::existe($paeDcoDocumento->arquivo_path), 404);
 
-        return Storage::disk('pae')->download($paeDcoDocumento->arquivo_path,
-            $paeDcoDocumento->arquivo_nome_original);
+        return PaeArquivoPdf::baixar($paeDcoDocumento->arquivo_path, $paeDcoDocumento->arquivo_nome_original);
     }
 }

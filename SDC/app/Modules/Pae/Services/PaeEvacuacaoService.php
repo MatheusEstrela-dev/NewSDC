@@ -12,6 +12,8 @@ use App\Modules\Pae\Requests\SimularEvacuacaoRequest;
 use App\Modules\Pae\Support\Evacuacao\CalculoEvacuacaoAnexoE;
 use App\Modules\Pae\Support\Evacuacao\ReferenciasEvacuacao;
 use App\Modules\Pae\Support\Evacuacao\TempoAnexoE;
+use App\Modules\Pae\Support\PaeIdempotencia;
+use App\Modules\Pae\Support\PaeListagem;
 use App\Modules\Pae\Support\TimelinePae;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -50,9 +52,9 @@ final class PaeEvacuacaoService
 
             $existente = $locked->conferenciasEvacuacao()->where('chave_idempotencia', $dados['chave_idempotencia'])->first();
             if ($existente !== null) {
-                if ($existente->entrada() != $entrada || $existente->num_sei !== $numSei || $existente->observacao !== $observacao) {
-                    throw ValidationException::withMessages(['chave_idempotencia' => 'Esta chave de idempotência já foi usada com outros dados.']);
-                }
+                PaeIdempotencia::exigirMesmosDados($existente, [...$entrada, 'num_sei' => $numSei, 'observacao' => $observacao], [
+                    'setores', 'rotas', 'acessos', 'pontos_encontro', 'tte_declarado_segundos', 'num_sei', 'observacao',
+                ]);
 
                 return $existente;
             }
@@ -118,30 +120,22 @@ final class PaeEvacuacaoService
 
     public function anotarListagem(LengthAwarePaginator $pagina): LengthAwarePaginator
     {
-        $ids = $pagina->getCollection()->map(fn ($item): int => (int) data_get($item, 'id'))->all();
-        if ($ids === []) {
-            return $pagina;
-        }
+        return PaeListagem::anotar(
+            $pagina,
+            fn (array $ids) => PaeEvacuacaoConferencia::query()
+                ->whereIn('id', PaeEvacuacaoConferencia::query()->selectRaw('max(id)')->whereIn('protocolo_id', $ids)->groupBy('protocolo_id'))
+                ->get(['protocolo_id', 'criterio1_conforme', 'criterio2_conforme', 'possui_rota_invalida', 'possui_setor_inviavel', 'excede_declarado'])
+                ->keyBy('protocolo_id'),
+            function (int $id, $vigentes): array {
+                $conferencia = $vigentes->get($id);
 
-        $vigentes = PaeEvacuacaoConferencia::query()
-            ->whereIn('id', PaeEvacuacaoConferencia::query()->selectRaw('max(id)')->whereIn('protocolo_id', $ids)->groupBy('protocolo_id'))
-            ->get(['protocolo_id', 'criterio1_conforme', 'criterio2_conforme', 'possui_rota_invalida', 'possui_setor_inviavel', 'excede_declarado'])
-            ->keyBy('protocolo_id');
-
-        $pagina->setCollection($pagina->getCollection()->map(function ($item) use ($vigentes): array {
-            $conferencia = $vigentes->get((int) data_get($item, 'id'));
-
-            return [
-                ...(is_array($item) ? $item : $item->toArray()),
-                'evacuacao_situacao' => match (true) {
+                return ['evacuacao_situacao' => match (true) {
                     $conferencia === null => 'nao_conferida',
                     $conferencia->conforme() => 'conforme',
                     default => 'nao_conforme',
-                },
-            ];
-        }));
-
-        return $pagina;
+                }];
+            },
+        );
     }
 
     /** Valida, normaliza e confere as referencias; o resultado nunca vem do cliente. */
