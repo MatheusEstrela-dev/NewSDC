@@ -12,7 +12,7 @@
       @change="$emit('update:modelValue', $event.target.files?.[0] ?? null)"
     />
     <p v-if="error" class="mt-1 text-xs text-red-600 dark:text-red-400">{{ error }}</p>
-    <p v-else-if="hint" class="mt-1 text-xs text-slate-500">{{ hint }}</p>
+    <p v-else-if="hint" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ hint }}</p>
   </div>
 </template>
 
