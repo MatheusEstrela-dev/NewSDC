@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Resgate\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Ranking\DTOs\FiltroPlacar;
 use App\Modules\Ranking\Enums\TipoPeriodo;
 use App\Modules\Ranking\Services\LeaderboardQuery;
@@ -78,9 +79,30 @@ final class CarteiraController extends Controller
             'filtros' => ['escopo' => $escopo->value, 'ente' => $enteId],
             'escopos' => array_map(static fn (EscopoCarteira $e): array => ['value' => $e->value, 'label' => $e->label()], EscopoCarteira::cases()),
             'podeEscolherEnte' => $estadual,
+            ...$this->motivoSemCarteira($user, $enteId),
             'entes' => $estadual ? $this->entesParticipantes($escopo, $nomes) : [],
             'faixas' => config('ranking.faixas'),
         ]);
+    }
+
+    /**
+     * Por que nao ha carteira para o usuario: sem orgao principal, ou orgao
+     * regional/estadual (sem municipio), cuja carteira nao existe por desenho.
+     * A tela so renderiza o texto correspondente.
+     *
+     * @return array{motivo_sem_carteira: ?string, orgao_nome: ?string}
+     */
+    private function motivoSemCarteira(User $user, ?int $enteId): array
+    {
+        if ($enteId !== null) {
+            return ['motivo_sem_carteira' => null, 'orgao_nome' => null];
+        }
+
+        $orgao = $user->orgaoPrincipal;
+
+        return $orgao === null
+            ? ['motivo_sem_carteira' => 'sem_orgao', 'orgao_nome' => null]
+            : ['motivo_sem_carteira' => 'orgao_regional', 'orgao_nome' => $orgao->nome];
     }
 
     /**
