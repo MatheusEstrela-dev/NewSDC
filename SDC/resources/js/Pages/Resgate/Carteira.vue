@@ -31,7 +31,7 @@
     </FilterSection>
 
     <p v-if="!carteira" role="status" class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-100">
-      {{ podeEscolherEnte ? 'Escolha um ente para ver a carteira.' : 'Seu usuário não está vinculado a um órgão com município; não há carteira para mostrar.' }}
+      {{ mensagemSemCarteira }}
     </p>
 
     <template v-else>
@@ -53,7 +53,7 @@
  * O saldo e derivado do ledger no backend; a faixa que libera premios e a da
  * temporada FECHADA (decisao D2), a atual aparece so como referencia.
  */
-import { reactive } from 'vue';
+import { computed, reactive } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { GiftIcon, TrophyIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -82,6 +82,8 @@ const props = defineProps({
   escopos: { type: Array, default: () => [] },
   entes: { type: Array, default: () => [] },
   podeEscolherEnte: { type: Boolean, default: false },
+  motivo_sem_carteira: { type: String, default: null },
+  orgao_nome: { type: String, default: null },
   faixas: { type: Object, default: null },
 });
 
@@ -90,6 +92,15 @@ const FAIXAS = { bronze: 'Bronze', prata: 'Prata', ouro: 'Ouro', diamante: 'Diam
 
 const formatador = new Intl.NumberFormat('pt-BR');
 const numero = (valor) => formatador.format(Number(valor ?? 0));
+
+// O servidor decide o motivo; aqui so se escolhe o texto.
+const mensagemSemCarteira = computed(() => {
+  if (props.podeEscolherEnte) return 'Escolha um ente para ver a carteira.';
+  if (props.motivo_sem_carteira === 'orgao_regional') {
+    return `A carteira de resgate pertence ao município (COMPDEC). Seu órgão principal, "${props.orgao_nome}", é regional ou estadual e não tem carteira própria. Para ver a carteira de um município, vincule-se à COMPDEC dele como órgão principal ou solicite a permissão de visão estadual.`;
+  }
+  return 'Seu usuário não tem órgão principal vinculado; não há carteira para mostrar. Vincule-se à COMPDEC do município como órgão principal.';
+});
 
 const local = reactive({ escopo: props.filtros.escopo, ente: props.filtros.ente });
 
