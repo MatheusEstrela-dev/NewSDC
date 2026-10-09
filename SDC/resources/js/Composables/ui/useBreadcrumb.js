@@ -465,6 +465,32 @@ export function useBreadcrumb() {
         return trilhas[componentName] ?? null;
     };
 
+    /**
+     * Trilha das telas do PAE.
+     *
+     * Pelo fallback automatico o rotulo vinha do nome do componente ("Pae Dco",
+     * "Pae Evacuacao") e nada dizia de QUAL protocolo estava aberto. O degrau
+     * do protocolo nao tem pagina propria, entao nao vira link; o degrau PAE
+     * leva a listagem, que e para onde o Voltar deve ir.
+     */
+    const trilhaPae = (componentName, props) => {
+        const inicio = { label: 'Início', route: 'dashboard' };
+        const pae = { label: 'PAE', route: 'pae.protocolos.index' };
+        const aqui = (label) => ({ label, route: null });
+        const numero = props?.protocolo?.num_protocolo ?? null;
+        const protocolo = aqui(numero ? `Protocolo ${numero}` : 'Protocolo');
+
+        const trilhas = {
+            PaeProtocolosIndex: [inicio, aqui('PAE')],
+            PaeDco: [inicio, pae, protocolo, aqui('DCO')],
+            PaeEvacuacao: [inicio, pae, protocolo, aqui('Evacuação')],
+            PaeFichaAnexoB: [inicio, pae, protocolo, aqui('Ficha cadastral')],
+            PaeSimulados: [inicio, pae, protocolo, aqui('Simulados')],
+        };
+
+        return trilhas[componentName] ?? null;
+    };
+
     const breadcrumbItems = computed(() => {
         const componentName = page.component?.value || page.component;
 
@@ -490,6 +516,12 @@ export function useBreadcrumb() {
 
         if (doResgate) {
             return doResgate;
+        }
+
+        const doPae = trilhaPae(componentName, propsDaPagina);
+
+        if (doPae) {
+            return doPae;
         }
 
         if (breadcrumbMap[componentName]) {
