@@ -18,13 +18,15 @@
 
     <template #topo>
       <SimuladoSituacaoPainel :resumo="resumo" />
-      <SimuladoExigibilidadePainel :resumo="resumo" :protocolo-id="protocolo.id" :pode-validar="can_validar" />
     </template>
 
     <template #default="{ aba: ativa }">
-      <PaeAviso v-if="!formularioDisponivel && ativa !== 'historico'" tom="aviso">O relatório só pode ser registrado depois de a CEDEC avaliar o simulado como exigível.</PaeAviso>
+      <div v-show="ativa === 'exigibilidade'">
+        <SimuladoExigibilidadePainel :resumo="resumo" :protocolo-id="protocolo.id" :pode-validar="can_validar" />
+      </div>
+      <PaeAviso v-if="!formularioDisponivel && ativa === 'envio'" tom="aviso">O relatório só pode ser registrado depois de a CEDEC avaliar o simulado como exigível.</PaeAviso>
       <!-- As abas do formulario ficam montadas (v-show): trocar de aba nao pode perder o PDF escolhido. -->
-      <div v-show="formularioDisponivel && ativa !== 'historico'">
+      <div v-show="formularioDisponivel && !['historico', 'exigibilidade'].includes(ativa)">
         <div v-show="ativa === 'envio'">
           <SimuladoEnvioTab :form="form" :somente-leitura="somenteLeitura" :selecionado="selecionado" :protocolo-id="protocolo.id" :can-view="can_view" />
         </div>
@@ -46,11 +48,11 @@
 
     <template #rodape>
       <PaeAviso v-if="mensagemGeral" tom="erro">{{ mensagemGeral }}</PaeAviso>
-      <div v-if="formularioDisponivel && !somenteLeitura" class="flex flex-wrap justify-end gap-3">
-        <Button :loading="form.processing" :disabled="!form.arquivo || !form.num_sei" @click="enviar">Registrar relatório</Button>
+      <div v-if="formularioDisponivel && !somenteLeitura" class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <Button class="w-full sm:w-auto" :loading="form.processing" :disabled="!form.arquivo || !form.num_sei" @click="enviar">Registrar relatório</Button>
       </div>
       <CollapsibleSection v-if="resumo.ccpae" namespace="pae" section-id="simulado-ccpae" title="Evidência usada no CCPAE" :icon="ShieldCheckIcon" tom="neutro">
-        <p class="text-sm text-slate-700 dark:text-slate-300">{{ resumo.ccpae.codigo }} · avaliação #{{ resumo.ccpae.simulado_avaliacao_id || 'legada, sem referência' }} · relatório #{{ resumo.ccpae.simulado_relatorio_id || 'não exigido ou legado' }}</p>
+        <p class="break-words text-sm text-slate-700 dark:text-slate-300">{{ resumo.ccpae.codigo }} · avaliação #{{ resumo.ccpae.simulado_avaliacao_id || 'legada, sem referência' }} · relatório #{{ resumo.ccpae.simulado_relatorio_id || 'não exigido ou legado' }}</p>
       </CollapsibleSection>
     </template>
   </PaeTelaLayout>
@@ -73,7 +75,7 @@ import { usePaeSimuladoForm } from '@/Composables/pae/usePaeSimuladoForm';
 import PaeTelaLayout from '@/Templates/Pae/PaeTelaLayout.vue';
 import { rotuloSituacaoSimulado, varianteSituacaoSimulado } from '@/utils/paeSimulado';
 import { errosSemCampo, formatarData } from '@/utils/paeTela';
-import { BellAlertIcon, ClipboardDocumentCheckIcon, ClockIcon, DocumentArrowUpIcon, InformationCircleIcon, ShieldCheckIcon, SpeakerWaveIcon } from '@heroicons/vue/24/outline';
+import { BellAlertIcon, ClipboardDocumentCheckIcon, ClipboardDocumentListIcon, ClockIcon, DocumentArrowUpIcon, InformationCircleIcon, ShieldCheckIcon, SpeakerWaveIcon } from '@heroicons/vue/24/outline';
 import { Head } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
@@ -97,23 +99,25 @@ const ABA_DO_CAMPO = {
 };
 const raizDoCampo = (campo) => campo.split('.')[0];
 
-const aba = ref('envio');
 const errosPorAba = computed(() => Object.keys(form.errors).reduce((contagem, campo) => {
   const destino = ABA_DO_CAMPO[raizDoCampo(campo)];
   return destino ? { ...contagem, [destino]: (contagem[destino] ?? 0) + 1 } : contagem;
 }, {}));
 
+const formularioDisponivel = computed(() => props.resumo.avaliacao?.resultado === 'exigivel');
+const aba = ref(formularioDisponivel.value ? 'envio' : 'exigibilidade');
+
 const abas = computed(() => [
+  { id: 'exigibilidade', label: 'Exigibilidade', icon: ShieldCheckIcon },
   { id: 'envio', label: 'Envio', icon: DocumentArrowUpIcon, badge: errosPorAba.value.envio || null },
   { id: 'criterios', label: 'Critérios', icon: ClipboardDocumentCheckIcon, badge: errosPorAba.value.criterios || null },
   { id: 'tempos', label: 'Tempos', icon: ClockIcon, badge: errosPorAba.value.tempos || null },
   { id: 'alarme', label: 'Alarme', icon: SpeakerWaveIcon, badge: errosPorAba.value.alarme || null },
   { id: 'informativos', label: 'Informativos', icon: InformationCircleIcon, badge: errosPorAba.value.informativos || null },
-  { id: 'historico', label: 'Histórico', icon: ShieldCheckIcon, badge: props.resumo.relatorios.length || null },
+  { id: 'historico', label: 'Histórico', icon: ClipboardDocumentListIcon, badge: props.resumo.relatorios.length || null },
 ]);
 
 const selecionado = computed(() => props.resumo.relatorios.find((r) => r.id === selecionadoId.value) ?? null);
-const formularioDisponivel = computed(() => props.resumo.avaliacao?.resultado === 'exigivel');
 // Quem pode abrir/criar simulados (independe da versao em consulta, para poder sair de uma versao antiga).
 const podeRegistrar = computed(() => props.can_validar && !props.protocolo.arquivado);
 const somenteLeitura = computed(() => !podeRegistrar.value || (selecionado.value !== null && !selecionado.value.vigente));

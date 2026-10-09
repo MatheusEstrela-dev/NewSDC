@@ -21,7 +21,7 @@
     <template #default="{ aba: ativa }">
       <div v-if="ativa === 'aplicabilidade'" class="space-y-4">
         <CollapsibleSection namespace="pae" section-id="dco-vigente" title="Decisão vigente" subtitle="A avaliação mais recente da CEDEC prevalece." :icon="ShieldCheckIcon">
-          <div v-if="resumo.avaliacao" class="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800">
+          <div v-if="resumo.avaliacao" class="break-words rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800">
             <p class="font-semibold text-slate-900 dark:text-white">{{ resumo.avaliacao.resultado === 'aplicavel' ? 'DCO aplicável' : 'DCO não aplicável' }}</p>
             <p class="mt-1 text-slate-700 dark:text-slate-200">{{ resumo.avaliacao.fundamentacao }}</p>
             <p class="mt-1 text-slate-500 dark:text-slate-400">SEI {{ resumo.avaliacao.num_sei }} · {{ resumo.avaliacao.decisor?.name || 'Responsável não disponível' }} · {{ formatarData(resumo.avaliacao.decidido_em) }}</p>
@@ -35,14 +35,14 @@
             <FormTextarea v-model="avaliacao.fundamentacao" label="Fundamentação" :rows="3" :error="avaliacao.errors.fundamentacao" required />
             <FormField v-model="avaliacao.num_sei" label="Número SEI" maxlength="100" :error="avaliacao.errors.num_sei" required />
             <p v-if="errosSemCampo(avaliacao.errors, CAMPOS_AVALIACAO)" class="text-sm text-red-600 dark:text-red-300">{{ errosSemCampo(avaliacao.errors, CAMPOS_AVALIACAO) }}</p>
-            <Button type="submit" :loading="avaliacao.processing">Registrar avaliação</Button>
+            <Button type="submit" class="w-full sm:w-auto" :loading="avaliacao.processing">Registrar avaliação</Button>
           </form>
         </CollapsibleSection>
 
         <CollapsibleSection namespace="pae" section-id="dco-historico-avaliacoes" title="Histórico de avaliações" :subtitle="`${resumo.avaliacoes.length} registro(s)`" :icon="ClockIcon" tom="neutro">
           <p v-if="!resumo.avaliacoes.length" class="text-sm text-slate-500">Nenhuma avaliação registrada.</p>
           <ol v-else class="space-y-2 text-sm text-slate-700 dark:text-slate-300">
-            <li v-for="item in resumo.avaliacoes" :key="item.id" class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <li v-for="item in resumo.avaliacoes" :key="item.id" class="break-words rounded-lg border border-slate-200 p-3 dark:border-slate-700">
               <strong>{{ item.resultado === 'aplicavel' ? 'Aplicável' : 'Não aplicável' }}</strong> · SEI {{ item.num_sei }} · {{ formatarData(item.decidido_em) }}
               <p class="mt-1">{{ item.fundamentacao }}</p>
             </li>
@@ -52,7 +52,7 @@
 
       <div v-else class="space-y-4">
         <CollapsibleSection v-if="can_validar && resumo.avaliacao?.resultado === 'aplicavel'" namespace="pae" section-id="dco-registrar" title="Registrar declaração" subtitle="Cada apresentação gera uma versão; a mais recente da competência prevalece na emissão." :icon="DocumentArrowUpIcon" tom="success">
-          <form class="grid gap-3 sm:grid-cols-2" @submit.prevent="registrarDocumento">
+          <form class="grid grid-cols-1 gap-3 sm:grid-cols-2" @submit.prevent="registrarDocumento">
             <FormField v-model="documento.competencia" type="number" label="Competência" step="1" :error="documento.errors.competencia" required />
             <FormSelect v-model="documento.resultado" label="Resultado conferido" :options="OPCOES_RESULTADO_DOCUMENTO" placeholder="" :error="documento.errors.resultado" required />
             <FormDateField v-model="documento.dt_documento" label="Data da DCO" :error="documento.errors.dt_documento" required />
@@ -61,14 +61,14 @@
             <FormFileField v-model="documento.arquivo" label="Arquivo PDF (até 20 MiB)" :error="documento.errors.arquivo" required />
             <FormTextarea v-model="documento.observacao" class="sm:col-span-2" label="Observação" :rows="2" :error="documento.errors.observacao" />
             <p v-if="errosSemCampo(documento.errors, CAMPOS_DOCUMENTO)" class="text-sm text-red-600 dark:text-red-300 sm:col-span-2">{{ errosSemCampo(documento.errors, CAMPOS_DOCUMENTO) }}</p>
-            <div class="sm:col-span-2"><Button type="submit" :loading="documento.processing">Registrar DCO</Button></div>
+            <div class="sm:col-span-2"><Button type="submit" class="w-full sm:w-auto" :loading="documento.processing">Registrar DCO</Button></div>
           </form>
         </CollapsibleSection>
 
         <CollapsibleSection namespace="pae" section-id="dco-declaracoes" title="Declarações apresentadas" :subtitle="`${resumo.documentos.length} versão(ões)`" :icon="DocumentTextIcon" tom="neutro">
           <p v-if="!resumo.documentos.length" class="text-sm text-slate-500 dark:text-slate-400">Nenhuma DCO apresentada.</p>
           <ul v-else class="space-y-3">
-            <li v-for="item in resumo.documentos" :key="item.id" class="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+            <li v-for="item in resumo.documentos" :key="item.id" class="min-w-0 break-words rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <strong class="text-slate-900 dark:text-white">{{ item.competencia }} · versão {{ item.versao }} · {{ item.resultado === 'positiva' ? 'Positiva' : 'Não conforme' }}</strong>
                 <a v-if="can_view" :href="route('pae.protocolo.dco.documentos.download', [protocolo.id, item.id])" class="font-semibold text-blue-700 underline dark:text-blue-300">Baixar PDF</a>
@@ -84,7 +84,7 @@
 
     <template v-if="resumo.ccpae" #rodape>
       <CollapsibleSection namespace="pae" section-id="dco-ccpae" title="Evidência usada no CCPAE" :icon="ShieldCheckIcon" tom="neutro">
-        <p class="text-sm text-slate-700 dark:text-slate-300">{{ resumo.ccpae.codigo }} · avaliação #{{ resumo.ccpae.dco_avaliacao_id || 'legada, sem referência' }} · DCO #{{ resumo.ccpae.dco_documento_id || 'não exigida ou legada' }}</p>
+        <p class="break-words text-sm text-slate-700 dark:text-slate-300">{{ resumo.ccpae.codigo }} · avaliação #{{ resumo.ccpae.dco_avaliacao_id || 'legada, sem referência' }} · DCO #{{ resumo.ccpae.dco_documento_id || 'não exigida ou legada' }}</p>
       </CollapsibleSection>
     </template>
   </PaeTelaLayout>

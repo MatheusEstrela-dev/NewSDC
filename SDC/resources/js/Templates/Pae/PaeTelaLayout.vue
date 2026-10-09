@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+  <div class="w-full min-w-0 pb-6">
     <DetalheHeader
       :title="titulo"
       :icon="icone"

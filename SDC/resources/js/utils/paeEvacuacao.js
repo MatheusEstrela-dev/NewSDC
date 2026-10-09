@@ -9,6 +9,12 @@ export function classeSituacaoEvacuacao(situacao) {
   return situacao === 'nao_conforme' ? 'text-red-700 dark:text-red-300' : 'text-slate-600 dark:text-slate-300';
 }
 
+const VARIANTES = { conforme: 'success', nao_conforme: 'danger', nao_conferida: 'warning' };
+
+export function varianteSituacaoEvacuacao(situacao) {
+  return VARIANTES[situacao] ?? 'warning';
+}
+
 export function numero(valor, casas = 2) {
   if (valor === null || valor === undefined) return '—';
   return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });

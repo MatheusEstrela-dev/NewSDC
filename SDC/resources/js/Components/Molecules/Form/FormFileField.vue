@@ -8,7 +8,7 @@
       :accept="accept"
       :disabled="disabled"
       :required="required"
-      class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-500 disabled:opacity-60 dark:text-slate-200"
+      class="block w-full min-w-0 text-sm text-slate-700 file:mr-3 file:mb-1 sm:file:mb-0 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-500 disabled:opacity-60 dark:text-slate-200"
       @change="$emit('update:modelValue', $event.target.files?.[0] ?? null)"
     />
     <p v-if="error" class="mt-1 text-xs text-red-600 dark:text-red-400">{{ error }}</p>

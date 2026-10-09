@@ -22,7 +22,7 @@
       <form v-if="ativa === 'cadastro'" class="space-y-4" @submit.prevent="salvar">
         <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true" :disabled="!podeEditar || form.processing">Salvar</button>
         <CollapsibleSection v-for="grupo in grupos" :key="grupo.titulo" namespace="pae" :section-id="`ficha-${grupo.chave}`" :title="grupo.titulo" :subtitle="grupo.ajuda" :icon="DocumentTextIcon">
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <template v-for="campo in grupo.campos" :key="campo.chave">
               <FormField v-if="campo.chave === 'municipio_sede_id' && !podeEditar" :model-value="ficha.municipio_sede_nome || 'Não informado'" :label="campo.rotulo" disabled />
               <FormSelect v-else-if="campo.chave === 'municipio_sede_id'" v-model="form.municipio_sede_id" :label="campo.rotulo" :options="opcoesMunicipios" placeholder="Não informado" :error="form.errors[campo.chave]" />
@@ -34,7 +34,7 @@
 
         <CollapsibleSection namespace="pae" section-id="ficha-municipios" title="Municípios da ZAS e da ZSS" subtitle="A lista é cadastrada na triagem do protocolo e preservada em cada versão da ficha." :icon="MapPinIcon">
           <div v-if="ficha.municipios_snapshot?.length" class="flex flex-wrap gap-2">
-            <span v-for="municipio in ficha.municipios_snapshot" :key="municipio.municipio_id" class="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700 dark:border-slate-600 dark:text-slate-200">
+            <span v-for="municipio in ficha.municipios_snapshot" :key="municipio.municipio_id" class="max-w-full break-words rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700 dark:border-slate-600 dark:text-slate-200">
               {{ municipio.nome }} <span class="text-slate-500 dark:text-slate-400">({{ [municipio.na_zas ? 'ZAS' : null, municipio.na_zss ? 'ZSS' : null].filter(Boolean).join(' / ') }})</span>
             </span>
           </div>
@@ -44,8 +44,8 @@
         </CollapsibleSection>
 
         <CollapsibleSection namespace="pae" section-id="ficha-listas" title="Rios e estruturas associadas" :icon="MapIcon">
-          <div class="grid gap-5 md:grid-cols-2">
-            <div v-for="lista in listas" :key="lista.chave" class="space-y-3">
+          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div v-for="lista in listas" :key="lista.chave" class="min-w-0 space-y-3">
               <FormSelect :model-value="estadoLista(lista.chave)" :label="lista.rotulo" :options="OPCOES_ESTADO_LISTA" placeholder="" :disabled="!podeEditar" @update:model-value="alterarEstadoLista(lista.chave, $event)" />
               <div v-if="Array.isArray(form[lista.chave]) && form[lista.chave].length" class="space-y-2">
                 <div v-for="(item, indice) in form[lista.chave]" :key="indice" class="flex items-start gap-2">
@@ -81,7 +81,7 @@
             <li v-for="item in versoes" :key="item.versao">
               <a :href="urlVersao(item.versao)" class="block rounded-lg border px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800" :class="item.versao === ficha.versao ? 'border-blue-500 text-blue-800 dark:text-blue-200' : 'border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300'">
                 <span class="font-semibold">Versão {{ item.versao }}</span>
-                <span class="mt-1 block text-xs">{{ item.autor_nome || 'Autor não disponível' }} · {{ formatarDataHora(item.criado_em) }}</span>
+                <span class="mt-1 block break-words text-xs">{{ item.autor_nome || 'Autor não disponível' }} · {{ formatarDataHora(item.criado_em) }}</span>
               </a>
             </li>
           </ul>
@@ -92,8 +92,8 @@
     <template #rodape>
       <PaeAviso v-if="camposComErro" tom="erro">{{ camposComErro }} campo(s) com erro na aba Cadastro</PaeAviso>
       <PaeAviso v-if="form.errors.base_versao || form.errors.protocolo" tom="erro">{{ form.errors.base_versao || form.errors.protocolo }}</PaeAviso>
-      <div v-if="podeEditar" class="flex justify-end">
-        <Button :loading="form.processing" @click="salvar">{{ form.processing ? 'Salvando...' : 'Salvar ficha cadastral' }}</Button>
+      <div v-if="podeEditar" class="flex flex-col sm:flex-row sm:justify-end">
+        <Button class="w-full sm:w-auto" :loading="form.processing" @click="salvar">{{ form.processing ? 'Salvando...' : 'Salvar ficha cadastral' }}</Button>
       </div>
     </template>
   </PaeTelaLayout>

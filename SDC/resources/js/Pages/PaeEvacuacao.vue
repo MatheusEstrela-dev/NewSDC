@@ -32,8 +32,8 @@
       <CollapsibleSection v-else namespace="pae" section-id="evacuacao-historico" title="Histórico de conferências" :subtitle="`${historico.length} versão(ões)`" :icon="ClockIcon" tom="neutro">
         <p v-if="!historico.length" class="text-sm text-slate-500 dark:text-slate-400">Nenhuma conferência registrada.</p>
         <ol v-else class="space-y-2 text-sm">
-          <li v-for="item in historico" :key="item.versao" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <span class="text-slate-700 dark:text-slate-200">Versão {{ item.versao }} · {{ item.autor || '—' }} · {{ formatarData(item.created_at) }} · SEI {{ item.num_sei }} · TTE {{ item.tte_fmt ?? '—' }}</span>
+          <li v-for="item in historico" :key="item.versao" class="flex flex-col gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+            <span class="min-w-0 break-words text-slate-700 dark:text-slate-200">Versão {{ item.versao }} · {{ item.autor || '—' }} · {{ formatarData(item.created_at) }} · SEI {{ item.num_sei }} · TTE {{ item.tte_fmt ?? '—' }}</span>
             <span class="flex items-center gap-3">
               <Badge :variant="item.conforme ? 'success' : 'danger'" size="sm">{{ item.conforme ? 'Conforme' : 'Não conforme' }}</Badge>
               <Link :href="route('pae.protocolo.evacuacao.versao', [protocolo.id, item.versao])" class="font-semibold text-blue-700 underline dark:text-blue-300">Abrir</Link>
@@ -45,16 +45,16 @@
 
     <template #rodape>
       <CollapsibleSection v-if="conferencia && !can_edit" namespace="pae" section-id="evacuacao-registro-lido" :title="`Registro da versão ${conferencia.versao}`" :icon="DocumentTextIcon" tom="neutro">
-        <dl class="grid gap-3 text-sm sm:grid-cols-3">
-          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Número SEI</dt><dd class="text-slate-800 dark:text-slate-100">{{ conferencia.num_sei || '—' }}</dd></div>
-          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Autor</dt><dd class="text-slate-800 dark:text-slate-100">{{ conferencia.autor || '—' }}</dd></div>
-          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Data</dt><dd class="text-slate-800 dark:text-slate-100">{{ formatarData(conferencia.created_at) }}</dd></div>
-          <div class="sm:col-span-3"><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Observação</dt><dd class="whitespace-pre-line text-slate-800 dark:text-slate-100">{{ conferencia.observacao || '—' }}</dd></div>
+        <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Número SEI</dt><dd class="break-words text-slate-800 dark:text-slate-100">{{ conferencia.num_sei || '—' }}</dd></div>
+          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Autor</dt><dd class="break-words text-slate-800 dark:text-slate-100">{{ conferencia.autor || '—' }}</dd></div>
+          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Data</dt><dd class="break-words text-slate-800 dark:text-slate-100">{{ formatarData(conferencia.created_at) }}</dd></div>
+          <div class="sm:col-span-2 lg:col-span-3"><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Observação</dt><dd class="whitespace-pre-line break-words text-slate-800 dark:text-slate-100">{{ conferencia.observacao || '—' }}</dd></div>
         </dl>
       </CollapsibleSection>
 
       <CollapsibleSection namespace="pae" section-id="evacuacao-registro" title="Tempo declarado e registro" subtitle="Informe o SEI e registre depois de simular." :icon="PencilSquareIcon" tom="success">
-        <div class="grid gap-3 sm:grid-cols-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <FormField v-model="form.tte_declarado" label="Tempo total declarado pelo empreendedor (mm:ss)" placeholder="15:00" maxlength="6" :disabled="!can_edit" :error="erros.tte_declarado" />
           <template v-if="can_edit">
             <FormField v-model="form.num_sei" label="Número SEI" maxlength="100" :error="erros.num_sei" />
@@ -63,9 +63,9 @@
         </div>
         <p v-if="erros.chave_idempotencia || erros.protocolo" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ erros.chave_idempotencia || erros.protocolo }}</p>
         <p v-if="erroSimulacao" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ erroSimulacao }}</p>
-        <div v-if="can_edit" class="mt-4 flex flex-wrap justify-end gap-3">
-          <Button variant="outline" :loading="simulando" @click="simular">{{ simulando ? 'Simulando...' : 'Simular' }}</Button>
-          <Button :disabled="!simulado || form.processing || !form.num_sei" @click="registrar">Registrar conferência</Button>
+        <div v-if="can_edit" class="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button class="w-full sm:w-auto" variant="outline" :loading="simulando" @click="simular">{{ simulando ? 'Simulando...' : 'Simular' }}</Button>
+          <Button class="w-full sm:w-auto" :disabled="!simulado || form.processing || !form.num_sei" @click="registrar">Registrar conferência</Button>
         </div>
       </CollapsibleSection>
     </template>

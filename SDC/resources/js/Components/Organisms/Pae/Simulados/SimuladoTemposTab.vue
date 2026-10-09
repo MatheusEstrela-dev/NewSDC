@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-4">
     <CollapsibleSection v-for="categoria in CATEGORIAS_TEMPO" :key="categoria.chave" namespace="pae" :section-id="`simulado-tempos-${categoria.chave}`" :title="categoria.titulo" :subtitle="categoria.criterio ? `Alimenta os indícios do critério ${categoria.criterio}.` : 'Informativo: sem critério no item 8.1.'" :icon="ClockIcon">
-      <div v-if="!somenteLeitura" class="mb-3 flex justify-end">
-        <Button variant="outline" size="sm" @click="$emit('adicionar', categoria.chave)">Adicionar linha</Button>
+      <div v-if="!somenteLeitura" class="mb-3 flex flex-col sm:flex-row sm:justify-end">
+        <Button class="w-full sm:w-auto" variant="outline" size="sm" @click="$emit('adicionar', categoria.chave)">Adicionar linha</Button>
       </div>
       <p v-if="!tempos[categoria.chave].length" class="text-sm text-slate-500 dark:text-slate-400">Nenhuma linha informada.</p>
-      <div v-else class="overflow-x-auto">
+      <div v-else class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <table class="min-w-full text-sm">
           <thead class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
             <tr>

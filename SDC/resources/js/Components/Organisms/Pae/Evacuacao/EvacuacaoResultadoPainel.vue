@@ -2,7 +2,7 @@
   <CollapsibleSection namespace="pae" section-id="evacuacao-resultado" title="Resultado" subtitle="TTE = maior valor entre o tempo máximo de deslocamento e o estrangulamento." :icon="ChartBarIcon" :tom="conforme || !resultado ? 'info' : 'danger'">
     <p v-if="!resultado" class="text-sm text-slate-500 dark:text-slate-400">Preencha os dados e clique em Simular.</p>
     <template v-else>
-      <dl class="grid gap-3 sm:grid-cols-3">
+      <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div v-for="item in tempos" :key="item.rotulo" class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
           <dt class="text-xs uppercase text-slate-500 dark:text-slate-400">{{ item.rotulo }}</dt>
           <dd class="text-xl font-bold text-slate-900 dark:text-white">{{ item.valor ?? '—' }}</dd>

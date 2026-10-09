@@ -31,7 +31,7 @@
         <p class="text-sm text-slate-600 dark:text-slate-300">
           Vigente ate: <span class="font-semibold">{{ vencimentoPrevisto || '—' }}</span>
         </p>
-        <p class="text-sm text-slate-700 dark:text-slate-200">DCO: {{ (protocolo?.dcoSituacao || 'não avaliada').replaceAll('_', ' ') }}.</p>
+        <p class="text-sm text-slate-700 dark:text-slate-200">DCO: {{ rotuloSituacaoDco(protocolo?.dcoSituacao) }}.</p>
         <a v-if="protocolo" :href="route('pae.protocolo.dco.show', protocolo.id)" class="inline-block text-sm font-semibold text-blue-700 underline dark:text-blue-300">Conferir avaliação e declarações</a>
         <p class="text-sm text-slate-700 dark:text-slate-200">Evacuação: {{ rotuloSituacaoEvacuacao(protocolo?.evacuacaoSituacao) }} (informativo, não bloqueia).</p>
         <p class="text-sm text-slate-700 dark:text-slate-200">Simulado: {{ rotuloSituacaoSimulado(protocolo?.simuladoSituacao) }}.</p>
@@ -61,6 +61,7 @@ import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormDateField from '@/Components/Molecules/Form/FormDateField.vue';
 import ToggleField from '@/Components/Molecules/Form/ToggleField.vue';
 import { hojeISO } from '@/Support/dataLocal';
+import { rotuloSituacaoDco } from '@/utils/paeDco';
 import { rotuloSituacaoEvacuacao } from '@/utils/paeEvacuacao';
 import { rotuloSituacaoSimulado, simuladoPronto } from '@/utils/paeSimulado';
 
