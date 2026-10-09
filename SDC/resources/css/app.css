@@ -20,3 +20,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Fundo do documento igual ao do app. O shell autenticado pinta o proprio
+ * fundo (bg-slate-50 / dark:bg-slate-950), mas o html/body ficavam sem cor:
+ * qualquer trecho de documento que sobre abaixo do shell (altura residual de
+ * uma pagina anterior, barra de endereco do celular recolhendo) aparecia como
+ * faixa branca sob o rodape.
+ */
+@layer base {
+  html,
+  body {
+    @apply bg-slate-50 dark:bg-slate-950;
+  }
+}
