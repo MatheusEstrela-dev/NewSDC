@@ -16,10 +16,10 @@ use App\Modules\Pae\Services\PaeAdmissibilidadeService;
 use App\Modules\Pae\Services\PaeComunicacaoService;
 use App\Modules\Pae\Services\PaeDcoService;
 use App\Modules\Pae\Services\PaeEvacuacaoService;
-use App\Modules\Pae\Services\PaeSimuladoService;
 use App\Modules\Pae\Services\PaeNotificacaoService;
 use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
+use App\Modules\Pae\Services\PaeSimuladoService;
 use App\Services\Export\CsvExportService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -64,8 +64,9 @@ class PaeProtocoloController extends Controller
             $filters['restringir_ao_analista'] = $user->id;
         }
 
+        $hoje = CarbonImmutable::today();
         $protocolos = $this->simulado->anotarListagem($this->evacuacao->anotarListagem($this->dco->anotarListagem(
-            $this->prazos->anotarListagem($this->service->list($filters)), CarbonImmutable::today())), CarbonImmutable::today());
+            $this->prazos->anotarListagem($this->service->list($filters)), $hoje)), $hoje);
         $statistics = $this->service->getStatistics($podeVerTodos ? null : $user->id);
 
         $analistas = DB::table('users')

@@ -12,7 +12,7 @@
         <a v-if="selecionado && canView" :href="route('pae.protocolo.simulados.relatorios.download', [protocoloId, selecionado.id])" class="mt-1 inline-block font-semibold text-blue-700 underline dark:text-blue-300">{{ selecionado.arquivo_nome_original }}</a>
         <span v-else class="text-slate-500 dark:text-slate-400">—</span>
       </div>
-      <ToggleField v-model="form.integrado" label="Simulado integrado (Art. 102)" description="Barragens que compartilham a mesma ZAS; cada protocolo registra o seu relatório." :class="somenteLeitura ? 'pointer-events-none opacity-60' : ''" />
+      <ToggleField v-model="form.integrado" label="Simulado integrado (Art. 102)" description="Barragens que compartilham a mesma ZAS; cada protocolo registra o seu relatório." :disabled="somenteLeitura" />
       <FormTextarea v-if="form.integrado" v-model="form.barragens_integradas" label="Barragens integradas" :rows="2" :disabled="somenteLeitura" :error="form.errors.barragens_integradas" required />
       <FormTextarea v-model="form.observacao" class="sm:col-span-2" label="Observação" :rows="2" :disabled="somenteLeitura" :error="form.errors.observacao" />
     </div>

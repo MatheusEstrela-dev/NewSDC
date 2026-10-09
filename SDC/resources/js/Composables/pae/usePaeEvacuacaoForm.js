@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { separarLista } from '@/utils/paeEvacuacao';
+import { novoUuid } from '@/utils/paeTela';
 
 const FABRICAS = {
   setores: () => ({ id: '', populacao: '', comercial: false, via: 'calcada', largura: '', lados: 2, distancia: '', terreno: 'plano' }),
@@ -21,7 +22,7 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
     tte_declarado: entrada?.tte_declarado ?? '',
     num_sei: '',
     observacao: '',
-    chave_idempotencia: crypto.randomUUID(),
+    chave_idempotencia: novoUuid(),
   });
   const resultado = ref(conferencia?.resultado ?? null);
   const simulado = ref(conferencia !== null);
@@ -76,7 +77,7 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
         preserveScroll: true,
         onSuccess: () => {
           form.reset('num_sei', 'observacao');
-          form.chave_idempotencia = crypto.randomUUID();
+          form.chave_idempotencia = novoUuid();
         },
       });
   }

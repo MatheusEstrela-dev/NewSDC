@@ -130,6 +130,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import { novoUuid } from '@/utils/paeTela';
 
 const props = defineProps({
   protocoloId: { type: Number, default: null },
@@ -144,7 +145,7 @@ const municipioSelecionado = ref('');
 const form = useForm({ municipios: [], itens: [] });
 const decisao = useForm({
   tipo: 'admitido', fundamentacao: '', fundamentos: [], transitorio_confirmado: false,
-  submetido_em: '', notificado_em: '', num_sei: '', chave_idempotencia: crypto.randomUUID(),
+  submetido_em: '', notificado_em: '', num_sei: '', chave_idempotencia: novoUuid(),
 });
 
 const podeEditar = computed(() => props.canEdit && dados.value?.pode_editar);
@@ -199,7 +200,7 @@ function decidir() {
     preserveState: true,
     onSuccess: () => {
       decisao.reset();
-      decisao.chave_idempotencia = crypto.randomUUID();
+      decisao.chave_idempotencia = novoUuid();
       emit('atualizado');
     },
   });

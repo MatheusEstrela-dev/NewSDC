@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { CATEGORIAS_TEMPO } from '@/utils/paeSimulado';
+import { novoUuid } from '@/utils/paeTela';
 
 const NUMEROS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -27,7 +28,7 @@ function estadoVazio() {
       conclusao_compdec: '',
     },
     arquivo: null,
-    chave_idempotencia: crypto.randomUUID(),
+    chave_idempotencia: novoUuid(),
   };
 }
 
@@ -83,6 +84,14 @@ function paraEnvio(valor) {
   return valor;
 }
 
+// Diz o que corrigir a partir das chaves rejeitadas; falha que nao e de validacao vira aviso generico.
+function mensagemErroIndicios(erro) {
+  if (erro.response?.status !== 422) return 'Não foi possível calcular os indícios agora. Tente novamente.';
+  const campos = Object.keys(erro.response.data?.errors ?? {}).map((chave) => chave.split('.')[0]);
+  const alvos = [campos.includes('tempos') ? 'os tempos (mm:ss)' : null, campos.includes('alarme') ? 'o alarme' : null].filter(Boolean);
+  return `Corrija ${alvos.length ? alvos.join(' e ') : 'os dados informados'} para calcular os indícios.`;
+}
+
 // Estado do relatorio em edicao. Validado e indicios sao do servidor; aqui so se pede a previa.
 export function usePaeSimuladoForm(protocoloId, relatorioInicial) {
   const form = useForm(relatorioInicial ? estadoDoRelatorio(relatorioInicial) : estadoVazio());
@@ -110,8 +119,7 @@ export function usePaeSimuladoForm(protocoloId, relatorioInicial) {
       });
       indicios.value = data;
     } catch (erro) {
-      if (erro.response?.status !== 422) throw erro;
-      erroIndicios.value = 'Corrija os tempos (mm:ss) e o alarme para calcular os indícios.';
+      erroIndicios.value = mensagemErroIndicios(erro);
     } finally {
       atualizandoIndicios.value = false;
     }
@@ -124,7 +132,7 @@ export function usePaeSimuladoForm(protocoloId, relatorioInicial) {
       forceFormData: true,
       onSuccess: () => {
         form.arquivo = null;
-        form.chave_idempotencia = crypto.randomUUID();
+        form.chave_idempotencia = novoUuid();
       },
       onError: () => aoErro?.(),
     });

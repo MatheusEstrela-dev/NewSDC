@@ -4,12 +4,15 @@
     :class="[
       'w-11 h-6 flex items-center rounded-full transition-all duration-200',
       'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white',
+      'disabled:opacity-60 disabled:cursor-not-allowed',
       'dark:focus:ring-offset-slate-900 focus:ring-blue-500',
       modelValue ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700',
     ]"
     :aria-checked="modelValue"
+    :aria-disabled="disabled"
+    :disabled="disabled"
     role="switch"
-    @click="$emit('update:modelValue', !modelValue)"
+    @click="alternar"
   >
     <span
       :class="[
@@ -21,12 +24,20 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   modelValue: {
+    type: Boolean,
+    default: false,
+  },
+  disabled: {
     type: Boolean,
     default: false,
   },
 });
 
-defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue']);
+
+const alternar = () => {
+  if (!props.disabled) emit('update:modelValue', !props.modelValue);
+};
 </script>

@@ -101,7 +101,7 @@ import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import PaeAviso from '@/Components/Molecules/Pae/PaeAviso.vue';
 import PaeTelaLayout from '@/Templates/Pae/PaeTelaLayout.vue';
-import { errosSemCampo, formatarData } from '@/utils/paeTela';
+import { errosSemCampo, formatarData, novoUuid } from '@/utils/paeTela';
 import { ClockIcon, DocumentArrowUpIcon, DocumentTextIcon, PencilSquareIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -126,8 +126,8 @@ const abas = [
   { id: 'declaracoes', label: 'Declarações', icon: DocumentTextIcon, badge: props.resumo.documentos.length || null },
 ];
 
-const avaliacao = useForm({ resultado: 'aplicavel', fundamentacao: '', num_sei: '', chave_idempotencia: crypto.randomUUID() });
-const documento = useForm({ competencia: props.resumo.competencia_anual, resultado: 'positiva', dt_documento: '', dt_apresentacao: '', num_sei: '', observacao: '', arquivo: null, chave_idempotencia: crypto.randomUUID() });
+const avaliacao = useForm({ resultado: 'aplicavel', fundamentacao: '', num_sei: '', chave_idempotencia: novoUuid() });
+const documento = useForm({ competencia: props.resumo.competencia_anual, resultado: 'positiva', dt_documento: '', dt_apresentacao: '', num_sei: '', observacao: '', arquivo: null, chave_idempotencia: novoUuid() });
 
 const ROTULOS = { nao_avaliada: 'Não avaliada', nao_aplicavel: 'Não aplicável', comprovada: 'Comprovada', aguardando_prazo: 'Aguardando prazo', pendente_emissao: 'Pendente para emissão', atrasada: 'Atrasada', nao_conforme: 'Não conforme' };
 const VARIANTES = { comprovada: 'success', nao_aplicavel: 'neutral', aguardando_prazo: 'warning', pendente_emissao: 'warning', atrasada: 'danger', nao_conforme: 'danger' };
@@ -137,7 +137,7 @@ const varianteSituacao = computed(() => VARIANTES[props.resumo.situacao] || 'def
 function avaliar() {
   avaliacao.post(route('pae.protocolo.dco.avaliar', props.protocolo.id), {
     preserveScroll: true,
-    onSuccess: () => { avaliacao.reset('fundamentacao', 'num_sei'); avaliacao.chave_idempotencia = crypto.randomUUID(); },
+    onSuccess: () => { avaliacao.reset('fundamentacao', 'num_sei'); avaliacao.chave_idempotencia = novoUuid(); },
   });
 }
 
@@ -145,7 +145,7 @@ function registrarDocumento() {
   documento.post(route('pae.protocolo.dco.documentos.store', props.protocolo.id), {
     preserveScroll: true,
     forceFormData: true,
-    onSuccess: () => { documento.reset('dt_documento', 'dt_apresentacao', 'num_sei', 'observacao', 'arquivo'); documento.chave_idempotencia = crypto.randomUUID(); },
+    onSuccess: () => { documento.reset('dt_documento', 'dt_apresentacao', 'num_sei', 'observacao', 'arquivo'); documento.chave_idempotencia = novoUuid(); },
   });
 }
 </script>

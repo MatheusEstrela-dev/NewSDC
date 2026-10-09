@@ -38,7 +38,7 @@ import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import PaeAviso from '@/Components/Molecules/Pae/PaeAviso.vue';
 import { MOTIVOS_DISPENSA, OPCOES_MOTIVO } from '@/utils/paeSimulado';
-import { errosSemCampo, formatarData } from '@/utils/paeTela';
+import { errosSemCampo, formatarData, novoUuid } from '@/utils/paeTela';
 import { ShieldCheckIcon } from '@heroicons/vue/24/outline';
 import { useForm } from '@inertiajs/vue3';
 
@@ -51,13 +51,13 @@ const props = defineProps({
 const CAMPOS = ['resultado', 'motivo_dispensa', 'fundamentacao', 'num_sei'];
 const OPCOES_RESULTADO = [{ value: 'exigivel', label: 'Exigível' }, { value: 'dispensado', label: 'Dispensado' }];
 
-const avaliacao = useForm({ resultado: 'exigivel', motivo_dispensa: '', fundamentacao: '', num_sei: '', chave_idempotencia: crypto.randomUUID() });
+const avaliacao = useForm({ resultado: 'exigivel', motivo_dispensa: '', fundamentacao: '', num_sei: '', chave_idempotencia: novoUuid() });
 
 function avaliar() {
   avaliacao.transform((dados) => ({ ...dados, motivo_dispensa: dados.resultado === 'dispensado' ? dados.motivo_dispensa : null }))
     .post(route('pae.protocolo.simulados.avaliar', props.protocoloId), {
       preserveScroll: true,
-      onSuccess: () => { avaliacao.reset('motivo_dispensa', 'fundamentacao', 'num_sei'); avaliacao.chave_idempotencia = crypto.randomUUID(); },
+      onSuccess: () => { avaliacao.reset('motivo_dispensa', 'fundamentacao', 'num_sei'); avaliacao.chave_idempotencia = novoUuid(); },
     });
 }
 </script>

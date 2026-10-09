@@ -22,9 +22,9 @@
               <td v-if="categoria.comPopulacao" class="min-w-[6rem] px-2 py-2"><FormField v-model="linha.populacao" type="number" step="1" size="sm" :aria-label="`População de ${categoria.nome} ${i + 1}`" :disabled="somenteLeitura" :error="erros[`tempos.${categoria.chave}.${i}.populacao`]" /></td>
               <td class="min-w-[6rem] px-2 py-2"><FormField v-model="linha.chegada_onda" size="sm" placeholder="15:00" maxlength="6" :aria-label="`Chegada da onda de ${categoria.nome} ${i + 1}`" :disabled="somenteLeitura" :error="erros[`tempos.${categoria.chave}.${i}.chegada_onda`]" /></td>
               <td class="min-w-[6rem] px-2 py-2"><FormField v-model="linha.saida" size="sm" placeholder="12:30" maxlength="6" :aria-label="`Saída de ${categoria.nome} ${i + 1}`" :disabled="somenteLeitura" :error="erros[`tempos.${categoria.chave}.${i}.saida`]" /></td>
-              <td class="px-2 py-2"><ToggleInput v-model="linha.houve_problemas" :aria-label="`Houve problemas em ${categoria.nome} ${i + 1}`" :class="somenteLeitura ? 'pointer-events-none opacity-60' : ''" /></td>
-              <td class="px-2 py-2"><ToggleInput v-model="linha.ponto_valido" :aria-label="`Ponto de encontro válido em ${categoria.nome} ${i + 1}`" :class="somenteLeitura ? 'pointer-events-none opacity-60' : ''" /></td>
-              <td class="px-2 py-2"><ToggleInput v-model="linha.estimativa" :aria-label="`Estimativa em ${categoria.nome} ${i + 1}`" :class="somenteLeitura ? 'pointer-events-none opacity-60' : ''" /></td>
+              <td class="px-2 py-2"><ToggleInput v-model="linha.houve_problemas" :aria-label="`Houve problemas em ${categoria.nome} ${i + 1}`" :disabled="somenteLeitura" /></td>
+              <td class="px-2 py-2"><ToggleInput v-model="linha.ponto_valido" :aria-label="`Ponto de encontro válido em ${categoria.nome} ${i + 1}`" :disabled="somenteLeitura" /></td>
+              <td class="px-2 py-2"><ToggleInput v-model="linha.estimativa" :aria-label="`Estimativa em ${categoria.nome} ${i + 1}`" :disabled="somenteLeitura" /></td>
               <td v-if="categoria.nivel" class="min-w-[6rem] px-2 py-2"><FormSelect v-model="linha.nivel_emergencia" size="sm" placeholder="" :options="OPCOES_NIVEL_LINHA" :aria-label="`Nível indicado de ${categoria.nome} ${i + 1}`" :disabled="somenteLeitura" :error="erros[`tempos.${categoria.chave}.${i}.nivel_emergencia`]" /></td>
               <td class="px-2 py-2"><Button v-if="!somenteLeitura" variant="danger" size="sm" @click="$emit('remover', categoria.chave, i)">Remover</Button></td>
             </tr>

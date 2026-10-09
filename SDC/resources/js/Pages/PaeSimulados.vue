@@ -41,7 +41,7 @@
           <SimuladoInformativosTab :informativos="form.informativos" :erros="form.errors" :somente-leitura="somenteLeitura" @adicionar-ano="adicionarAno" @remover-ano="removerAno" />
         </div>
       </div>
-      <SimuladoHistoricoTab v-if="ativa === 'historico'" :relatorios="resumo.relatorios" :selecionado-id="selecionadoId" :protocolo-id="protocolo.id" :pode-validar="can_validar" :can-view="can_view" @abrir="abrir" @novo="novo" />
+      <SimuladoHistoricoTab v-if="ativa === 'historico'" :relatorios="resumo.relatorios" :selecionado-id="selecionadoId" :protocolo-id="protocolo.id" :somente-leitura="!podeRegistrar" :can-view="can_view" @abrir="abrir" @novo="novo" />
     </template>
 
     <template #rodape>
@@ -114,7 +114,9 @@ const abas = computed(() => [
 
 const selecionado = computed(() => props.resumo.relatorios.find((r) => r.id === selecionadoId.value) ?? null);
 const formularioDisponivel = computed(() => props.resumo.avaliacao?.resultado === 'exigivel');
-const somenteLeitura = computed(() => !props.can_validar || props.protocolo.arquivado || (selecionado.value !== null && !selecionado.value.vigente));
+// Quem pode abrir/criar simulados (independe da versao em consulta, para poder sair de uma versao antiga).
+const podeRegistrar = computed(() => props.can_validar && !props.protocolo.arquivado);
+const somenteLeitura = computed(() => !podeRegistrar.value || (selecionado.value !== null && !selecionado.value.vigente));
 const seloRotulo = computed(() => {
   const rotulo = rotuloSituacaoSimulado(props.resumo.situacao);
   return rotulo.charAt(0).toUpperCase() + rotulo.slice(1);
@@ -143,6 +145,9 @@ function abrir(relatorio) {
 
 const novo = () => abrir(null);
 
-// Depois de registrar, a versao nova passa a ser a vigente: o formulario recarrega dela (nova chave, PDF novo).
-watch(() => props.resumo.relatorios[0]?.id, () => carregar(vigente()));
+// O registro novo e sempre o de maior id (a lista vem por data de realizacao, entao nao e o primeiro se for revisao de um simulado antigo).
+const ultimoRegistradoId = computed(() => Math.max(0, ...props.resumo.relatorios.map((r) => r.id)));
+
+// Depois de registrar, o formulario recarrega do relatorio recem-salvo (nova chave, PDF novo) e a selecao o acompanha.
+watch(ultimoRegistradoId, (id) => carregar(props.resumo.relatorios.find((r) => r.id === id) ?? vigente()));
 </script>
