@@ -13,6 +13,7 @@ use App\Models\UserStatusHistory;
 use App\Modules\Compdec\Models\Orgao;
 use App\Services\Auth\EmailChangeService;
 use App\Services\Auth\OnboardingService;
+use App\Services\Auth\SessionVersionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -550,12 +551,11 @@ class UserManagementController extends Controller
         }
 
         if (isset($validated['roles'])) {
-            $roles = Role::whereIn('id', $validated['roles'])->get();
-            $user->syncRoles($roles);
+            $this->sincronizarCargos($user, Role::whereIn('id', $validated['roles'])->get());
         }
 
         if (array_key_exists('direct_permissions', $validated)) {
-            $user->syncPermissions($validated['direct_permissions'] ?? []);
+            $this->sincronizarPermissoes($user, $validated['direct_permissions'] ?? []);
         }
 
         $this->invalidarCachesDoUsuario($user);
@@ -572,8 +572,7 @@ class UserManagementController extends Controller
             'roles.*' => 'exists:roles,id',
         ]);
 
-        $roles = Role::whereIn('id', $validated['roles'])->get();
-        $user->syncRoles($roles);
+        $this->sincronizarCargos($user, Role::whereIn('id', $validated['roles'])->get());
 
         $this->invalidarCachesDoUsuario($user);
 
@@ -590,7 +589,7 @@ class UserManagementController extends Controller
         ]);
 
         $permissionNames = Permission::whereIn('id', $validated['permissions'])->pluck('name')->toArray();
-        $user->syncPermissions($permissionNames);
+        $this->sincronizarPermissoes($user, $permissionNames);
 
         $this->invalidarCachesDoUsuario($user);
 
@@ -615,6 +614,43 @@ class UserManagementController extends Controller
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         Cache::forget("inertia_user_data_{$user->id}");
+    }
+
+    /**
+     * Sincroniza cargos so quando o conjunto muda de fato (o Spatie desanexa e
+     * reanexa tudo a cada sync, o que dispararia os eventos de derrubada de
+     * sessao mesmo numa edicao sem mudanca de cargo). Se mudou, derruba as
+     * sessoes e tokens do usuario, inclusive na remocao total.
+     */
+    private function sincronizarCargos(User $user, $roles): void
+    {
+        $atuais = $user->roles()->pluck('roles.id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+        $novos = collect($roles)->pluck('id')->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
+
+        if ($atuais === $novos) {
+            return;
+        }
+
+        $user->syncRoles($roles);
+        app(SessionVersionService::class)->bumpUser($user);
+    }
+
+    /**
+     * Idem para permissoes diretas (por nome).
+     *
+     * @param  array<int, string>  $nomes
+     */
+    private function sincronizarPermissoes(User $user, array $nomes): void
+    {
+        $atuais = $user->permissions()->pluck('name')->sort()->values()->all();
+        $novos = collect($nomes)->unique()->sort()->values()->all();
+
+        if ($atuais === $novos) {
+            return;
+        }
+
+        $user->syncPermissions($nomes);
+        app(SessionVersionService::class)->bumpUser($user);
     }
 
     public function destroy(User $user)

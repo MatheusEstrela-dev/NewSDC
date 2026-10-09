@@ -123,11 +123,8 @@ class UserObserver
             return;
         }
 
+        // Sobe a versao e revoga sessoes/tokens (unico escritor).
         app(SessionVersionService::class)->bumpUser($user);
-
-        if (!$user->canAuthenticate() || $user->trashed()) {
-            $user->tokens()->delete();
-        }
     }
 
     /**
