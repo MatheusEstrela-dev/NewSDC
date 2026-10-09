@@ -49,6 +49,9 @@
       <div v-if="protocolo.dcoSituacao" class="text-sm font-medium" :class="['atrasada', 'nao_conforme'].includes(protocolo.dcoSituacao) ? 'text-red-700 dark:text-red-300' : 'text-slate-600 dark:text-slate-300'">
         DCO: {{ protocolo.dcoSituacao.replaceAll('_', ' ') }}
       </div>
+      <div v-if="protocolo.evacuacaoSituacao" class="text-sm font-medium" :class="classeSituacaoEvacuacao(protocolo.evacuacaoSituacao)">
+        Evacuação: {{ rotuloSituacaoEvacuacao(protocolo.evacuacaoSituacao) }}
+      </div>
     </div>
 
     <div class="mt-5 flex items-center justify-between gap-2">
@@ -66,6 +69,7 @@
           { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo.id),    allowed: canPdf },
           { action: 'ficha',  placement: 'menu', aliasOverride: 'view', handler: () => $emit('ficha', protocolo.id) },
           { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'DCO', handler: () => $emit('dco', protocolo.id) },
+          { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'Evacuação', handler: () => $emit('evacuacao', protocolo.id) },
           { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo.id), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
           { action: 'relate', placement: 'menu', handler: () => $emit('relate', protocolo.id), allowed: canCreate },
         ]"
@@ -87,6 +91,7 @@ import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import PrazosPill from './PrazosPill.vue';
 import StatusPill from './StatusPill.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
+import { classeSituacaoEvacuacao, rotuloSituacaoEvacuacao } from '@/utils/paeEvacuacao';
 
 defineProps({
   protocolo: {
@@ -119,5 +124,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'check', 'pdf', 'ficha', 'dco', 'archive', 'options', 'assign', 'relate']);
+defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'check', 'pdf', 'ficha', 'dco', 'evacuacao', 'archive', 'options', 'assign', 'relate']);
 </script>

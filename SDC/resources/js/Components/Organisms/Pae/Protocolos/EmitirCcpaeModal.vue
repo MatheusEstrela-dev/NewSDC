@@ -33,6 +33,7 @@
         </p>
         <p class="text-sm text-slate-700 dark:text-slate-200">DCO: {{ (protocolo?.dcoSituacao || 'não avaliada').replaceAll('_', ' ') }}.</p>
         <a v-if="protocolo" :href="route('pae.protocolo.dco.show', protocolo.id)" class="inline-block text-sm font-semibold text-blue-700 underline dark:text-blue-300">Conferir avaliação e declarações</a>
+        <p class="text-sm text-slate-700 dark:text-slate-200">Evacuação: {{ rotuloSituacaoEvacuacao(protocolo?.evacuacaoSituacao) }} (informativo, não bloqueia).</p>
         <p v-if="protocolo && !protocolo.dcoEmissaoPronta" class="text-sm text-amber-700 dark:text-amber-300">Na data de hoje não há DCO exigível comprovada. A emissão será conferida pela data informada.</p>
         <InputError v-if="form.errors.status || form.errors.ccpae || form.errors.dco" :message="form.errors.status || form.errors.ccpae || form.errors.dco" />
       </div>
@@ -57,6 +58,7 @@ import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormDateField from '@/Components/Molecules/Form/FormDateField.vue';
 import ToggleField from '@/Components/Molecules/Form/ToggleField.vue';
 import { hojeISO } from '@/Support/dataLocal';
+import { rotuloSituacaoEvacuacao } from '@/utils/paeEvacuacao';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
