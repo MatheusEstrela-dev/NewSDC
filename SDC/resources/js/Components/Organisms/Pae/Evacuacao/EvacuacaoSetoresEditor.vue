@@ -1,9 +1,9 @@
 <template>
   <CollapsibleSection namespace="pae" section-id="evacuacao-setores" title="Setores de evacuação" subtitle="Sem calçada, a largura da rua desconta 2,90 m (mão única) ou 5,80 m (mão dupla)." :icon="Squares2X2Icon">
-    <div v-if="!somenteLeitura" class="mb-3 flex justify-end">
-      <Button variant="outline" size="sm" @click="$emit('adicionar')">Adicionar setor</Button>
+    <div v-if="!somenteLeitura" class="mb-3 flex flex-col sm:flex-row sm:justify-end">
+      <Button class="w-full sm:w-auto" variant="outline" size="sm" @click="$emit('adicionar')">Adicionar setor</Button>
     </div>
-    <div class="overflow-x-auto">
+    <div class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <table class="min-w-full text-sm">
         <thead class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
           <tr>

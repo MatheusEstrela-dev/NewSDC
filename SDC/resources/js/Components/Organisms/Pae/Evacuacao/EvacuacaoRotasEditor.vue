@@ -1,9 +1,9 @@
 <template>
   <CollapsibleSection namespace="pae" section-id="evacuacao-rotas" title="Rotas de fuga (Critério 2)" :subtitle="`Setores na ordem do percurso, separados por vírgula. Disponíveis: ${setoresDisponiveis.join(', ') || 'nenhum'}.`" :icon="MapIcon">
-    <div v-if="!somenteLeitura" class="mb-3 flex justify-end">
-      <Button variant="outline" size="sm" @click="$emit('adicionar')">Adicionar rota</Button>
+    <div v-if="!somenteLeitura" class="mb-3 flex flex-col sm:flex-row sm:justify-end">
+      <Button class="w-full sm:w-auto" variant="outline" size="sm" @click="$emit('adicionar')">Adicionar rota</Button>
     </div>
-    <div class="overflow-x-auto">
+    <div class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <table class="min-w-full text-sm">
         <thead class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
           <tr>

@@ -1,10 +1,10 @@
 <template>
   <CollapsibleSection namespace="pae" section-id="evacuacao-acessos" title="Acessos à área segura (estrangulamento)" :subtitle="`Abaixo de 1,2 m a rota não pode ser usada (art. 48, §6º). Rotas: ${rotasDisponiveis.join(', ') || 'nenhuma'}.`" :icon="ArrowsPointingInIcon">
-    <div v-if="!somenteLeitura" class="mb-3 flex justify-end">
-      <Button variant="outline" size="sm" @click="$emit('adicionar')">Adicionar acesso</Button>
+    <div v-if="!somenteLeitura" class="mb-3 flex flex-col sm:flex-row sm:justify-end">
+      <Button class="w-full sm:w-auto" variant="outline" size="sm" @click="$emit('adicionar')">Adicionar acesso</Button>
     </div>
     <p v-if="!itens.length" class="text-sm text-slate-500 dark:text-slate-400">Sem acesso informado, o tempo total é o tempo máximo de deslocamento.</p>
-    <div v-else class="overflow-x-auto">
+    <div v-else class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <table class="min-w-full text-sm">
         <thead class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
           <tr><th class="px-2 py-2">Acesso</th><th class="px-2 py-2">Largura (m)</th><th class="px-2 py-2">Terreno</th><th class="px-2 py-2">Rotas</th><th class="px-2 py-2">Pessoas</th><th class="px-2 py-2">TE</th><th class="px-2 py-2"></th></tr>

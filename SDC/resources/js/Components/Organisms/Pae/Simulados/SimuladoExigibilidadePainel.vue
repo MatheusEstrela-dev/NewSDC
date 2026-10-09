@@ -5,7 +5,7 @@
         {{ resumo.avaliacao.resultado === 'exigivel' ? 'Simulado exigível' : `Simulado dispensado: ${MOTIVOS_DISPENSA[resumo.avaliacao.motivo_dispensa]}` }}
       </p>
       <p class="mt-1 text-slate-700 dark:text-slate-200">{{ resumo.avaliacao.fundamentacao }}</p>
-      <p class="mt-1 text-slate-500 dark:text-slate-400">SEI {{ resumo.avaliacao.num_sei }} · {{ resumo.avaliacao.decisor?.name || 'Responsável não disponível' }} · {{ formatarData(resumo.avaliacao.decidido_em) }}</p>
+      <p class="mt-1 break-words text-slate-500 dark:text-slate-400">SEI {{ resumo.avaliacao.num_sei }} · {{ resumo.avaliacao.decisor?.name || 'Responsável não disponível' }} · {{ formatarData(resumo.avaliacao.decidido_em) }}</p>
     </div>
     <PaeAviso v-else tom="aviso">Exigibilidade ainda não avaliada. A emissão de CCPAE ficará bloqueada.</PaeAviso>
 
@@ -16,13 +16,13 @@
       <FormTextarea v-model="avaliacao.fundamentacao" label="Fundamentação" :rows="3" :error="avaliacao.errors.fundamentacao" required />
       <FormField v-model="avaliacao.num_sei" label="Número SEI" maxlength="100" :error="avaliacao.errors.num_sei" required />
       <p v-if="errosSemCampo(avaliacao.errors, CAMPOS)" class="text-sm text-red-600 dark:text-red-300">{{ errosSemCampo(avaliacao.errors, CAMPOS) }}</p>
-      <Button type="submit" :loading="avaliacao.processing">Registrar avaliação</Button>
+      <Button type="submit" class="w-full sm:w-auto" :loading="avaliacao.processing">Registrar avaliação</Button>
     </form>
 
     <h3 class="mt-6 font-medium text-slate-900 dark:text-white">Histórico de avaliações</h3>
     <p v-if="!resumo.avaliacoes.length" class="mt-2 text-sm text-slate-500 dark:text-slate-400">Nenhuma avaliação registrada.</p>
     <ol v-else class="mt-2 space-y-2 text-sm text-slate-700 dark:text-slate-300">
-      <li v-for="item in resumo.avaliacoes" :key="item.id" class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+      <li v-for="item in resumo.avaliacoes" :key="item.id" class="break-words rounded-lg border border-slate-200 p-3 dark:border-slate-700">
         <strong>{{ item.resultado === 'exigivel' ? 'Exigível' : `Dispensado (${MOTIVOS_DISPENSA[item.motivo_dispensa]})` }}</strong> · SEI {{ item.num_sei }} · {{ formatarData(item.decidido_em) }}
         <p class="mt-1">{{ item.fundamentacao }}</p>
       </li>

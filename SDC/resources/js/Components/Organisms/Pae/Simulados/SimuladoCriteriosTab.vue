@@ -1,11 +1,11 @@
 <template>
   <CollapsibleSection namespace="pae" section-id="simulado-criterios" title="Critérios do item 8.1" subtitle="O analista decide cada critério; os indícios do sistema apoiam, não reprovam sozinhos. Validado somente com os 8 critérios reprováveis atendidos." :icon="ClipboardDocumentCheckIcon">
-    <div class="mb-3 flex flex-wrap items-center gap-3">
-      <Button v-if="!somenteLeitura" variant="outline" size="sm" :loading="atualizando" @click="$emit('atualizar-indicios')">Atualizar indícios</Button>
+    <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <Button v-if="!somenteLeitura" class="w-full sm:w-auto" variant="outline" size="sm" :loading="atualizando" @click="$emit('atualizar-indicios')">Atualizar indícios</Button>
       <span v-if="erroIndicios" class="text-sm text-red-600 dark:text-red-300">{{ erroIndicios }}</span>
     </div>
     <div class="space-y-4">
-      <article v-for="item in catalogo" :key="item.numero" class="grid gap-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700 lg:grid-cols-2">
+      <article v-for="item in catalogo" :key="item.numero" class="grid gap-4 rounded-lg border border-slate-200 p-3 dark:border-slate-700 sm:p-4 lg:grid-cols-2">
         <div class="space-y-3">
           <div>
             <h3 class="font-semibold text-slate-900 dark:text-white">{{ item.numero }}. {{ item.indice }}</h3>

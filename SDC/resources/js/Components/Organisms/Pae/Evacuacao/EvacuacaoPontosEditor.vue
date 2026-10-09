@@ -1,9 +1,9 @@
 <template>
   <CollapsibleSection namespace="pae" section-id="evacuacao-pontos" title="Pontos de encontro (Critério 1)" subtitle="Atende quando a população estimada por m² é menor que 3." :icon="MapPinIcon">
-    <div v-if="!somenteLeitura" class="mb-3 flex justify-end">
-      <Button variant="outline" size="sm" @click="$emit('adicionar')">Adicionar ponto</Button>
+    <div v-if="!somenteLeitura" class="mb-3 flex flex-col sm:flex-row sm:justify-end">
+      <Button class="w-full sm:w-auto" variant="outline" size="sm" @click="$emit('adicionar')">Adicionar ponto</Button>
     </div>
-    <div class="overflow-x-auto">
+    <div class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <table class="min-w-full text-sm">
         <thead class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
           <tr><th class="px-2 py-2">Local</th><th class="px-2 py-2">Endereço</th><th class="px-2 py-2">População</th><th class="px-2 py-2">Área (m²)</th><th class="px-2 py-2">Pessoas/m²</th><th class="px-2 py-2">&lt; 3?</th><th class="px-2 py-2"></th></tr>
