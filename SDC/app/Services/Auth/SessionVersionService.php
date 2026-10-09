@@ -5,7 +5,6 @@ namespace App\Services\Auth;
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Carimbo de seguranca da sessao ("session version").
@@ -34,11 +33,19 @@ class SessionVersionService
             return;
         }
 
-        foreach ($ids as $id) {
-            User::withTrashed()->toBase()->where('id', $id)->update([
+        foreach (array_chunk($ids, 1000) as $lote) {
+            // remember_token nulo invalida o cookie "lembrar-me" (o guard so
+            // aceita token nao vazio) e dispensa um token aleatorio por linha.
+            User::withTrashed()->toBase()->whereIn('id', $lote)->update([
                 'session_version' => DB::raw('session_version + 1'),
-                'remember_token' => Str::random(60),
+                'remember_token' => null,
             ]);
+
+            // Tokens de API tem abilities fixas: qualquer mudanca de acesso os revoga.
+            DB::table('personal_access_tokens')
+                ->where('tokenable_type', (new User())->getMorphClass())
+                ->whereIn('tokenable_id', $lote)
+                ->delete();
         }
 
         $this->restampCurrentSession($ids);
@@ -62,17 +69,12 @@ class SessionVersionService
     }
 
     /**
-     * Sessao sem carimbo (anterior ao deploy) adota a versao vigente.
+     * Sessao sem carimbo (anterior ao deploy) vale como versao 1 (default da
+     * migration): cai se o usuario ja teve qualquer mudanca de acesso.
      */
     public function matches(Session $session, User $user): bool
     {
-        if (!$session->has(self::SESSION_KEY)) {
-            $session->put(self::SESSION_KEY, (int) $user->session_version);
-
-            return true;
-        }
-
-        return (int) $session->get(self::SESSION_KEY) === (int) $user->session_version;
+        return (int) $session->get(self::SESSION_KEY, 1) === (int) $user->session_version;
     }
 
     /**

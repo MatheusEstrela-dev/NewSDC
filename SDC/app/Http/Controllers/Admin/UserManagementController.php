@@ -13,6 +13,7 @@ use App\Models\UserStatusHistory;
 use App\Modules\Compdec\Models\Orgao;
 use App\Services\Auth\EmailChangeService;
 use App\Services\Auth\OnboardingService;
+use App\Services\Auth\SessionVersionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -615,6 +616,10 @@ class UserManagementController extends Controller
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         Cache::forget("inertia_user_data_{$user->id}");
+
+        // Cargo/permissao mudou (inclusive remocao total, que o Spatie pode
+        // nao anunciar por evento): derruba sessoes e tokens do usuario.
+        app(SessionVersionService::class)->bumpUser($user);
     }
 
     public function destroy(User $user)

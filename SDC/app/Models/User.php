@@ -80,6 +80,16 @@ class User extends Authenticatable
 
 
     /**
+     * Mesmo default da coluna (migration): model recem-criado em memoria ja
+     * nasce na versao 1, sem depender de refresh.
+     *
+     * @var array<string, int>
+     */
+    protected $attributes = [
+        'session_version' => 1,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
