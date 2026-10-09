@@ -62,6 +62,9 @@
               <div v-if="protocolo.evacuacaoSituacao" class="mt-1 text-xs font-medium" :class="classeSituacaoEvacuacao(protocolo.evacuacaoSituacao)">
                 Evacuação: {{ rotuloSituacaoEvacuacao(protocolo.evacuacaoSituacao) }}
               </div>
+              <div v-if="protocolo.simuladoSituacao" class="mt-1 text-xs font-medium" :class="classeSituacaoSimulado(protocolo.simuladoSituacao)">
+                Simulado: {{ rotuloSituacaoSimulado(protocolo.simuladoSituacao) }}
+              </div>
             </td>
 
             <!-- Acoes -->
@@ -81,6 +84,7 @@
                     { action: 'ficha',  placement: 'menu', aliasOverride: 'view', handler: () => $emit('ficha', protocolo.id) },
                     { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'DCO', handler: () => $emit('dco', protocolo.id) },
                     { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'Evacuação', handler: () => $emit('evacuacao', protocolo.id) },
+                    { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'Simulados', handler: () => $emit('simulado', protocolo.id) },
                     { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo.id), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
                     { action: 'relate', placement: 'menu', handler: () => $emit('relate', protocolo.id), allowed: canCreate },
                   ]"
@@ -107,6 +111,7 @@ import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
 import { classeSituacaoEvacuacao, rotuloSituacaoEvacuacao } from '@/utils/paeEvacuacao';
+import { classeSituacaoSimulado, rotuloSituacaoSimulado } from '@/utils/paeSimulado';
 
 defineProps({
   protocolos: {
@@ -139,5 +144,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'ficha', 'dco', 'evacuacao', 'archive', 'delete', 'options', 'assign', 'relate']);
+defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'ficha', 'dco', 'evacuacao', 'simulado', 'archive', 'delete', 'options', 'assign', 'relate']);
 </script>

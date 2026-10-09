@@ -34,6 +34,9 @@
         <p class="text-sm text-slate-700 dark:text-slate-200">DCO: {{ (protocolo?.dcoSituacao || 'não avaliada').replaceAll('_', ' ') }}.</p>
         <a v-if="protocolo" :href="route('pae.protocolo.dco.show', protocolo.id)" class="inline-block text-sm font-semibold text-blue-700 underline dark:text-blue-300">Conferir avaliação e declarações</a>
         <p class="text-sm text-slate-700 dark:text-slate-200">Evacuação: {{ rotuloSituacaoEvacuacao(protocolo?.evacuacaoSituacao) }} (informativo, não bloqueia).</p>
+        <p class="text-sm text-slate-700 dark:text-slate-200">Simulado: {{ rotuloSituacaoSimulado(protocolo?.simuladoSituacao) }}.</p>
+        <a v-if="protocolo" :href="route('pae.protocolo.simulados.show', protocolo.id)" class="inline-block text-sm font-semibold text-blue-700 underline dark:text-blue-300">Conferir exigibilidade e relatórios</a>
+        <p v-if="protocolo && !simuladoPronto(protocolo.simuladoSituacao)" class="text-sm text-amber-700 dark:text-amber-300">Sem simulado dispensado ou relatório validado vigente hoje. A emissão será conferida no servidor pela data informada.</p>
         <p v-if="protocolo && !protocolo.dcoEmissaoPronta" class="text-sm text-amber-700 dark:text-amber-300">Na data de hoje não há DCO exigível comprovada. A emissão será conferida pela data informada.</p>
         <InputError v-if="erroGeral" :message="erroGeral" />
       </div>
@@ -59,6 +62,7 @@ import FormDateField from '@/Components/Molecules/Form/FormDateField.vue';
 import ToggleField from '@/Components/Molecules/Form/ToggleField.vue';
 import { hojeISO } from '@/Support/dataLocal';
 import { rotuloSituacaoEvacuacao } from '@/utils/paeEvacuacao';
+import { rotuloSituacaoSimulado, simuladoPronto } from '@/utils/paeSimulado';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
