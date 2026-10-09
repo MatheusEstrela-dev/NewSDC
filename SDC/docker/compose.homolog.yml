@@ -69,6 +69,21 @@ x-ranking-env: &ranking-env
   RESGATE_PERMITIR_DEMONSTRACAO: "true"
   RANKING_SOURCE_SSLMODE: disable
 
+# E-mail real pelo SMTP da Prodemge, com credenciais do docker/.env. Ate
+# 2026-10-09 o homolog usava MAIL_MAILER=log e o mailer de log escreve em
+# nivel debug, abaixo do minimo info dos canais: a redefinicao de senha
+# "enviava" e a mensagem sumia. Atencao: o banco do homolog tem e-mails
+# reais, entao todo envio daqui chega de verdade ao destinatario.
+x-mail-env: &mail-env
+  MAIL_MAILER: ${MAIL_MAILER:-smtp}
+  MAIL_HOST: ${MAIL_HOST:-}
+  MAIL_PORT: ${MAIL_PORT:-587}
+  MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+  MAIL_USERNAME: ${MAIL_USERNAME:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC}
+
 # Variaveis do modulo Acessos (integracao com o Active Directory), UMA vez so,
 # herdadas por app, queue_diretorio e scheduler. App e worker PRECISAM concordar
 # em driver e arquivo: o app semeia o diretorio fake e o worker o consome, pelo
@@ -230,7 +245,7 @@ services:
       DB_SSLMODE: disable
 
       # Ranking: ver a ancora x-ranking-env no topo do arquivo.
-      <<: [*ranking-env, *diretorio-env]
+      <<: [*ranking-env, *diretorio-env, *mail-env]
       DB_POOLER_MODE: ${DB_POOLER_MODE:-}
 
       # Lidos pelo guardrail do entrypoint quando DB_POOLER_MODE esta setado.
@@ -258,7 +273,6 @@ services:
       REVERB_PORT: "8080"
       REVERB_SCHEME: http
 
-      MAIL_MAILER: log
 
       # Ensaio de capacidade: quando preenchido, requisicao com o mesmo valor em
       # X-Loadtest-Bypass fica sem limite de taxa. Sem isso, medir o teto real a
@@ -361,7 +375,7 @@ services:
       REVERB_HOST: reverb
       REVERB_PORT: "8080"
       REVERB_SCHEME: http
-      MAIL_MAILER: log
+      <<: *mail-env
 
     # A imagem traz um HEALTHCHECK que bate em localhost:8000/health -- correto
     # para o app, errado aqui: este container nao serve HTTP. Sem sobrescrever,
@@ -443,7 +457,7 @@ services:
       REVERB_HOST: reverb
       REVERB_PORT: "8080"
       REVERB_SCHEME: http
-      MAIL_MAILER: log
+      <<: *mail-env
       # Sem o token, config/medalhao.php:53 fica nulo e o InmetApiClient falha
       # em toda coleta. E o unico servico do homolog que precisa dele -- o app
       # nao chama a API do INMET, quem chama sao os jobs desta fila.
