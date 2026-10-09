@@ -182,6 +182,9 @@ class RoleManagementController extends Controller
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        // Mudanca no cargo atinge todos que o tem: derruba as sessoes deles.
+        app(SessionVersionService::class)->bump($role->users()->pluck('users.id')->all());
+
         $role->users()->select('users.id')->cursor()->each(
             fn ($usuario) => Cache::forget("inertia_user_data_{$usuario->id}")
         );

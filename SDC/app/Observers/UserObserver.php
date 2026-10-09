@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\User;
 use App\Models\AuditLog;
 use App\Models\PermissionAuditLog;
+use App\Services\Auth\SessionVersionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
@@ -44,6 +45,8 @@ class UserObserver
     public function updated(User $user): void
     {
         $changedFields = array_keys($user->getChanges());
+        $this->invalidarAcessos($user, $changedFields);
+
         $relevantFields = ['name', 'email', 'cpf', 'status', 'active', 'orgao_principal_id', 'password'];
         $hasRelevantChanges = !empty(array_intersect($changedFields, $relevantFields));
 
@@ -86,6 +89,7 @@ class UserObserver
     public function deleted(User $user): void
     {
         $this->forgetCpfLoginCache($user);
+        $this->invalidarAcessos($user, ['active']);
 
         AuditLog::logDelete('users', $user->id, $user->only([
             'id', 'name', 'email', 'cpf', 'status', 'active'
@@ -99,6 +103,30 @@ class UserObserver
                 entityId: $user->id,
                 beforeState: $user->only(['id', 'name', 'email', 'cpf'])
             );
+        }
+    }
+
+    /**
+     * Campos cuja mudanca exige novo login (sobe session_version).
+     */
+    private const CAMPOS_DE_ACESSO = ['email', 'password', 'status', 'active', 'orgao_principal_id'];
+
+    /**
+     * Unico ponto que carimba a sessao do usuario apos mudanca de acesso.
+     * Usuario que deixou de poder autenticar tambem perde os tokens de API.
+     *
+     * @param  array<int, string>  $changedFields
+     */
+    private function invalidarAcessos(User $user, array $changedFields): void
+    {
+        if (empty(array_intersect($changedFields, self::CAMPOS_DE_ACESSO))) {
+            return;
+        }
+
+        app(SessionVersionService::class)->bumpUser($user);
+
+        if (!$user->canAuthenticate() || $user->trashed()) {
+            $user->tokens()->delete();
         }
     }
 

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Listeners\PermissionEventSubscriber;
+use App\Listeners\SessionVersionSubscriber;
 use App\Listeners\SincronizaPermissoesAposMigrations;
 use App\Models\Role;
 use App\Models\User;
@@ -39,6 +40,7 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(Registered::class, SendEmailVerificationNotification::class);
 
         Event::subscribe(PermissionEventSubscriber::class);
+        Event::subscribe(SessionVersionSubscriber::class);
 
         Event::listen(MigrationsEnded::class, [SincronizaPermissoesAposMigrations::class, 'aoTerminarMigrations']);
         Event::listen(NoPendingMigrations::class, [SincronizaPermissoesAposMigrations::class, 'semMigrationsPendentes']);

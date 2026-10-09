@@ -132,6 +132,16 @@ class User extends Authenticatable
     ];
 
     /**
+     * Estados de status que impedem autenticacao (login, sessao e token).
+     */
+    public const BLOCKED_STATUSES = ['inactive', 'suspended', 'blocked'];
+
+    public function canAuthenticate(): bool
+    {
+        return $this->active && !in_array($this->status, self::BLOCKED_STATUSES, true);
+    }
+
+    /**
      * Escopo para usuários com dados desatualizados há mais de 6 meses.
      */
     public function scopeOutdated(\Illuminate\Database\Eloquent\Builder $query): void
