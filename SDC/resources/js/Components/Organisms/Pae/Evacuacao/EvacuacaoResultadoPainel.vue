@@ -1,17 +1,8 @@
 <template>
-  <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Resultado</h2>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">TTE = maior valor entre o tempo máximo de deslocamento e o estrangulamento.</p>
-      </div>
-      <span v-if="resultado" class="rounded-full px-3 py-1 text-sm font-semibold" :class="conforme ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'">
-        {{ conforme ? 'Conforme' : 'Não conforme' }}
-      </span>
-    </div>
-    <p v-if="!resultado" class="mt-4 text-sm text-slate-500 dark:text-slate-400">Preencha os dados e clique em Simular.</p>
+  <CollapsibleSection namespace="pae" section-id="evacuacao-resultado" title="Resultado" subtitle="TTE = maior valor entre o tempo máximo de deslocamento e o estrangulamento." :icon="ChartBarIcon" :tom="conforme || !resultado ? 'info' : 'danger'">
+    <p v-if="!resultado" class="text-sm text-slate-500 dark:text-slate-400">Preencha os dados e clique em Simular.</p>
     <template v-else>
-      <dl class="mt-4 grid gap-3 sm:grid-cols-3">
+      <dl class="grid gap-3 sm:grid-cols-3">
         <div v-for="item in tempos" :key="item.rotulo" class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
           <dt class="text-xs uppercase text-slate-500 dark:text-slate-400">{{ item.rotulo }}</dt>
           <dd class="text-xl font-bold text-slate-900 dark:text-white">{{ item.valor ?? '—' }}</dd>
@@ -24,13 +15,16 @@
         <li v-if="resultado.possui_setor_inviavel" :class="erroClasse">Há setor sem tempo calculável.</li>
         <li v-if="resultado.excede_declarado" :class="erroClasse">O tempo calculado excede o declarado pelo empreendedor.</li>
       </ul>
-      <p v-if="!simulado" class="mt-3 text-sm text-amber-700 dark:text-amber-300">Os dados mudaram desde a última simulação.</p>
+      <PaeAviso v-if="!simulado" tom="aviso" class="mt-3">Os dados mudaram desde a última simulação.</PaeAviso>
     </template>
     <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">A conferência apenas sinaliza: não bloqueia a tramitação nem a emissão do CCPAE.</p>
-  </section>
+  </CollapsibleSection>
 </template>
 
 <script setup>
+import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
+import PaeAviso from '@/Components/Molecules/Pae/PaeAviso.vue';
+import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import { computed } from 'vue';
 
 const props = defineProps({

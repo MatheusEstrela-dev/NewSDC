@@ -1,46 +1,42 @@
 <template>
-  <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-    <header class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Acessos à área segura (estrangulamento)</h2>
-        <p class="text-sm text-slate-600 dark:text-slate-300">Largura do ponto de maior afunilamento. Abaixo de 1,2 m a rota não pode ser usada (art. 48, §6º). Rotas: {{ rotasDisponiveis.join(', ') || 'nenhuma' }}.</p>
-      </div>
-      <button v-if="!somenteLeitura" type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-600 dark:text-slate-200" @click="$emit('adicionar')">Adicionar acesso</button>
-    </header>
-    <p v-if="!itens.length" class="mt-4 text-sm text-slate-500 dark:text-slate-400">Sem acesso informado, o tempo total é o tempo máximo de deslocamento.</p>
-    <div v-else class="mt-4 overflow-x-auto">
+  <CollapsibleSection namespace="pae" section-id="evacuacao-acessos" title="Acessos à área segura (estrangulamento)" :subtitle="`Abaixo de 1,2 m a rota não pode ser usada (art. 48, §6º). Rotas: ${rotasDisponiveis.join(', ') || 'nenhuma'}.`" :icon="ArrowsPointingInIcon">
+    <div v-if="!somenteLeitura" class="mb-3 flex justify-end">
+      <Button variant="outline" size="sm" @click="$emit('adicionar')">Adicionar acesso</Button>
+    </div>
+    <p v-if="!itens.length" class="text-sm text-slate-500 dark:text-slate-400">Sem acesso informado, o tempo total é o tempo máximo de deslocamento.</p>
+    <div v-else class="overflow-x-auto">
       <table class="min-w-full text-sm">
         <thead class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
           <tr><th class="px-2 py-2">Acesso</th><th class="px-2 py-2">Largura (m)</th><th class="px-2 py-2">Terreno</th><th class="px-2 py-2">Rotas</th><th class="px-2 py-2">Pessoas</th><th class="px-2 py-2">TE</th><th class="px-2 py-2"></th></tr>
         </thead>
         <tbody>
           <tr v-for="(acesso, i) in itens" :key="i" class="border-t border-slate-100 align-top dark:border-slate-800">
-            <td class="px-2 py-2"><input v-model.trim="acesso.id" :aria-label="`Identificador do acesso ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'min-w-[4rem]']" /><InputError :message="erros[`acessos.${i}.id`]" /></td>
-            <td class="px-2 py-2"><input v-model.number="acesso.largura" :aria-label="`Largura do acesso ${i + 1}`" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[5rem]']" /><InputError :message="erros[`acessos.${i}.largura`]" /></td>
-            <td class="px-2 py-2">
-              <select v-model="acesso.terreno" :aria-label="`Terreno do acesso ${i + 1}`" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option value="plano">Plano</option><option value="inclinado">Rampa ou escada</option></select>
-            </td>
-            <td class="px-2 py-2">
-              <input v-model="acesso.rotas_texto" :aria-label="`Rotas do acesso ${i + 1}`" :disabled="somenteLeitura" placeholder="R1, R2" :class="[CLASSE_CAMPO, 'min-w-[7rem]']" />
-              <InputError :message="erroDaLinha(erros, `acessos.${i}.rotas`)" />
-            </td>
+            <td class="min-w-[5rem] px-2 py-2"><FormField v-model="acesso.id" size="sm" :aria-label="`Identificador do acesso ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :error="erros[`acessos.${i}.id`]" /></td>
+            <td class="min-w-[6rem] px-2 py-2"><FormField v-model="acesso.largura" type="number" step="0.01" size="sm" :aria-label="`Largura do acesso ${i + 1}`" :disabled="somenteLeitura" :error="erros[`acessos.${i}.largura`]" /></td>
+            <td class="min-w-[10rem] px-2 py-2"><FormSelect v-model="acesso.terreno" size="sm" placeholder="" :options="OPCOES_TERRENO" :aria-label="`Terreno do acesso ${i + 1}`" :disabled="somenteLeitura" /></td>
+            <td class="min-w-[8rem] px-2 py-2"><FormField v-model="acesso.rotas_texto" size="sm" placeholder="R1, R2" :aria-label="`Rotas do acesso ${i + 1}`" :disabled="somenteLeitura" :error="erroDaLinha(erros, `acessos.${i}.rotas`)" /></td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ calculo(acesso)?.n ?? '—' }}</td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">
               {{ calculo(acesso)?.te_fmt ?? '—' }}
               <span v-if="calculo(acesso)?.invalido" class="block text-xs text-red-700 dark:text-red-300">abaixo de 1,2 m</span>
             </td>
-            <td class="px-2 py-2"><button v-if="!somenteLeitura" type="button" class="text-sm text-red-700 dark:text-red-300" @click="$emit('remover', i)">Remover</button></td>
+            <td class="px-2 py-2"><Button v-if="!somenteLeitura" variant="danger" size="sm" @click="$emit('remover', i)">Remover</Button></td>
           </tr>
         </tbody>
       </table>
     </div>
     <InputError class="mt-2" :message="erros.acessos" />
-  </section>
+  </CollapsibleSection>
 </template>
 
 <script setup>
+import Button from '@/Components/Atoms/Button/Button.vue';
 import InputError from '@/Components/InputError.vue';
-import { CLASSE_CAMPO, erroDaLinha } from '@/utils/paeEvacuacao';
+import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
+import FormField from '@/Components/Molecules/Form/FormField.vue';
+import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
+import { erroDaLinha } from '@/utils/paeEvacuacao';
+import { ArrowsPointingInIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   itens: { type: Array, required: true },
@@ -52,6 +48,8 @@ const props = defineProps({
 });
 
 defineEmits(['adicionar', 'remover']);
+
+const OPCOES_TERRENO = [{ value: 'plano', label: 'Plano' }, { value: 'inclinado', label: 'Rampa ou escada' }];
 
 const calculo = (acesso) => props.simulado ? (props.resultado?.acessos?.[acesso.id] ?? null) : null;
 </script>

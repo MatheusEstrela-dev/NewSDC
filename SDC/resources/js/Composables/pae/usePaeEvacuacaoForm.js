@@ -4,10 +4,10 @@ import { computed, ref, watch } from 'vue';
 import { separarLista } from '@/utils/paeEvacuacao';
 
 const FABRICAS = {
-  setores: () => ({ id: '', populacao: 0, comercial: false, via: 'calcada', largura: 1.5, lados: 2, distancia: 0, terreno: 'plano' }),
+  setores: () => ({ id: '', populacao: '', comercial: false, via: 'calcada', largura: '', lados: 2, distancia: '', terreno: 'plano' }),
   rotas: () => ({ id: '', setores_texto: '', chegada_onda: '', nivel_emergencia: 1 }),
-  acessos: () => ({ id: '', largura: 1.2, terreno: 'plano', rotas_texto: '' }),
-  pontos_encontro: () => ({ nome: '', endereco: '', populacao: 0, area: 0 }),
+  acessos: () => ({ id: '', largura: '', terreno: 'plano', rotas_texto: '' }),
+  pontos_encontro: () => ({ nome: '', endereco: '', populacao: '', area: '' }),
 };
 
 // Estado da conferencia: o calculo e sempre do servidor (simular), nunca do navegador.
