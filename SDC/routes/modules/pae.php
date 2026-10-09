@@ -8,6 +8,7 @@ use App\Modules\Pae\Controllers\PaeDcoController;
 use App\Modules\Pae\Controllers\PaeEvacuacaoController;
 use App\Modules\Pae\Controllers\PaeNotificacaoController;
 use App\Modules\Pae\Controllers\PaeProtocoloController;
+use App\Modules\Pae\Controllers\PaeSimuladoController;
 
 Route::prefix('pae')->name('pae.')->group(function () {
 
@@ -121,6 +122,26 @@ Route::prefix('pae')->name('pae.')->group(function () {
     Route::post('/protocolo/{paeProtocolo}/evacuacao/conferencias', [PaeEvacuacaoController::class, 'registrar'])
         ->name('protocolo.evacuacao.registrar')
         ->middleware('can:pae.protocolos.edit');
+
+    Route::get('/protocolo/{paeProtocolo}/simulados', [PaeSimuladoController::class, 'show'])
+        ->name('protocolo.simulados.show')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::post('/protocolo/{paeProtocolo}/simulados/avaliacoes', [PaeSimuladoController::class, 'avaliar'])
+        ->name('protocolo.simulados.avaliar')
+        ->middleware('can:pae.protocolos.validar');
+
+    Route::post('/protocolo/{paeProtocolo}/simulados/relatorios', [PaeSimuladoController::class, 'registrar'])
+        ->name('protocolo.simulados.relatorios.store')
+        ->middleware('can:pae.protocolos.validar');
+
+    Route::post('/protocolo/{paeProtocolo}/simulados/indicios', [PaeSimuladoController::class, 'indicios'])
+        ->name('protocolo.simulados.indicios')
+        ->middleware('can:pae.protocolos.validar');
+
+    Route::get('/protocolo/{paeProtocolo}/simulados/relatorios/{paeSimuladoRelatorio}/download', [PaeSimuladoController::class, 'download'])
+        ->name('protocolo.simulados.relatorios.download')
+        ->middleware('can:pae.protocolos.view');
 
     Route::get('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'show'])
         ->name('protocolo.admissibilidade.show')

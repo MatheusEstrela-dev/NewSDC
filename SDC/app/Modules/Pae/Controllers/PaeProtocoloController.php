@@ -16,6 +16,7 @@ use App\Modules\Pae\Services\PaeAdmissibilidadeService;
 use App\Modules\Pae\Services\PaeComunicacaoService;
 use App\Modules\Pae\Services\PaeDcoService;
 use App\Modules\Pae\Services\PaeEvacuacaoService;
+use App\Modules\Pae\Services\PaeSimuladoService;
 use App\Modules\Pae\Services\PaeNotificacaoService;
 use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
@@ -40,6 +41,7 @@ class PaeProtocoloController extends Controller
         private readonly PaeComunicacaoService $comunicacoes,
         private readonly PaeDcoService $dco,
         private readonly PaeEvacuacaoService $evacuacao,
+        private readonly PaeSimuladoService $simulado,
     ) {
     }
 
@@ -62,8 +64,8 @@ class PaeProtocoloController extends Controller
             $filters['restringir_ao_analista'] = $user->id;
         }
 
-        $protocolos = $this->evacuacao->anotarListagem($this->dco->anotarListagem(
-            $this->prazos->anotarListagem($this->service->list($filters)), CarbonImmutable::today()));
+        $protocolos = $this->simulado->anotarListagem($this->evacuacao->anotarListagem($this->dco->anotarListagem(
+            $this->prazos->anotarListagem($this->service->list($filters)), CarbonImmutable::today())), CarbonImmutable::today());
         $statistics = $this->service->getStatistics($podeVerTodos ? null : $user->id);
 
         $analistas = DB::table('users')
@@ -139,6 +141,8 @@ class PaeProtocoloController extends Controller
             'dco_avaliacao'    => ['tipo' => 'analise',     'titulo' => 'Aplicabilidade da DCO avaliada'],
             'dco_documento'    => ['tipo' => 'analise',     'titulo' => 'DCO registrada'],
             'evacuacao_conferencia' => ['tipo' => 'analise',     'titulo' => 'Conferência de evacuação registrada'],
+            'simulado_avaliacao'    => ['tipo' => 'analise',     'titulo' => 'Exigibilidade do simulado avaliada'],
+            'simulado_relatorio'    => ['tipo' => 'analise',     'titulo' => 'Relatório de simulado registrado'],
         ];
 
         $timeline = $protocolo->timeline->map(function ($item) use ($eventoMap) {
