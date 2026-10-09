@@ -11,21 +11,18 @@ use App\Modules\Pae\Models\PaeDcoDocumento;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Requests\AvaliarDcoRequest;
 use App\Modules\Pae\Requests\RegistrarDcoRequest;
+use App\Modules\Pae\Support\PaeArquivoPdf;
 use App\Modules\Pae\Support\PaeDcoCiclo;
+use App\Modules\Pae\Support\PaeIdempotencia;
+use App\Modules\Pae\Support\PaeListagem;
 use App\Modules\Pae\Support\TimelinePae;
 use Carbon\CarbonImmutable;
-use DateTimeInterface;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
-use Throwable;
 
 final class PaeDcoService
 {
@@ -42,7 +39,7 @@ final class PaeDcoService
             $locked = PaeProtocolo::query()->whereKey($protocolo->id)->lockForUpdate()->firstOrFail();
             $existente = $locked->avaliacoesDco()->where('chave_idempotencia', $dados['chave_idempotencia'])->first();
             if ($existente !== null) {
-                $this->exigirMesmosDados($existente, $dados, ['resultado', 'fundamentacao', 'num_sei']);
+                PaeIdempotencia::exigirMesmosDados($existente, $dados, ['resultado', 'fundamentacao', 'num_sei']);
 
                 return $existente;
             }
@@ -74,13 +71,12 @@ final class PaeDcoService
             throw ValidationException::withMessages(['num_sei' => 'Informe o número SEI.']);
         }
 
-        $path = null;
-        try {
-            return DB::transaction(function () use ($protocolo, $dados, $arquivo, $user, &$path): PaeDcoDocumento {
+        return PaeArquivoPdf::executar(fn (PaeArquivoPdf $pdf): PaeDcoDocumento => DB::transaction(
+            function () use ($protocolo, $dados, $arquivo, $user, $pdf): PaeDcoDocumento {
                 $locked = PaeProtocolo::query()->whereKey($protocolo->id)->lockForUpdate()->firstOrFail();
                 $existente = $locked->documentosDco()->where('chave_idempotencia', $dados['chave_idempotencia'])->first();
                 if ($existente !== null) {
-                    $this->exigirMesmosDados($existente, $dados, [
+                    PaeIdempotencia::exigirMesmosDados($existente, $dados, [
                         'competencia', 'resultado', 'dt_documento', 'dt_apresentacao', 'num_sei',
                     ]);
 
@@ -92,12 +88,7 @@ final class PaeDcoService
 
                 $competencia = (int) $dados['competencia'];
                 $versao = (int) $locked->documentosDco()->where('competencia', $competencia)->max('versao') + 1;
-                $diretorio = "dco/{$locked->id}/{$competencia}";
-                $nome = (string) Str::uuid().'.pdf';
-                $path = "{$diretorio}/{$nome}";
-                if (Storage::disk('pae')->putFileAs($diretorio, $arquivo, $nome) !== $path) {
-                    throw new RuntimeException('Não foi possível guardar a DCO.');
-                }
+                $metadados = $pdf->guardar("dco/{$locked->id}/{$competencia}", $arquivo, 'Não foi possível guardar a DCO.');
 
                 $documento = $locked->documentosDco()->create([
                     'competencia' => $competencia,
@@ -107,10 +98,7 @@ final class PaeDcoService
                     'dt_apresentacao' => $dados['dt_apresentacao'],
                     'num_sei' => $dados['num_sei'],
                     'observacao' => trim((string) ($dados['observacao'] ?? '')) ?: null,
-                    'arquivo_path' => $path,
-                    'arquivo_nome_original' => $arquivo->getClientOriginalName(),
-                    'arquivo_mime' => $arquivo->getMimeType(),
-                    'arquivo_tamanho_bytes' => $arquivo->getSize(),
+                    ...$metadados,
                     'chave_idempotencia' => $dados['chave_idempotencia'],
                     'registrado_por' => $user->id,
                     'registrado_em' => now(),
@@ -119,34 +107,8 @@ final class PaeDcoService
                     "DCO {$competencia}, versão {$versao}: {$documento->resultado}. SEI {$documento->num_sei}.", $user);
 
                 return $documento;
-            });
-        } catch (Throwable $e) {
-            if ($path !== null) {
-                Storage::disk('pae')->delete($path);
-            }
-            throw $e;
-        }
-    }
-
-    /**
-     * Mesma chave com dados de negocio diferentes e reuso indevido, nao repeticao.
-     *
-     * @param  list<string>  $campos
-     */
-    private function exigirMesmosDados(Model $existente, array $dados, array $campos): void
-    {
-        foreach ($campos as $campo) {
-            if ($this->normalizar($existente->getAttribute($campo)) !== $this->normalizar($dados[$campo])) {
-                throw ValidationException::withMessages([
-                    'chave_idempotencia' => 'Esta chave de idempotência já foi usada com outros dados.',
-                ]);
-            }
-        }
-    }
-
-    private function normalizar(mixed $valor): string
-    {
-        return $valor instanceof DateTimeInterface ? $valor->format('Y-m-d') : (string) $valor;
+            },
+        ));
     }
 
     public function resumo(PaeProtocolo $protocolo, CarbonImmutable $hoje): array
@@ -215,7 +177,7 @@ final class PaeDcoService
             ->orderByDesc('competencia')->orderByDesc('versao')->first();
 
         if ($documento === null || $documento->resultado !== 'positiva'
-            || ! Storage::disk('pae')->exists($documento->arquivo_path)) {
+            || ! PaeArquivoPdf::existe($documento->arquivo_path)) {
             throw ValidationException::withMessages(['dco' => 'A emissão exige DCO positiva e disponível para a competência aplicável.']);
         }
 
@@ -224,37 +186,32 @@ final class PaeDcoService
 
     public function anotarListagem(LengthAwarePaginator $pagina, CarbonImmutable $hoje): LengthAwarePaginator
     {
-        $ids = $pagina->getCollection()->map(fn ($item): int => (int) data_get($item, 'id'))->all();
-        if ($ids === []) {
-            return $pagina;
-        }
+        return PaeListagem::anotar(
+            $pagina,
+            fn (array $ids): array => [
+                'avaliacoes' => PaeDcoAvaliacao::query()->whereIn('protocolo_id', $ids)
+                    ->orderByDesc('id')->get()->unique('protocolo_id')->keyBy('protocolo_id'),
+                'documentos' => PaeDcoDocumento::query()->whereIn('protocolo_id', $ids)
+                    ->whereBetween('competencia', [PaeDcoCiclo::competenciaExigivel($hoje), $hoje->year])
+                    ->whereDate('dt_apresentacao', '<=', $hoje->toDateString())
+                    ->whereDate('dt_documento', '<=', $hoje->toDateString())
+                    ->orderByDesc('competencia')->orderByDesc('versao')->get()->groupBy('protocolo_id'),
+                'certificados' => PaeCcpae::query()->whereIn('protocolo_id', $ids)
+                    ->distinct()->pluck('protocolo_id')->flip(),
+            ],
+            function (int $id, array $contexto) use ($hoje): array {
+                $avaliacao = $contexto['avaliacoes']->get($id);
+                $porProtocolo = $contexto['documentos']->get($id, collect());
+                $prova = $porProtocolo->first();
 
-        $avaliacoes = PaeDcoAvaliacao::query()->whereIn('protocolo_id', $ids)
-            ->orderByDesc('id')->get()->unique('protocolo_id')->keyBy('protocolo_id');
-        $documentos = PaeDcoDocumento::query()->whereIn('protocolo_id', $ids)
-            ->whereBetween('competencia', [PaeDcoCiclo::competenciaExigivel($hoje), $hoje->year])
-            ->whereDate('dt_apresentacao', '<=', $hoje->toDateString())
-            ->whereDate('dt_documento', '<=', $hoje->toDateString())
-            ->orderByDesc('competencia')->orderByDesc('versao')->get()->groupBy('protocolo_id');
-        $certificados = PaeCcpae::query()->whereIn('protocolo_id', $ids)
-            ->distinct()->pluck('protocolo_id')->flip();
-
-        $pagina->setCollection($pagina->getCollection()->map(function ($item) use ($avaliacoes, $documentos, $certificados, $hoje): array {
-            $id = (int) data_get($item, 'id');
-            $avaliacao = $avaliacoes->get($id);
-            $porProtocolo = $documentos->get($id, collect());
-            $prova = $porProtocolo->first();
-
-            return [
-                ...(is_array($item) ? $item : $item->toArray()),
-                'dco_situacao' => $this->situacaoAnual($avaliacao, $porProtocolo, $hoje, $certificados->has($id)),
-                'dco_emissao_pronta' => $avaliacao !== null && (
-                    $avaliacao->resultado === 'nao_aplicavel' || $prova?->resultado === 'positiva'
-                ),
-            ];
-        }));
-
-        return $pagina;
+                return [
+                    'dco_situacao' => $this->situacaoAnual($avaliacao, $porProtocolo, $hoje, $contexto['certificados']->has($id)),
+                    'dco_emissao_pronta' => $avaliacao !== null && (
+                        $avaliacao->resultado === 'nao_aplicavel' || $prova?->resultado === 'positiva'
+                    ),
+                ];
+            },
+        );
     }
 
     /**

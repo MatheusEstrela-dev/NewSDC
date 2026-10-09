@@ -97,6 +97,7 @@
       @ficha="handleFicha"
       @dco="handleDco"
       @evacuacao="handleEvacuacao"
+      @simulado="handleSimulado"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -124,6 +125,7 @@
       @ficha="handleFicha"
       @dco="handleDco"
       @evacuacao="handleEvacuacao"
+      @simulado="handleSimulado"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -311,6 +313,7 @@ function mapProtocolo(p) {
     dcoSituacao: p.dco_situacao ?? null,
     dcoEmissaoPronta: !!p.dco_emissao_pronta,
     evacuacaoSituacao: p.evacuacao_situacao ?? null,
+    simuladoSituacao: p.simulado_situacao ?? null,
     arquivado,
   };
 }
@@ -403,6 +406,10 @@ function handleDco(id) {
 
 function handleEvacuacao(id) {
   router.visit(route('pae.protocolo.evacuacao.show', id));
+}
+
+function handleSimulado(id) {
+  router.visit(route('pae.protocolo.simulados.show', id));
 }
 
 function handleRelate(id) {

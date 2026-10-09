@@ -1,92 +1,96 @@
 <template>
-  <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-    <Head :title="`Evacuação - ${protocolo.num_protocolo}`" />
+  <Head :title="`Evacuação - ${protocolo.num_protocolo}`" />
 
-    <header class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p class="text-sm font-medium text-blue-700 dark:text-blue-300">PAE · Resolução GMG nº 83/2024 · Anexo E</p>
-        <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Conferência de evacuação</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Protocolo {{ protocolo.num_protocolo }}</p>
-      </div>
-      <Link :href="route('pae.protocolos.index')" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-600 dark:text-slate-200">Voltar aos protocolos</Link>
-    </header>
+  <PaeTelaLayout
+    v-model:aba="aba"
+    titulo="Conferência de evacuação"
+    subtitulo="Resolução GMG nº 83/2024 · Anexo E"
+    :icone="UserGroupIcon"
+    :protocolo="protocolo"
+    :status-label="seloRotulo"
+    :status-variant="seloVariante"
+    :abas="abas"
+  >
+    <template #avisos>
+      <PaeAviso v-if="historica" tom="aviso">
+        Consultando a versão {{ conferencia.versao }}.
+        <Link :href="route('pae.protocolo.evacuacao.show', protocolo.id)" class="font-semibold underline">Ir para a versão atual ({{ versao_atual }})</Link>
+      </PaeAviso>
+      <PaeAviso v-if="protocolo.arquivado" tom="aviso">Protocolo arquivado: conferência somente para consulta.</PaeAviso>
+    </template>
 
-    <p v-if="historica" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-      Consultando a versão {{ conferencia.versao }}.
-      <Link :href="route('pae.protocolo.evacuacao.show', protocolo.id)" class="font-semibold underline">Ir para a versão atual ({{ versao_atual }})</Link>
-    </p>
-    <p v-if="protocolo.arquivado" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">Protocolo arquivado: conferência somente para consulta.</p>
+    <template #topo>
+      <EvacuacaoResultadoPainel :resultado="resultado" :simulado="simulado" />
+    </template>
 
-    <EvacuacaoResultadoPainel :resultado="resultado" :simulado="simulado" />
+    <template #default="{ aba: ativa }">
+      <EvacuacaoSetoresEditor v-if="ativa === 'setores'" :itens="form.setores" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('setores')" @remover="remover('setores', $event)" />
+      <EvacuacaoRotasEditor v-else-if="ativa === 'rotas'" :itens="form.rotas" :erros="erros" :resultado="resultado" :simulado="simulado" :setores-disponiveis="idsSetores" :somente-leitura="!can_edit" @adicionar="adicionar('rotas')" @remover="remover('rotas', $event)" />
+      <EvacuacaoAcessosEditor v-else-if="ativa === 'acessos'" :itens="form.acessos" :erros="erros" :resultado="resultado" :simulado="simulado" :rotas-disponiveis="idsRotas" :somente-leitura="!can_edit" @adicionar="adicionar('acessos')" @remover="remover('acessos', $event)" />
+      <EvacuacaoPontosEditor v-else-if="ativa === 'pontos'" :itens="form.pontos_encontro" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('pontos_encontro')" @remover="remover('pontos_encontro', $event)" />
 
-    <EvacuacaoSetoresEditor :itens="form.setores" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('setores')" @remover="remover('setores', $event)" />
-    <EvacuacaoRotasEditor :itens="form.rotas" :erros="erros" :resultado="resultado" :simulado="simulado" :setores-disponiveis="idsSetores" :somente-leitura="!can_edit" @adicionar="adicionar('rotas')" @remover="remover('rotas', $event)" />
-    <EvacuacaoAcessosEditor :itens="form.acessos" :erros="erros" :resultado="resultado" :simulado="simulado" :rotas-disponiveis="idsRotas" :somente-leitura="!can_edit" @adicionar="adicionar('acessos')" @remover="remover('acessos', $event)" />
-    <EvacuacaoPontosEditor :itens="form.pontos_encontro" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('pontos_encontro')" @remover="remover('pontos_encontro', $event)" />
+      <CollapsibleSection v-else namespace="pae" section-id="evacuacao-historico" title="Histórico de conferências" :subtitle="`${historico.length} versão(ões)`" :icon="ClockIcon" tom="neutro">
+        <p v-if="!historico.length" class="text-sm text-slate-500 dark:text-slate-400">Nenhuma conferência registrada.</p>
+        <ol v-else class="space-y-2 text-sm">
+          <li v-for="item in historico" :key="item.versao" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <span class="text-slate-700 dark:text-slate-200">Versão {{ item.versao }} · {{ item.autor || '—' }} · {{ formatarData(item.created_at) }} · SEI {{ item.num_sei }} · TTE {{ item.tte_fmt ?? '—' }}</span>
+            <span class="flex items-center gap-3">
+              <Badge :variant="item.conforme ? 'success' : 'danger'" size="sm">{{ item.conforme ? 'Conforme' : 'Não conforme' }}</Badge>
+              <Link :href="route('pae.protocolo.evacuacao.versao', [protocolo.id, item.versao])" class="font-semibold text-blue-700 underline dark:text-blue-300">Abrir</Link>
+            </span>
+          </li>
+        </ol>
+      </CollapsibleSection>
+    </template>
 
-    <section v-if="conferencia && !can_edit" class="rounded-xl border border-slate-200 bg-white p-5 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Registro da versão {{ conferencia.versao }}</h2>
-      <dl class="mt-3 grid gap-3 sm:grid-cols-3">
-        <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Número SEI</dt><dd class="text-slate-800 dark:text-slate-100">{{ conferencia.num_sei || '—' }}</dd></div>
-        <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Autor</dt><dd class="text-slate-800 dark:text-slate-100">{{ conferencia.autor || '—' }}</dd></div>
-        <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Data</dt><dd class="text-slate-800 dark:text-slate-100">{{ dataLocal(conferencia.created_at) }}</dd></div>
-        <div class="sm:col-span-3"><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Observação</dt><dd class="whitespace-pre-line text-slate-800 dark:text-slate-100">{{ conferencia.observacao || '—' }}</dd></div>
-      </dl>
-    </section>
+    <template #rodape>
+      <CollapsibleSection v-if="conferencia && !can_edit" namespace="pae" section-id="evacuacao-registro-lido" :title="`Registro da versão ${conferencia.versao}`" :icon="DocumentTextIcon" tom="neutro">
+        <dl class="grid gap-3 text-sm sm:grid-cols-3">
+          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Número SEI</dt><dd class="text-slate-800 dark:text-slate-100">{{ conferencia.num_sei || '—' }}</dd></div>
+          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Autor</dt><dd class="text-slate-800 dark:text-slate-100">{{ conferencia.autor || '—' }}</dd></div>
+          <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Data</dt><dd class="text-slate-800 dark:text-slate-100">{{ formatarData(conferencia.created_at) }}</dd></div>
+          <div class="sm:col-span-3"><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Observação</dt><dd class="whitespace-pre-line text-slate-800 dark:text-slate-100">{{ conferencia.observacao || '—' }}</dd></div>
+        </dl>
+      </CollapsibleSection>
 
-    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <div class="grid gap-3 sm:grid-cols-3">
-        <label class="block text-sm text-slate-700 dark:text-slate-200">Tempo total declarado pelo empreendedor (mm:ss)
-          <input v-model.trim="form.tte_declarado" :disabled="!can_edit" placeholder="15:00" maxlength="6" :class="[CLASSE_CAMPO, 'mt-1']" />
-          <InputError :message="erros.tte_declarado" />
-        </label>
-        <template v-if="can_edit">
-          <label class="block text-sm text-slate-700 dark:text-slate-200">Número SEI
-            <input v-model.trim="form.num_sei" maxlength="100" :class="[CLASSE_CAMPO, 'mt-1']" />
-            <InputError :message="erros.num_sei" />
-          </label>
-          <label class="block text-sm text-slate-700 dark:text-slate-200">Observação
-            <textarea v-model="form.observacao" rows="1" maxlength="5000" :class="[CLASSE_CAMPO, 'mt-1']" />
-            <InputError :message="erros.observacao" />
-          </label>
-        </template>
-      </div>
-      <p v-if="erros.chave_idempotencia || erros.protocolo" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ erros.chave_idempotencia || erros.protocolo }}</p>
-      <p v-if="erroSimulacao" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ erroSimulacao }}</p>
-      <div v-if="can_edit" class="mt-4 flex flex-wrap justify-end gap-3">
-        <button type="button" :disabled="simulando" class="rounded-lg border border-blue-700 px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50 dark:border-blue-300 dark:text-blue-300" @click="simular">{{ simulando ? 'Simulando...' : 'Simular' }}</button>
-        <button type="button" :disabled="!simulado || form.processing || !form.num_sei" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" @click="registrar">Registrar conferência</button>
-      </div>
-    </section>
-
-    <section class="rounded-xl border border-slate-200 bg-white p-5 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Histórico de conferências</h2>
-      <p v-if="!historico.length" class="mt-2 text-slate-500 dark:text-slate-400">Nenhuma conferência registrada.</p>
-      <ol v-else class="mt-3 space-y-2">
-        <li v-for="item in historico" :key="item.versao" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-          <span class="text-slate-700 dark:text-slate-200">Versão {{ item.versao }} · {{ item.autor || '—' }} · {{ dataLocal(item.created_at) }} · SEI {{ item.num_sei }} · TTE {{ item.tte_fmt ?? '—' }}</span>
-          <span class="flex items-center gap-3">
-            <span :class="item.conforme ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'">{{ item.conforme ? 'Conforme' : 'Não conforme' }}</span>
-            <Link :href="route('pae.protocolo.evacuacao.versao', [protocolo.id, item.versao])" class="font-semibold text-blue-700 underline dark:text-blue-300">Abrir</Link>
-          </span>
-        </li>
-      </ol>
-    </section>
-  </div>
+      <CollapsibleSection namespace="pae" section-id="evacuacao-registro" title="Tempo declarado e registro" subtitle="Informe o SEI e registre depois de simular." :icon="PencilSquareIcon" tom="success">
+        <div class="grid gap-3 sm:grid-cols-3">
+          <FormField v-model="form.tte_declarado" label="Tempo total declarado pelo empreendedor (mm:ss)" placeholder="15:00" maxlength="6" :disabled="!can_edit" :error="erros.tte_declarado" />
+          <template v-if="can_edit">
+            <FormField v-model="form.num_sei" label="Número SEI" maxlength="100" :error="erros.num_sei" />
+            <FormTextarea v-model="form.observacao" label="Observação" :rows="1" :error="erros.observacao" />
+          </template>
+        </div>
+        <p v-if="erros.chave_idempotencia || erros.protocolo" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ erros.chave_idempotencia || erros.protocolo }}</p>
+        <p v-if="erroSimulacao" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ erroSimulacao }}</p>
+        <div v-if="can_edit" class="mt-4 flex flex-wrap justify-end gap-3">
+          <Button variant="outline" :loading="simulando" @click="simular">{{ simulando ? 'Simulando...' : 'Simular' }}</Button>
+          <Button :disabled="!simulado || form.processing || !form.num_sei" @click="registrar">Registrar conferência</Button>
+        </div>
+      </CollapsibleSection>
+    </template>
+  </PaeTelaLayout>
 </template>
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import EvacuacaoResultadoPainel from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoResultadoPainel.vue';
-import EvacuacaoSetoresEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoSetoresEditor.vue';
-import EvacuacaoRotasEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoRotasEditor.vue';
+import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
+import FormField from '@/Components/Molecules/Form/FormField.vue';
+import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
+import PaeAviso from '@/Components/Molecules/Pae/PaeAviso.vue';
 import EvacuacaoAcessosEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoAcessosEditor.vue';
 import EvacuacaoPontosEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoPontosEditor.vue';
+import EvacuacaoResultadoPainel from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoResultadoPainel.vue';
+import EvacuacaoRotasEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoRotasEditor.vue';
+import EvacuacaoSetoresEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoSetoresEditor.vue';
 import { usePaeEvacuacaoForm } from '@/Composables/pae/usePaeEvacuacaoForm';
-import { CLASSE_CAMPO } from '@/utils/paeEvacuacao';
+import PaeTelaLayout from '@/Templates/Pae/PaeTelaLayout.vue';
+import { formatarData } from '@/utils/paeTela';
+import { ArrowsPointingInIcon, ClockIcon, DocumentTextIcon, MapIcon, MapPinIcon, PencilSquareIcon, Squares2X2Icon, UserGroupIcon } from '@heroicons/vue/24/outline';
 import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -101,10 +105,18 @@ const props = defineProps({
 
 const { form, resultado, simulado, simulando, erros, erroSimulacao, simular, registrar, adicionar, remover } = usePaeEvacuacaoForm(props.protocolo.id, props.conferencia);
 
+const aba = ref('setores');
+const abas = computed(() => [
+  { id: 'setores', label: 'Setores', icon: Squares2X2Icon, badge: form.setores.length || null },
+  { id: 'rotas', label: 'Rotas', icon: MapIcon, badge: form.rotas.length || null },
+  { id: 'acessos', label: 'Acessos', icon: ArrowsPointingInIcon, badge: form.acessos.length || null },
+  { id: 'pontos', label: 'Pontos de encontro', icon: MapPinIcon, badge: form.pontos_encontro.length || null },
+  { id: 'historico', label: 'Histórico', icon: ClockIcon, badge: props.historico.length || null },
+]);
+
+const seloRotulo = computed(() => (props.conferencia ? (props.conferencia.conforme ? 'Conforme' : 'Não conforme') : 'Não conferida'));
+const seloVariante = computed(() => (props.conferencia ? (props.conferencia.conforme ? 'success' : 'danger') : 'default'));
+
 const idsSetores = computed(() => form.setores.map((s) => s.id).filter(Boolean));
 const idsRotas = computed(() => form.rotas.map((r) => r.id).filter(Boolean));
-
-function dataLocal(valor) {
-  return valor ? new Date(valor).toLocaleDateString('pt-BR') : '—';
-}
 </script>

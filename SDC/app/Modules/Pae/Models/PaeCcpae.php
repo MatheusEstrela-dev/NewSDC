@@ -30,6 +30,8 @@ class PaeCcpae extends Model
         'emitido_por',
         'dco_avaliacao_id',
         'dco_documento_id',
+        'simulado_avaliacao_id',
+        'simulado_relatorio_id',
     ];
 
     protected $casts = [
@@ -56,5 +58,15 @@ class PaeCcpae extends Model
     public function documentoDco(): BelongsTo
     {
         return $this->belongsTo(PaeDcoDocumento::class, 'dco_documento_id');
+    }
+
+    public function avaliacaoSimulado(): BelongsTo
+    {
+        return $this->belongsTo(PaeSimuladoAvaliacao::class, 'simulado_avaliacao_id');
+    }
+
+    public function relatorioSimulado(): BelongsTo
+    {
+        return $this->belongsTo(PaeSimuladoRelatorio::class, 'simulado_relatorio_id');
     }
 }

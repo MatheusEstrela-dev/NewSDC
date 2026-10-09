@@ -15,6 +15,7 @@
     </div>
     <ToggleInput
       :model-value="modelValue"
+      :disabled="disabled"
       class="flex-shrink-0 ml-2 sm:ml-4"
       @update:model-value="$emit('update:modelValue', $event)"
     />
@@ -40,6 +41,10 @@ defineProps({
   icon: {
     type: [Object, Function],
     default: null,
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
   },
 });
 

@@ -1,13 +1,9 @@
 <template>
-  <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-    <header class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Rotas de fuga (Critério 2)</h2>
-        <p class="text-sm text-slate-600 dark:text-slate-300">Setores na ordem do percurso, separados por vírgula. Disponíveis: {{ setoresDisponiveis.join(', ') || 'nenhum' }}.</p>
-      </div>
-      <button v-if="!somenteLeitura" type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-600 dark:text-slate-200" @click="$emit('adicionar')">Adicionar rota</button>
-    </header>
-    <div class="mt-4 overflow-x-auto">
+  <CollapsibleSection namespace="pae" section-id="evacuacao-rotas" title="Rotas de fuga (Critério 2)" :subtitle="`Setores na ordem do percurso, separados por vírgula. Disponíveis: ${setoresDisponiveis.join(', ') || 'nenhum'}.`" :icon="MapIcon">
+    <div v-if="!somenteLeitura" class="mb-3 flex justify-end">
+      <Button variant="outline" size="sm" @click="$emit('adicionar')">Adicionar rota</Button>
+    </div>
+    <div class="overflow-x-auto">
       <table class="min-w-full text-sm">
         <thead class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
           <tr>
@@ -17,33 +13,33 @@
         </thead>
         <tbody>
           <tr v-for="(rota, i) in itens" :key="i" class="border-t border-slate-100 align-top dark:border-slate-800">
-            <td class="px-2 py-2"><input v-model.trim="rota.id" :aria-label="`Identificador da rota ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'min-w-[4rem]']" /><InputError :message="erros[`rotas.${i}.id`]" /></td>
-            <td class="px-2 py-2">
-              <input v-model="rota.setores_texto" :aria-label="`Setores da rota ${i + 1}`" :disabled="somenteLeitura" placeholder="A, D, E" :class="[CLASSE_CAMPO, 'min-w-[8rem]']" />
-              <InputError :message="erroDaLinha(erros, `rotas.${i}.setores`)" />
-            </td>
-            <td class="px-2 py-2"><input v-model.trim="rota.chegada_onda" :aria-label="`Chegada da onda da rota ${i + 1}`" :disabled="somenteLeitura" placeholder="15:00" maxlength="6" :class="[CLASSE_CAMPO, 'min-w-[5rem]']" /><InputError :message="erros[`rotas.${i}.chegada_onda`]" /></td>
-            <td class="px-2 py-2">
-              <select v-model.number="rota.nivel_emergencia" :aria-label="`Nível de emergência da rota ${i + 1}`" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option :value="1">1</option><option :value="2">2</option><option :value="3">3</option></select>
-            </td>
+            <td class="min-w-[5rem] px-2 py-2"><FormField v-model="rota.id" size="sm" :aria-label="`Identificador da rota ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :error="erros[`rotas.${i}.id`]" /></td>
+            <td class="min-w-[9rem] px-2 py-2"><FormField v-model="rota.setores_texto" size="sm" placeholder="A, D, E" :aria-label="`Setores da rota ${i + 1}`" :disabled="somenteLeitura" :error="erroDaLinha(erros, `rotas.${i}.setores`)" /></td>
+            <td class="min-w-[6rem] px-2 py-2"><FormField v-model="rota.chegada_onda" size="sm" placeholder="15:00" maxlength="6" :aria-label="`Chegada da onda da rota ${i + 1}`" :disabled="somenteLeitura" :error="erros[`rotas.${i}.chegada_onda`]" /></td>
+            <td class="min-w-[5rem] px-2 py-2"><FormSelect v-model="rota.nivel_emergencia" size="sm" placeholder="" :options="OPCOES_NIVEL" :aria-label="`Nível de emergência da rota ${i + 1}`" :disabled="somenteLeitura" /></td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ calculo(rota)?.terf_fmt ?? '—' }}</td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ calculo(rota)?.saida_fmt ?? '—' }}</td>
             <td class="px-2 py-2">
               <span v-if="calculo(rota)" :class="calculo(rota).conforme ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'">{{ calculo(rota).conforme ? 'Sim' : 'Não' }}</span>
               <span v-if="calculo(rota)?.motivo" class="block text-xs text-red-700 dark:text-red-300">{{ MOTIVOS_ROTA[calculo(rota).motivo] }}</span>
             </td>
-            <td class="px-2 py-2"><button v-if="!somenteLeitura && itens.length > 1" type="button" class="text-sm text-red-700 dark:text-red-300" @click="$emit('remover', i)">Remover</button></td>
+            <td class="px-2 py-2"><Button v-if="!somenteLeitura && itens.length > 1" variant="danger" size="sm" @click="$emit('remover', i)">Remover</Button></td>
           </tr>
         </tbody>
       </table>
     </div>
     <InputError class="mt-2" :message="erros.rotas" />
-  </section>
+  </CollapsibleSection>
 </template>
 
 <script setup>
+import Button from '@/Components/Atoms/Button/Button.vue';
 import InputError from '@/Components/InputError.vue';
-import { CLASSE_CAMPO, MOTIVOS_ROTA, erroDaLinha } from '@/utils/paeEvacuacao';
+import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
+import FormField from '@/Components/Molecules/Form/FormField.vue';
+import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
+import { MOTIVOS_ROTA, erroDaLinha, idAparado } from '@/utils/paeEvacuacao';
+import { MapIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   itens: { type: Array, required: true },
@@ -56,5 +52,7 @@ const props = defineProps({
 
 defineEmits(['adicionar', 'remover']);
 
-const calculo = (rota) => props.simulado ? (props.resultado?.rotas?.[rota.id] ?? null) : null;
+const OPCOES_NIVEL = [{ value: 1, label: '1' }, { value: 2, label: '2' }, { value: 3, label: '3' }];
+
+const calculo = (rota) => props.simulado ? (props.resultado?.rotas?.[idAparado(rota.id)] ?? null) : null;
 </script>

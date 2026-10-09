@@ -14,8 +14,6 @@ export function numero(valor, casas = 2) {
   return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
 
-export const CLASSE_CAMPO = 'w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 disabled:opacity-70 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100';
-
 export const MOTIVOS_ROTA = {
   setor_sem_tempo: 'setor sem tempo calculado',
   estrangulamento_abaixo_minimo: 'estrangulamento abaixo de 1,2 m',
@@ -34,4 +32,9 @@ export function erroDaLinha(erros, prefixo) {
 
 export function separarLista(texto) {
   return (texto ?? '').split(',').map((parte) => parte.trim()).filter(Boolean);
+}
+
+// O servidor normaliza os ids (aparados); a busca no resultado usa a mesma forma.
+export function idAparado(id) {
+  return String(id ?? '').trim();
 }
