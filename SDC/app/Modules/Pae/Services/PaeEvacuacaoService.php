@@ -89,9 +89,14 @@ final class PaeEvacuacaoService
 
     public function visualizar(PaeProtocolo $protocolo, ?int $versao): array
     {
-        $historico = $protocolo->conferenciasEvacuacao()->with('autor:id,name')->orderByDesc('versao')->get();
+        $historico = $protocolo->conferenciasEvacuacao()
+            ->select(['id', 'protocolo_id', 'versao', 'num_sei', 'tte_segundos', 'criterio1_conforme', 'criterio2_conforme', 'possui_rota_invalida', 'possui_setor_inviavel', 'excede_declarado', 'criado_por', 'created_at'])
+            ->with('autor:id,name')
+            ->orderByDesc('versao')
+            ->get();
         $atual = $historico->first();
-        $selecionada = $versao === null ? $atual : $historico->firstWhere('versao', $versao);
+        $alvo = $versao ?? $atual?->versao;
+        $selecionada = $alvo === null ? null : $this->completa($protocolo, $alvo);
         if ($versao !== null && $selecionada === null) {
             throw (new ModelNotFoundException())->setModel(PaeEvacuacaoConferencia::class, [$versao]);
         }
@@ -182,6 +187,12 @@ final class PaeEvacuacaoService
         }
 
         return $entrada;
+    }
+
+    /** Linha completa (com os jsonb) so da versao exibida; null quando a versao nao existe no protocolo. */
+    private function completa(PaeProtocolo $protocolo, int $versao): ?PaeEvacuacaoConferencia
+    {
+        return $protocolo->conferenciasEvacuacao()->with('autor:id,name')->where('versao', $versao)->first();
     }
 
     private function apresentar(PaeEvacuacaoConferencia $c): array

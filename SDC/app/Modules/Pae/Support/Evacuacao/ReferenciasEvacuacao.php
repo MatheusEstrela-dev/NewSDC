@@ -20,12 +20,12 @@ final class ReferenciasEvacuacao
 
         foreach ($entrada['rotas'] as $i => $rota) {
             if (count($rota['setores']) !== count(array_unique($rota['setores']))) {
-                $erros["rotas.$i.setores"] = 'A rota repete um setor.';
+                self::acumular($erros, "rotas.$i.setores", 'A rota repete um setor.');
             }
             foreach ($rota['setores'] as $setorId) {
                 $usados[$setorId] = true;
                 if (! in_array($setorId, $idsSetores, true)) {
-                    $erros["rotas.$i.setores"] = "O setor {$setorId} não existe.";
+                    self::acumular($erros, "rotas.$i.setores", "O setor {$setorId} não existe.");
                 }
             }
         }
@@ -40,9 +40,9 @@ final class ReferenciasEvacuacao
         foreach ($entrada['acessos'] as $i => $acesso) {
             foreach ($acesso['rotas'] as $rotaId) {
                 if (! in_array($rotaId, $idsRotas, true)) {
-                    $erros["acessos.$i.rotas"] = "A rota {$rotaId} não existe.";
+                    self::acumular($erros, "acessos.$i.rotas", "A rota {$rotaId} não existe.");
                 } elseif (isset($acessoDaRota[$rotaId])) {
-                    $erros["acessos.$i.rotas"] = "A rota {$rotaId} já está ligada ao acesso {$acessoDaRota[$rotaId]}.";
+                    self::acumular($erros, "acessos.$i.rotas", "A rota {$rotaId} já está ligada ao acesso {$acessoDaRota[$rotaId]}.");
                 } else {
                     $acessoDaRota[$rotaId] = $acesso['id'];
                 }
@@ -50,5 +50,11 @@ final class ReferenciasEvacuacao
         }
 
         return $erros;
+    }
+
+    /** Varios problemas no mesmo campo viram uma unica mensagem, na ordem em que aparecem. */
+    private static function acumular(array &$erros, string $campo, string $mensagem): void
+    {
+        $erros[$campo] = isset($erros[$campo]) ? $erros[$campo].' '.$mensagem : $mensagem;
     }
 }

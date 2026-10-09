@@ -13,7 +13,22 @@ final class CalculoEvacuacaoAnexoE
 {
     public const LARGURA_MINIMA_ESTRANGULAMENTO = 1.2;
 
-    private const EPSILON = 1e-9;
+    public const SITUACAO_OK = 'ok';
+    public const SITUACAO_VIA_INSUFICIENTE = 'via_insuficiente';
+    public const SITUACAO_DENSIDADE_INVIAVEL = 'densidade_inviavel';
+    public const MOTIVO_SETOR_SEM_TEMPO = 'setor_sem_tempo';
+    public const MOTIVO_ESTRANGULAMENTO_ABAIXO_MINIMO = 'estrangulamento_abaixo_minimo';
+
+    /** Coeficiente de estrangulamento aplicado ao numero de pessoas (Anexo E, item 4); distinto da largura minima de 1,2 m. */
+    private const COEFICIENTE_ESTRANGULAMENTO = 1.2;
+    private const DIVISOR_PLANO = 100;
+    private const DIVISOR_RAMPA_ESCADA = 79;
+    private const SEGUNDOS_POR_MINUTO = 60;
+    /** Acrescimo de 30% em area comercial, em decimos: populacao * 13 / 10 arredondado para cima via (p * 13 + 9) div 10. */
+    private const ACRESCIMO_COMERCIAL_NUMERADOR = 13;
+    private const ACRESCIMO_COMERCIAL_DENOMINADOR = 10;
+
+    private const EPSILON = 1e-6;
     private const DESCONTO_RUA = ['rua_mao_unica' => 2.90, 'rua_mao_dupla' => 5.80];
     private const DENSIDADE_MAXIMA_PONTO = 3.0;
 
@@ -54,8 +69,8 @@ final class CalculoEvacuacaoAnexoE
             'criterio1_conforme' => $this->todos($pontos, 'conforme'),
             'criterio2_conforme' => $this->todos($rotas, 'conforme'),
             'possui_rota_invalida' => in_array(true, array_column($rotas, 'invalida'), true),
-            'possui_setor_inviavel' => in_array(true, array_map(fn (array $s): bool => $s['situacao'] !== 'ok', $setores), true),
-            'excede_declarado' => $declarado !== null && $tte !== null && $tte > $declarado,
+            'possui_setor_inviavel' => in_array(true, array_map(fn (array $s): bool => $s['situacao'] !== self::SITUACAO_OK, $setores), true),
+            'excede_declarado' => $declarado !== null && $tte !== null && $this->estritamenteMaior($tte, (float) $declarado),
         ];
 
         return [
@@ -81,20 +96,20 @@ final class CalculoEvacuacaoAnexoE
     private function setor(array $setor): array
     {
         // +30% em area comercial, arredondado para cima sem erro de ponto flutuante.
-        $populacao = $setor['comercial'] ? intdiv($setor['populacao'] * 13 + 9, 10) : $setor['populacao'];
+        $populacao = $setor['comercial'] ? intdiv($setor['populacao'] * self::ACRESCIMO_COMERCIAL_NUMERADOR + self::ACRESCIMO_COMERCIAL_DENOMINADOR - 1, self::ACRESCIMO_COMERCIAL_DENOMINADOR) : $setor['populacao'];
         $larguraUtil = $setor['via'] === 'calcada'
             ? $setor['largura'] * $setor['lados']
             : $setor['largura'] - self::DESCONTO_RUA[$setor['via']];
 
         if ($larguraUtil <= self::EPSILON) {
-            return $this->setorSemTempo($populacao, null, 'via_insuficiente');
+            return $this->setorSemTempo($populacao, null, self::SITUACAO_VIA_INSUFICIENTE);
         }
 
         $area = $larguraUtil * $setor['distancia'];
         $densidade = $populacao / $area;
         $velocidade = TabelaVelocidadeAnexoE::velocidade($densidade, $setor['terreno']);
         if ($velocidade === null) {
-            return ['densidade' => $densidade, 'area' => $area] + $this->setorSemTempo($populacao, $larguraUtil, 'densidade_inviavel');
+            return ['densidade' => $densidade, 'area' => $area] + $this->setorSemTempo($populacao, $larguraUtil, self::SITUACAO_DENSIDADE_INVIAVEL);
         }
 
         return [
@@ -104,7 +119,7 @@ final class CalculoEvacuacaoAnexoE
             'densidade' => $densidade,
             'velocidade' => $velocidade,
             'tempo_segundos' => $setor['distancia'] / $velocidade,
-            'situacao' => 'ok',
+            'situacao' => self::SITUACAO_OK,
         ];
     }
 
@@ -133,11 +148,11 @@ final class CalculoEvacuacaoAnexoE
         foreach (array_keys($setoresDoAcesso) as $setorId) {
             $n += $setores[$setorId]['populacao_efetiva'];
         }
-        $divisor = $acesso['terreno'] === TabelaVelocidadeAnexoE::PLANO ? 100 : 79;
+        $divisor = $acesso['terreno'] === TabelaVelocidadeAnexoE::PLANO ? self::DIVISOR_PLANO : self::DIVISOR_RAMPA_ESCADA;
 
         return [
             'n' => $n,
-            'te_segundos' => 1.2 * $n / ($divisor * $acesso['largura']) * 60,
+            'te_segundos' => self::COEFICIENTE_ESTRANGULAMENTO * $n / ($divisor * $acesso['largura']) * self::SEGUNDOS_POR_MINUTO,
             'invalido' => $acesso['largura'] < self::LARGURA_MINIMA_ESTRANGULAMENTO - self::EPSILON,
         ];
     }
@@ -147,8 +162,8 @@ final class CalculoEvacuacaoAnexoE
         $tempos = array_map(fn (string $id): ?float => $setores[$id]['tempo_segundos'], $rota['setores']);
         $terf = in_array(null, $tempos, true) ? null : array_sum($tempos);
         $motivo = match (true) {
-            $terf === null => 'setor_sem_tempo',
-            $acesso !== null && $acesso['invalido'] => 'estrangulamento_abaixo_minimo',
+            $terf === null => self::MOTIVO_SETOR_SEM_TEMPO,
+            $acesso !== null && $acesso['invalido'] => self::MOTIVO_ESTRANGULAMENTO_ABAIXO_MINIMO,
             default => null,
         };
         $saida = $terf === null ? null : max($terf, $acesso['te_segundos'] ?? 0.0);
@@ -161,7 +176,7 @@ final class CalculoEvacuacaoAnexoE
             'nivel_emergencia' => $rota['nivel_emergencia'],
             'invalida' => $motivo !== null,
             'motivo' => $motivo,
-            'conforme' => $motivo === null && $saida < $rota['chegada_onda_segundos'],
+            'conforme' => $motivo === null && $this->estritamenteMenor($saida, (float) $rota['chegada_onda_segundos']),
         ];
     }
 
@@ -169,7 +184,19 @@ final class CalculoEvacuacaoAnexoE
     {
         $densidade = $ponto['populacao'] / $ponto['area'];
 
-        return ['densidade' => $densidade, 'conforme' => $densidade < self::DENSIDADE_MAXIMA_PONTO];
+        return ['densidade' => $densidade, 'conforme' => $this->estritamenteMenor($densidade, self::DENSIDADE_MAXIMA_PONTO)];
+    }
+
+    /** Menor que o limite legal; valores a menos de EPSILON do limite contam como iguais. */
+    private function estritamenteMenor(float $valor, float $limite): bool
+    {
+        return $valor < $limite - self::EPSILON;
+    }
+
+    /** Maior que o limite legal; valores a menos de EPSILON do limite contam como iguais. */
+    private function estritamenteMaior(float $valor, float $limite): bool
+    {
+        return $valor > $limite + self::EPSILON;
     }
 
     private function todos(array $itens, string $campo): bool
