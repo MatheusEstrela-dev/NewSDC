@@ -2,7 +2,7 @@
   <div class="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-3 dark:border-slate-700/50 sm:mb-6 sm:pb-4">
     <div class="flex items-start gap-3 sm:items-center">
       <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20 sm:h-12 sm:w-12 sm:rounded-xl">
-        <component :is="iconeEfetivo" class="h-5 w-5 text-white sm:h-6 sm:w-6" />
+        <component :is="iconeEfetivo" aria-hidden="true" class="h-5 w-5 text-white sm:h-6 sm:w-6" />
       </div>
 
       <div class="min-w-0 flex-1">

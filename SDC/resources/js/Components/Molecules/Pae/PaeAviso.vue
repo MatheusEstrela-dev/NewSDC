@@ -1,5 +1,5 @@
 <template>
-  <div role="status" :class="['rounded-lg border p-3 text-sm', CLASSES[tom] ?? CLASSES.info]">
+  <div :role="tom === 'erro' ? 'alert' : 'status'" :class="['rounded-lg border p-3 text-sm', CLASSES[tom] ?? CLASSES.info]">
     <slot />
   </div>
 </template>
