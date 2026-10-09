@@ -24,6 +24,16 @@
     <EvacuacaoAcessosEditor :itens="form.acessos" :erros="erros" :resultado="resultado" :rotas-disponiveis="idsRotas" :somente-leitura="!can_edit" @adicionar="adicionar('acessos')" @remover="remover('acessos', $event)" />
     <EvacuacaoPontosEditor :itens="form.pontos_encontro" :erros="erros" :resultado="resultado" :somente-leitura="!can_edit" @adicionar="adicionar('pontos_encontro')" @remover="remover('pontos_encontro', $event)" />
 
+    <section v-if="conferencia && !can_edit" class="rounded-xl border border-slate-200 bg-white p-5 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Registro da versão {{ conferencia.versao }}</h2>
+      <dl class="mt-3 grid gap-3 sm:grid-cols-3">
+        <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Número SEI</dt><dd class="text-slate-800 dark:text-slate-100">{{ conferencia.num_sei || '—' }}</dd></div>
+        <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Autor</dt><dd class="text-slate-800 dark:text-slate-100">{{ conferencia.autor || '—' }}</dd></div>
+        <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Data</dt><dd class="text-slate-800 dark:text-slate-100">{{ dataLocal(conferencia.created_at) }}</dd></div>
+        <div class="sm:col-span-3"><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Observação</dt><dd class="whitespace-pre-line text-slate-800 dark:text-slate-100">{{ conferencia.observacao || '—' }}</dd></div>
+      </dl>
+    </section>
+
     <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div class="grid gap-3 sm:grid-cols-3">
         <label class="block text-sm text-slate-700 dark:text-slate-200">Tempo total declarado pelo empreendedor (mm:ss)

@@ -17,14 +17,14 @@
         </thead>
         <tbody>
           <tr v-for="(rota, i) in itens" :key="i" class="border-t border-slate-100 align-top dark:border-slate-800">
-            <td class="px-2 py-2"><input v-model.trim="rota.id" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'w-16']" /><InputError :message="erros[`rotas.${i}.id`]" /></td>
+            <td class="px-2 py-2"><input v-model.trim="rota.id" :aria-label="`Identificador da rota ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'min-w-[4rem]']" /><InputError :message="erros[`rotas.${i}.id`]" /></td>
             <td class="px-2 py-2">
-              <input :value="rota.setores.join(', ')" :disabled="somenteLeitura" placeholder="A, D, E" :class="[CLASSE_CAMPO, 'w-32']" @change="rota.setores = separar($event.target.value)" />
+              <input v-model="rota.setores_texto" :aria-label="`Setores da rota ${i + 1}`" :disabled="somenteLeitura" placeholder="A, D, E" :class="[CLASSE_CAMPO, 'min-w-[8rem]']" />
               <InputError :message="erros[`rotas.${i}.setores`]" />
             </td>
-            <td class="px-2 py-2"><input v-model.trim="rota.chegada_onda" :disabled="somenteLeitura" placeholder="15:00" maxlength="6" :class="[CLASSE_CAMPO, 'w-20']" /><InputError :message="erros[`rotas.${i}.chegada_onda`]" /></td>
+            <td class="px-2 py-2"><input v-model.trim="rota.chegada_onda" :aria-label="`Chegada da onda da rota ${i + 1}`" :disabled="somenteLeitura" placeholder="15:00" maxlength="6" :class="[CLASSE_CAMPO, 'min-w-[5rem]']" /><InputError :message="erros[`rotas.${i}.chegada_onda`]" /></td>
             <td class="px-2 py-2">
-              <select v-model.number="rota.nivel_emergencia" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option :value="1">1</option><option :value="2">2</option><option :value="3">3</option></select>
+              <select v-model.number="rota.nivel_emergencia" :aria-label="`Nível de emergência da rota ${i + 1}`" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option :value="1">1</option><option :value="2">2</option><option :value="3">3</option></select>
             </td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ calculo(rota)?.terf_fmt ?? '—' }}</td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ calculo(rota)?.saida_fmt ?? '—' }}</td>
@@ -56,5 +56,4 @@ const props = defineProps({
 defineEmits(['adicionar', 'remover']);
 
 const calculo = (rota) => props.resultado?.rotas?.[rota.id] ?? null;
-const separar = (texto) => texto.split(',').map((parte) => parte.trim()).filter(Boolean);
 </script>

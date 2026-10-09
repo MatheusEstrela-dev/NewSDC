@@ -49,6 +49,14 @@ final class CalculoEvacuacaoAnexoE
         $tte = $tmd === null ? null : max($tmd, $te ?? 0.0);
         $declarado = $entrada['tte_declarado_segundos'] ?? null;
 
+        $sinais = [
+            'criterio1_conforme' => $this->todos($pontos, 'conforme'),
+            'criterio2_conforme' => $this->todos($rotas, 'conforme'),
+            'possui_rota_invalida' => in_array(true, array_column($rotas, 'invalida'), true),
+            'possui_setor_inviavel' => in_array(true, array_map(fn (array $s): bool => $s['situacao'] !== 'ok', $setores), true),
+            'excede_declarado' => $declarado !== null && $tte !== null && $tte > $declarado,
+        ];
+
         return [
             'setores' => $setores,
             'rotas' => $rotas,
@@ -57,12 +65,16 @@ final class CalculoEvacuacaoAnexoE
             'tmd_segundos' => $tmd,
             'te_segundos' => $te,
             'tte_segundos' => $tte,
-            'criterio1_conforme' => $this->todos($pontos, 'conforme'),
-            'criterio2_conforme' => $this->todos($rotas, 'conforme'),
-            'possui_rota_invalida' => in_array(true, array_column($rotas, 'invalida'), true),
-            'possui_setor_inviavel' => in_array(true, array_map(fn (array $s): bool => $s['situacao'] !== 'ok', $setores), true),
-            'excede_declarado' => $declarado !== null && $tte !== null && $tte > $declarado,
-        ];
+        ] + $sinais + ['conforme' => self::conforme($sinais)];
+    }
+
+    /**
+     * Fonte unica da regra de conformidade: os dois criterios atendidos e nenhum sinal de alerta.
+     */
+    public static function conforme(array $sinais): bool
+    {
+        return (bool) $sinais['criterio1_conforme'] && (bool) $sinais['criterio2_conforme']
+            && ! $sinais['possui_rota_invalida'] && ! $sinais['possui_setor_inviavel'] && ! $sinais['excede_declarado'];
     }
 
     private function setor(array $setor): array

@@ -19,22 +19,22 @@
         </thead>
         <tbody>
           <tr v-for="(setor, i) in itens" :key="i" class="border-t border-slate-100 align-top dark:border-slate-800">
-            <td class="px-2 py-2"><input v-model.trim="setor.id" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'w-16']" /><InputError :message="erros[`setores.${i}.id`]" /></td>
-            <td class="px-2 py-2"><input v-model.number="setor.populacao" type="number" min="0" step="1" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'w-24']" /><InputError :message="erros[`setores.${i}.populacao`]" /></td>
-            <td class="px-2 py-2"><input v-model="setor.comercial" type="checkbox" :disabled="somenteLeitura" /></td>
+            <td class="px-2 py-2"><input v-model.trim="setor.id" :aria-label="`Identificador do setor ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'min-w-[4rem]']" /><InputError :message="erros[`setores.${i}.id`]" /></td>
+            <td class="px-2 py-2"><input v-model.number="setor.populacao" :aria-label="`Moradores do setor ${i + 1}`" type="number" min="0" step="1" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[6rem]']" /><InputError :message="erros[`setores.${i}.populacao`]" /></td>
+            <td class="px-2 py-2"><input v-model="setor.comercial" :aria-label="`Área comercial do setor ${i + 1}`" type="checkbox" :disabled="somenteLeitura" /></td>
             <td class="px-2 py-2">
-              <select v-model="setor.via" :disabled="somenteLeitura" :class="CLASSE_CAMPO">
+              <select v-model="setor.via" :aria-label="`Tipo de via do setor ${i + 1}`" :disabled="somenteLeitura" :class="CLASSE_CAMPO">
                 <option value="calcada">Calçada</option><option value="rua_mao_unica">Rua mão única</option><option value="rua_mao_dupla">Rua mão dupla</option>
               </select>
             </td>
-            <td class="px-2 py-2"><input v-model.number="setor.largura" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'w-20']" /><InputError :message="erros[`setores.${i}.largura`]" /></td>
+            <td class="px-2 py-2"><input v-model.number="setor.largura" :aria-label="`Largura do setor ${i + 1}`" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[5rem]']" /><InputError :message="erros[`setores.${i}.largura`]" /></td>
             <td class="px-2 py-2">
-              <select v-if="setor.via === 'calcada'" v-model.number="setor.lados" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option :value="1">1</option><option :value="2">2</option></select>
+              <select v-if="setor.via === 'calcada'" v-model.number="setor.lados" :aria-label="`Lados da calçada do setor ${i + 1}`" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option :value="1">1</option><option :value="2">2</option></select>
               <span v-else class="text-slate-400">—</span>
             </td>
-            <td class="px-2 py-2"><input v-model.number="setor.distancia" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'w-24']" /><InputError :message="erros[`setores.${i}.distancia`]" /></td>
+            <td class="px-2 py-2"><input v-model.number="setor.distancia" :aria-label="`Distância do setor ${i + 1}`" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[6rem]']" /><InputError :message="erros[`setores.${i}.distancia`]" /></td>
             <td class="px-2 py-2">
-              <select v-model="setor.terreno" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option value="plano">Plano</option><option value="inclinado">Inclinado (&gt; 5%)</option></select>
+              <select v-model="setor.terreno" :aria-label="`Terreno do setor ${i + 1}`" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option value="plano">Plano</option><option value="inclinado">Inclinado (&gt; 5%)</option></select>
             </td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ numero(calculo(setor)?.densidade) }}</td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ numero(calculo(setor)?.velocidade) }}</td>

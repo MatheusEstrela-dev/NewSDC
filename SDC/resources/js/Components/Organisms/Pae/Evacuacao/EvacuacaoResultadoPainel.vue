@@ -41,10 +41,8 @@ const props = defineProps({
 const okClasse = 'text-green-700 dark:text-green-300';
 const erroClasse = 'text-red-700 dark:text-red-300';
 
-const conforme = computed(() => {
-  const r = props.resultado;
-  return Boolean(r && r.criterio1_conforme && r.criterio2_conforme && !r.possui_rota_invalida && !r.possui_setor_inviavel && !r.excede_declarado);
-});
+// A regra de conformidade e do servidor (CalculoEvacuacaoAnexoE::conforme); aqui so se exibe.
+const conforme = computed(() => Boolean(props.resultado?.conforme));
 
 const tempos = computed(() => [
   { rotulo: 'TTE', valor: props.resultado?.tte_fmt },

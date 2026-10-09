@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Pae\Models;
 
 use App\Models\User;
+use App\Modules\Pae\Support\Evacuacao\CalculoEvacuacaoAnexoE;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -64,7 +65,8 @@ final class PaeEvacuacaoConferencia extends Model
 
     public function conforme(): bool
     {
-        return $this->criterio1_conforme && $this->criterio2_conforme
-            && ! $this->possui_rota_invalida && ! $this->possui_setor_inviavel && ! $this->excede_declarado;
+        return CalculoEvacuacaoAnexoE::conforme($this->only([
+            'criterio1_conforme', 'criterio2_conforme', 'possui_rota_invalida', 'possui_setor_inviavel', 'excede_declarado',
+        ]));
     }
 }

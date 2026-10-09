@@ -14,10 +14,10 @@
         </thead>
         <tbody>
           <tr v-for="(ponto, i) in itens" :key="i" class="border-t border-slate-100 align-top dark:border-slate-800">
-            <td class="px-2 py-2"><input v-model.trim="ponto.nome" :disabled="somenteLeitura" maxlength="255" :class="CLASSE_CAMPO" /><InputError :message="erros[`pontos_encontro.${i}.nome`]" /></td>
-            <td class="px-2 py-2"><input v-model.trim="ponto.endereco" :disabled="somenteLeitura" maxlength="500" :class="CLASSE_CAMPO" /><InputError :message="erros[`pontos_encontro.${i}.endereco`]" /></td>
-            <td class="px-2 py-2"><input v-model.number="ponto.populacao" type="number" min="0" step="1" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'w-24']" /><InputError :message="erros[`pontos_encontro.${i}.populacao`]" /></td>
-            <td class="px-2 py-2"><input v-model.number="ponto.area" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'w-28']" /><InputError :message="erros[`pontos_encontro.${i}.area`]" /></td>
+            <td class="px-2 py-2"><input v-model.trim="ponto.nome" :aria-label="`Local do ponto de encontro ${i + 1}`" :disabled="somenteLeitura" maxlength="255" :class="CLASSE_CAMPO" /><InputError :message="erros[`pontos_encontro.${i}.nome`]" /></td>
+            <td class="px-2 py-2"><input v-model.trim="ponto.endereco" :aria-label="`Endereço do ponto de encontro ${i + 1}`" :disabled="somenteLeitura" maxlength="500" :class="CLASSE_CAMPO" /><InputError :message="erros[`pontos_encontro.${i}.endereco`]" /></td>
+            <td class="px-2 py-2"><input v-model.number="ponto.populacao" :aria-label="`População do ponto de encontro ${i + 1}`" type="number" min="0" step="1" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[6rem]']" /><InputError :message="erros[`pontos_encontro.${i}.populacao`]" /></td>
+            <td class="px-2 py-2"><input v-model.number="ponto.area" :aria-label="`Área do ponto de encontro ${i + 1}`" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[7rem]']" /><InputError :message="erros[`pontos_encontro.${i}.area`]" /></td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ numero(resultado?.pontos_encontro?.[i]?.densidade) }}</td>
             <td class="px-2 py-2">
               <span v-if="resultado?.pontos_encontro?.[i]" :class="resultado.pontos_encontro[i].conforme ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'">{{ resultado.pontos_encontro[i].conforme ? 'Sim' : 'Não' }}</span>

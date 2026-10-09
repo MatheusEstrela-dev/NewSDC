@@ -15,13 +15,13 @@
         </thead>
         <tbody>
           <tr v-for="(acesso, i) in itens" :key="i" class="border-t border-slate-100 align-top dark:border-slate-800">
-            <td class="px-2 py-2"><input v-model.trim="acesso.id" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'w-16']" /><InputError :message="erros[`acessos.${i}.id`]" /></td>
-            <td class="px-2 py-2"><input v-model.number="acesso.largura" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'w-20']" /><InputError :message="erros[`acessos.${i}.largura`]" /></td>
+            <td class="px-2 py-2"><input v-model.trim="acesso.id" :aria-label="`Identificador do acesso ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'min-w-[4rem]']" /><InputError :message="erros[`acessos.${i}.id`]" /></td>
+            <td class="px-2 py-2"><input v-model.number="acesso.largura" :aria-label="`Largura do acesso ${i + 1}`" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[5rem]']" /><InputError :message="erros[`acessos.${i}.largura`]" /></td>
             <td class="px-2 py-2">
-              <select v-model="acesso.terreno" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option value="plano">Plano</option><option value="inclinado">Rampa ou escada</option></select>
+              <select v-model="acesso.terreno" :aria-label="`Terreno do acesso ${i + 1}`" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option value="plano">Plano</option><option value="inclinado">Rampa ou escada</option></select>
             </td>
             <td class="px-2 py-2">
-              <input :value="acesso.rotas.join(', ')" :disabled="somenteLeitura" placeholder="R1, R2" :class="[CLASSE_CAMPO, 'w-28']" @change="acesso.rotas = separar($event.target.value)" />
+              <input v-model="acesso.rotas_texto" :aria-label="`Rotas do acesso ${i + 1}`" :disabled="somenteLeitura" placeholder="R1, R2" :class="[CLASSE_CAMPO, 'min-w-[7rem]']" />
               <InputError :message="erros[`acessos.${i}.rotas`]" />
             </td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ calculo(acesso)?.n ?? '—' }}</td>
@@ -52,5 +52,4 @@ const props = defineProps({
 defineEmits(['adicionar', 'remover']);
 
 const calculo = (acesso) => props.resultado?.acessos?.[acesso.id] ?? null;
-const separar = (texto) => texto.split(',').map((parte) => parte.trim()).filter(Boolean);
 </script>

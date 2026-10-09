@@ -25,3 +25,7 @@ export const SITUACOES_SETOR = {
   via_insuficiente: 'largura útil insuficiente',
   densidade_inviavel: 'densidade inviável',
 };
+
+export function separarLista(texto) {
+  return (texto ?? '').split(',').map((parte) => parte.trim()).filter(Boolean);
+}

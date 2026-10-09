@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { separarLista } from '@/utils/paeEvacuacao';
 
 const FABRICAS = {
   setores: () => ({ id: '', populacao: 0, comercial: false, via: 'calcada', largura: 1.5, lados: 2, distancia: 0, terreno: 'plano' }),
-  rotas: () => ({ id: '', setores: [], chegada_onda: '', nivel_emergencia: 1 }),
-  acessos: () => ({ id: '', largura: 1.2, terreno: 'plano', rotas: [] }),
+  rotas: () => ({ id: '', setores_texto: '', chegada_onda: '', nivel_emergencia: 1 }),
+  acessos: () => ({ id: '', largura: 1.2, terreno: 'plano', rotas_texto: '' }),
   pontos_encontro: () => ({ nome: '', endereco: '', populacao: 0, area: 0 }),
 };
 
@@ -14,8 +15,8 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
   const entrada = conferencia?.entrada ?? null;
   const form = useForm({
     setores: entrada?.setores.map((s) => ({ ...s, lados: s.lados ?? 2 })) ?? [FABRICAS.setores()],
-    rotas: entrada?.rotas.map(({ id, setores, chegada_onda, nivel_emergencia }) => ({ id, setores, chegada_onda, nivel_emergencia })) ?? [FABRICAS.rotas()],
-    acessos: entrada?.acessos.map((a) => ({ ...a })) ?? [],
+    rotas: entrada?.rotas.map(({ id, setores, chegada_onda, nivel_emergencia }) => ({ id, setores_texto: setores.join(', '), chegada_onda, nivel_emergencia })) ?? [FABRICAS.rotas()],
+    acessos: entrada?.acessos.map(({ rotas, ...resto }) => ({ ...resto, rotas_texto: rotas.join(', ') })) ?? [],
     pontos_encontro: entrada?.pontos_encontro.map((p) => ({ ...p })) ?? [FABRICAS.pontos_encontro()],
     tte_declarado: entrada?.tte_declarado ?? '',
     num_sei: '',
@@ -31,13 +32,14 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
     simulado.value = false;
   }, { deep: true });
 
-  function entradaAtual() {
+  // Unico ponto que converte o texto digitado em listas: o servidor recebe sempre arrays.
+  function paraPayload(dados) {
     return {
-      setores: form.setores,
-      rotas: form.rotas,
-      acessos: form.acessos,
-      pontos_encontro: form.pontos_encontro,
-      tte_declarado: form.tte_declarado || null,
+      setores: dados.setores,
+      rotas: dados.rotas.map(({ setores_texto, ...rota }) => ({ ...rota, setores: separarLista(setores_texto) })),
+      acessos: dados.acessos.map(({ rotas_texto, ...acesso }) => ({ ...acesso, rotas: separarLista(rotas_texto) })),
+      pontos_encontro: dados.pontos_encontro,
+      tte_declarado: dados.tte_declarado || null,
     };
   }
 
@@ -45,7 +47,7 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
     simulando.value = true;
     errosSimulacao.value = {};
     try {
-      const { data } = await axios.post(route('pae.protocolo.evacuacao.simular', protocoloId), entradaAtual());
+      const { data } = await axios.post(route('pae.protocolo.evacuacao.simular', protocoloId), paraPayload(form.data()));
       resultado.value = data;
       simulado.value = true;
     } catch (erro) {
@@ -57,7 +59,7 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
   }
 
   function registrar() {
-    form.transform((dados) => ({ ...dados, tte_declarado: dados.tte_declarado || null }))
+    form.transform((dados) => ({ ...paraPayload(dados), num_sei: dados.num_sei, observacao: dados.observacao, chave_idempotencia: dados.chave_idempotencia }))
       .post(route('pae.protocolo.evacuacao.registrar', protocoloId), {
         preserveScroll: true,
         onSuccess: () => {
