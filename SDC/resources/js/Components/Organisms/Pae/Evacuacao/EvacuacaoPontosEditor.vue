@@ -18,9 +18,9 @@
             <td class="px-2 py-2"><input v-model.trim="ponto.endereco" :aria-label="`Endereço do ponto de encontro ${i + 1}`" :disabled="somenteLeitura" maxlength="500" :class="CLASSE_CAMPO" /><InputError :message="erros[`pontos_encontro.${i}.endereco`]" /></td>
             <td class="px-2 py-2"><input v-model.number="ponto.populacao" :aria-label="`População do ponto de encontro ${i + 1}`" type="number" min="0" step="1" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[6rem]']" /><InputError :message="erros[`pontos_encontro.${i}.populacao`]" /></td>
             <td class="px-2 py-2"><input v-model.number="ponto.area" :aria-label="`Área do ponto de encontro ${i + 1}`" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[7rem]']" /><InputError :message="erros[`pontos_encontro.${i}.area`]" /></td>
-            <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ numero(resultado?.pontos_encontro?.[i]?.densidade) }}</td>
+            <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ numero(calculo(i)?.densidade) }}</td>
             <td class="px-2 py-2">
-              <span v-if="resultado?.pontos_encontro?.[i]" :class="resultado.pontos_encontro[i].conforme ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'">{{ resultado.pontos_encontro[i].conforme ? 'Sim' : 'Não' }}</span>
+              <span v-if="calculo(i)" :class="calculo(i).conforme ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'">{{ calculo(i).conforme ? 'Sim' : 'Não' }}</span>
             </td>
             <td class="px-2 py-2"><button v-if="!somenteLeitura && itens.length > 1" type="button" class="text-sm text-red-700 dark:text-red-300" @click="$emit('remover', i)">Remover</button></td>
           </tr>
@@ -35,12 +35,15 @@
 import InputError from '@/Components/InputError.vue';
 import { CLASSE_CAMPO, numero } from '@/utils/paeEvacuacao';
 
-defineProps({
+const props = defineProps({
   itens: { type: Array, required: true },
   erros: { type: Object, required: true },
   resultado: { type: Object, default: null },
+  simulado: { type: Boolean, default: false },
   somenteLeitura: { type: Boolean, default: false },
 });
 
 defineEmits(['adicionar', 'remover']);
+
+const calculo = (indice) => (props.simulado ? props.resultado?.pontos_encontro?.[indice] ?? null : null);
 </script>

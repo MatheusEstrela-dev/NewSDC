@@ -27,9 +27,14 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
   const simulado = ref(conferencia !== null);
   const simulando = ref(false);
   const errosSimulacao = ref({});
+  const erroSimulacao = ref('');
+  let geracao = 0; // muda a cada edicao: respostas de simulacoes antigas sao descartadas
 
   watch(() => [form.setores, form.rotas, form.acessos, form.pontos_encontro, form.tte_declarado], () => {
+    geracao += 1;
     simulado.value = false;
+    errosSimulacao.value = {};
+    erroSimulacao.value = '';
   }, { deep: true });
 
   // Unico ponto que converte o texto digitado em listas: o servidor recebe sempre arrays.
@@ -46,13 +51,20 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
   async function simular() {
     simulando.value = true;
     errosSimulacao.value = {};
+    erroSimulacao.value = '';
+    const minhaGeracao = geracao;
     try {
       const { data } = await axios.post(route('pae.protocolo.evacuacao.simular', protocoloId), paraPayload(form.data()));
+      if (minhaGeracao !== geracao) return;
       resultado.value = data;
       simulado.value = true;
     } catch (erro) {
-      if (erro.response?.status !== 422) throw erro;
-      errosSimulacao.value = Object.fromEntries(Object.entries(erro.response.data.errors).map(([campo, mensagens]) => [campo, mensagens[0]]));
+      if (minhaGeracao !== geracao) return;
+      if (erro.response?.status === 422) {
+        errosSimulacao.value = Object.fromEntries(Object.entries(erro.response.data.errors ?? {}).map(([campo, mensagens]) => [campo, mensagens[0]]));
+      } else {
+        erroSimulacao.value = 'Não foi possível simular agora. Tente novamente.';
+      }
     } finally {
       simulando.value = false;
     }
@@ -79,5 +91,5 @@ export function usePaeEvacuacaoForm(protocoloId, conferencia) {
 
   const erros = computed(() => ({ ...errosSimulacao.value, ...form.errors }));
 
-  return { form, resultado, simulado, simulando, erros, simular, registrar, adicionar, remover };
+  return { form, resultado, simulado, simulando, erros, erroSimulacao, simular, registrar, adicionar, remover };
 }

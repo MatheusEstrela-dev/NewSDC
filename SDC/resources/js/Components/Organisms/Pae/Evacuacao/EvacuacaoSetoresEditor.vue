@@ -31,6 +31,7 @@
             <td class="px-2 py-2">
               <select v-if="setor.via === 'calcada'" v-model.number="setor.lados" :aria-label="`Lados da calçada do setor ${i + 1}`" :disabled="somenteLeitura" :class="CLASSE_CAMPO"><option :value="1">1</option><option :value="2">2</option></select>
               <span v-else class="text-slate-400">—</span>
+              <InputError :message="erros[`setores.${i}.lados`]" />
             </td>
             <td class="px-2 py-2"><input v-model.number="setor.distancia" :aria-label="`Distância do setor ${i + 1}`" type="number" min="0.01" step="0.01" :disabled="somenteLeitura" :class="[CLASSE_CAMPO, 'min-w-[6rem]']" /><InputError :message="erros[`setores.${i}.distancia`]" /></td>
             <td class="px-2 py-2">
@@ -59,10 +60,11 @@ const props = defineProps({
   itens: { type: Array, required: true },
   erros: { type: Object, required: true },
   resultado: { type: Object, default: null },
+  simulado: { type: Boolean, default: false },
   somenteLeitura: { type: Boolean, default: false },
 });
 
 defineEmits(['adicionar', 'remover']);
 
-const calculo = (setor) => props.resultado?.setores?.[setor.id] ?? null;
+const calculo = (setor) => props.simulado ? props.resultado?.setores?.[setor.id] ?? null : null;
 </script>

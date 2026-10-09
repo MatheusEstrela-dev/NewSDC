@@ -26,6 +26,12 @@ export const SITUACOES_SETOR = {
   densidade_inviavel: 'densidade inviável',
 };
 
+// Primeira mensagem do erro da linha: a chave exata ou qualquer chave aninhada (prefixo.N).
+export function erroDaLinha(erros, prefixo) {
+  const chave = Object.keys(erros).find((c) => c === prefixo || c.startsWith(`${prefixo}.`));
+  return chave ? erros[chave] : null;
+}
+
 export function separarLista(texto) {
   return (texto ?? '').split(',').map((parte) => parte.trim()).filter(Boolean);
 }

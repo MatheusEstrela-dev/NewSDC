@@ -20,7 +20,7 @@
             <td class="px-2 py-2"><input v-model.trim="rota.id" :aria-label="`Identificador da rota ${i + 1}`" :disabled="somenteLeitura" maxlength="10" :class="[CLASSE_CAMPO, 'min-w-[4rem]']" /><InputError :message="erros[`rotas.${i}.id`]" /></td>
             <td class="px-2 py-2">
               <input v-model="rota.setores_texto" :aria-label="`Setores da rota ${i + 1}`" :disabled="somenteLeitura" placeholder="A, D, E" :class="[CLASSE_CAMPO, 'min-w-[8rem]']" />
-              <InputError :message="erros[`rotas.${i}.setores`]" />
+              <InputError :message="erroDaLinha(erros, `rotas.${i}.setores`)" />
             </td>
             <td class="px-2 py-2"><input v-model.trim="rota.chegada_onda" :aria-label="`Chegada da onda da rota ${i + 1}`" :disabled="somenteLeitura" placeholder="15:00" maxlength="6" :class="[CLASSE_CAMPO, 'min-w-[5rem]']" /><InputError :message="erros[`rotas.${i}.chegada_onda`]" /></td>
             <td class="px-2 py-2">
@@ -43,17 +43,18 @@
 
 <script setup>
 import InputError from '@/Components/InputError.vue';
-import { CLASSE_CAMPO, MOTIVOS_ROTA } from '@/utils/paeEvacuacao';
+import { CLASSE_CAMPO, MOTIVOS_ROTA, erroDaLinha } from '@/utils/paeEvacuacao';
 
 const props = defineProps({
   itens: { type: Array, required: true },
   erros: { type: Object, required: true },
   resultado: { type: Object, default: null },
+  simulado: { type: Boolean, default: false },
   setoresDisponiveis: { type: Array, required: true },
   somenteLeitura: { type: Boolean, default: false },
 });
 
 defineEmits(['adicionar', 'remover']);
 
-const calculo = (rota) => props.resultado?.rotas?.[rota.id] ?? null;
+const calculo = (rota) => props.simulado ? props.resultado?.rotas?.[rota.id] ?? null : null;
 </script>

@@ -22,7 +22,7 @@
             </td>
             <td class="px-2 py-2">
               <input v-model="acesso.rotas_texto" :aria-label="`Rotas do acesso ${i + 1}`" :disabled="somenteLeitura" placeholder="R1, R2" :class="[CLASSE_CAMPO, 'min-w-[7rem]']" />
-              <InputError :message="erros[`acessos.${i}.rotas`]" />
+              <InputError :message="erroDaLinha(erros, `acessos.${i}.rotas`)" />
             </td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">{{ calculo(acesso)?.n ?? '—' }}</td>
             <td class="px-2 py-2 text-slate-700 dark:text-slate-200">
@@ -34,22 +34,24 @@
         </tbody>
       </table>
     </div>
+    <InputError class="mt-2" :message="erros.acessos" />
   </section>
 </template>
 
 <script setup>
 import InputError from '@/Components/InputError.vue';
-import { CLASSE_CAMPO } from '@/utils/paeEvacuacao';
+import { CLASSE_CAMPO, erroDaLinha } from '@/utils/paeEvacuacao';
 
 const props = defineProps({
   itens: { type: Array, required: true },
   erros: { type: Object, required: true },
   resultado: { type: Object, default: null },
+  simulado: { type: Boolean, default: false },
   rotasDisponiveis: { type: Array, required: true },
   somenteLeitura: { type: Boolean, default: false },
 });
 
 defineEmits(['adicionar', 'remover']);
 
-const calculo = (acesso) => props.resultado?.acessos?.[acesso.id] ?? null;
+const calculo = (acesso) => props.simulado ? props.resultado?.acessos?.[acesso.id] ?? null : null;
 </script>

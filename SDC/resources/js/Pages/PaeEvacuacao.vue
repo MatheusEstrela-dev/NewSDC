@@ -8,21 +8,21 @@
         <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Conferência de evacuação</h1>
         <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Protocolo {{ protocolo.num_protocolo }}</p>
       </div>
-      <a :href="route('pae.protocolos.index')" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-600 dark:text-slate-200">Voltar aos protocolos</a>
+      <Link :href="route('pae.protocolos.index')" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-600 dark:text-slate-200">Voltar aos protocolos</Link>
     </header>
 
     <p v-if="historica" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
       Consultando a versão {{ conferencia.versao }}.
-      <a :href="route('pae.protocolo.evacuacao.show', protocolo.id)" class="font-semibold underline">Ir para a versão atual ({{ versao_atual }})</a>
+      <Link :href="route('pae.protocolo.evacuacao.show', protocolo.id)" class="font-semibold underline">Ir para a versão atual ({{ versao_atual }})</Link>
     </p>
     <p v-if="protocolo.arquivado" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">Protocolo arquivado: conferência somente para consulta.</p>
 
     <EvacuacaoResultadoPainel :resultado="resultado" :simulado="simulado" />
 
-    <EvacuacaoSetoresEditor :itens="form.setores" :erros="erros" :resultado="resultado" :somente-leitura="!can_edit" @adicionar="adicionar('setores')" @remover="remover('setores', $event)" />
+    <EvacuacaoSetoresEditor :itens="form.setores" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('setores')" @remover="remover('setores', $event)" />
     <EvacuacaoRotasEditor :itens="form.rotas" :erros="erros" :resultado="resultado" :setores-disponiveis="idsSetores" :somente-leitura="!can_edit" @adicionar="adicionar('rotas')" @remover="remover('rotas', $event)" />
     <EvacuacaoAcessosEditor :itens="form.acessos" :erros="erros" :resultado="resultado" :rotas-disponiveis="idsRotas" :somente-leitura="!can_edit" @adicionar="adicionar('acessos')" @remover="remover('acessos', $event)" />
-    <EvacuacaoPontosEditor :itens="form.pontos_encontro" :erros="erros" :resultado="resultado" :somente-leitura="!can_edit" @adicionar="adicionar('pontos_encontro')" @remover="remover('pontos_encontro', $event)" />
+    <EvacuacaoPontosEditor :itens="form.pontos_encontro" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('pontos_encontro')" @remover="remover('pontos_encontro', $event)" />
 
     <section v-if="conferencia && !can_edit" class="rounded-xl border border-slate-200 bg-white p-5 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Registro da versão {{ conferencia.versao }}</h2>
@@ -52,6 +52,7 @@
         </template>
       </div>
       <p v-if="erros.chave_idempotencia || erros.protocolo" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ erros.chave_idempotencia || erros.protocolo }}</p>
+      <p v-if="erroSimulacao" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ erroSimulacao }}</p>
       <div v-if="can_edit" class="mt-4 flex flex-wrap justify-end gap-3">
         <button type="button" :disabled="simulando" class="rounded-lg border border-blue-700 px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50 dark:border-blue-300 dark:text-blue-300" @click="simular">{{ simulando ? 'Simulando...' : 'Simular' }}</button>
         <button type="button" :disabled="!simulado || form.processing || !form.num_sei" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" @click="registrar">Registrar conferência</button>
@@ -66,7 +67,7 @@
           <span class="text-slate-700 dark:text-slate-200">Versão {{ item.versao }} · {{ item.autor || '—' }} · {{ dataLocal(item.created_at) }} · SEI {{ item.num_sei }} · TTE {{ item.tte_fmt ?? '—' }}</span>
           <span class="flex items-center gap-3">
             <span :class="item.conforme ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'">{{ item.conforme ? 'Conforme' : 'Não conforme' }}</span>
-            <a :href="route('pae.protocolo.evacuacao.versao', [protocolo.id, item.versao])" class="font-semibold text-blue-700 underline dark:text-blue-300">Abrir</a>
+            <Link :href="route('pae.protocolo.evacuacao.versao', [protocolo.id, item.versao])" class="font-semibold text-blue-700 underline dark:text-blue-300">Abrir</Link>
           </span>
         </li>
       </ol>
@@ -84,7 +85,7 @@ import EvacuacaoAcessosEditor from '@/Components/Organisms/Pae/Evacuacao/Evacuac
 import EvacuacaoPontosEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoPontosEditor.vue';
 import { usePaeEvacuacaoForm } from '@/Composables/pae/usePaeEvacuacaoForm';
 import { CLASSE_CAMPO } from '@/utils/paeEvacuacao';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -98,7 +99,7 @@ const props = defineProps({
   can_edit: { type: Boolean, default: false },
 });
 
-const { form, resultado, simulado, simulando, erros, simular, registrar, adicionar, remover } = usePaeEvacuacaoForm(props.protocolo.id, props.conferencia);
+const { form, resultado, simulado, simulando, erros, erroSimulacao, simular, registrar, adicionar, remover } = usePaeEvacuacaoForm(props.protocolo.id, props.conferencia);
 
 const idsSetores = computed(() => form.setores.map((s) => s.id).filter(Boolean));
 const idsRotas = computed(() => form.rotas.map((r) => r.id).filter(Boolean));
