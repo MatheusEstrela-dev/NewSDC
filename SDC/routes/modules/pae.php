@@ -110,7 +110,7 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->middleware('can:pae.protocolos.view');
 
     Route::get('/protocolo/{paeProtocolo}/evacuacao/conferencias/{versao}', [PaeEvacuacaoController::class, 'show'])
-        ->whereNumber('versao')
+        ->where('versao', '[0-9]{1,9}')
         ->name('protocolo.evacuacao.versao')
         ->middleware('can:pae.protocolos.view');
 

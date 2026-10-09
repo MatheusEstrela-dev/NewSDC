@@ -15,6 +15,7 @@ use App\Modules\Pae\Domain\Guards\ExigeEmissaoCcpae;
 use App\Modules\Pae\Domain\Guards\ExigeAdmissibilidade;
 use App\Modules\Pae\Domain\Workflows\PaeProtocoloWorkflow;
 use App\Modules\Pae\Services\EmpreendimentoApiService;
+use App\Modules\Pae\Services\PaeCcpaeService;
 use App\Modules\Pae\Services\PaeFormularioService;
 use App\Modules\Pae\Services\PaeNotificacaoService;
 use App\Modules\Pae\Services\PaePrazoService;

@@ -42,9 +42,10 @@ final class CalculoEvacuacaoAnexoE
 
         $pontos = array_map(fn (array $ponto): array => $this->ponto($ponto), $entrada['pontos_encontro']);
 
-        $terfs = array_values(array_filter(array_column($rotas, 'terf_segundos'), fn ($t): bool => $t !== null));
+        $terfs = array_column($rotas, 'terf_segundos');
         $tes = array_column($acessos, 'te_segundos');
-        $tmd = $terfs === [] ? null : max($terfs);
+        // Rota sem tempo calculavel torna o tempo da area indeterminado, nunca subestimado.
+        $tmd = $terfs === [] || in_array(null, $terfs, true) ? null : max($terfs);
         $te = $tes === [] ? null : max($tes);
         $tte = $tmd === null ? null : max($tmd, $te ?? 0.0);
         $declarado = $entrada['tte_declarado_segundos'] ?? null;
