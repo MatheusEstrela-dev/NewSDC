@@ -38,6 +38,17 @@ class ExportRedecTest extends TestCase
         // os cenarios sao montados antes de actingAsExportador().
         $this->actingAs(User::factory()->create());
 
+        // Banco sem carga de municipios (ambiente local/CI): cria dois pela factory,
+
+        // dentro da transacao do teste.
+
+        if (Municipio::query()->whereRaw('length(codigo_ibge) = 7')->count() < 2) {
+
+            Municipio::factory()->count(2)->create();
+
+        }
+
+
         [$this->municipioA, $this->municipioB] = Municipio::query()
             ->whereNotNull('codigo_ibge')
             ->whereRaw('length(codigo_ibge) = 7')

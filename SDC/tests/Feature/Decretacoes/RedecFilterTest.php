@@ -42,6 +42,12 @@ class RedecFilterTest extends TestCase
         $this->actingAs(User::factory()->create());
 
         // Dois municipios reais e distintos, ambos com IBGE preenchido.
+        // Banco sem carga de municipios (ambiente local/CI): cria dois pela factory,
+        // dentro da transacao do teste.
+        if (Municipio::query()->whereRaw('length(codigo_ibge) = 7')->count() < 2) {
+            Municipio::factory()->count(2)->create();
+        }
+
         [$this->municipioDaRedec, $this->municipioDeOutraRedec] = Municipio::query()
             ->whereNotNull('codigo_ibge')
             ->whereRaw('length(codigo_ibge) = 7')

@@ -60,8 +60,8 @@ class ProcessoStoreFlashTest extends TestCase
         return [
             'data_entrada' => '2026-03-01',
             'origem'       => 'municipal',
-            'municipio_id' => (int) Municipio::query()->value('id'),
-            'status'       => 'Aguardando analise',
+            'municipio_id' => (int) (Municipio::query()->value('id') ?? Municipio::factory()->create()->id),
+            'status'       => 'Aguardando Analise do Estado',
         ];
     }
 
