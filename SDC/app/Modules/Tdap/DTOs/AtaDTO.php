@@ -11,7 +11,7 @@ final readonly class AtaDTO
         public string $dt_inicio,
         public string $dt_final,
         public ?string $historico,
-        public bool $ativo,
+        public ?bool $ativo,
         public ?string $observacoes,
     ) {}
 
@@ -25,7 +25,9 @@ final readonly class AtaDTO
             dt_inicio:   (string) ($data['dt_inicio'] ?? ''),
             dt_final:    (string) ($data['dt_final'] ?? ''),
             historico:   self::nullable($data['historico'] ?? null),
-            ativo:       (bool) ($data['ativo'] ?? true),
+            // Ausente = null: editar nao reativa registro inativo; no create
+            // vale o default true da coluna (mesmo contrato do CaminhaoDTO).
+            ativo:       array_key_exists('ativo', $data) && $data['ativo'] !== null ? (bool) filter_var($data['ativo'], FILTER_VALIDATE_BOOL) : null,
             observacoes: self::nullable($data['observacoes'] ?? null),
         );
     }
@@ -40,7 +42,7 @@ final readonly class AtaDTO
             'dt_inicio'   => $this->dt_inicio,
             'dt_final'    => $this->dt_final,
             'historico'   => $this->historico,
-            'ativo'       => $this->ativo,
+            ...($this->ativo !== null ? ['ativo' => $this->ativo] : []),
             'observacoes' => $this->observacoes,
         ];
     }

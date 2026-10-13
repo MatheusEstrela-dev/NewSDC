@@ -62,7 +62,13 @@ const fetchTickets = async () => {
 
 const submitTicket = async () => {
     try {
-        await axios.post(route('suporte.store'), form.data());
+        // FormData: num objeto comum o axios serializa o File como {} e o
+        // anexo nunca chegava ao servidor.
+        const dados = new FormData();
+        Object.entries(form.data()).forEach(([campo, valor]) => {
+            if (valor !== null && valor !== undefined) dados.append(campo, valor);
+        });
+        await axios.post(route('suporte.store'), dados);
         form.reset();
         activeTab.value = 'list';
         fetchTickets();
@@ -199,6 +205,16 @@ const getStatusColor = (status) => {
                                 </span>
                             </div>
                             <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm line-clamp-2">{{ ticket.description }}</p>
+                            <div v-if="ticket.anexos?.length" class="mt-2 flex flex-wrap gap-2">
+                                <a
+                                    v-for="anexo in ticket.anexos"
+                                    :key="anexo.url"
+                                    :href="anexo.url"
+                                    class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                >
+                                    📎 {{ anexo.nome }}
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

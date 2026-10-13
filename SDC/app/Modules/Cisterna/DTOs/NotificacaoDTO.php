@@ -64,7 +64,9 @@ final readonly class NotificacaoDTO
             'notificavel_type' => $this->notificavelType,
             'notificavel_id' => $this->notificavelId,
             'observacao' => $this->observacao,
-            'legacy_id' => $this->legacyId,
+            // So quando preenchido (carga do legado): o update HTTP nao envia
+            // legacy_id e o null zerava o vinculo do registro migrado.
+            ...($this->legacyId !== null ? ['legacy_id' => $this->legacyId] : []),
         ];
     }
 

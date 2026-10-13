@@ -21,6 +21,13 @@ class TicketResource extends JsonResource
             'description' => $this->description,
             'created_at' => $this->created_at->format('d/m/Y H:i'),
             'updated_at' => $this->updated_at->format('d/m/Y H:i'),
+            'anexos' => $this->whenLoaded('messages', fn () => $this->messages
+                ->filter(fn ($m) => filled($m->attachment_path))
+                ->map(fn ($m) => [
+                    'nome' => basename((string) $m->attachment_path),
+                    'url'  => route('suporte.anexo', ['ticket' => $this->id, 'mensagem' => $m->id]),
+                ])
+                ->values()),
         ];
     }
 }

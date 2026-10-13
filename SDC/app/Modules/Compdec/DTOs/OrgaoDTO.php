@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Compdec\DTOs;
 
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
+
 class OrgaoDTO
 {
+    use SafeCastingTrait;
+
     /**
      * @param  array<string, mixed>|null  $abrangencia
      * @param  array<string, mixed>|null  $metadata
@@ -42,14 +46,14 @@ class OrgaoDTO
         public ?string $portariaNumero = null,
         public ?string $portariaData = null,
         // Quantitativos
-        public int $qtdEfetivo = 0,
-        public int $qtdNupdec = 0,
+        public ?int $qtdEfetivo = null,
+        public ?int $qtdNupdec = null,
         // Capacidades estruturais
-        public bool $temSedePropria = false,
-        public bool $temViatura = false,
-        public bool $temMapeamentoRisco = false,
-        public bool $temSimulado = false,
-        public bool $temCartaoPdc = false,
+        public ?bool $temSedePropria = null,
+        public ?bool $temViatura = null,
+        public ?bool $temMapeamentoRisco = null,
+        public ?bool $temSimulado = null,
+        public ?bool $temCartaoPdc = null,
         // JSONB
         public ?array $abrangencia = null,
         public ?array $metadata = null,
@@ -89,13 +93,13 @@ class OrgaoDTO
             decretoData: $data['decreto_data'] ?? null,
             portariaNumero: $data['portaria_numero'] ?? null,
             portariaData: $data['portaria_data'] ?? null,
-            qtdEfetivo: (int) ($data['qtd_efetivo'] ?? 0),
-            qtdNupdec: (int) ($data['qtd_nupdec'] ?? 0),
-            temSedePropria: (bool) ($data['tem_sede_propria'] ?? false),
-            temViatura: (bool) ($data['tem_viatura'] ?? false),
-            temMapeamentoRisco: (bool) ($data['tem_mapeamento_risco'] ?? false),
-            temSimulado: (bool) ($data['tem_simulado'] ?? false),
-            temCartaoPdc: (bool) ($data['tem_cartao_pdc'] ?? false),
+            qtdEfetivo: self::asIntOrNull($data['qtd_efetivo'] ?? null),
+            qtdNupdec: self::asIntOrNull($data['qtd_nupdec'] ?? null),
+            temSedePropria: self::asBoolOrNull($data['tem_sede_propria'] ?? null),
+            temViatura: self::asBoolOrNull($data['tem_viatura'] ?? null),
+            temMapeamentoRisco: self::asBoolOrNull($data['tem_mapeamento_risco'] ?? null),
+            temSimulado: self::asBoolOrNull($data['tem_simulado'] ?? null),
+            temCartaoPdc: self::asBoolOrNull($data['tem_cartao_pdc'] ?? null),
             abrangencia: $data['abrangencia'] ?? null,
             metadata: $data['metadata'] ?? null,
             capacidades: $data['capacidades'] ?? null,
@@ -139,16 +143,16 @@ class OrgaoDTO
             'decreto_data' => $this->decretoData,
             'portaria_numero' => $this->portariaNumero,
             'portaria_data' => $this->portariaData,
-            'qtd_efetivo' => $this->qtdEfetivo,
-            'qtd_nupdec' => $this->qtdNupdec,
-            'tem_sede_propria' => $this->temSedePropria,
-            'tem_viatura' => $this->temViatura,
-            'tem_mapeamento_risco' => $this->temMapeamentoRisco,
-            'tem_simulado' => $this->temSimulado,
-            'tem_cartao_pdc' => $this->temCartaoPdc,
+            ...($this->qtdEfetivo !== null ? ['qtd_efetivo' => $this->qtdEfetivo] : []),
+            ...($this->qtdNupdec !== null ? ['qtd_nupdec' => $this->qtdNupdec] : []),
+            ...($this->temSedePropria !== null ? ['tem_sede_propria' => $this->temSedePropria] : []),
+            ...($this->temViatura !== null ? ['tem_viatura' => $this->temViatura] : []),
+            ...($this->temMapeamentoRisco !== null ? ['tem_mapeamento_risco' => $this->temMapeamentoRisco] : []),
+            ...($this->temSimulado !== null ? ['tem_simulado' => $this->temSimulado] : []),
+            ...($this->temCartaoPdc !== null ? ['tem_cartao_pdc' => $this->temCartaoPdc] : []),
             'abrangencia' => $this->abrangencia,
             'metadata' => $metadata,
-            'legacy_id' => $this->legacyId,
+            ...($this->legacyId !== null ? ['legacy_id' => $this->legacyId] : []),
         ];
     }
 }

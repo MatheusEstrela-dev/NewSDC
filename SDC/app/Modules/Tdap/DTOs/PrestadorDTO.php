@@ -27,7 +27,7 @@ final readonly class PrestadorDTO
         public ?string $cidade,
         public ?string $uf,
         public ?string $cep,
-        public bool $ativo,
+        public ?bool $ativo,
         public ?string $observacoes,
     ) {}
 
@@ -51,7 +51,9 @@ final readonly class PrestadorDTO
             // `uf` vazia virava string '' e o filtro por UF nunca casava.
             uf:            $uf === null ? null : mb_strtoupper($uf),
             cep:           Documento::digitos(self::nullable($data['cep'] ?? null)),
-            ativo:         (bool) ($data['ativo'] ?? true),
+            // Ausente = null: editar nao reativa registro inativo; no create
+            // vale o default true da coluna (mesmo contrato do CaminhaoDTO).
+            ativo:         array_key_exists('ativo', $data) && $data['ativo'] !== null ? (bool) filter_var($data['ativo'], FILTER_VALIDATE_BOOL) : null,
             observacoes:   self::nullable($data['observacoes'] ?? null),
         );
     }
@@ -73,7 +75,7 @@ final readonly class PrestadorDTO
             'cidade'        => $this->cidade,
             'uf'            => $this->uf,
             'cep'           => $this->cep,
-            'ativo'         => $this->ativo,
+            ...($this->ativo !== null ? ['ativo' => $this->ativo] : []),
             'observacoes'   => $this->observacoes,
         ];
     }

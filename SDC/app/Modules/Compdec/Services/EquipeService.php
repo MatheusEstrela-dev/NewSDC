@@ -40,7 +40,8 @@ class EquipeService
         return DB::transaction(function () use ($orgaoId, $dto): CompdecEquipe {
             $orgao = Orgao::findOrFail($orgaoId);
 
-            $this->validarCoordenadorUnicoAtivo($orgaoId, $dto, null);
+            // ativo ausente = default true da coluna.
+            $this->validarCoordenadorUnicoAtivo($orgaoId, $dto, $dto->ativo ?? true, null);
 
             $payload = array_merge($dto->toArray(), ['orgao_id' => $orgao->id]);
 
@@ -53,7 +54,8 @@ class EquipeService
         return DB::transaction(function () use ($orgaoId, $equipeId, $dto): CompdecEquipe {
             $equipe = $this->obter($orgaoId, $equipeId);
 
-            $this->validarCoordenadorUnicoAtivo($orgaoId, $dto, $equipeId);
+            // ativo ausente = continua como esta (o DTO nao o envia ao update).
+            $this->validarCoordenadorUnicoAtivo($orgaoId, $dto, $dto->ativo ?? (bool) $equipe->ativo, $equipeId);
 
             $equipe->update($dto->toArray());
 
@@ -80,9 +82,9 @@ class EquipeService
     /**
      * Regra de negocio: apenas UM coordenador ativo por orgao.
      */
-    private function validarCoordenadorUnicoAtivo(int $orgaoId, EquipeDTO $dto, ?int $excludeId): void
+    private function validarCoordenadorUnicoAtivo(int $orgaoId, EquipeDTO $dto, bool $ativo, ?int $excludeId): void
     {
-        if ($dto->funcao !== FuncaoEquipe::COORDENADOR->value || ! $dto->ativo) {
+        if ($dto->funcao !== FuncaoEquipe::COORDENADOR->value || ! $ativo) {
             return;
         }
 

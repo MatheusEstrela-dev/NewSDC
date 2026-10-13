@@ -20,7 +20,7 @@ final readonly class LoteDTO
         public ?string $contrato,
         public float $qtd_agua_m3,
         public float $valor_m3,
-        public bool $ativo,
+        public ?bool $ativo,
         public ?string $observacoes,
     ) {}
 
@@ -46,7 +46,9 @@ final readonly class LoteDTO
             contrato:      self::nullable($data['contrato'] ?? null),
             qtd_agua_m3:   (float) ($data['qtd_agua_m3'] ?? 0),
             valor_m3:      (float) ($data['valor_m3'] ?? 0),
-            ativo:         (bool) ($data['ativo'] ?? true),
+            // Ausente = null: editar nao reativa registro inativo; no create
+            // vale o default true da coluna (mesmo contrato do CaminhaoDTO).
+            ativo:         array_key_exists('ativo', $data) && $data['ativo'] !== null ? (bool) filter_var($data['ativo'], FILTER_VALIDATE_BOOL) : null,
             observacoes:   self::nullable($data['observacoes'] ?? null),
         );
     }
@@ -65,7 +67,7 @@ final readonly class LoteDTO
             'contrato'     => $this->contrato,
             'qtd_agua_m3'  => $this->qtd_agua_m3,
             'valor_m3'     => $this->valor_m3,
-            'ativo'        => $this->ativo,
+            ...($this->ativo !== null ? ['ativo' => $this->ativo] : []),
             'observacoes'  => $this->observacoes,
         ];
     }

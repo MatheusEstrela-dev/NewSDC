@@ -31,7 +31,9 @@ class CisternaOrdemServico extends Model implements HasMedia, Rastreavel
 
     protected $table = 'cisterna_ordens_servico';
 
-    protected $fillable = ['lote_id', 'nome', 'observacao', 'legacy_id'];
+    // documento_url: validado pela Request e enviado pelo DTO, mas fora do
+    // fillable a atribuicao em massa o descartava em silencio.
+    protected $fillable = ['lote_id', 'nome', 'observacao', 'documento_url', 'legacy_id'];
 
     protected $casts = ['legacy_id' => 'integer'];
 
