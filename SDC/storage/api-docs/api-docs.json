@@ -371,7 +371,8 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -408,7 +409,8 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -471,7 +473,8 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -512,7 +515,8 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -4732,11 +4736,12 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID da ocorrência RAT",
+                        "description": "UUID da ocorrência RAT",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "example": 345
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "0199a3b2-0000-7000-8000-000000000001"
                         }
                     },
                     {
@@ -4832,11 +4837,12 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID da ocorrência RAT",
+                        "description": "UUID da ocorrência RAT",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "example": 345
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "0199a3b2-0000-7000-8000-000000000001"
                         }
                     },
                     {
@@ -5780,8 +5786,8 @@
                 "title": "Nova Estrutura de RAT",
                 "properties": {
                     "id": {
-                        "type": "integer",
-                        "example": 1
+                        "type": "string",
+                        "format": "uuid"
                     },
                     "protocolo": {
                         "type": "string",
@@ -9101,12 +9107,14 @@
                 "description": "Evento da trilha de alterações de uma ocorrência RAT",
                 "properties": {
                     "id": {
-                        "type": "integer",
-                        "example": 1201
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "0199a3b2-0000-7000-8000-0000000004b1"
                     },
                     "ocorrencia_id": {
-                        "type": "integer",
-                        "example": 345
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "0199a3b2-0000-7000-8000-000000000001"
                     },
                     "user_id": {
                         "type": "integer",

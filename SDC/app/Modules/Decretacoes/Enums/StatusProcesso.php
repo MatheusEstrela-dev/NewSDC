@@ -53,4 +53,24 @@ enum StatusProcesso: string
             self::cases()
         );
     }
+
+    /**
+     * Regra de validacao do campo `status` (create, update e API).
+     *
+     * O seletor do formulario so oferece estes valores. $statusAtual aceita
+     * tambem o status gravado de um processo antigo fora do enum, para que
+     * editar outros campos sem mexer no status continue possivel.
+     *
+     * @return array<int, mixed>
+     */
+    public static function regraDoCampo(?string $statusAtual = null): array
+    {
+        $permitidos = array_column(self::cases(), 'value');
+
+        if ($statusAtual !== null && $statusAtual !== '') {
+            $permitidos[] = $statusAtual;
+        }
+
+        return ['nullable', 'string', 'max:255', \Illuminate\Validation\Rule::in($permitidos)];
+    }
 }

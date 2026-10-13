@@ -114,12 +114,13 @@ class DesastreDataService
             ]
         );
 
-        // Atualiza o ID no DTO para uso nos campos filhos
-        $desastreData->entradaCategoriaDesastreId = $entradaCategoria->id;
+        // O id da categoria recem-gravada segue por parametro: o DTO de entrada
+        // nao e mais mutado durante o processamento.
+        $entradaCategoriaId = (int) $entradaCategoria->id;
 
         foreach ($desastreData->items as $itemData) {
             foreach ($itemData->campos as $campoData) {
-                $this->persistDesastreCampo($municipioData, $desastreData, $itemData, $campoData, $processo);
+                $this->persistDesastreCampo($municipioData, $entradaCategoriaId, $itemData, $campoData, $processo);
             }
         }
     }
@@ -159,14 +160,14 @@ class DesastreDataService
      * DESTINO: Tabela dec_entrada_desastres
      *
      * @param MunicipioData $municipioData Dados do municipio
-     * @param DesastreData $desastreData Dados do desastre
+     * @param int $entradaCategoriaId Categoria de desastre ja gravada para o municipio
      * @param ItemData $itemData Dados do item
      * @param CampoData $campoData Dados do campo
      * @param Processo $processo Processo pai
      */
     private function persistDesastreCampo(
         MunicipioData $municipioData,
-        DesastreData $desastreData,
+        int $entradaCategoriaId,
         ItemData $itemData,
         CampoData $campoData,
         Processo $processo
@@ -183,7 +184,7 @@ class DesastreDataService
             'item_campo_id'                 => $campoData->id,
             'entrada_processo_id'           => $processo->id,
             'item_id'                       => $itemData->id,
-            'entrada_categoria_desastre_id' => $desastreData->entradaCategoriaDesastreId,
+            'entrada_categoria_desastre_id' => $entradaCategoriaId,
         ];
 
         $values = $searchCriteria + [

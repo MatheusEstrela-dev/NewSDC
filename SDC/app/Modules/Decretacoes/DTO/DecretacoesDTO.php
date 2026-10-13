@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\DTO;
 
+use App\Modules\Decretacoes\Enums\StatusProcesso;
 use App\Modules\Decretacoes\Support\Vigencia;
-use Illuminate\Http\Request;
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
 
 /**
  * DTOs consolidados para o modulo de Decretacoes.
@@ -17,7 +18,7 @@ use Illuminate\Http\Request;
  * - ProcessoRequestDTO: Dados principais do processo vindos do Request
  * - CampoData: Dados de campo com valor e tipo (inclui logica de formatacao)
  * - ItemData: Item contendo multiplos campos
- * - DesastreData: Dados de desastre com itens (entradaCategoriaDesastreId e mutavel)
+ * - DesastreData: Dados de desastre com itens
  * - CategoriaData: Categoria contendo desastres
  * - MunicipioData: Municipio com protocolo e categorias
  * - DesastreSubmissionDTO: Submissao de nivel superior contendo municipios
@@ -32,64 +33,104 @@ use Illuminate\Http\Request;
  */
 class ProcessoRequestDTO
 {
+    use SafeCastingTrait;
+
+    /** Campo do formulario (ProcessoForm.vue) => coluna do Processo. */
+    private const MAPA = [
+        'data_entrada'                      => 'data_entrada',
+        'situacao_anormalidade'             => 'tipo_desastre',
+        'data_ocorrencia'                   => 'data_ocorrencia_desastre',
+        'redec_id'                          => 'redec_id',
+        'status'                            => 'status',
+        'analista_id'                       => 'analista',
+        'n_protocolo_fide'                  => 'n_protocolo_fide',
+        'n_decreto_municipal'               => 'decreto_municipal',
+        'data_decreto_municipal'            => 'data_decreto_municipal',
+        'data_publicacao_decreto_municipal' => 'data_publicacao_mg',
+        'n_decreto_estadual'                => 'n_decreto_estadual',
+        'data_decreto_estadual'             => 'data_decreto_estadual',
+        'n_edicao_domg'                     => 'n_edicao_domg',
+        'data_publicacao_domg'              => 'data_publicacao_domg',
+        'n_portaria_federal'                => 'portaria_reconhecimento_fed',
+        'data_portaria_federal'             => 'data_portaria_federal',
+        'n_edicao_dou'                      => 'n_edicao_dou',
+        'data_publicacao_dou'               => 'data_publicacao_dou',
+        'n_processo_sei'                    => 'processo_inserido_sei',
+        'observacoes'                       => 'observacoes',
+    ];
+
+    /**
+     * @param  array<string, mixed>  $allData  colunas do Processo a gravar
+     * @param  array<int, int>|null  $municipios  null = nao enviado (nao sincroniza)
+     */
     public function __construct(
         public readonly array $allData,
-        public readonly array $municipios = [],
+        public readonly ?array $municipios = null,
         public readonly ?string $informacoesDecreto = null,
     ) {
     }
 
     /**
-     * Cria DTO a partir do Request HTTP.
+     * Cria o DTO a partir de FormRequest::validated() (Store/UpdateProcessoRequest).
      *
-     * Mapeia os campos do frontend (ProcessoForm.vue) para as colunas do modelo Processo.
+     * $parcial (update): so as chaves ENVIADAS entram em allData, e campo enviado
+     * vazio limpa a coluna. Antes o DTO lia Request::input() -- inclusive
+     * `status`, sem regra no update -- e descartava vazios, entao nenhum campo
+     * podia ser limpo. Create continua sem nulos, e o prazo em branco vira o
+     * padrao legal de 180 dias.
      *
-     * @param Request $request Request vindo do Controller
-     * @return self DTO pronto para ser processado pelo Service
+     * @param  array<string, mixed>  $dados
      */
-    public static function fromRequest(Request $request): self
+    public static function fromValidated(array $dados, bool $parcial = false): self
     {
-        $municipioId = $request->input('municipio_id');
+        $mapped = [];
 
-        $mapped = [
-            // Identificacao do Processo
-            'data_entrada'             => $request->input('data_entrada') ?: null,
-            'processo'                 => strtoupper($request->input('origem', '')),
-            'tipo_desastre_id'         => $request->input('cobrade_id') ?: ($request->input('tipo_desastre_id') ?: null),
-            'tipo_desastre'            => $request->input('situacao_anormalidade') ?: null,
-            'data_ocorrencia_desastre' => $request->input('data_ocorrencia') ?: null,
-            'redec_id'                 => $request->input('redec_id') ?: null,
-            // Status e Responsavel
-            'status'                   => $request->input('status') ?: null,
-            'analista'                 => $request->input('analista_id') ?: null,
-            'n_protocolo_fide'         => $request->input('n_protocolo_fide') ?: null,
-            // Decreto Municipal
-            'decreto_municipal'        => $request->input('n_decreto_municipal') ?: null,
-            'data_decreto_municipal'   => $request->input('data_decreto_municipal') ?: null,
-            'data_publicacao_mg'       => $request->input('data_publicacao_decreto_municipal') ?: null,
-            // Prazo em branco grava o padrao legal de 180 dias (SE/ECP), para que
-            // vencimento/dias restantes fiquem calculaveis tambem em SQL.
-            'prazo_vigencia'           => Vigencia::prazo($request->input('prazo_vigencia_decreto')),
-            // Reconhecimento Estadual
-            'n_decreto_estadual'       => $request->input('n_decreto_estadual') ?: null,
-            'data_decreto_estadual'    => $request->input('data_decreto_estadual') ?: null,
-            'n_edicao_domg'            => $request->input('n_edicao_domg') ?: null,
-            'data_publicacao_domg'     => $request->input('data_publicacao_domg') ?: null,
-            // Reconhecimento Federal
-            'portaria_reconhecimento_fed' => $request->input('n_portaria_federal') ?: null,
-            'data_portaria_federal'    => $request->input('data_portaria_federal') ?: null,
-            'n_edicao_dou'             => $request->input('n_edicao_dou') ?: null,
-            'data_publicacao_dou'      => $request->input('data_publicacao_dou') ?: null,
-            // Informacoes Adicionais
-            'processo_inserido_sei'    => $request->input('n_processo_sei') ?: null,
-            'observacoes'              => $request->input('observacoes') ?: null,
-        ];
+        foreach (self::MAPA as $campo => $coluna) {
+            if (array_key_exists($campo, $dados)) {
+                $mapped[$coluna] = self::vazioParaNull($dados[$campo]);
+            }
+        }
+
+        if (array_key_exists('origem', $dados)) {
+            $mapped['processo'] = strtoupper(self::asString($dados['origem']));
+        } elseif (! $parcial) {
+            $mapped['processo'] = '';
+        }
+
+        if (array_key_exists('cobrade_id', $dados) || array_key_exists('tipo_desastre_id', $dados)) {
+            $mapped['tipo_desastre_id'] = self::asIntOrNull($dados['cobrade_id'] ?? null)
+                ?? self::asIntOrNull($dados['tipo_desastre_id'] ?? null);
+        }
+
+        // Prazo em branco grava o padrao legal de 180 dias (SE/ECP), para que
+        // vencimento/dias restantes fiquem calculaveis tambem em SQL.
+        if (array_key_exists('prazo_vigencia_decreto', $dados) || ! $parcial) {
+            $mapped['prazo_vigencia'] = Vigencia::prazo($dados['prazo_vigencia_decreto'] ?? null);
+        }
+
+        // Todo processo nasce em Registro (primeiro passo do fluxo e o unico em
+        // que pode ser excluido). O formulario mandava 'pendente', fora do enum,
+        // e o processo novo ja contava como decretacao nos cards.
+        if (! $parcial && ($mapped['status'] ?? null) === null) {
+            $mapped['status'] = StatusProcesso::REGISTRO->value;
+        }
+
+        $municipioId = self::asIntOrNull($dados['municipio_id'] ?? null);
 
         return new self(
-            allData: array_filter($mapped, fn($v) => $v !== null),
-            municipios: $municipioId ? [(int) $municipioId] : [],
-            informacoesDecreto: $request->input('informacoes_decreto'),
+            allData: $parcial ? $mapped : array_filter($mapped, fn ($v) => $v !== null),
+            // Ausente no update = nao mexer: [] faria syncMunicipalities remover
+            // todos os municipios do processo e os desastres deles.
+            municipios: array_key_exists('municipio_id', $dados)
+                ? ($municipioId !== null ? [$municipioId] : [])
+                : ($parcial ? null : []),
+            informacoesDecreto: self::asStringOrNull($dados['informacoes_decreto'] ?? null),
         );
+    }
+
+    private static function vazioParaNull(mixed $valor): mixed
+    {
+        return $valor === '' ? null : $valor;
     }
 }
 
@@ -203,7 +244,7 @@ class ItemData
  * DesastreData
  *
  * Dados de desastre com itens.
- * Nota: entradaCategoriaDesastreId e mutavel (nao readonly) pois e preenchido apos criacao.
+ * O id da categoria gravada segue por parametro no DesastreDataService; o DTO e imutavel.
  *
  * FLUXO: Request (JSON) -> DesastreData -> DesastreDataService -> EntradaCategoriaDesastre (Model)
  */
@@ -216,7 +257,7 @@ class DesastreData
         public readonly int $id,
         public readonly ?string $descricao,
         public readonly array $items,
-        public ?int $entradaCategoriaDesastreId = null,
+        public readonly ?int $entradaCategoriaDesastreId = null,
     ) {
     }
 

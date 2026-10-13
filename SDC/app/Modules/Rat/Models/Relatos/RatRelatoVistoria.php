@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Vistoria técnica realizada durante uma ocorrência RAT.
  *
  * Campos-chave (ver migração 2026_02_10_134052):
- * @property int         $id
+ * @property string         $id
  * @property string|null $v_solicitante_nome
  * @property string|null $v_solicitante_cpf
  * @property string|null $v_tipo_imovel

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class RatHistoricoService
 {
-    public function timeline(int $id, int $porPagina = 20): array
+    public function timeline(string $id, int $porPagina = 20): array
     {
         $items = RatOcorrenciaHistorico::where('ocorrencia_id', $id)
             ->orderByDesc('created_at')
@@ -23,7 +23,7 @@ class RatHistoricoService
         ];
     }
 
-    public function recent(int $id, int $limite = 10): array
+    public function recent(string $id, int $limite = 10): array
     {
         return RatOcorrenciaHistorico::where('ocorrencia_id', $id)
             ->orderByDesc('created_at')

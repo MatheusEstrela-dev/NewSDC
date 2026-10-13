@@ -72,7 +72,8 @@ const form = useForm({
   situacao_anormalidade: processoData?.situacao_anormalidade || processoData?.tipo_desastre || '',
   data_entrada: formatDate(processoData?.data_entrada),
   data_ocorrencia: formatDate(processoData?.data_ocorrencia_desastre || processoData?.data_ocorrencia),
-  status: processoData?.status || 'pendente',
+  // Sem status gravado, segue vazio: 'pendente' nao existe no StatusProcesso e o update o recusaria.
+  status: processoData?.status ?? '',
   analista_id: processoData?.analista || '',
   n_protocolo_fide: processoData?.n_protocolo_fide || processoData?.protocolo_fide || '',
   n_decreto_municipal: processoData?.decreto_municipal || '',

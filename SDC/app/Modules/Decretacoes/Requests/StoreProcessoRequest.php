@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Requests;
 
+use App\Modules\Decretacoes\Enums\StatusProcesso;
 use App\Modules\Decretacoes\Services\RedecService;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -24,7 +25,7 @@ class StoreProcessoRequest extends FormRequest
             'tipo_desastre_id'                  => 'nullable|integer',
             'situacao_anormalidade'             => 'nullable|string|in:N1,SE,ECP',
             'data_ocorrencia'                   => 'nullable|date',
-            'status'                            => 'nullable|string|max:255',
+            'status'                            => StatusProcesso::regraDoCampo(),
             'analista_id'                       => 'nullable|string|max:255',
             'n_protocolo_fide'                  => 'nullable|string|max:50',
             // Lista derivada do catalogo `dec_redecs`: um `max:` fixo travou o

@@ -92,7 +92,7 @@ class EntradaProcessoService
     {
         return DB::transaction(function () use ($dto) {
             $processo = Processo::create($dto->allData);
-            $this->syncMunicipalities($processo, $dto->municipios);
+            $this->syncMunicipalities($processo, $dto->municipios ?? []);
             $this->syncInformacoesDecreto($processo, $dto->informacoesDecreto);
 
             return $processo;
@@ -113,7 +113,10 @@ class EntradaProcessoService
         return DB::transaction(function () use ($dto, $id) {
             $processo = Processo::findOrFail($id);
             $processo->fill($dto->allData);
-            $this->syncMunicipalities($processo, $dto->municipios);
+            // null = municipio nao enviado: manter os vinculos (e os desastres deles).
+            if ($dto->municipios !== null) {
+                $this->syncMunicipalities($processo, $dto->municipios);
+            }
             $this->syncInformacoesDecreto($processo, $dto->informacoesDecreto);
             $processo->save();
 

@@ -9,6 +9,7 @@ use App\Modules\Rat\DTOs\RatDadosGeraisDTO;
 use App\Modules\Rat\DTOs\RatEnvolvidoDTO;
 use App\Modules\Rat\DTOs\RatHistoricoDTO;
 use App\Modules\Rat\DTOs\RatRecursoDTO;
+use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\DTOs\RatVistoriaDTO;
 use App\Modules\Rat\Http\Requests\RatDadosGeraisRequest;
 use App\Modules\Rat\Http\Requests\RatEnvolvidoRequest;
@@ -85,6 +86,21 @@ class RatUnifiedController extends BaseController
         'data_hora'  => 'created_at',
         'ano'        => 'sequencial_ano',
         'status'     => 'status',
+    ];
+
+    /**
+     * Secoes do formulario RAT (criar, editar e rascunho). Cada secao chega ao
+     * RatRelatosDTO, que converte e controla a presenca campo a campo.
+     */
+    private const REGRAS_RELATOS = [
+        'dadosGerais' => 'nullable|array',
+        'comunicacao' => 'nullable|array',
+        'local'       => 'nullable|array',
+        'endereco'    => 'nullable|array',
+        'recursos'    => 'nullable|array',
+        'envolvidos'  => 'nullable|array',
+        'vistoria'    => 'nullable|array',
+        'historico'   => 'nullable',
     ];
 
     public function index(Request $request): Response
@@ -219,15 +235,7 @@ class RatUnifiedController extends BaseController
                 'payload' => $this->ratDebugPayload($request->all()),
             ]);
 
-            $validated = $request->validate([
-                'dadosGerais' => 'nullable|array',
-                'comunicacao' => 'nullable|array',
-                'local'       => 'nullable|array',
-                'endereco'    => 'nullable|array',
-                'recursos'    => 'nullable|array',
-                'envolvidos'  => 'nullable|array',
-                'vistoria'    => 'nullable|array',
-                'historico'   => 'nullable',
+            $validated = $request->validate(self::REGRAS_RELATOS + [
                 'finalize'    => 'nullable|boolean',
             ]);
 
@@ -236,7 +244,7 @@ class RatUnifiedController extends BaseController
                 'payload' => $this->ratDebugPayload($validated),
             ]);
 
-            $ocorrencia = $this->writeService->createWithData($validated);
+            $ocorrencia = $this->writeService->createWithData(RatRelatosDTO::fromArray($validated));
 
             $this->ratDebug($request, $traceId, 'controller.store.persisted', [
                 'rat_id' => $ocorrencia->id,
@@ -375,49 +383,7 @@ class RatUnifiedController extends BaseController
             return redirect()->back()->withErrors(['error' => $msg]);
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $id) {
-            if ($request->has('dadosGerais') || $request->has('comunicacao') || $request->has('local') || $request->has('endereco')) {
-                $this->writeService->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($request->all()));
-            }
-
-            if ($request->has('recursos')) {
-                RatRelatoRecurso::where('ocorrencia_id', $id)->delete();
-                RatOcorrenciaRelato::where('ocorrencia_id', $id)
-                    ->where('conteudo_type', RatRelatoRecurso::class)
-                    ->forceDelete();
-
-                foreach ($request->input('recursos', []) as $index => $recursoData) {
-                    unset($recursoData['id']);
-                    $recursoData['seq'] = $recursoData['seq'] ?? ($index + 1);
-                    $this->writeService->saveRecurso($id, RatRecursoDTO::fromArray($recursoData));
-                }
-            }
-
-            if ($request->has('envolvidos')) {
-                RatRelatoEnvolvidos::where('ocorrencia_id', $id)->delete();
-                RatOcorrenciaRelato::where('ocorrencia_id', $id)
-                    ->where('conteudo_type', RatRelatoEnvolvidos::class)
-                    ->forceDelete();
-
-                foreach ($request->input('envolvidos', []) as $index => $envolvidoData) {
-                    unset($envolvidoData['id']);
-                    $envolvidoData['seq'] = $envolvidoData['seq'] ?? ($index + 1);
-                    $this->writeService->saveEnvolvido($id, RatEnvolvidoDTO::fromArray($envolvidoData));
-                }
-            }
-
-            if ($request->has('vistoria') && !empty($request->input('vistoria'))) {
-                $this->writeService->saveVistoria($id, RatVistoriaDTO::fromArray($request->input('vistoria')));
-            }
-
-            if ($request->has('historico')) {
-                $this->writeService->saveHistorico($id, RatHistoricoDTO::fromArray(['historico' => $request->input('historico')]));
-            }
-
-            // Via modelo, e nao `where(...)->update()`: observer do Eloquent nao
-            // dispara para escrita em massa, e a listagem depende dele.
-            RatOcorrencia::find($id)?->update(['updated_by' => Auth::id()]);
-        });
+        $this->writeService->atualizar($id, RatRelatosDTO::fromArray($request->validate(self::REGRAS_RELATOS)));
 
         if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Ocorrência atualizada com sucesso.']);
@@ -464,8 +430,12 @@ class RatUnifiedController extends BaseController
 
     public function draft(Request $request, string $id): RedirectResponse|JsonResponse
     {
+        // Fora do try: o catch(\Throwable) abaixo transformaria o 422 da
+        // validacao em 500 generico.
+        $relatos = RatRelatosDTO::fromArray($request->validate(self::REGRAS_RELATOS));
+
         try {
-            $ocorrencia = $this->writeService->saveDraft($id, $request->all());
+            $ocorrencia = $this->writeService->saveDraft($id, $relatos);
         } catch (\Throwable $e) {
             Log::error('Erro ao salvar rascunho RAT', ['id' => $id, 'error' => $e->getMessage()]);
             if ($request->expectsJson() || $request->wantsJson()) {
@@ -584,8 +554,15 @@ class RatUnifiedController extends BaseController
 
     public function updateEnvolvidos(RatEnvolvidoRequest $request, string $ocorrenciaId, string $id): JsonResponse
     {
-        $request->merge(['id' => $id]);
-        return $this->storeEnvolvidos($request, $ocorrenciaId);
+        // O id vem da rota direto ao DTO. O antigo merge(['id']) acontecia
+        // depois da validacao, validated() nao o via e o "update" criava um
+        // envolvido novo, deixando o original intacto.
+        $envolvido = $this->writeService->saveEnvolvido(
+            $ocorrenciaId,
+            RatEnvolvidoDTO::fromArray(['id' => $id] + $request->validated())
+        );
+
+        return response()->json(['success' => true, 'message' => 'Envolvido salvo.', 'data' => $envolvido]);
     }
 
     public function destroyEnvolvidos(string $ocorrenciaId, string $id): JsonResponse
@@ -614,8 +591,13 @@ class RatUnifiedController extends BaseController
 
     public function updateRecursos(RatRecursoRequest $request, string $ocorrenciaId, string $id): JsonResponse
     {
-        $request->merge(['id' => $id]);
-        return $this->storeRecursos($request, $ocorrenciaId);
+        // Mesmo defeito do envolvido: merge(['id']) pos-validacao criava recurso novo.
+        $recurso = $this->writeService->saveRecurso(
+            $ocorrenciaId,
+            RatRecursoDTO::fromArray(['id' => $id] + $request->validated())
+        );
+
+        return response()->json(['success' => true, 'message' => 'Recurso salvo.', 'data' => $recurso]);
     }
 
     public function destroyRecursos(string $ocorrenciaId, string $id): JsonResponse
@@ -634,10 +616,12 @@ class RatUnifiedController extends BaseController
 
     public function storeVistoria(RatVistoriaRequest $request, string $ocorrenciaId): JsonResponse
     {
-        // Usamos all() para que RatVistoriaDTO receba tanto campos v_* flat quanto estrutura aninhada
+        // A API recebe o formato plano v_*; a RatVistoriaRequest tem regra para
+        // todas as colunas que o DTO grava, entao validated() nao perde campo.
+        // O formato aninhado do formulario chega por update()/draft().
         $vistoria = $this->writeService->saveVistoria(
             $ocorrenciaId,
-            RatVistoriaDTO::fromArray($request->all())
+            RatVistoriaDTO::fromArray($request->validated())
         );
 
         return response()->json(['success' => true, 'message' => 'Vistoria salva.', 'data' => $vistoria], 201);
@@ -833,14 +817,14 @@ class RatUnifiedController extends BaseController
     // API V1 Mobile
     // =========================================================================
 
-    public function v1Timeline(int $id, Request $request): JsonResponse
+    public function v1Timeline(string $id, Request $request): JsonResponse
     {
         return response()->json(
             $this->historicoService->timeline($id, $request->integer('por_pagina', 20))
         );
     }
 
-    public function v1Recent(int $id, Request $request): JsonResponse
+    public function v1Recent(string $id, Request $request): JsonResponse
     {
         return response()->json(
             $this->historicoService->recent($id, $request->integer('limite', 10))
@@ -857,8 +841,10 @@ class RatUnifiedController extends BaseController
 
         $ocorrencia = $this->ocorrenciaService->manageOcorrencia(RatBoDTO::fromArray($validated));
 
-        if ($request->has('relatos')) {
-            $this->relatoService->manageRelatos($ocorrencia, $request->input('relatos'));
+        $relatos = $request->validate(['relatos' => 'nullable|array'])['relatos'] ?? null;
+
+        if (is_array($relatos)) {
+            $this->relatoService->manageRelatos($ocorrencia, RatRelatosDTO::fromArray($relatos));
         }
 
         $this->historicoService->log($ocorrencia, 'ocorrencia.registrada_mobile');

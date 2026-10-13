@@ -16,7 +16,7 @@ class RatEnvolvidoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id'                              => ['nullable', 'integer'],
+            'id'                              => ['nullable', 'uuid'],
             'seq'                             => ['nullable', 'integer', 'min:1'],
             // Dados gerais do envolvimento
             'g_tipo_pessoa'                   => ['nullable', 'string', 'max:50'],

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Requests;
 
+use App\Modules\Decretacoes\Enums\StatusProcesso;
+use App\Modules\Decretacoes\Models\Processo;
 use App\Modules\Decretacoes\Services\RedecService;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -45,6 +47,19 @@ class UpdateProcessoRequest extends FormRequest
             'n_processo_sei'                    => 'nullable|string|max:255',
             'observacoes'                       => 'nullable|string',
             'informacoes_decreto'               => 'nullable|json',
+            // O formulario de edicao envia o status (seletor). Sem esta regra o
+            // DTO o lia de Request::input() sem validacao nenhuma.
+            'status'                            => StatusProcesso::regraDoCampo($this->statusAtual()),
         ];
+    }
+
+    /** Status gravado do processo em edicao (pode ser legado, fora do enum). */
+    private function statusAtual(): ?string
+    {
+        $id = $this->route('id');
+
+        return is_numeric($id)
+            ? Processo::query()->whereKey((int) $id)->value('status')
+            : null;
     }
 }

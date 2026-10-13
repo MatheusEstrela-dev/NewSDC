@@ -398,7 +398,7 @@ class DecretacoesController extends Controller
      */
     public function store(StoreProcessoRequest $request): RedirectResponse
     {
-        $dto = ProcessoRequestDTO::fromRequest($request);
+        $dto = ProcessoRequestDTO::fromValidated($request->validated());
         $processo = $this->processoService->createProcesso($dto);
 
         // Mantem o usuario no fluxo de CRIACAO (/create), nao mistura com /edit.
@@ -422,7 +422,7 @@ class DecretacoesController extends Controller
      */
     public function update(UpdateProcessoRequest $request, int $id): RedirectResponse
     {
-        $dto = ProcessoRequestDTO::fromRequest($request);
+        $dto = ProcessoRequestDTO::fromValidated($request->validated(), parcial: true);
         $this->processoService->updateProcesso($dto, $id);
 
         // Sem flash de sucesso: o toast da pagina ja informa a atualizacao.
@@ -492,7 +492,7 @@ class DecretacoesController extends Controller
             abort(404, 'Processo nao encontrado');
         }
 
-        $dto = DesastreSubmissionDTO::fromArray($request->all());
+        $dto = DesastreSubmissionDTO::fromArray($request->validated());
         $result = $this->desastreService->processDesastresData($dto, $processo);
 
         if (!$result['success']) {

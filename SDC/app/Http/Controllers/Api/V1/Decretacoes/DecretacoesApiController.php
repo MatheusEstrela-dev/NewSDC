@@ -216,7 +216,7 @@ class DecretacoesApiController extends Controller
      */
     public function receive(ReceiveProcessoRequest $request): JsonResponse
     {
-        $dto = ProcessoRequestDTO::fromRequest($request);
+        $dto = ProcessoRequestDTO::fromValidated($request->validated());
         $processo = $this->entradaService->createProcesso($dto);
 
         $data = $this->queryService->showForApiFlat($processo->id);

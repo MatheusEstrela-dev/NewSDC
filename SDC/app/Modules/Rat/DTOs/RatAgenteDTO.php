@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\DTOs;
 
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
+
 /**
  * DTO para dados de agentes/servidores na guarnição de um recurso RAT.
  */
 readonly class RatAgenteDTO
 {
+    use SafeCastingTrait;
+
     public function __construct(
         public ?string $id = null,
         public ?string $nomeCompleto = null,
@@ -32,7 +36,7 @@ readonly class RatAgenteDTO
             orgao:        $data['orgao']         ?? null,
             unidade:      $data['unidade']       ?? null,
             funcao:       $data['funcao']        ?? null,
-            isCondutor:   isset($data['is_condutor']) ? (bool) $data['is_condutor'] : (isset($data['condutor']) ? (bool) $data['condutor'] : null),
+            isCondutor:   self::asBoolOrNull($data['is_condutor'] ?? $data['condutor'] ?? null),
         );
     }
 

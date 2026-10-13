@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Services\Rat\RatNovoService;
 use App\Modules\Rat\Http\Resources\RatResource;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ use Illuminate\Http\Request;
  *     schema="RatNovo",
  *     type="object",
  *     title="Nova Estrutura de RAT",
- *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="id", type="string", format="uuid"),
  *     @OA\Property(property="protocolo", type="string", example="RAT-2026-0001"),
  *     @OA\Property(property="status", type="integer", example=0, description="0=Rascunho, 1=Finalizado"),
  *     @OA\Property(property="status_label", type="string", example="Rascunho"),
@@ -74,7 +75,7 @@ class RatNovoController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -84,7 +85,7 @@ class RatNovoController extends Controller
      *     @OA\Response(response=404, description="RAT não encontrado")
      * )
      */
-    public function show(int $id): RatResource
+    public function show(string $id): RatResource
     {
         $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::with('relatosMorph')->findOrFail($id);
         return new RatResource($ocorrencia);
@@ -100,7 +101,7 @@ class RatNovoController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -108,7 +109,7 @@ class RatNovoController extends Controller
      *     )
      * )
      */
-    public function powerBiData(int $id): JsonResponse
+    public function powerBiData(string $id): JsonResponse
     {
         $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::with('relatosMorph')->findOrFail($id);
 
@@ -173,7 +174,11 @@ class RatNovoController extends Controller
             'dados_gerais' => 'nullable|array',
         ]);
 
-        $ocorrencia = $this->service->createRat($validated);
+        // A API recebe dados_gerais (snake_case); o service entendia so
+        // dadosGerais, entao o bloco era validado e descartado em silencio.
+        $ocorrencia = $this->service->createRat(RatRelatosDTO::fromArray([
+            'dadosGerais' => $validated['dados_gerais'] ?? null,
+        ]));
 
         return response()->json([
             'message' => 'RAT criado com sucesso!',
@@ -191,7 +196,7 @@ class RatNovoController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
@@ -211,7 +216,7 @@ class RatNovoController extends Controller
      *     )
      * )
      */
-    public function update(int $id, Request $request): JsonResponse
+    public function update(string $id, Request $request): JsonResponse
     {
         $validated = $request->validate([
             'numero_bos'   => 'nullable|string|max:50',
@@ -237,7 +242,7 @@ class RatNovoController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -248,7 +253,7 @@ class RatNovoController extends Controller
      *     )
      * )
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(string $id): JsonResponse
     {
         $this->service->deleteRat($id);
 

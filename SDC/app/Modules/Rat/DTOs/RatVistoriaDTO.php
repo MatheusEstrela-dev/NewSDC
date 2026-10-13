@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\DTOs;
 
+use App\Modules\Shared\DTOs\Traits\LeituraComPresenca;
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
+
 /**
  * DTO para dados de Vistoria em uma ocorrência RAT.
  * Mapeia a estrutura aninhada do frontend (solicitante, imovel, estrutura, moradores,
@@ -12,8 +15,12 @@ namespace App\Modules\Rat\DTOs;
  */
 readonly class RatVistoriaDTO
 {
+    use LeituraComPresenca;
+    use SafeCastingTrait;
+
     public function __construct(
-        public ?int    $id = null,
+        // UUID: as tabelas RAT usam uuid desde 2026_05_18_000001.
+        public ?string $id = null,
         // Solicitante
         public ?string $vSolicitanteNome      = null,
         public ?string $vSolicitanteCpf       = null,
@@ -133,177 +140,173 @@ readonly class RatVistoriaDTO
         public ?bool   $vOrgaoSeapa                = null,
         public ?bool   $vOrgaoOutros               = null,
         public ?string $vOrgaoOutrosDescricao      = null,
+        /** @var array<int, string> colunas v_* enviadas no payload */
+        public array   $presentes                  = [],
     ) {}
 
     public static function fromArray(array $data): self
     {
-        $sol    = $data['solicitante']      ?? [];
-        $imo    = $data['imovel']           ?? [];
-        $est    = $data['estrutura']        ?? [];
-        $mor    = $data['moradores']        ?? [];
-        $infra  = $data['infraestrutura']   ?? [];
-        $tec    = $data['tecnico']          ?? [];
-        $pat    = $data['patologias']       ?? [];
-        $enc    = $data['encaminhamentos']  ?? [];
-        $bens   = $data['bens_afetados']    ?? [];
-        $orgaos = $data['orgaos_acionados'] ?? [];
+        // Colunas que vieram no payload, plano (v_*) ou aninhado (grupo.chave):
+        // so elas vao ao toArray(), entao o que nao foi enviado fica intacto.
+        $p = [];
 
         return new self(
-            id: $data['id'] ?? null,
+            id: self::asStringOrNull($data['id'] ?? null),
 
             // Solicitante
-            vSolicitanteNome:     $data['v_solicitante_nome']     ?? $sol['nome']     ?? null,
-            vSolicitanteCpf:      $data['v_solicitante_cpf']      ?? $sol['cpf']      ?? null,
-            vSolicitanteTelefone: $data['v_solicitante_telefone'] ?? $sol['telefone'] ?? null,
-            vSolicitanteEndereco: $data['v_solicitante_endereco'] ?? $sol['endereco'] ?? null,
-            vSolicitanteBairro:   $data['v_solicitante_bairro']   ?? $sol['bairro']   ?? null,
-            vSolicitanteCep:      $data['v_solicitante_cep']      ?? $sol['cep']      ?? null,
+            vSolicitanteNome:     self::asStringOrNull(self::ler($data, $p, 'v_solicitante_nome', 'solicitante.nome')),
+            vSolicitanteCpf:      self::asStringOrNull(self::ler($data, $p, 'v_solicitante_cpf', 'solicitante.cpf')),
+            vSolicitanteTelefone: self::asStringOrNull(self::ler($data, $p, 'v_solicitante_telefone', 'solicitante.telefone')),
+            vSolicitanteEndereco: self::asStringOrNull(self::ler($data, $p, 'v_solicitante_endereco', 'solicitante.endereco')),
+            vSolicitanteBairro:   self::asStringOrNull(self::ler($data, $p, 'v_solicitante_bairro', 'solicitante.bairro')),
+            vSolicitanteCep:      self::asStringOrNull(self::ler($data, $p, 'v_solicitante_cep', 'solicitante.cep')),
 
             // Local e imóvel
-            vLocalEndereco:               $data['v_local_endereco']                ?? null,
-            vLocalComplemento:            $data['v_local_complemento']             ?? $imo['complemento'] ?? null,
-            vTipoArea:                    $data['v_tipo_area']                     ?? $est['tipo_area']           ?? null,
-            vTipoAreaDescricao:           $data['v_tipo_area_descricao']           ?? null,
-            vTipoImovel:                  $data['v_tipo_imovel']                   ?? $est['tipo_imovel']         ?? null,
-            vTipoImovelOutroDescricao:    $data['v_tipo_imovel_outro_descricao']   ?? null,
-            vTipoConstrucao:              $data['v_tipo_construcao']               ?? $est['tipo_construcao']     ?? null,
-            vTipoConstrucaoOutroDescricao:$data['v_tipo_construcao_outro_descricao'] ?? null,
-            vTipoEdificacao:              $data['v_tipo_edificacao']               ?? $est['tipo_edificacao']     ?? null,
-            vTipoDestinacao:              $data['v_tipo_destinacao']               ?? $est['tipo_destinacao']     ?? null,
-            vTipoTerrenoRelevo:           $data['v_tipo_terreno_relevo']           ?? $est['tipo_terreno_relevo'] ?? null,
-            vSistemaEstrutural:           $data['v_sistema_estrutural']            ?? $est['sistema_estrutural']  ?? null,
-            vNumeroPavimentos:            self::intOrNull($data['v_numero_pavimentos'] ?? $est['num_pavimentos'] ?? null),
-            vEstadoConservacao:           $data['v_estado_conservacao']            ?? $est['estado_conservacao']  ?? null,
-            vRegimeOcupacao:              $data['v_regime_ocupacao']               ?? $est['regime_ocupacao']     ?? null,
-            vTipoLocalizacao:             $data['v_tipo_localizacao']              ?? $est['tipo_localizacao']    ?? null,
+            vLocalEndereco:               self::asStringOrNull(self::ler($data, $p, 'v_local_endereco')),
+            vLocalComplemento:            self::asStringOrNull(self::ler($data, $p, 'v_local_complemento', 'imovel.complemento')),
+            vTipoArea:                    self::asStringOrNull(self::ler($data, $p, 'v_tipo_area', 'estrutura.tipo_area')),
+            vTipoAreaDescricao:           self::asStringOrNull(self::ler($data, $p, 'v_tipo_area_descricao')),
+            vTipoImovel:                  self::asStringOrNull(self::ler($data, $p, 'v_tipo_imovel', 'estrutura.tipo_imovel')),
+            vTipoImovelOutroDescricao:    self::asStringOrNull(self::ler($data, $p, 'v_tipo_imovel_outro_descricao')),
+            vTipoConstrucao:              self::asStringOrNull(self::ler($data, $p, 'v_tipo_construcao', 'estrutura.tipo_construcao')),
+            vTipoConstrucaoOutroDescricao:self::asStringOrNull(self::ler($data, $p, 'v_tipo_construcao_outro_descricao')),
+            vTipoEdificacao:              self::asStringOrNull(self::ler($data, $p, 'v_tipo_edificacao', 'estrutura.tipo_edificacao')),
+            vTipoDestinacao:              self::asStringOrNull(self::ler($data, $p, 'v_tipo_destinacao', 'estrutura.tipo_destinacao')),
+            vTipoTerrenoRelevo:           self::asStringOrNull(self::ler($data, $p, 'v_tipo_terreno_relevo', 'estrutura.tipo_terreno_relevo')),
+            vSistemaEstrutural:           self::asStringOrNull(self::ler($data, $p, 'v_sistema_estrutural', 'estrutura.sistema_estrutural')),
+            vNumeroPavimentos:            self::asIntOrNull(self::ler($data, $p, 'v_numero_pavimentos', 'estrutura.num_pavimentos')),
+            vEstadoConservacao:           self::asStringOrNull(self::ler($data, $p, 'v_estado_conservacao', 'estrutura.estado_conservacao')),
+            vRegimeOcupacao:              self::asStringOrNull(self::ler($data, $p, 'v_regime_ocupacao', 'estrutura.regime_ocupacao')),
+            vTipoLocalizacao:             self::asStringOrNull(self::ler($data, $p, 'v_tipo_localizacao', 'estrutura.tipo_localizacao')),
 
             // Moradores
-            vProprietarioMorador:    $data['v_proprietario_morador']   ?? $mor['proprietario']  ?? null,
-            vContatoTelefone:        $data['v_contato_telefone']       ?? $mor['telefone']      ?? null,
-            vNumeroMoradores:        self::intOrNull($data['v_numero_moradores'] ?? $mor['num_moradores'] ?? null),
-            vHaIdosos:               self::boolOrNull($data['v_ha_idosos']  ?? $mor['ha_idosos']  ?? null),
-            vHaCriancas:             self::boolOrNull($data['v_ha_criancas'] ?? $mor['ha_criancas'] ?? null),
-            vHaDificuldadeLocomocao: isset($mor['ha_pcd']) && $mor['ha_pcd'] ? 'sim' : ($data['v_ha_dificuldade_locomocao'] ?? null),
+            vProprietarioMorador:    self::asStringOrNull(self::ler($data, $p, 'v_proprietario_morador', 'moradores.proprietario')),
+            vContatoTelefone:        self::asStringOrNull(self::ler($data, $p, 'v_contato_telefone', 'moradores.telefone')),
+            vNumeroMoradores:        self::asIntOrNull(self::ler($data, $p, 'v_numero_moradores', 'moradores.num_moradores')),
+            vHaIdosos:               self::asBoolOrNull(self::ler($data, $p, 'v_ha_idosos', 'moradores.ha_idosos')),
+            vHaCriancas:             self::asBoolOrNull(self::ler($data, $p, 'v_ha_criancas', 'moradores.ha_criancas')),
+            vHaDificuldadeLocomocao: self::simOuTexto(self::ler($data, $p, 'v_ha_dificuldade_locomocao', 'moradores.ha_pcd')),
 
             // Localização do imóvel
-            vEnderecoImovel: $data['v_endereco_imovel']  ?? $imo['endereco']        ?? null,
-            vBairro:         $data['v_bairro']           ?? $imo['bairro']          ?? null,
-            vMunicipio:      self::intOrNull($data['v_municipio'] ?? $imo['municipio'] ?? null),
-            vMunicipioNome:  $data['v_municipio_nome']  ?? $imo['municipio_nome']   ?? null,
-            vCep:            $data['v_cep']              ?? $imo['cep']             ?? null,
-            vLatitude:       isset($data['v_latitude'])  ? (float) $data['v_latitude']  : (isset($imo['latitude'])  ? (float) $imo['latitude']  : null),
-            vLongitude:      isset($data['v_longitude']) ? (float) $data['v_longitude'] : (isset($imo['longitude']) ? (float) $imo['longitude'] : null),
+            vEnderecoImovel: self::asStringOrNull(self::ler($data, $p, 'v_endereco_imovel', 'imovel.endereco')),
+            vBairro:         self::asStringOrNull(self::ler($data, $p, 'v_bairro', 'imovel.bairro')),
+            vMunicipio:      self::asIntOrNull(self::ler($data, $p, 'v_municipio', 'imovel.municipio')),
+            vMunicipioNome:  self::asStringOrNull(self::ler($data, $p, 'v_municipio_nome', 'imovel.municipio_nome')),
+            vCep:            self::asStringOrNull(self::ler($data, $p, 'v_cep', 'imovel.cep')),
+            vLatitude:       self::asFloatOrNull(self::ler($data, $p, 'v_latitude', 'imovel.latitude')),
+            vLongitude:      self::asFloatOrNull(self::ler($data, $p, 'v_longitude', 'imovel.longitude')),
 
             // Infraestrutura
-            vAbastecimentoAgua:    $data['v_abastecimento_agua']     ?? $infra['abastecimento_agua']    ?? null,
-            vEsgotamentoSanitario: $data['v_esgotamento_sanitario']  ?? $infra['esgotamento_sanitario'] ?? null,
-            vDranagemSuperficial:  $data['v_drenagem_superficial']   ?? $infra['drenagem_superficial']  ?? null,
-            vSistemaViarioAcesso:  $data['v_sistema_viario_acesso']  ?? $infra['sistema_viario_acesso'] ?? null,
-            vTipoRevestimento:     $data['v_tipo_revestimento']      ?? $infra['tipo_revestimento']     ?? null,
-            vCondicoesAcesso:      $data['v_condicoes_acesso']       ?? $infra['condicoes_acesso']      ?? null,
-            vNumeroMoradiasTereno: self::intOrNull($data['v_numero_moradias_terreno'] ?? $infra['num_moradias_terreno'] ?? null),
-            vDistanciaEncosta:     $data['v_distancia_encosta']      ?? $infra['distancia_encosta']     ?? null,
+            vAbastecimentoAgua:    self::asStringOrNull(self::ler($data, $p, 'v_abastecimento_agua', 'infraestrutura.abastecimento_agua')),
+            vEsgotamentoSanitario: self::asStringOrNull(self::ler($data, $p, 'v_esgotamento_sanitario', 'infraestrutura.esgotamento_sanitario')),
+            vDranagemSuperficial:  self::asStringOrNull(self::ler($data, $p, 'v_drenagem_superficial', 'infraestrutura.drenagem_superficial')),
+            vSistemaViarioAcesso:  self::asStringOrNull(self::ler($data, $p, 'v_sistema_viario_acesso', 'infraestrutura.sistema_viario_acesso')),
+            vTipoRevestimento:     self::asStringOrNull(self::ler($data, $p, 'v_tipo_revestimento', 'infraestrutura.tipo_revestimento')),
+            vCondicoesAcesso:      self::asStringOrNull(self::ler($data, $p, 'v_condicoes_acesso', 'infraestrutura.condicoes_acesso')),
+            vNumeroMoradiasTereno: self::asIntOrNull(self::ler($data, $p, 'v_numero_moradias_terreno', 'infraestrutura.num_moradias_terreno')),
+            vDistanciaEncosta:     self::asStringOrNull(self::ler($data, $p, 'v_distancia_encosta', 'infraestrutura.distancia_encosta')),
 
             // Aspectos técnicos
-            vMaterialConstrutivo:      $data['v_material_construtivo']      ?? $tec['material_construtivo']      ?? null,
-            vConservacaoEstrutural:    $data['v_conservacao_estrutural']    ?? $tec['conservacao_estrutural']    ?? null,
-            vElementosEstruturais:     $data['v_elementos_estruturais']     ?? $tec['elementos_estruturais']     ?? null,
-            vElementosConstrutivos:    $data['v_elementos_construtivos']    ?? $tec['elementos_construtivos']    ?? null,
-            vAgentesPotencializadores: $data['v_agentes_potencializadores'] ?? $tec['agentes_potencializadores'] ?? null,
-            vProcessosGeodinamicos:    $data['v_processos_geodinamicos']    ?? $tec['processos_geodinamicos']    ?? null,
-            vDanosEstruturais:         $data['v_danos_estruturais']         ?? $tec['danos_estruturais']         ?? null,
-            vManutencaoUsoOcupacao:    $data['v_manutencao_uso_ocupacao']   ?? $tec['manutencao_uso_ocupacao']   ?? null,
-            vHistorico:                $data['v_historico']                 ?? $tec['historico']                 ?? $data['observacoes'] ?? null,
+            vMaterialConstrutivo:      self::asStringOrNull(self::ler($data, $p, 'v_material_construtivo', 'tecnico.material_construtivo')),
+            vConservacaoEstrutural:    self::asStringOrNull(self::ler($data, $p, 'v_conservacao_estrutural', 'tecnico.conservacao_estrutural')),
+            vElementosEstruturais:     self::asStringOrNull(self::ler($data, $p, 'v_elementos_estruturais', 'tecnico.elementos_estruturais')),
+            vElementosConstrutivos:    self::asStringOrNull(self::ler($data, $p, 'v_elementos_construtivos', 'tecnico.elementos_construtivos')),
+            vAgentesPotencializadores: self::asStringOrNull(self::ler($data, $p, 'v_agentes_potencializadores', 'tecnico.agentes_potencializadores')),
+            vProcessosGeodinamicos:    self::asStringOrNull(self::ler($data, $p, 'v_processos_geodinamicos', 'tecnico.processos_geodinamicos')),
+            vDanosEstruturais:         self::asStringOrNull(self::ler($data, $p, 'v_danos_estruturais', 'tecnico.danos_estruturais')),
+            vManutencaoUsoOcupacao:    self::asStringOrNull(self::ler($data, $p, 'v_manutencao_uso_ocupacao', 'tecnico.manutencao_uso_ocupacao')),
+            vHistorico:                self::asStringOrNull(self::ler($data, $p, 'v_historico', 'tecnico.historico', 'observacoes')),
 
             // Patologias
-            vPatologiaRachaduras:            self::boolOrNull($data['v_patologia_rachaduras']            ?? $pat['rachaduras']               ?? null),
-            vPatologiaTrincas:               self::boolOrNull($data['v_patologia_trincas']               ?? $pat['trincas']                  ?? null),
-            vPatologiaFissurasEstruturais:   self::boolOrNull($data['v_patologia_fissuras_estruturais']  ?? $pat['fissuras_estruturais']     ?? null),
-            vPatologiaDeformacoesEstruturais:self::boolOrNull($data['v_patologia_deformacoes_estruturais']?? $pat['deformacoes_estruturais']  ?? null),
-            vPatologiaInfiltracoes:          self::boolOrNull($data['v_patologia_infiltracoes']          ?? $pat['infiltracoes']             ?? null),
-            vPatologiaCorrosaoArmaduras:     self::boolOrNull($data['v_patologia_corrosao_armaduras']    ?? $pat['corrosao_armaduras']       ?? null),
-            vPatologiaDesagregacao:          self::boolOrNull($data['v_patologia_desagregacao']          ?? $pat['desagregacao']             ?? null),
-            vPatologiaEflorescencia:         self::boolOrNull($data['v_patologia_eflorescencia']         ?? $pat['eflorescencia']            ?? null),
-            vPatologiaDesplacamento:         self::boolOrNull($data['v_patologia_desplacamento']         ?? $pat['desplacamento']            ?? null),
-            vPatologiaFundacoes:             self::boolOrNull($data['v_patologia_fundacoes']             ?? $pat['fundacoes']                ?? null),
-            vPatologiaInstabilidadeTalude:   self::boolOrNull($data['v_patologia_instabilidade_talude']  ?? $pat['instabilidade_talude']     ?? null),
-            vPatologiaMovimentacaoSolo:      self::boolOrNull($data['v_patologia_movimentacao_solo']     ?? $pat['movimentacao_solo']        ?? null),
-            vPatologiaTombamentoMuralhas:    self::boolOrNull($data['v_patologia_tombamento_muralhas']   ?? $pat['tombamento_muralhas']      ?? null),
-            vPatologiaInundacoes:            self::boolOrNull($data['v_patologia_inundacoes']            ?? $pat['inundacoes']               ?? null),
-            vPatologiaAlagamentos:           self::boolOrNull($data['v_patologia_alagamentos']           ?? $pat['alagamentos']              ?? null),
-            vPatologiaEnxurradas:            self::boolOrNull($data['v_patologia_enxurradas']            ?? $pat['enxurradas']               ?? null),
-            vPatologiaMadeira:               self::boolOrNull($data['v_patologia_madeira']               ?? $pat['madeira']                  ?? null),
-            vPatologiaElementosNaoEstruturais:self::boolOrNull($data['v_patologia_elementos_nao_estruturais'] ?? $pat['elementos_nao_estruturais'] ?? null),
-            vPatologiaFalhaDrenagem:         self::boolOrNull($data['v_patologia_falha_drenagem']        ?? $pat['falha_drenagem']           ?? null),
-            vPatologiaQuedaArvores:          self::boolOrNull($data['v_patologia_queda_arvores']         ?? $pat['queda_arvores']            ?? null),
-            vPatologiaOutros:                self::boolOrNull($data['v_patologia_outros']                ?? $pat['outros']                   ?? null),
-            vPatologiaOutrosDescricao:       $data['v_patologia_outros_descricao']                       ?? $pat['outros_descricao']         ?? null,
+            vPatologiaRachaduras:            self::asBoolOrNull(self::ler($data, $p, 'v_patologia_rachaduras', 'patologias.rachaduras')),
+            vPatologiaTrincas:               self::asBoolOrNull(self::ler($data, $p, 'v_patologia_trincas', 'patologias.trincas')),
+            vPatologiaFissurasEstruturais:   self::asBoolOrNull(self::ler($data, $p, 'v_patologia_fissuras_estruturais', 'patologias.fissuras_estruturais')),
+            vPatologiaDeformacoesEstruturais:self::asBoolOrNull(self::ler($data, $p, 'v_patologia_deformacoes_estruturais', 'patologias.deformacoes_estruturais')),
+            vPatologiaInfiltracoes:          self::asBoolOrNull(self::ler($data, $p, 'v_patologia_infiltracoes', 'patologias.infiltracoes')),
+            vPatologiaCorrosaoArmaduras:     self::asBoolOrNull(self::ler($data, $p, 'v_patologia_corrosao_armaduras', 'patologias.corrosao_armaduras')),
+            vPatologiaDesagregacao:          self::asBoolOrNull(self::ler($data, $p, 'v_patologia_desagregacao', 'patologias.desagregacao')),
+            vPatologiaEflorescencia:         self::asBoolOrNull(self::ler($data, $p, 'v_patologia_eflorescencia', 'patologias.eflorescencia')),
+            vPatologiaDesplacamento:         self::asBoolOrNull(self::ler($data, $p, 'v_patologia_desplacamento', 'patologias.desplacamento')),
+            vPatologiaFundacoes:             self::asBoolOrNull(self::ler($data, $p, 'v_patologia_fundacoes', 'patologias.fundacoes')),
+            vPatologiaInstabilidadeTalude:   self::asBoolOrNull(self::ler($data, $p, 'v_patologia_instabilidade_talude', 'patologias.instabilidade_talude')),
+            vPatologiaMovimentacaoSolo:      self::asBoolOrNull(self::ler($data, $p, 'v_patologia_movimentacao_solo', 'patologias.movimentacao_solo')),
+            vPatologiaTombamentoMuralhas:    self::asBoolOrNull(self::ler($data, $p, 'v_patologia_tombamento_muralhas', 'patologias.tombamento_muralhas')),
+            vPatologiaInundacoes:            self::asBoolOrNull(self::ler($data, $p, 'v_patologia_inundacoes', 'patologias.inundacoes')),
+            vPatologiaAlagamentos:           self::asBoolOrNull(self::ler($data, $p, 'v_patologia_alagamentos', 'patologias.alagamentos')),
+            vPatologiaEnxurradas:            self::asBoolOrNull(self::ler($data, $p, 'v_patologia_enxurradas', 'patologias.enxurradas')),
+            vPatologiaMadeira:               self::asBoolOrNull(self::ler($data, $p, 'v_patologia_madeira', 'patologias.madeira')),
+            vPatologiaElementosNaoEstruturais:self::asBoolOrNull(self::ler($data, $p, 'v_patologia_elementos_nao_estruturais', 'patologias.elementos_nao_estruturais')),
+            vPatologiaFalhaDrenagem:         self::asBoolOrNull(self::ler($data, $p, 'v_patologia_falha_drenagem', 'patologias.falha_drenagem')),
+            vPatologiaQuedaArvores:          self::asBoolOrNull(self::ler($data, $p, 'v_patologia_queda_arvores', 'patologias.queda_arvores')),
+            vPatologiaOutros:                self::asBoolOrNull(self::ler($data, $p, 'v_patologia_outros', 'patologias.outros')),
+            vPatologiaOutrosDescricao:       self::asStringOrNull(self::ler($data, $p, 'v_patologia_outros_descricao', 'patologias.outros_descricao')),
 
             // Encaminhamentos
-            vEncInterdicaoParcial:      self::boolOrNull($data['v_enc_interdicao_parcial']      ?? $enc['interdicao_parcial']      ?? null),
-            vEncInterdicaoTotal:        self::boolOrNull($data['v_enc_interdicao_total']        ?? $enc['interdicao_total']        ?? null),
-            vEncRemocaoTemporaria:      self::boolOrNull($data['v_enc_remocao_temporaria']      ?? $enc['remocao_temporaria']      ?? null),
-            vEncRemocaoDefinitiva:      self::boolOrNull($data['v_enc_remocao_definitiva']      ?? $enc['remocao_definitiva']      ?? null),
-            vEncIsolamentoArea:         self::boolOrNull($data['v_enc_isolamento_area']         ?? $enc['isolamento_area']         ?? null),
-            vEncDesocupacaoAbrigo:      self::boolOrNull($data['v_enc_desocupacao_abrigo']      ?? $enc['desocupacao_abrigo']      ?? null),
-            vEncNotificacaoResponsavel: self::boolOrNull($data['v_enc_notificacao_responsavel'] ?? $enc['notificacao_responsavel'] ?? null),
-            vEncContratacaoResponsavel: self::boolOrNull($data['v_enc_contratacao_responsavel'] ?? $enc['contratacao_responsavel'] ?? null),
-            vEncComunicacaoOrgaos:      self::boolOrNull($data['v_enc_comunicacao_orgaos']      ?? $enc['comunicacao_orgaos']      ?? null),
-            vEncApoioSocial:            self::boolOrNull($data['v_enc_apoio_social']            ?? $enc['apoio_social']            ?? null),
-            vEncOutros:                 self::boolOrNull($data['v_enc_outros']                  ?? $enc['outros']                  ?? null),
-            vEncOutrosDescricao:        $data['v_enc_outros_descricao']                         ?? $enc['outros_descricao']        ?? null,
+            vEncInterdicaoParcial:      self::asBoolOrNull(self::ler($data, $p, 'v_enc_interdicao_parcial', 'encaminhamentos.interdicao_parcial')),
+            vEncInterdicaoTotal:        self::asBoolOrNull(self::ler($data, $p, 'v_enc_interdicao_total', 'encaminhamentos.interdicao_total')),
+            vEncRemocaoTemporaria:      self::asBoolOrNull(self::ler($data, $p, 'v_enc_remocao_temporaria', 'encaminhamentos.remocao_temporaria')),
+            vEncRemocaoDefinitiva:      self::asBoolOrNull(self::ler($data, $p, 'v_enc_remocao_definitiva', 'encaminhamentos.remocao_definitiva')),
+            vEncIsolamentoArea:         self::asBoolOrNull(self::ler($data, $p, 'v_enc_isolamento_area', 'encaminhamentos.isolamento_area')),
+            vEncDesocupacaoAbrigo:      self::asBoolOrNull(self::ler($data, $p, 'v_enc_desocupacao_abrigo', 'encaminhamentos.desocupacao_abrigo')),
+            vEncNotificacaoResponsavel: self::asBoolOrNull(self::ler($data, $p, 'v_enc_notificacao_responsavel', 'encaminhamentos.notificacao_responsavel')),
+            vEncContratacaoResponsavel: self::asBoolOrNull(self::ler($data, $p, 'v_enc_contratacao_responsavel', 'encaminhamentos.contratacao_responsavel')),
+            vEncComunicacaoOrgaos:      self::asBoolOrNull(self::ler($data, $p, 'v_enc_comunicacao_orgaos', 'encaminhamentos.comunicacao_orgaos')),
+            vEncApoioSocial:            self::asBoolOrNull(self::ler($data, $p, 'v_enc_apoio_social', 'encaminhamentos.apoio_social')),
+            vEncOutros:                 self::asBoolOrNull(self::ler($data, $p, 'v_enc_outros', 'encaminhamentos.outros')),
+            vEncOutrosDescricao:        self::asStringOrNull(self::ler($data, $p, 'v_enc_outros_descricao', 'encaminhamentos.outros_descricao')),
 
             // Bens afetados
-            vBensResidencia:        self::boolOrNull($data['v_bens_residencia']        ?? $bens['residencia']         ?? null),
-            vBensMuros:             self::boolOrNull($data['v_bens_muros']             ?? $bens['muros']              ?? null),
-            vBensViasPublicas:      self::boolOrNull($data['v_bens_vias_publicas']     ?? $bens['vias_publicas']      ?? null),
-            vBensPontes:            self::boolOrNull($data['v_bens_pontes']            ?? $bens['pontes']             ?? null),
-            vBensViadutos:          self::boolOrNull($data['v_bens_viadutos']          ?? $bens['viadutos']           ?? null),
-            vBensComercios:         self::boolOrNull($data['v_bens_comercios']         ?? $bens['comercios']          ?? null),
-            vBensGalpoes:           self::boolOrNull($data['v_bens_galpoes']           ?? $bens['galpoes']            ?? null),
-            vBensPrediosPublicos:   self::boolOrNull($data['v_bens_predios_publicos']  ?? $bens['predios_publicos']   ?? null),
-            vBensEdificiosPublicos: self::boolOrNull($data['v_bens_edificios_publicos']?? $bens['edificios_publicos'] ?? null),
-            vBensOutros:            self::boolOrNull($data['v_bens_outros']            ?? $bens['outros']             ?? null),
-            vBensOutrosDescricao:   $data['v_bens_outros_descricao']                   ?? $bens['outros_descricao']   ?? null,
+            vBensResidencia:        self::asBoolOrNull(self::ler($data, $p, 'v_bens_residencia', 'bens_afetados.residencia')),
+            vBensMuros:             self::asBoolOrNull(self::ler($data, $p, 'v_bens_muros', 'bens_afetados.muros')),
+            vBensViasPublicas:      self::asBoolOrNull(self::ler($data, $p, 'v_bens_vias_publicas', 'bens_afetados.vias_publicas')),
+            vBensPontes:            self::asBoolOrNull(self::ler($data, $p, 'v_bens_pontes', 'bens_afetados.pontes')),
+            vBensViadutos:          self::asBoolOrNull(self::ler($data, $p, 'v_bens_viadutos', 'bens_afetados.viadutos')),
+            vBensComercios:         self::asBoolOrNull(self::ler($data, $p, 'v_bens_comercios', 'bens_afetados.comercios')),
+            vBensGalpoes:           self::asBoolOrNull(self::ler($data, $p, 'v_bens_galpoes', 'bens_afetados.galpoes')),
+            vBensPrediosPublicos:   self::asBoolOrNull(self::ler($data, $p, 'v_bens_predios_publicos', 'bens_afetados.predios_publicos')),
+            vBensEdificiosPublicos: self::asBoolOrNull(self::ler($data, $p, 'v_bens_edificios_publicos', 'bens_afetados.edificios_publicos')),
+            vBensOutros:            self::asBoolOrNull(self::ler($data, $p, 'v_bens_outros', 'bens_afetados.outros')),
+            vBensOutrosDescricao:   self::asStringOrNull(self::ler($data, $p, 'v_bens_outros_descricao', 'bens_afetados.outros_descricao')),
 
             // Órgãos acionados
-            vOrgaoCopasa:               self::boolOrNull($data['v_orgao_copasa']               ?? $orgaos['copasa']               ?? null),
-            vOrgaoCemig:                self::boolOrNull($data['v_orgao_cemig']                ?? $orgaos['cemig']                ?? null),
-            vOrgaoSecretariaMunicipal:  self::boolOrNull($data['v_orgao_secretaria_municipal'] ?? $orgaos['secretaria_municipal'] ?? null),
-            vOrgaoDefesaCivilEstadual:  self::boolOrNull($data['v_orgao_defesa_civil_estadual']?? $orgaos['defesa_civil_estadual']?? null),
-            vOrgaoDnit:                 self::boolOrNull($data['v_orgao_dnit']                 ?? $orgaos['dnit']                 ?? null),
-            vOrgaoPm:                   self::boolToSimOrNull($data['v_orgao_pm']              ?? $orgaos['pm']                   ?? null),
-            vOrgaoBm:                   self::boolToSimOrNull($data['v_orgao_bm']              ?? $orgaos['bm']                   ?? null),
-            vOrgaoCrea:                 self::boolOrNull($data['v_orgao_crea']                 ?? $orgaos['crea']                 ?? null),
-            vOrgaoEmater:               self::boolOrNull($data['v_orgao_emater']               ?? $orgaos['emater']               ?? null),
-            vOrgaoSeapa:                self::boolOrNull($data['v_orgao_seapa']                 ?? $orgaos['seapa']                ?? null),
-            vOrgaoOutros:               self::boolOrNull($data['v_orgao_outros']               ?? $orgaos['outros']               ?? null),
-            vOrgaoOutrosDescricao:      $data['v_orgao_outros_descricao']                      ?? $orgaos['outros_descricao']     ?? null,
+            vOrgaoCopasa:               self::asBoolOrNull(self::ler($data, $p, 'v_orgao_copasa', 'orgaos_acionados.copasa')),
+            vOrgaoCemig:                self::asBoolOrNull(self::ler($data, $p, 'v_orgao_cemig', 'orgaos_acionados.cemig')),
+            vOrgaoSecretariaMunicipal:  self::asBoolOrNull(self::ler($data, $p, 'v_orgao_secretaria_municipal', 'orgaos_acionados.secretaria_municipal')),
+            vOrgaoDefesaCivilEstadual:  self::asBoolOrNull(self::ler($data, $p, 'v_orgao_defesa_civil_estadual', 'orgaos_acionados.defesa_civil_estadual')),
+            vOrgaoDnit:                 self::asBoolOrNull(self::ler($data, $p, 'v_orgao_dnit', 'orgaos_acionados.dnit')),
+            vOrgaoPm:                   self::simOuTexto(self::ler($data, $p, 'v_orgao_pm', 'orgaos_acionados.pm')),
+            vOrgaoBm:                   self::simOuTexto(self::ler($data, $p, 'v_orgao_bm', 'orgaos_acionados.bm')),
+            vOrgaoCrea:                 self::asBoolOrNull(self::ler($data, $p, 'v_orgao_crea', 'orgaos_acionados.crea')),
+            vOrgaoEmater:               self::asBoolOrNull(self::ler($data, $p, 'v_orgao_emater', 'orgaos_acionados.emater')),
+            vOrgaoSeapa:                self::asBoolOrNull(self::ler($data, $p, 'v_orgao_seapa', 'orgaos_acionados.seapa')),
+            vOrgaoOutros:               self::asBoolOrNull(self::ler($data, $p, 'v_orgao_outros', 'orgaos_acionados.outros')),
+            vOrgaoOutrosDescricao:      self::asStringOrNull(self::ler($data, $p, 'v_orgao_outros_descricao', 'orgaos_acionados.outros_descricao')),
+            presentes: $p,
         );
     }
 
-    private static function intOrNull(mixed $v): ?int
+    /**
+     * PM, BM e PcD: o formulario manda booleano (marcado = "sim"); integracoes
+     * podem mandar texto. Booleano falso, inclusive a string "false", limpa.
+     */
+    private static function simOuTexto(mixed $v): ?string
     {
-        if ($v === null || $v === '') return null;
-        $int = filter_var($v, FILTER_VALIDATE_INT);
-        return $int !== false ? $int : null;
+        $bool = self::asBoolOrNull($v);
+
+        if ($bool !== null) {
+            return $bool ? 'sim' : null;
+        }
+
+        return self::asStringOrNull($v);
     }
 
-    private static function boolOrNull(mixed $v): ?bool
-    {
-        return $v !== null ? (bool) $v : null;
-    }
-
-    private static function boolToSimOrNull(mixed $v): ?string
-    {
-        if ($v === null || $v === '' || $v === false) return null;
-        if ($v === true || $v === 1 || $v === '1') return 'sim';
-        return is_string($v) ? $v : null;
-    }
-
+    /**
+     * Somente as colunas enviadas: ausente preserva o banco, null/'' limpa,
+     * false e 0 gravam (contrato de update parcial do plano_dtos.md).
+     */
     public function toArray(): array
     {
-        return array_filter([
+        return self::somentePresentes([
             'v_solicitante_nome'                    => $this->vSolicitanteNome,
             'v_solicitante_cpf'                     => $this->vSolicitanteCpf,
             'v_solicitante_telefone'                => $this->vSolicitanteTelefone,
@@ -419,6 +422,6 @@ readonly class RatVistoriaDTO
             'v_orgao_seapa'                         => $this->vOrgaoSeapa,
             'v_orgao_outros'                        => $this->vOrgaoOutros,
             'v_orgao_outros_descricao'              => $this->vOrgaoOutrosDescricao,
-        ], fn ($v) => $v !== null && $v !== '');
+        ], $this->presentes);
     }
 }

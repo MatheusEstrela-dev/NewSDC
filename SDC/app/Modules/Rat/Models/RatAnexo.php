@@ -19,7 +19,7 @@ use App\Modules\Rat\Models\RatOcorrencia;
  * fica no disk privado 'rat' (bind mount ANEXOS_ROOT/RAT na VM, Azure
  * Blob no App Service, storage/app/rat em dev puro).
  *
- * @property int         $id
+ * @property string         $id
  * @property int         $rat_id          ID da ocorrencia RAT pai
  * @property string      $categoria
  * @property string      $nome_original

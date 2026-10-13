@@ -12,6 +12,7 @@ use App\Modules\Rat\DTOs\RatDadosGeraisDTO;
 use App\Modules\Rat\DTOs\RatEnvolvidoDTO;
 use App\Modules\Rat\DTOs\RatHistoricoDTO;
 use App\Modules\Rat\DTOs\RatRecursoDTO;
+use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\DTOs\RatVistoriaDTO;
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\RatOcorrenciaRelato;
@@ -85,9 +86,9 @@ class RatWriteService
         });
     }
 
-    public function createWithData(array $data): RatOcorrencia
+    public function createWithData(RatRelatosDTO $relatos): RatOcorrencia
     {
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($relatos) {
             $protocolo = $this->protocoloService->generate();
             $userId    = Auth::id();
 
@@ -100,42 +101,18 @@ class RatWriteService
                 'updated_by'     => $userId,
             ]);
 
-            $id = (string) $ocorrencia->id;
-
-            if (isset($data['dadosGerais']) || isset($data['comunicacao']) || isset($data['local']) || isset($data['endereco'])) {
-                $this->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($data));
-            }
-
-            if (isset($data['recursos']) && is_array($data['recursos'])) {
-                foreach ($data['recursos'] as $recurso) {
-                    $this->saveRecurso($id, RatRecursoDTO::fromArray($recurso));
-                }
-            }
-
-            if (isset($data['envolvidos']) && is_array($data['envolvidos'])) {
-                foreach ($data['envolvidos'] as $envolvido) {
-                    $this->saveEnvolvido($id, RatEnvolvidoDTO::fromArray($envolvido));
-                }
-            }
-
-            if (isset($data['vistoria']) && is_array($data['vistoria']) && !empty($data['vistoria'])) {
-                $this->saveVistoria($id, RatVistoriaDTO::fromArray($data['vistoria']));
-            }
-
-            if (isset($data['historico'])) {
-                $this->saveHistorico($id, RatHistoricoDTO::fromArray(['historico' => $data['historico']]));
-            }
+            $this->salvarRelatos((string) $ocorrencia->id, $relatos, substituirListas: false);
 
             /*
              * Registro completo = criacao que ja chega com conteudo. O
              * esqueleto vazio de create() e o autosave de saveDraft() ficam de
              * fora: rascunho nao e entrega.
              */
-            if ($this->temConteudoDeRegistro($data)) {
+            if ($relatos->temConteudo) {
                 $this->publicarRegistroCompleto($ocorrencia, $this->actorUserId());
             }
 
-            if (!empty($data['finalize'])) {
+            if ($relatos->finalizar) {
                 $ocorrencia->update([
                     'status'     => 1,
                     'updated_by' => $userId,
@@ -148,50 +125,9 @@ class RatWriteService
         });
     }
 
-    public function findById(string $id): ?RatOcorrencia
+    public function saveDraft(string $id, RatRelatosDTO $relatos): RatOcorrencia
     {
-        return RatOcorrencia::with([
-            'creator',
-            'updater',
-            'historicos',
-            'ratAnexos',
-            'relatosMorph.conteudo', // Carrega vistoria, envolvidos, recursos, dados_gerais
-            'ocorrenciaOrigem',
-            'ocorrenciasFilhas',
-        ])->find($id);
-    }
-
-    public function finalize(string $id): RatOcorrencia
-    {
-        $ocorrencia = RatOcorrencia::findOrFail($id);
-        abort_if($ocorrencia->status === 1, 422, 'RAT já está finalizado.');
-
-        // Finalizar manualmente e permitido a qualquer momento: e o autor
-        // abrindo mao do restante da janela de edicao de 48h. O prazo_edicao
-        // existe para BLOQUEAR edicao apos vencer (update()) e para o
-        // fechamento automatico (rat:close-expired) — nao para impedir o
-        // fechamento manual antecipado (com o bloqueio, ninguem finalizava:
-        // antes das 48h a regra proibia e depois o cron ja tinha fechado).
-        // Transacao: o RelatorioFinalizadoV1 tem de cair no outbox junto com a
-        // virada de status, senao o marco existe no banco e nunca no ranking
-        // (ou o contrario, se o outbox gravasse fora).
-        return DB::transaction(function () use ($ocorrencia): RatOcorrencia {
-            $userId = $this->actorUserId();
-
-            $ocorrencia->update([
-                'status'     => 1,
-                'updated_by' => $userId,
-            ]);
-
-            $this->publicarRelatorioFinalizado($ocorrencia, $userId, 'manual');
-
-            return $ocorrencia->fresh();
-        });
-    }
-
-    public function saveDraft(string $id, array $data): RatOcorrencia
-    {
-        return DB::transaction(function () use ($id, $data) {
+        return DB::transaction(function () use ($id, $relatos) {
             $ocorrencia = RatOcorrencia::findOrFail($id);
 
             // Após o prazo de 48h, o RAT fica bloqueado para edição
@@ -199,55 +135,84 @@ class RatWriteService
                 abort(422, 'O prazo de edição de 48h foi encerrado. Este RAT não pode mais ser alterado.');
             }
 
-            $userId = Auth::id();
-
             // Via modelo, e nao `where(...)->update()`: observer do Eloquent nao
             // dispara para escrita em massa, e a listagem depende dele.
-            RatOcorrencia::find($id)?->update([
+            $ocorrencia->update([
                 'status'     => 0,
-                'updated_by' => $userId,
+                'updated_by' => Auth::id(),
             ]);
 
-            if (isset($data['dadosGerais']) || isset($data['comunicacao']) || isset($data['local']) || isset($data['endereco'])) {
-                $this->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($data));
-            }
-
-            if (isset($data['recursos']) && is_array($data['recursos'])) {
-                RatRelatoRecurso::where('ocorrencia_id', $id)->delete();
-                RatOcorrenciaRelato::where('ocorrencia_id', $id)
-                    ->where('conteudo_type', RatRelatoRecurso::class)
-                    ->forceDelete();
-
-                foreach ($data['recursos'] as $index => $recursoData) {
-                    unset($recursoData['id']);
-                    $recursoData['seq'] = $recursoData['seq'] ?? ($index + 1);
-                    $this->saveRecurso($id, RatRecursoDTO::fromArray($recursoData));
-                }
-            }
-
-            if (isset($data['envolvidos']) && is_array($data['envolvidos'])) {
-                RatRelatoEnvolvidos::where('ocorrencia_id', $id)->delete();
-                RatOcorrenciaRelato::where('ocorrencia_id', $id)
-                    ->where('conteudo_type', RatRelatoEnvolvidos::class)
-                    ->forceDelete();
-
-                foreach ($data['envolvidos'] as $index => $envolvidoData) {
-                    unset($envolvidoData['id']);
-                    $envolvidoData['seq'] = $envolvidoData['seq'] ?? ($index + 1);
-                    $this->saveEnvolvido($id, RatEnvolvidoDTO::fromArray($envolvidoData));
-                }
-            }
-
-            if (isset($data['vistoria']) && !empty($data['vistoria'])) {
-                $this->saveVistoria($id, RatVistoriaDTO::fromArray($data['vistoria']));
-            }
-
-            if (isset($data['historico'])) {
-                $this->saveHistorico($id, RatHistoricoDTO::fromArray(['historico' => $data['historico']]));
-            }
+            $this->salvarRelatos($id, $relatos, substituirListas: true);
 
             return RatOcorrencia::find($id);
         });
+    }
+
+    /**
+     * Edicao sem mexer no status. O formulario (PUT rat/{id}) substitui as
+     * listas, como o rascunho; a API v1 mescla itens por id
+     * ($substituirListas = false). O prazo de 48h e conferido no Controller.
+     */
+    public function atualizar(string $id, RatRelatosDTO $relatos, bool $substituirListas = true): void
+    {
+        DB::transaction(function () use ($id, $relatos, $substituirListas) {
+            $this->salvarRelatos($id, $relatos, $substituirListas);
+
+            // Via modelo, e nao `where(...)->update()`: observer do Eloquent nao
+            // dispara para escrita em massa, e a listagem depende dele.
+            RatOcorrencia::find($id)?->update(['updated_by' => Auth::id()]);
+        });
+    }
+
+    /**
+     * Grava cada relato enviado (null = nao enviado, nao toca).
+     *
+     * Com $substituirListas, recursos/envolvidos enviados SUBSTITUEM os
+     * gravados (formulario e rascunho mandam a lista inteira). Sem ele os itens
+     * sao acrescentados (criacao e sincronizacao do app).
+     */
+    public function salvarRelatos(string $id, RatRelatosDTO $relatos, bool $substituirListas): void
+    {
+        if ($relatos->dadosGerais !== null) {
+            $this->saveDadosGerais($id, $relatos->dadosGerais);
+        }
+
+        if ($relatos->recursos !== null) {
+            if ($substituirListas) {
+                $this->removerRelatos($id, RatRelatoRecurso::class);
+            }
+
+            foreach ($relatos->recursos as $recurso) {
+                $this->saveRecurso($id, $recurso);
+            }
+        }
+
+        if ($relatos->envolvidos !== null) {
+            if ($substituirListas) {
+                $this->removerRelatos($id, RatRelatoEnvolvidos::class);
+            }
+
+            foreach ($relatos->envolvidos as $envolvido) {
+                $this->saveEnvolvido($id, $envolvido);
+            }
+        }
+
+        if ($relatos->vistoria !== null) {
+            $this->saveVistoria($id, $relatos->vistoria);
+        }
+
+        if ($relatos->historico !== null) {
+            $this->saveHistorico($id, $relatos->historico);
+        }
+    }
+
+    /** @param class-string<RatRelatoRecurso|RatRelatoEnvolvidos> $modelo */
+    private function removerRelatos(string $ocorrenciaId, string $modelo): void
+    {
+        $modelo::where('ocorrencia_id', $ocorrenciaId)->delete();
+        RatOcorrenciaRelato::where('ocorrencia_id', $ocorrenciaId)
+            ->where('conteudo_type', $modelo)
+            ->forceDelete();
     }
 
     public function saveDadosGerais(string $ocorrenciaId, RatDadosGeraisDTO $dto): RatRelatoDadosGerais
@@ -277,7 +242,9 @@ class RatWriteService
             ]);
 
             if ($dto->id) {
-                $envolvido = RatRelatoEnvolvidos::find($dto->id);
+                // Escopo na ocorrencia da rota: o UUID sozinho permitia editar
+                // o envolvido de outra ocorrencia.
+                $envolvido = RatRelatoEnvolvidos::where('ocorrencia_id', $ocorrenciaId)->find($dto->id);
                 $envolvido ? $envolvido->update($data) : $envolvido = RatRelatoEnvolvidos::create($data);
             } else {
                 $envolvido = RatRelatoEnvolvidos::create($data);
@@ -297,7 +264,7 @@ class RatWriteService
             ]);
 
             if ($dto->id) {
-                $recurso = RatRelatoRecurso::find($dto->id);
+                $recurso = RatRelatoRecurso::where('ocorrencia_id', $ocorrenciaId)->find($dto->id);
                 $recurso ? $recurso->update($data) : $recurso = RatRelatoRecurso::create($data);
             } else {
                 $recurso = RatRelatoRecurso::create($data);
@@ -368,19 +335,6 @@ class RatWriteService
         });
     }
 
-    /**
-     * Ha conteudo de RAT no payload, ou e so o esqueleto?
-     */
-    private function temConteudoDeRegistro(array $data): bool
-    {
-        foreach (['dadosGerais', 'comunicacao', 'local', 'endereco', 'recursos', 'envolvidos', 'vistoria', 'historico'] as $bloco) {
-            if (!empty($data[$bloco])) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     /**
      * Autor da acao, capturado AQUI, onde a request ainda existe.

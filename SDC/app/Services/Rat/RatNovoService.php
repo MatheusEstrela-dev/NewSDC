@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Rat;
 
+use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
 use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
@@ -16,12 +17,12 @@ class RatNovoService
         private readonly RatWriteService $writeService,
     ) {}
 
-    public function createRat(array $data): RatOcorrencia
+    public function createRat(RatRelatosDTO $relatos): RatOcorrencia
     {
-        return $this->writeService->createWithData($data);
+        return $this->writeService->createWithData($relatos);
     }
 
-    public function updateRat(int $id, array $data): RatOcorrencia
+    public function updateRat(string $id, array $data): RatOcorrencia
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
         $ocorrencia->fill(array_filter([
@@ -33,7 +34,7 @@ class RatNovoService
         return $ocorrencia->fresh();
     }
 
-    public function deleteRat(int $id): void
+    public function deleteRat(string $id): void
     {
         RatOcorrencia::findOrFail($id)->delete();
     }

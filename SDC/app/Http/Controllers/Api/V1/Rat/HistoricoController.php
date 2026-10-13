@@ -12,8 +12,8 @@ use Illuminate\Http\Request;
  *     schema="RatHistoricoItem",
  *     type="object",
  *     description="Evento da trilha de alterações de uma ocorrência RAT",
- *     @OA\Property(property="id", type="integer", example=1201),
- *     @OA\Property(property="ocorrencia_id", type="integer", example=345),
+ *     @OA\Property(property="id", type="string", format="uuid", example="0199a3b2-0000-7000-8000-0000000004b1"),
+ *     @OA\Property(property="ocorrencia_id", type="string", format="uuid", example="0199a3b2-0000-7000-8000-000000000001"),
  *     @OA\Property(property="user_id", type="integer", nullable=true, example=17),
  *     @OA\Property(property="evento", type="string", description="Tipo do evento registrado", example="atualizado"),
  *     @OA\Property(property="payload", type="object", nullable=true, description="Dados do evento (campos alterados, valores anteriores e novos)"),
@@ -36,7 +36,7 @@ class HistoricoController extends Controller
      *     summary="Histórico de alterações de uma ocorrência RAT (paginado)",
      *     description="Trilha de alterações da ocorrência, da mais recente para a mais antiga. Substitui o endpoint legado GET /bi/rat/changes/{ocorrenciaId}. Requer a permissão rat.historico.view.",
      *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, description="ID da ocorrência RAT", @OA\Schema(type="integer", example=345)),
+     *     @OA\Parameter(name="id", in="path", required=true, description="UUID da ocorrência RAT", @OA\Schema(type="string", format="uuid", example="0199a3b2-0000-7000-8000-000000000001")),
      *     @OA\Parameter(name="per_page", in="query", required=false, description="Itens por página (padrão: 20)", @OA\Schema(type="integer", example=20)),
      *     @OA\Parameter(name="page", in="query", required=false, description="Página", @OA\Schema(type="integer", example=1)),
      *     @OA\Response(
@@ -57,7 +57,7 @@ class HistoricoController extends Controller
     public function index(Request $request, string $id): JsonResponse
     {
         $timeline = $this->historicoService->timeline(
-            (int) $id,
+            $id,
             $request->integer('per_page', 20)
         );
 
@@ -78,7 +78,7 @@ class HistoricoController extends Controller
      *     summary="Últimos eventos do histórico de uma ocorrência RAT",
      *     description="Retorna os N eventos mais recentes da trilha de alterações, sem paginação. Requer a permissão rat.historico.view.",
      *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, description="ID da ocorrência RAT", @OA\Schema(type="integer", example=345)),
+     *     @OA\Parameter(name="id", in="path", required=true, description="UUID da ocorrência RAT", @OA\Schema(type="string", format="uuid", example="0199a3b2-0000-7000-8000-000000000001")),
      *     @OA\Parameter(name="limite", in="query", required=false, description="Quantidade de eventos (padrão: 10)", @OA\Schema(type="integer", example=10)),
      *     @OA\Response(
      *         response=200,
@@ -94,7 +94,7 @@ class HistoricoController extends Controller
     public function recent(Request $request, string $id): JsonResponse
     {
         $items = $this->historicoService->recent(
-            (int) $id,
+            $id,
             $request->integer('limite', 10)
         );
 

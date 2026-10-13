@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\DTOs;
 
+use App\Modules\Shared\DTOs\Traits\LeituraComPresenca;
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
+
 /**
  * DTO para dados de envolvidos em uma ocorrência RAT.
  */
 readonly class RatEnvolvidoDTO
 {
+    use LeituraComPresenca;
+    use SafeCastingTrait;
+
     public function __construct(
-        // ID do registro (para updates)
-        public ?int $id = null,
+        // UUID do registro (para updates); tabelas RAT usam uuid.
+        public ?string $id = null,
         public ?int $seq = null,
 
         // Dados Gerais (g_)
@@ -72,71 +78,77 @@ readonly class RatEnvolvidoDTO
         public ?string $pTelefoneComercial = null,
         public ?string $pEmail = null,
         public ?string $pMotivoAusenciaContato = null,
+
+        /** @var array<int, string> colunas enviadas no payload */
+        public array $presentes = [],
     ) {}
 
     public static function fromArray(array $data): self
     {
+        // Colunas presentes no payload: so elas vao ao toArray() (update parcial pela API).
+        $p = [];
+
         return new self(
-            id:                            $data['id']                             ?? null,
-            seq:                           $data['seq']                            ?? null,
-            gTipoPessoa:                   $data['g_tipo_pessoa']                  ?? $data['tipo_envolvimento'] ?? null,
-            gLesaoGrau:                    $data['g_lesao_grau']                   ?? null,
-            gLesaoGrauSelecionado:         $data['g_lesao_grau_selecionado']       ?? null,
-            gAtendimentoVitimaRepassada:   $data['g_atendimento_vitima_repassada']  ?? null,
-            gEnvolvidoPresenca:            isset($data['g_envolvido_presenca'])    ? (bool) $data['g_envolvido_presenca'] : null,
-            gEnvolvidoTipo:                $data['g_envolvido_tipo']               ?? null,
-            gEnvolvidoOrgao:               $data['g_envolvido_orgao']              ?? null,
-            gEnvolvidoUf:                  $data['g_envolvido_uf']                 ?? null,
-            gEnvolvidoMatricula:           $data['g_envolvido_matricula']          ?? null,
-            gEnvolvidoServico:             isset($data['g_envolvido_servico'])     ? (bool) $data['g_envolvido_servico'] : null,
-            pTipo:                         $data['p_tipo']                         ?? null,
-            pTipoSelecionado:              $data['p_tipo_selecionado']             ?? null,
-            pNumero:                       $data['p_numero']                       ?? $data['rg'] ?? null,
-            pOrgaoExpedidor:               $data['p_orgao_expedidor']              ?? null,
-            pUf:                           $data['p_uf']                           ?? null,
-            pIdadeAparente:                isset($data['p_idade_aparente']) && $data['p_idade_aparente'] !== ''
-                                               ? (int) $data['p_idade_aparente'] : null,
-            pNomeCompleto:                 $data['p_nome_completo']                ?? $data['nome'] ?? null,
-            pNomeFantasia:                 $data['p_nome_fantasia']                ?? null,
-            pDataNascimento:               $data['p_data_nascimento']              ?? $data['data_nascimento'] ?? null,
-            pCpf:                          $data['p_cpf']                          ?? $data['cpf'] ?? null,
-            pNomeMae:                      $data['p_nome_mae']                     ?? null,
-            pNomePai:                      $data['p_nome_pai']                     ?? null,
-            pOcupacaoAtual:                $data['p_ocupacao_atual']               ?? null,
-            pEscolaridade:                 $data['p_escolaridade']                 ?? null,
-            pCorRaca:                      $data['p_cor_raca']                     ?? null,
-            pCorRacaCod:                   $data['p_cor_raca_cod']                 ?? null,
-            pSexo:                         $data['p_sexo']                         ?? $data['sexo'] ?? null,
-            pSexoSelecionado:              $data['p_sexo_selecionado']             ?? null,
-            pEstadoCivil:                  $data['p_estado_civil']                 ?? null,
-            pOrientacaoSexual:             $data['p_orientacao_sexual']            ?? null,
-            pIdentidadeGenero:             $data['p_identidade_genero']            ?? null,
-            pNomeSocial:                   $data['p_nome_social']                  ?? null,
-            pNacionalidade:                $data['p_nacionalidade']                ?? null,
-            pPaisOrigem:                   $data['p_pais_origem']                  ?? null,
-            pNaturalidadeUf:               $data['p_naturalidade_uf']              ?? null,
-            pTurista:                      isset($data['p_turista'])               ? (bool) $data['p_turista'] : null,
-            pSituacaoRua:                  isset($data['p_situacao_rua'])          ? (bool) $data['p_situacao_rua'] : null,
-            pEndCep:                       $data['p_end_cep']                      ?? $data['cep'] ?? null,
-            pEndPais:                      $data['p_end_pais']                     ?? null,
-            pEndEstadoUf:                  $data['p_end_estado_uf']                ?? $data['uf'] ?? null,
-            pEndMunicipio:                 $data['p_end_municipio']                ?? $data['municipio'] ?? null,
-            pEndBairro:                    $data['p_end_bairro']                   ?? $data['bairro'] ?? null,
-            pEndLogradouro:                $data['p_end_logradouro']               ?? $data['endereco'] ?? null,
-            pEndNumero:                    $data['p_end_numero']                   ?? null,
-            pEndComplemento:               $data['p_end_complemento']              ?? null,
-            pEndKm:                        $data['p_end_km']                       ?? null,
-            pEndIbge:                      $data['p_end_ibge']                     ?? null,
-            pTelefoneResidencial:         $data['p_telefone_residencial']         ?? $data['telefone'] ?? null,
-            pTelefoneComercial:           $data['p_telefone_comercial']           ?? null,
-            pEmail:                        $data['p_email']                        ?? null,
-            pMotivoAusenciaContato:       $data['p_motivo_ausencia_contato']      ?? null,
+            id:                            self::asStringOrNull($data['id'] ?? null),
+            seq:                           self::asIntOrNull(self::ler($data, $p, 'seq')),
+            gTipoPessoa:                   self::asStringOrNull(self::ler($data, $p, 'g_tipo_pessoa', 'tipo_envolvimento')),
+            gLesaoGrau:                    self::asStringOrNull(self::ler($data, $p, 'g_lesao_grau')),
+            gLesaoGrauSelecionado:         self::asStringOrNull(self::ler($data, $p, 'g_lesao_grau_selecionado')),
+            gAtendimentoVitimaRepassada:   self::asStringOrNull(self::ler($data, $p, 'g_atendimento_vitima_repassada')),
+            gEnvolvidoPresenca:            self::asBoolOrNull(self::ler($data, $p, 'g_envolvido_presenca')),
+            gEnvolvidoTipo:                self::asStringOrNull(self::ler($data, $p, 'g_envolvido_tipo')),
+            gEnvolvidoOrgao:               self::asStringOrNull(self::ler($data, $p, 'g_envolvido_orgao')),
+            gEnvolvidoUf:                  self::asStringOrNull(self::ler($data, $p, 'g_envolvido_uf')),
+            gEnvolvidoMatricula:           self::asStringOrNull(self::ler($data, $p, 'g_envolvido_matricula')),
+            gEnvolvidoServico:             self::asBoolOrNull(self::ler($data, $p, 'g_envolvido_servico')),
+            pTipo:                         self::asStringOrNull(self::ler($data, $p, 'p_tipo')),
+            pTipoSelecionado:              self::asStringOrNull(self::ler($data, $p, 'p_tipo_selecionado')),
+            pNumero:                       self::asStringOrNull(self::ler($data, $p, 'p_numero', 'rg')),
+            pOrgaoExpedidor:               self::asStringOrNull(self::ler($data, $p, 'p_orgao_expedidor')),
+            pUf:                           self::asStringOrNull(self::ler($data, $p, 'p_uf')),
+            pIdadeAparente:                self::asIntOrNull(self::ler($data, $p, 'p_idade_aparente')),
+            pNomeCompleto:                 self::asStringOrNull(self::ler($data, $p, 'p_nome_completo', 'nome')),
+            pNomeFantasia:                 self::asStringOrNull(self::ler($data, $p, 'p_nome_fantasia')),
+            pDataNascimento:               self::asStringOrNull(self::ler($data, $p, 'p_data_nascimento', 'data_nascimento')),
+            pCpf:                          self::asStringOrNull(self::ler($data, $p, 'p_cpf', 'cpf')),
+            pNomeMae:                      self::asStringOrNull(self::ler($data, $p, 'p_nome_mae')),
+            pNomePai:                      self::asStringOrNull(self::ler($data, $p, 'p_nome_pai')),
+            pOcupacaoAtual:                self::asStringOrNull(self::ler($data, $p, 'p_ocupacao_atual')),
+            pEscolaridade:                 self::asStringOrNull(self::ler($data, $p, 'p_escolaridade')),
+            pCorRaca:                      self::asStringOrNull(self::ler($data, $p, 'p_cor_raca')),
+            pCorRacaCod:                   self::asStringOrNull(self::ler($data, $p, 'p_cor_raca_cod')),
+            pSexo:                         self::asStringOrNull(self::ler($data, $p, 'p_sexo', 'sexo')),
+            pSexoSelecionado:              self::asStringOrNull(self::ler($data, $p, 'p_sexo_selecionado')),
+            pEstadoCivil:                  self::asStringOrNull(self::ler($data, $p, 'p_estado_civil')),
+            pOrientacaoSexual:             self::asStringOrNull(self::ler($data, $p, 'p_orientacao_sexual')),
+            pIdentidadeGenero:             self::asStringOrNull(self::ler($data, $p, 'p_identidade_genero')),
+            pNomeSocial:                   self::asStringOrNull(self::ler($data, $p, 'p_nome_social')),
+            pNacionalidade:                self::asStringOrNull(self::ler($data, $p, 'p_nacionalidade')),
+            pPaisOrigem:                   self::asStringOrNull(self::ler($data, $p, 'p_pais_origem')),
+            pNaturalidadeUf:               self::asStringOrNull(self::ler($data, $p, 'p_naturalidade_uf')),
+            pTurista:                      self::asBoolOrNull(self::ler($data, $p, 'p_turista')),
+            pSituacaoRua:                  self::asBoolOrNull(self::ler($data, $p, 'p_situacao_rua')),
+            pEndCep:                       self::asStringOrNull(self::ler($data, $p, 'p_end_cep', 'cep')),
+            pEndPais:                      self::asStringOrNull(self::ler($data, $p, 'p_end_pais')),
+            pEndEstadoUf:                  self::asStringOrNull(self::ler($data, $p, 'p_end_estado_uf', 'uf')),
+            pEndMunicipio:                 self::asStringOrNull(self::ler($data, $p, 'p_end_municipio', 'municipio')),
+            pEndBairro:                    self::asStringOrNull(self::ler($data, $p, 'p_end_bairro', 'bairro')),
+            pEndLogradouro:                self::asStringOrNull(self::ler($data, $p, 'p_end_logradouro', 'endereco')),
+            pEndNumero:                    self::asStringOrNull(self::ler($data, $p, 'p_end_numero')),
+            pEndComplemento:               self::asStringOrNull(self::ler($data, $p, 'p_end_complemento')),
+            pEndKm:                        self::asStringOrNull(self::ler($data, $p, 'p_end_km')),
+            pEndIbge:                      self::asStringOrNull(self::ler($data, $p, 'p_end_ibge')),
+            pTelefoneResidencial:         self::asStringOrNull(self::ler($data, $p, 'p_telefone_residencial', 'telefone')),
+            pTelefoneComercial:           self::asStringOrNull(self::ler($data, $p, 'p_telefone_comercial')),
+            pEmail:                        self::asStringOrNull(self::ler($data, $p, 'p_email')),
+            pMotivoAusenciaContato:       self::asStringOrNull(self::ler($data, $p, 'p_motivo_ausencia_contato')),
+            presentes:                     $p,
         );
     }
 
     public function toArray(): array
     {
-        return array_filter([
+        return self::somentePresentes([
             'seq'                            => $this->seq,
             'g_tipo_pessoa'                  => $this->gTipoPessoa,
             'g_lesao_grau'                   => $this->gLesaoGrau,
@@ -189,6 +201,6 @@ readonly class RatEnvolvidoDTO
             'p_telefone_comercial'          => $this->pTelefoneComercial,
             'p_email'                       => $this->pEmail,
             'p_motivo_ausencia_contato'     => $this->pMotivoAusenciaContato,
-        ], fn ($v) => $v !== null && $v !== '');
+        ], $this->presentes);
     }
 }

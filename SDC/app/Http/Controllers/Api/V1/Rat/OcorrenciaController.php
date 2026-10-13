@@ -3,10 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Rat;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Rat\DTOs\RatDadosGeraisDTO;
-use App\Modules\Rat\DTOs\RatEnvolvidoDTO;
-use App\Modules\Rat\DTOs\RatRecursoDTO;
-use App\Modules\Rat\DTOs\RatVistoriaDTO;
+use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\Http\Resources\RatResource;
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Services\RatWriteService;
@@ -54,7 +51,7 @@ class OcorrenciaController extends Controller
             'finalize'    => 'nullable|boolean',
         ]);
 
-        $ocorrencia = $this->writeService->createWithData($validated);
+        $ocorrencia = $this->writeService->createWithData(RatRelatosDTO::fromArray($validated));
 
         return response()->json([
             'success' => true,
@@ -85,29 +82,19 @@ class OcorrenciaController extends Controller
             return response()->json(['message' => 'Ocorrência não encontrada.'], 404);
         }
 
-        if ($request->has('dadosGerais') || $request->has('comunicacao') || $request->has('local') || $request->has('endereco')) {
-            $this->writeService->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($request->all()));
-        }
+        // Mesmo contrato do formulario, mas mesclando recursos/envolvidos por
+        // id (com id atualiza, sem id cria), como esta API sempre fez.
+        $validated = $request->validate([
+            'dadosGerais' => 'nullable|array',
+            'comunicacao' => 'nullable|array',
+            'local'       => 'nullable|array',
+            'endereco'    => 'nullable|array',
+            'recursos'    => 'nullable|array',
+            'envolvidos'  => 'nullable|array',
+            'vistoria'    => 'nullable|array',
+        ]);
 
-        if ($request->has('recursos')) {
-            foreach ($request->input('recursos', []) as $index => $r) {
-                $r['seq'] = $r['seq'] ?? ($index + 1);
-                $this->writeService->saveRecurso($id, RatRecursoDTO::fromArray($r));
-            }
-        }
-
-        if ($request->has('envolvidos')) {
-            foreach ($request->input('envolvidos', []) as $index => $e) {
-                $e['seq'] = $e['seq'] ?? ($index + 1);
-                $this->writeService->saveEnvolvido($id, RatEnvolvidoDTO::fromArray($e));
-            }
-        }
-
-        if ($request->has('vistoria') && !empty($request->input('vistoria'))) {
-            $this->writeService->saveVistoria($id, RatVistoriaDTO::fromArray($request->input('vistoria')));
-        }
-
-        $ocorrencia->update(['updated_by' => auth()->id()]);
+        $this->writeService->atualizar($id, RatRelatosDTO::fromArray($validated), substituirListas: false);
 
         return response()->json([
             'success' => true,

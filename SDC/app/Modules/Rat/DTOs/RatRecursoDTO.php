@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Rat\DTOs;
 
 use App\Modules\Rat\DTOs\RatAgenteDTO;
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
 
 /**
  * DTO para dados de recursos (viaturas/pessoal) em uma ocorrência RAT.
  */
 readonly class RatRecursoDTO
 {
+    use SafeCastingTrait;
+
     public function __construct(
         public ?string $id = null,
         public ?int    $seq = null,
@@ -46,7 +49,7 @@ readonly class RatRecursoDTO
             id:                  $data['id']                   ?? null,
             seq:                 $data['seq']                  ?? null,
             recursoTipo:         $data['recurso_tipo']         ?? $data['tipo_recurso'] ?? null,
-            recursoProblemas:    isset($data['recurso_problemas']) ? (bool) $data['recurso_problemas'] : null,
+            recursoProblemas:    self::asBoolOrNull($data['recurso_problemas'] ?? null),
             recursoDescricao:    $data['recurso_descricao']    ?? $data['descricao'] ?? null,
             viaturaTipo:         $data['viatura_tipo']         ?? $data['categoria'] ?? null,
             viaturaPlaca:        $data['viatura_placa']        ?? $data['identificacao'] ?? null,
@@ -59,12 +62,12 @@ readonly class RatRecursoDTO
             viaturaKm:           $data['viatura_km']           ?? $data['km_percorrido'] ?? null,
             viaturaLocalOrigem:  $data['viatura_local_origem']  ?? $data['local_origem'] ?? null,
             viaturaLocalDestino: $data['viatura_local_destino'] ?? $data['local_destino'] ?? null,
-            viaturaQuantidade:   self::intOrNull($data['viatura_quantidade'] ?? $data['quantidade'] ?? null),
-            viaturaCapacidade:   self::intOrNull($data['viatura_capacidade'] ?? $data['capacidade'] ?? null),
+            viaturaQuantidade:   self::asIntOrNull($data['viatura_quantidade'] ?? $data['quantidade'] ?? null),
+            viaturaCapacidade:   self::asIntOrNull($data['viatura_capacidade'] ?? $data['capacidade'] ?? null),
             viaturaCondicao:     $data['viatura_condicao']     ?? $data['condicao'] ?? null,
             viaturaOperador:     $data['viatura_operador']     ?? $data['condutor'] ?? $data['operador'] ?? null,
             operadorMasp:        $data['operador_masp']        ?? null,
-            operadorIsCondutor:  isset($data['operador_is_condutor']) ? (bool) $data['operador_is_condutor'] : null,
+            operadorIsCondutor:  self::asBoolOrNull($data['operador_is_condutor'] ?? null),
             viaturaContato:      $data['viatura_contato']      ?? $data['contato_emergencia'] ?? null,
             agentes:             isset($data['agentes']) 
                                     ? array_map(fn($a) => RatAgenteDTO::fromArray($a), $data['agentes']) 
@@ -72,10 +75,6 @@ readonly class RatRecursoDTO
         );
     }
 
-    private static function intOrNull(mixed $v): ?int
-    {
-        return ($v !== null && $v !== '') ? (int) $v : null;
-    }
 
     public function toArray(): array
     {

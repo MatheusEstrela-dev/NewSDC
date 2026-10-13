@@ -8,7 +8,7 @@ namespace App\Modules\Rat\Models\Relatos;
  * Envolvidos (vítimas, agentes, etc.) em uma ocorrência RAT.
  *
  * Campos-chave (ver migração 2026_02_10_133452):
- * @property int         $id
+ * @property string         $id
  * @property string|null $p_nome_completo   Nome completo / razão social
  * @property string|null $g_tipo_pessoa     Tipo de pessoa envolvida
  * @property string|null $p_cpf

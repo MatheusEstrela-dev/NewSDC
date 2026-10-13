@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Requests;
 
+use App\Modules\Decretacoes\Enums\StatusProcesso;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ReceiveProcessoRequest extends FormRequest
@@ -29,6 +30,23 @@ class ReceiveProcessoRequest extends FormRequest
             'n_decreto_municipal'    => 'nullable|string|max:255',
             'data_decreto_municipal' => 'nullable|date',
             'observacoes'            => 'nullable|string',
+
+            // Mesmas regras do StoreProcessoRequest. O receive passou a entregar
+            // validated() ao DTO; sem elas estes campos, que o DTO sempre leu de
+            // Request::input(), seriam descartados.
+            'status'                            => StatusProcesso::regraDoCampo(),
+            'data_publicacao_decreto_municipal' => 'nullable|date',
+            'prazo_vigencia_decreto'            => 'nullable|integer|min:1|max:365',
+            'n_decreto_estadual'                => 'nullable|string|max:255',
+            'data_decreto_estadual'             => 'nullable|date',
+            'n_edicao_domg'                     => 'nullable|string|max:255',
+            'data_publicacao_domg'              => 'nullable|date',
+            'n_portaria_federal'                => 'nullable|string|max:255',
+            'data_portaria_federal'             => 'nullable|date',
+            'n_edicao_dou'                      => 'nullable|string|max:255',
+            'data_publicacao_dou'               => 'nullable|date',
+            'n_processo_sei'                    => 'nullable|string|max:255',
+            'informacoes_decreto'               => 'nullable|json',
         ];
     }
 }

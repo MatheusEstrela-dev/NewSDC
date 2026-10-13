@@ -52,7 +52,7 @@ const form = useForm({
   situacao_anormalidade:            props.processo?.situacao_anormalidade ?? '',
   data_entrada:                     props.processo?.data_entrada ?? '',
   data_ocorrencia:                  props.processo?.data_ocorrencia ?? '',
-  status:                           props.processo?.status ?? 'pendente',
+  status:                           props.processo?.status ?? 'Registro',
   analista_id:                      props.processo?.analista ?? '',
   n_protocolo_fide:                 props.processo?.n_protocolo_fide ?? '',
   n_decreto_municipal:              props.processo?.decreto_municipal ?? '',

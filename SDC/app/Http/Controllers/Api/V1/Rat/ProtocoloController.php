@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Rat;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\Http\Requests\ReceiveRatBIRequest;
 use App\Modules\Rat\Http\Resources\RatListResource;
 use App\Modules\Rat\Http\Resources\RatResource;
@@ -134,16 +135,20 @@ class ProtocoloController extends Controller
      */
     public function receive(ReceiveRatBIRequest $request): JsonResponse
     {
-        $rat = $this->writeService->createWithData([
-            'dadosGerais' => $request->input('dados_gerais', []),
-            'comunicacao' => $request->input('comunicacao', []),
-            'local'       => $request->input('local', []),
-            'endereco'    => $request->input('endereco', []),
-            'recursos'    => $request->input('recursos', []),
-            'envolvidos'  => $request->input('envolvidos', []),
-            'vistoria'    => $request->input('vistoria', []),
-            'finalize'    => (bool) $request->input('finalize', false),
-        ]);
+        // validated(): a ReceiveRatBIRequest define o contrato de cada secao;
+        // input() deixava passar campos fora dele.
+        $dados = $request->validated();
+
+        $rat = $this->writeService->createWithData(RatRelatosDTO::fromArray([
+            'dadosGerais' => $dados['dados_gerais'] ?? [],
+            'comunicacao' => $dados['comunicacao'] ?? [],
+            'local'       => $dados['local'] ?? [],
+            'endereco'    => $dados['endereco'] ?? [],
+            'recursos'    => $dados['recursos'] ?? [],
+            'envolvidos'  => $dados['envolvidos'] ?? [],
+            'vistoria'    => $dados['vistoria'] ?? [],
+            'finalize'    => $dados['finalize'] ?? false,
+        ]));
 
         return response()->json([
             'success' => true,
