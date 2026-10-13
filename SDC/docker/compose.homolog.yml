@@ -273,6 +273,12 @@ services:
       REVERB_PORT: "8080"
       REVERB_SCHEME: http
 
+      # Assistente de IA (core/IA). O .env assado na imagem nao traz a chave,
+      # entao ela vem do docker/.env, como as demais credenciais. Vazia, o chat
+      # responde "assistente nao configurado" em vez de falhar.
+      AI_DRIVER: ${AI_DRIVER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash-lite}
 
       # Ensaio de capacidade: quando preenchido, requisicao com o mesmo valor em
       # X-Loadtest-Bypass fica sem limite de taxa. Sem isso, medir o teto real a
