@@ -103,6 +103,28 @@
         <span class="hidden xxs:inline truncate text-xs font-medium text-left">Buscar protocolo, município...</span>
       </button>
 
+      <!--
+        Assistente IA no mobile. O botao do desktop mora dentro do bloco da
+        busca (hidden md:flex), entao abaixo de 768px o assistente sumia e nao
+        havia outro caminho ate ele. A busca acima trunca a dica e cede a largura.
+      -->
+      <button
+        v-if="!isCidadao"
+        type="button"
+        class="flex md:hidden flex-shrink-0 items-center justify-center w-10 h-10 rounded-lg transition-colors
+               hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95"
+        title="Assistente IA - Defesa Civil"
+        aria-label="Abrir Assistente IA"
+        @click="showAiAssistant = true"
+      >
+        <span class="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-white">
+          <picture>
+            <source srcset="/imgs/logo_dc.webp" type="image/webp" />
+            <img src="/imgs/logo_dc.png" alt="" class="w-full h-full object-cover" />
+          </picture>
+        </span>
+      </button>
+
       <!-- Right Section - User Info & Actions -->
       <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40" data-tour="topbar-actions">
         <!-- Notifications Dropdown - staff-only (usa fila de notificacoes do guard web) -->

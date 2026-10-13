@@ -2,6 +2,7 @@
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue';
 import Modal from '@/Components/Modal.vue';
 import { useHybridAI } from '@/Composables/useHybridAI';
+import { useMobile } from '@/Composables/useMobile';
 import {
     ChatBubbleLeftIcon,
     PaperAirplaneIcon,
@@ -29,8 +30,11 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const { ask, isThinking, isReady, error } = useHybridAI();
+const { isMobile } = useMobile();
 
-const isSidebarOpen = ref(true);
+// No celular o historico (w-80) ocupava quase todo o modal e o chat ficava com
+// poucos pixels: comeca fechado e abre pelo botao do cabecalho.
+const isSidebarOpen = ref(!isMobile.value);
 const userInput = ref('');
 const messagesContainer = ref(null);
 const messages = ref([]);
@@ -192,7 +196,8 @@ const close = () => {
 
 <template>
     <Modal :show="show" @close="close" maxWidth="5xl">
-        <div class="flex h-[80vh] bg-[#F8FAFC] dark:bg-[#0b0f1a] text-slate-800 dark:text-slate-200 font-sans overflow-hidden rounded-lg">
+        <!-- dvh: no celular vh conta a area atras da barra de endereco e o campo de mensagem sumia. -->
+        <div class="flex h-[80dvh] bg-[#F8FAFC] dark:bg-[#0b0f1a] text-slate-800 dark:text-slate-200 font-sans overflow-hidden rounded-lg">
 
             <!-- SIDEBAR -->
             <aside

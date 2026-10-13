@@ -90,7 +90,16 @@
         </Button>
       </div>
 
-      <table v-if="usuarios.length > 0" class="usuarios-table">
+      <!-- Abaixo de md vira cartoes: cinco colunas com e-mail nao cabem em 375px. -->
+      <ResponsiveTable
+        v-if="usuarios.length > 0"
+        :items="usuarios"
+        :mobile-fields="CAMPOS_USUARIO_MOBILE"
+        :get-item-title="(u) => u.name"
+        :get-item-subtitle="(u) => u.email"
+      >
+        <template #table>
+      <table class="usuarios-table">
         <thead>
           <tr>
             <th>Nome</th>
@@ -126,6 +135,26 @@
           </tr>
         </tbody>
       </table>
+        </template>
+
+        <template #mobile-funcao="{ item: usuario }">
+          <span class="funcao-badge">{{ usuario.pivot?.funcao || '-' }}</span>
+        </template>
+        <template #mobile-principal="{ item: usuario }">
+          <StatusOrgaoBadge v-if="usuario.pivot?.is_principal" status="ativo" />
+          <Text v-else variant="muted">-</Text>
+        </template>
+        <template v-if="canVincularUsuarios" #mobile-actions="{ item: usuario }">
+          <ActionButton
+            module="compdec"
+            resource="usuarios"
+            size="sm"
+            :actions="[
+              { action: 'delete', aliasOverride: 'desvincular', handler: () => handleDesvincularUsuario(usuario.id), allowed: canVincularUsuarios, label: 'Desvincular' },
+            ]"
+          />
+        </template>
+      </ResponsiveTable>
 
       <div v-else class="empty-state">
         <Text variant="muted">Nenhum usuario vinculado.</Text>
@@ -199,6 +228,7 @@ import EquipeTab from '@/Components/Organisms/Compdec/Tabs/EquipeTab.vue';
 import AnexosTab from '@/Components/Organisms/Compdec/Tabs/AnexosTab.vue';
 import PlanoContingenciaTab from '@/Components/Organisms/Compdec/Tabs/PlanoContingenciaTab.vue';
 import VincularUsuarioModal from '@/Components/Organisms/Compdec/Modals/VincularUsuarioModal.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
 import HomeIcon from '@/Components/Icons/HomeIcon.vue';
@@ -210,6 +240,11 @@ import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import { useToast } from '@/Composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
+
+const CAMPOS_USUARIO_MOBILE = [
+  { key: 'funcao', label: 'Funcao' },
+  { key: 'principal', label: 'Principal' },
+];
 
 const props = defineProps({
   orgao: {

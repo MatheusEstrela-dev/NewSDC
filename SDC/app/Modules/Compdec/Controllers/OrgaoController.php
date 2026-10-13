@@ -69,8 +69,12 @@ class OrgaoController extends Controller
         $orgao = $this->service->obterOrgao($orgao->id);
 
         return Inertia::render('Compdec/OrgaoShow', [
-            'orgao' => OrgaoResource::make($orgao->loadMissing(['orgaoSuperior', 'prefeitura'])),
-            'usuarios' => Inertia::lazy(fn () => $orgao->usuarios()->select(['users.id', 'users.name', 'users.email'])->get()),
+            // resolve(): sem ele o Inertia serializa o resource embrulhado em
+            // `data` e a pagina, que le orgao.codigo/orgao.nome, ficava em branco.
+            'orgao' => OrgaoResource::make($orgao->loadMissing(['orgaoSuperior', 'prefeitura']))->resolve(),
+            // Closure, nao lazy: a lista e exibida na carga da pagina, e lazy so
+            // vinha no reload apos vincular -- antes disso aparecia sempre vazia.
+            'usuarios' => fn () => $orgao->usuarios()->select(['users.id', 'users.name', 'users.email'])->get(),
             'canManage' => $request->user()?->can('update', $orgao) ?? false,
             'canDelete' => $request->user()?->can('delete', $orgao) ?? false,
             'canManageEquipe' => $request->user()?->can('compdec.equipe.edit') ?? false,
@@ -127,7 +131,7 @@ class OrgaoController extends Controller
         $this->authorize('update', $orgao);
 
         return Inertia::render('Compdec/OrgaoEdit', [
-            'orgao' => OrgaoResource::make($orgao->loadMissing(['orgaoSuperior'])),
+            'orgao' => OrgaoResource::make($orgao->loadMissing(['orgaoSuperior']))->resolve(),
             'cedecs' => $this->service->obterCedecs(),
             'redecs' => $this->service->obterRedecs(),
             'orgaosSuperior' => $this->service->obterCedecs()->concat($this->service->obterRedecs())->values(),

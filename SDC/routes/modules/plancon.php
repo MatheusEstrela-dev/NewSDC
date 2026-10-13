@@ -9,6 +9,11 @@ Route::prefix('plancon')->name('plancon.')->group(function () {
     Route::get('/municipios/com-plano', [PlanConController::class, 'municipiosComPlano'])->name('municipios.com');
     Route::get('/municipios/sem-plano', [PlanConController::class, 'municipiosSemPlano'])->name('municipios.sem');
 
+    // Botao "Exportar" do painel (PlanConIndex.vue ja chamava esta rota).
+    Route::get('/export', [PlanConController::class, 'export'])
+        ->name('export')
+        ->middleware('can:plancon.export');
+
     // Envio pelo proprio municipio: o orgao sai do usuario logado, por isso a
     // rota nao recebe municipio. A gravacao e delegada ao servico do COMPDEC.
     Route::post('/planos', [PlanConController::class, 'store'])

@@ -15,6 +15,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
 use Illuminate\Http\Response as HttpResponse;
+use App\Modules\Shared\Support\CsvSeguro;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PlanConController extends Controller
 {
@@ -71,6 +73,35 @@ class PlanConController extends Controller
             'pagination' => $resultado['pagination'],
             'filters' => $filters,
         ]);
+    }
+
+    /**
+     * CSV com a situacao do plano de contingencia de cada municipio de MG.
+     * Ponto e virgula e BOM para o Excel em pt-BR abrir com acentos; o nome do
+     * municipio passa pelo CsvSeguro como os demais exports.
+     */
+    public function export(): StreamedResponse
+    {
+        $linhas = $this->planoService->linhasExportacao();
+
+        return response()->streamDownload(function () use ($linhas): void {
+            $out = fopen('php://output', 'wb');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['municipio', 'codigo_ibge', 'tem_plano', 'versao', 'situacao', 'enviado_em'], ';', '"', '');
+
+            foreach ($linhas as $l) {
+                fputcsv($out, [
+                    CsvSeguro::celula($l['municipio']),
+                    $l['codigo_ibge'],
+                    $l['tem_plano'] ? 'sim' : 'nao',
+                    $l['versao'],
+                    $l['situacao'],
+                    $l['enviado_em'] ? substr((string) $l['enviado_em'], 0, 10) : '',
+                ], ';', '"', '');
+            }
+
+            fclose($out);
+        }, 'plancon-municipios-' . now()->format('Ymd') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /**

@@ -552,6 +552,7 @@ return [
                 'view'     => 'plancon.view',
                 'upload'   => 'plancon.upload',
                 'download' => 'plancon.download',
+                'export'   => 'plancon.export',
             ],
         ],
         'CISTERNAS' => [
@@ -891,6 +892,7 @@ return [
             'plancon.view',
             'plancon.upload',
             'plancon.download',
+            'plancon.export',
             // GEOESPACIAL - papel da CEDEC. Alem de enviar, revisa e retira do
             // mapa: mesma altura de pmda.analise.aprovar e .arquivar, que
             // tambem param aqui. Aprovar area de risco e ato de supervisao.

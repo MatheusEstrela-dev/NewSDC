@@ -287,6 +287,51 @@ class PlanoContingenciaService extends BaseService
     }
 
     /**
+     * Uma linha por municipio de MG para o CSV do painel: quem tem plano
+     * (versao, situacao e data do envio mais recente) e quem nao tem. "Ter
+     * plano" segue municipiosComPlanoSubquery() -- qualquer versao nao apagada
+     * --, senao um municipio so com versoes inativas sumiria das duas partes.
+     *
+     * @return array<int, array{municipio: string, codigo_ibge: ?string, tem_plano: bool, versao: mixed, situacao: ?string, enviado_em: ?string}>
+     */
+    public function linhasExportacao(): array
+    {
+        $comPlano = $this->baseQuery(apenasAtivos: false)
+            ->orderBy('municipios.nome')
+            ->orderByRaw('planos.enviado_em DESC NULLS LAST')
+            ->get()
+            // Varias versoes por municipio: vale a do envio mais novo.
+            ->unique('id')
+            ->map(fn (object $p): array => [
+                'municipio'   => $p->nome,
+                'codigo_ibge' => $p->codigo_ibge,
+                'tem_plano'   => true,
+                'versao'      => $p->versao,
+                'situacao'    => $p->situacao_plano,
+                'enviado_em'  => $p->data_ultima_atualizacao,
+            ]);
+
+        $semPlano = DB::table('municipios')
+            ->select(['municipios.nome', 'municipios.codigo_ibge'])
+            ->where('municipios.uf', 'MG')
+            ->whereNotIn('municipios.id', $this->municipiosComPlanoSubquery())
+            ->get()
+            ->map(fn (object $m): array => [
+                'municipio'   => $m->nome,
+                'codigo_ibge' => $m->codigo_ibge,
+                'tem_plano'   => false,
+                'versao'      => null,
+                'situacao'    => null,
+                'enviado_em'  => null,
+            ]);
+
+        return $comPlano->concat($semPlano)
+            ->sortBy('municipio', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+    }
+
+    /**
      * Lista TODAS as versoes de plano, uma linha por plano, como a tela do
      * legado (`compdec/plano/listacomplano`): um municipio que enviou tres
      * versoes aparece em tres linhas. Ordena por municipio e, dentro dele, da
