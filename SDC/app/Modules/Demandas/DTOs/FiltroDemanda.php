@@ -7,7 +7,6 @@ namespace App\Modules\Demandas\DTOs;
 use App\Modules\Demandas\Enums\EtapaDemanda;
 use App\Modules\Demandas\Enums\PrioridadeSimples;
 use App\Modules\Demandas\Enums\StatusDemanda;
-use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 final readonly class FiltroDemanda
@@ -25,9 +24,15 @@ final readonly class FiltroDemanda
         public ?string $dataFinal = null,
     ) {}
 
-    public static function fromRequest(Request $request): self
+    /**
+     * Regras da query string da listagem. O Controller valida com elas e entrega
+     * o resultado a fromValidated(): o DTO nao conhece o Request HTTP.
+     *
+     * @return array<string, mixed>
+     */
+    public static function regras(): array
     {
-        $data = $request->validate([
+        return [
             'search' => ['nullable', 'string', 'max:200'],
             'etapa' => ['nullable', Rule::enum(EtapaDemanda::class)],
             'status' => ['nullable', Rule::enum(StatusDemanda::class)],
@@ -38,7 +43,12 @@ final readonly class FiltroDemanda
             'criado_por_id' => ['nullable', 'integer'],
             'data_inicial' => ['nullable', 'date'],
             'data_final' => ['nullable', 'date', 'after_or_equal:data_inicial'],
-        ]);
+        ];
+    }
+
+    /** @param array<string, mixed> $data */
+    public static function fromValidated(array $data): self
+    {
         $int = static fn (string $k): ?int => isset($data[$k]) ? (int) $data[$k] : null;
 
         return new self(

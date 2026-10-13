@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Inventario\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Inventario\DTOs\EstacaoData;
 use App\Modules\Inventario\Models\Estacao;
 use App\Modules\Inventario\Requests\EstacaoRequest;
+use App\Modules\Inventario\Services\EstacaoService;
 use App\Modules\Shared\Support\PadraoBusca;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +17,8 @@ use Inertia\Response;
 
 class EstacaoController extends Controller
 {
+    public function __construct(private readonly EstacaoService $service) {}
+
     public function index(Request $request): Response
     {
         $filters = $request->validate([
@@ -45,20 +49,19 @@ class EstacaoController extends Controller
 
     public function store(EstacaoRequest $request): RedirectResponse
     {
-        Estacao::create($request->validated());
+        $this->service->criar(EstacaoData::fromArray($request->validated()));
         return redirect()->route('inventario.estacoes.index')->with('success', 'Estação cadastrada.');
     }
 
     public function update(EstacaoRequest $request, Estacao $estacao): RedirectResponse
     {
-        $estacao->update($request->validated());
+        $this->service->atualizar($estacao, EstacaoData::fromArray($request->validated()));
         return redirect()->back()->with('success', 'Estação atualizada.');
     }
 
     public function destroy(Estacao $estacao): RedirectResponse
     {
-        abort_if($estacao->equipamentos()->exists(), 409, 'A estação possui equipamentos vinculados.');
-        $estacao->delete();
+        $this->service->remover($estacao);
         return redirect()->back()->with('success', 'Estação removida.');
     }
 }

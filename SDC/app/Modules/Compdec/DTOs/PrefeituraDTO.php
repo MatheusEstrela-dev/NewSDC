@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Compdec\DTOs;
 
-class PrefeituraDTO
+final readonly class PrefeituraDTO
 {
     public function __construct(
         public int $municipioId,

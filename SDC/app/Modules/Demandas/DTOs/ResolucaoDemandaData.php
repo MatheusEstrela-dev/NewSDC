@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas\DTOs;
 
-use App\Modules\Demandas\Requests\ResolverDemandaRequest;
 use Carbon\CarbonImmutable;
 
 final readonly class ResolucaoDemandaData
@@ -21,9 +20,9 @@ final readonly class ResolucaoDemandaData
         }
     }
 
-    public static function fromRequest(ResolverDemandaRequest $request): self
+    /** @param array<string, mixed> $data ResolverDemandaRequest::validated() */
+    public static function fromValidated(array $data): self
     {
-        $data = $request->validated();
 
         return new self(
             CarbonImmutable::parse($data['aberta_em']),

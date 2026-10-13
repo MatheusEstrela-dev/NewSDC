@@ -6,7 +6,7 @@ namespace App\Modules\Compdec\DTOs;
 
 use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
 
-class OrgaoDTO
+final readonly class OrgaoDTO
 {
     use SafeCastingTrait;
 

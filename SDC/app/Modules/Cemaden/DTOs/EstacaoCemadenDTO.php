@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Cemaden\DTOs;
 
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
+
 final readonly class EstacaoCemadenDTO
 {
+    use SafeCastingTrait;
+
     public function __construct(
         public string $codigo,
         public string $nome,
@@ -64,19 +68,13 @@ final readonly class EstacaoCemadenDTO
 
     private static function numero(mixed $valor): ?float
     {
-        if ($valor === null || $valor === '') {
-            return null;
-        }
-
-        return (float) $valor;
+        // Texto nao numerico ("n/d", "-") vira ausencia, nunca medicao zero;
+        // zero legitimo e virgula decimal sao preservados (SafeCastingTrait).
+        return self::asFloatOrNull($valor);
     }
 
     private static function inteiro(mixed $valor): ?int
     {
-        if ($valor === null || $valor === '') {
-            return null;
-        }
-
-        return (int) $valor;
+        return self::asIntOrNull($valor);
     }
 }

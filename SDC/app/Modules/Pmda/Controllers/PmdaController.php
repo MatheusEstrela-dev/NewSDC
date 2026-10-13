@@ -13,6 +13,7 @@ use App\Modules\Compdec\Models\CompdecEquipe;
 use App\Modules\Compdec\Resources\AnexoIndexResource;
 use App\Modules\Compdec\Services\AnexoService;
 use App\Modules\Compdec\Services\EquipeService;
+use App\Modules\Pmda\DTOs\PmdaPlanoDTO;
 use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
 use App\Modules\Pmda\Models\ComunidadeSolicitacao;
 use App\Modules\Pmda\Models\PmdaComunidade;
@@ -416,7 +417,7 @@ class PmdaPlanoController extends Controller
             $plano = $this->service->criar(
                 municipioId: (int) $request->validated('municipio_id'),
                 userId: (int) $request->user()->id,
-                data: collect($request->validated())->except('municipio_id')->toArray(),
+                dto: PmdaPlanoDTO::deFormulario(collect($request->validated())->except('municipio_id')->toArray()),
             );
         } catch (\DomainException $e) {
             return to_route('pmda.planos.index')->with('error', $e->getMessage());
@@ -522,7 +523,7 @@ class PmdaPlanoController extends Controller
     public function update(UpdatePmdaPlanoRequest $request, PmdaPlano $plano): RedirectResponse
     {
         try {
-            $this->service->atualizar($plano, $request->validated(), (int) $request->user()->id);
+            $this->service->atualizar($plano, PmdaPlanoDTO::deFormulario($request->validated()), (int) $request->user()->id);
         } catch (\DomainException $e) {
             return back()->withErrors(['plano' => $e->getMessage()]);
         }

@@ -5,17 +5,22 @@ declare(strict_types=1);
 namespace App\Modules\Acessos\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Acessos\DTOs\CadastroAcessoDTO;
 use App\Modules\Acessos\Models\CadastroAcesso;
 use App\Modules\Acessos\Requests\CadastroAcessoRequest;
+use App\Modules\Acessos\Services\CadastroAcessoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CadastroAcessoController extends Controller
 {
+    public function __construct(
+        private readonly CadastroAcessoService $service,
+    ) {}
+
     public function index(Request $request): Response
     {
         $filters = $request->validate([
@@ -80,65 +85,38 @@ class CadastroAcessoController extends Controller
 
     public function store(CadastroAcessoRequest $request): RedirectResponse
     {
-        $cadastro = DB::transaction(function () use ($request): CadastroAcesso {
-            $cadastro = CadastroAcesso::create([
-                ...$request->validated(),
-                'solicitado_por_id' => $request->user()->id,
-                'data_solicitacao' => now(),
-            ]);
-            $cadastro->auditoria()->create(['actor_id' => $request->user()->id, 'acao' => 'criado', 'created_at' => now()]);
-            return $cadastro;
-        });
+        $cadastro = $this->service->criar(
+            CadastroAcessoDTO::fromValidated($request->validated()),
+            (int) $request->user()->id,
+        );
+
         return redirect()->route('acessos.show', $cadastro)->with('success', 'Cadastro criado.');
     }
 
     public function update(CadastroAcessoRequest $request, CadastroAcesso $cadastro): RedirectResponse
     {
-        DB::transaction(function () use ($request, $cadastro): void {
-            $cadastro->update($request->validated());
-            $cadastro->auditoria()->create(['actor_id' => $request->user()->id, 'acao' => 'editado', 'created_at' => now()]);
-        });
+        $this->service->atualizar(
+            $cadastro,
+            CadastroAcessoDTO::fromValidated($request->validated()),
+            (int) $request->user()->id,
+        );
+
         return redirect()->back()->with('success', 'Cadastro atualizado.');
     }
 
     public function aprovar(Request $request, CadastroAcesso $cadastro): RedirectResponse
     {
-        DB::transaction(function () use ($request, $cadastro): void {
-            $locked = CadastroAcesso::query()->lockForUpdate()->findOrFail($cadastro->id);
-            abort_unless($locked->status === 'pendente', 409, 'Cadastro não está pendente.');
-            abort_if($locked->solicitado_por_id === $request->user()->id, 403, 'O solicitante não pode aprovar o próprio cadastro.');
-            $locked->update([
-                'status' => 'aprovado',
-                'aprovado_por_id' => $request->user()->id,
-                'data_aprovacao' => now(),
-            ]);
-            $locked->auditoria()->create(['actor_id' => $request->user()->id, 'acao' => 'aprovado', 'created_at' => now()]);
-        });
+        $this->service->aprovar($cadastro, (int) $request->user()->id);
+
         return redirect()->back()->with('success', 'Cadastro aprovado.');
     }
 
     public function alterarStatus(Request $request, CadastroAcesso $cadastro): RedirectResponse
     {
         $data = $request->validate(['status' => ['required', Rule::in(['ativo', 'inativo', 'rejeitado'])]]);
-        DB::transaction(function () use ($request, $cadastro, $data): void {
-            $locked = CadastroAcesso::query()->lockForUpdate()->findOrFail($cadastro->id);
-            $allowed = match ($locked->status) {
-                'pendente' => ['rejeitado'],
-                'aprovado' => ['ativo', 'inativo'],
-                'ativo' => ['inativo'],
-                'inativo' => ['ativo'],
-                default => [],
-            };
-            abort_unless(in_array($data['status'], $allowed, true), 409, 'Transição de status não permitida.');
-            $previous = $locked->status;
-            $locked->update(['status' => $data['status']]);
-            $locked->auditoria()->create([
-                'actor_id' => $request->user()->id,
-                'acao' => 'status_alterado',
-                'dados' => ['anterior' => $previous, 'novo' => $data['status']],
-                'created_at' => now(),
-            ]);
-        });
+
+        $this->service->alterarStatus($cadastro, $data['status'], (int) $request->user()->id);
+
         return redirect()->back()->with('success', 'Status atualizado.');
     }
 }

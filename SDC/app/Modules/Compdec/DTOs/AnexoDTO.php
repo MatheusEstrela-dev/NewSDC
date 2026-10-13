@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Compdec\DTOs;
 
-class AnexoDTO
+final readonly class AnexoDTO
 {
     public function __construct(
         public string $tipo,

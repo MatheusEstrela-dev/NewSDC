@@ -5,45 +5,32 @@ declare(strict_types=1);
 namespace App\Modules\Inventario\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Inventario\Contracts\EquipamentoRepository;
-use App\Modules\Inventario\Enums\SituacaoEquipamento;
-use App\Modules\Inventario\Models\Equipamento;
+use App\Modules\Inventario\DTOs\EquipamentoData;
 use App\Modules\Inventario\Requests\EquipamentoRequest;
+use App\Modules\Inventario\Services\EquipamentoService;
 use Illuminate\Http\RedirectResponse;
 
 class EquipamentoController extends Controller
 {
-    public function __construct(private readonly EquipamentoRepository $equipamentos) {}
+    public function __construct(private readonly EquipamentoService $service) {}
 
     public function store(EquipamentoRequest $request): RedirectResponse
     {
-        $equipamento = new Equipamento($request->validated());
-        $equipamento->situacao = SituacaoEquipamento::DISPONIVEL;
-        $this->equipamentos->save($equipamento);
+        $this->service->criar(EquipamentoData::fromArray($request->validated()));
 
         return redirect()->route('inventario.index')->with('success', 'Equipamento cadastrado.');
     }
 
     public function update(EquipamentoRequest $request, int $equipamento): RedirectResponse
     {
-        $model = $this->equipamentos->find($equipamento) ?? abort(404);
-        abort_if(
-            $model->movimentacoes()->seguraEquipamento()->exists()
-                && (int) $request->validated('quantidade') !== $model->quantidade,
-            409,
-            'Não é possível alterar a quantidade durante uma movimentação ativa.'
-        );
-        $model->fill($request->validated());
-        $this->equipamentos->save($model);
+        $this->service->atualizar($equipamento, EquipamentoData::fromArray($request->validated()));
 
         return redirect()->back()->with('success', 'Equipamento atualizado.');
     }
 
     public function destroy(int $equipamento): RedirectResponse
     {
-        $model = $this->equipamentos->find($equipamento) ?? abort(404);
-        abort_if($model->movimentacoes()->seguraEquipamento()->exists(), 409, 'Há movimentação ativa para este equipamento.');
-        $model->delete();
+        $this->service->remover($equipamento);
 
         return redirect()->back()->with('success', 'Equipamento removido.');
     }

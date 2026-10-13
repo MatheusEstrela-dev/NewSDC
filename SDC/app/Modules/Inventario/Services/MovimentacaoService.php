@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventario\Services;
 
+use App\Modules\Inventario\DTOs\EmprestimoAvulsoData;
 use App\Modules\Inventario\Enums\SituacaoEquipamento;
 use App\Modules\Inventario\Enums\StatusMovimentacao;
 use App\Modules\Inventario\Enums\TipoMovimentacao;
@@ -19,24 +20,24 @@ use Illuminate\Validation\ValidationException;
  */
 final class MovimentacaoService
 {
-    public function registrar(array $data, int $actorId): Movimentacao
+    public function registrar(EmprestimoAvulsoData $dados, int $actorId): Movimentacao
     {
-        return DB::transaction(function () use ($data, $actorId): Movimentacao {
-            $equipamento = Equipamento::query()->lockForUpdate()->findOrFail($data['equipamento_id']);
+        return DB::transaction(function () use ($dados, $actorId): Movimentacao {
+            $equipamento = Equipamento::query()->lockForUpdate()->findOrFail($dados->equipamentoId);
             if (in_array($equipamento->situacao, [SituacaoEquipamento::MANUTENCAO, SituacaoEquipamento::BAIXADO], true)) {
                 throw ValidationException::withMessages(['equipamento_id' => 'Equipamento indisponível para movimentação.']);
             }
-            if ($data['tipo'] === TipoMovimentacao::EMPRESTIMO->value && ! $equipamento->emprestavel) {
+            if ($dados->tipo === TipoMovimentacao::EMPRESTIMO->value && ! $equipamento->emprestavel) {
                 throw ValidationException::withMessages(['equipamento_id' => 'Equipamento não permite empréstimo.']);
             }
 
             $ativos = (int) $equipamento->movimentacoes()->seguraEquipamento()->sum('quantidade');
-            if ($ativos > 0 || $data['quantidade'] !== $equipamento->quantidade) {
+            if ($ativos > 0 || $dados->quantidade !== (int) $equipamento->quantidade) {
                 throw ValidationException::withMessages(['quantidade' => 'Movimente a quantidade integral do equipamento, sem movimentação ativa.']);
             }
 
             $movimentacao = $equipamento->movimentacoes()->create([
-                ...$data,
+                ...$dados->toArray(),
                 'registrado_por_id' => $actorId,
                 'usuario_origem_id' => $equipamento->user_id,
                 'estacao_origem_id' => $equipamento->estacao_id,
@@ -45,8 +46,8 @@ final class MovimentacaoService
                 'status' => StatusMovimentacao::ATIVO->value,
             ]);
             $equipamento->update([
-                'user_id' => $data['usuario_destino_id'] ?? null,
-                'estacao_id' => $data['estacao_destino_id'] ?? null,
+                'user_id' => $dados->usuarioDestinoId,
+                'estacao_id' => $dados->estacaoDestinoId,
                 'situacao' => SituacaoEquipamento::EM_USO,
             ]);
 

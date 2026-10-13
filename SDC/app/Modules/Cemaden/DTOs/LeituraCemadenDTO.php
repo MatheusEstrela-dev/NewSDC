@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Cemaden\DTOs;
 
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
+
 use Illuminate\Support\Carbon;
 
 final readonly class LeituraCemadenDTO
 {
+    use SafeCastingTrait;
+
     public function __construct(
         public string $codigoEstacao,
         public Carbon $medidoEm,
@@ -38,7 +42,7 @@ final readonly class LeituraCemadenDTO
             // null significa estacao que nao transmitiu neste snapshot, e nao
             // chuva zero. Manter a distincao e o que permite a tela dizer
             // "sem telemetria" em vez de "sem chuva".
-            acumulado24h: ($acumulado === null || $acumulado === '') ? null : (float) $acumulado,
+            acumulado24h: self::asFloatOrNull($acumulado),
         );
     }
 }

@@ -6,7 +6,7 @@ namespace App\Modules\Pae\DTOs;
 
 use Illuminate\Http\UploadedFile;
 
-class PaeFormAnexoDTO
+final readonly class PaeFormAnexoDTO
 {
     public function __construct(
         public UploadedFile $arquivo,

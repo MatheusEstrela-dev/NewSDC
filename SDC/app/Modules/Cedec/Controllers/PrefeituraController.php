@@ -30,7 +30,7 @@ final class PrefeituraController extends Controller
 
     public function index(Request $request): Response
     {
-        $filtro = PrefeituraFiltroDTO::fromRequest($request);
+        $filtro = PrefeituraFiltroDTO::fromArray($request->query());
 
         return Inertia::render('Cedec/Prefeituras/Index', [
             'prefeituras' => $this->paraResource($this->service->listar($filtro)),

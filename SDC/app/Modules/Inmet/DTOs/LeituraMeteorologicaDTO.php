@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Inmet\DTOs;
 
+use App\Modules\Shared\DTOs\Traits\SafeCastingTrait;
+
 use Carbon\Carbon;
 use App\Modules\Inmet\Enums\NivelPrecipitacao;
 
 readonly class LeituraMeteorologicaDTO
 {
+    use SafeCastingTrait;
+
     public function __construct(
         public string $codigoEstacao,
         public string $nomeEstacao,
@@ -72,11 +76,9 @@ readonly class LeituraMeteorologicaDTO
 
     private static function parseFloat($value): ?float
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (float) $value;
+        // Texto nao numerico ("n/d", "-") vira ausencia, nunca medicao zero;
+        // zero legitimo e virgula decimal sao preservados (SafeCastingTrait).
+        return self::asFloatOrNull($value);
     }
 
     public function toArray(): array

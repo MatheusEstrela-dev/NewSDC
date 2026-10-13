@@ -7,7 +7,6 @@ namespace App\Modules\Demandas\DTOs;
 use App\Modules\Demandas\Enums\Impacto;
 use App\Modules\Demandas\Enums\Urgencia;
 use App\Modules\Demandas\Enums\TipoDemanda;
-use App\Modules\Demandas\Requests\UpdateDemandaRequest;
 
 final readonly class AtualizarDemandaData
 {
@@ -24,9 +23,9 @@ final readonly class AtualizarDemandaData
         public array $presentes,
     ) {}
 
-    public static function fromRequest(UpdateDemandaRequest $request): self
+    /** @param array<string, mixed> $data UpdateDemandaRequest::validated() */
+    public static function fromValidated(array $data): self
     {
-        $data = $request->validated();
         return new self(
             tipo: isset($data['tipo']) ? TipoDemanda::from($data['tipo']) : null,
             titulo: $data['titulo'] ?? null,

@@ -46,7 +46,7 @@ class PmdaPlanoService extends BaseService
         ];
     }
 
-    public function criar(int $municipioId, int $userId, array $data): PmdaPlano
+    public function criar(int $municipioId, int $userId, PmdaPlanoDTO $dto): PmdaPlano
     {
         $pendente = PmdaPlano::query()
             ->where('municipio_id', $municipioId)
@@ -60,7 +60,7 @@ class PmdaPlanoService extends BaseService
             );
         }
 
-        return PmdaPlano::create(array_merge(PmdaPlanoDTO::deFormulario($data)->toArray(), [
+        return PmdaPlano::create(array_merge($dto->toArray(), [
             'municipio_id' => $municipioId,
             'status'       => PmdaStatus::RASCUNHO,
             'created_by'   => $userId,
@@ -80,7 +80,7 @@ class PmdaPlanoService extends BaseService
      * coluna, chave com null limpa. E o que faz "submeti so a aba ISS" nao apagar
      * o resto e "apaguei o campo" gravar de fato.
      */
-    public function atualizar(PmdaPlano $plano, array $data, int $userId): PmdaPlano
+    public function atualizar(PmdaPlano $plano, PmdaPlanoDTO $dto, int $userId): PmdaPlano
     {
         if (! $plano->status->permiteEdicao()) {
             throw new \DomainException(sprintf(
@@ -89,7 +89,7 @@ class PmdaPlanoService extends BaseService
             ));
         }
 
-        $plano->update(array_merge(PmdaPlanoDTO::deFormulario($data)->toArray(), [
+        $plano->update(array_merge($dto->toArray(), [
             'updated_by'          => $userId,
             'dt_ultima_alteracao' => now(),
         ]));

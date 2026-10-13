@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Cedec\DTOs;
 
-use Illuminate\Http\Request;
 
 /**
  * Filtro da listagem estadual de prefeituras. Imutavel: uma instancia por requisicao,
- * construida em fromRequest() e repassada inteira ao service.
+ * construida em fromArray() com a query string e repassada inteira ao service.
  */
-final class PrefeituraFiltroDTO
+final readonly class PrefeituraFiltroDTO
 {
     private const PENDENCIAS_VALIDAS = ['sem_email', 'sem_telefone', 'sem_foto'];
 
@@ -24,15 +23,19 @@ final class PrefeituraFiltroDTO
         public int $perPage = 20,
     ) {}
 
-    public static function fromRequest(Request $request): self
+    /**
+     * @param  array<string, mixed>  $query  query string da listagem (o Controller
+     *                                    a entrega; o DTO nao conhece o Request HTTP)
+     */
+    public static function fromArray(array $query): self
     {
-        $pendencia = $request->query('pendencia');
-        $perPage = (int) $request->query('per_page', 20);
+        $pendencia = $query['pendencia'] ?? null;
+        $perPage = (int) ($query['per_page'] ?? 20);
 
         return new self(
-            busca: self::stringOuNulo($request->query('busca')),
-            redecId: self::intOuNulo($request->query('redec_id')),
-            macrorregiao: self::stringOuNulo($request->query('macrorregiao')),
+            busca: self::stringOuNulo($query['busca'] ?? null),
+            redecId: self::intOuNulo($query['redec_id'] ?? null),
+            macrorregiao: self::stringOuNulo($query['macrorregiao'] ?? null),
             pendencia: in_array($pendencia, self::PENDENCIAS_VALIDAS, true) ? $pendencia : null,
             perPage: in_array($perPage, self::PER_PAGE_VALIDOS, true) ? $perPage : 20,
         );

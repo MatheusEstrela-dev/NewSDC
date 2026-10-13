@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventario\Controllers;
 
+use App\Modules\Inventario\DTOs\EmprestimoAvulsoData;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Inventario\Enums\SituacaoEquipamento;
@@ -79,7 +80,7 @@ class MovimentacaoController extends Controller
         if (empty($data['usuario_destino_id']) && empty($data['estacao_destino_id'])) {
             throw ValidationException::withMessages(['usuario_destino_id' => 'Informe um usuário ou estação de destino.']);
         }
-        $this->service->registrar($data, (int) $request->user()->id);
+        $this->service->registrar(EmprestimoAvulsoData::fromArray($data), (int) $request->user()->id);
         return redirect()->back()->with('success', 'Movimentação registrada.');
     }
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Compdec\DTOs;
 
-class PlanoContingenciaDTO
+final readonly class PlanoContingenciaDTO
 {
     public function __construct(
         public string $versao,

@@ -53,7 +53,7 @@ class DemandaController extends Controller
         $this->authorize('viewAny', Demanda::class);
         $user = $request->user();
         $gerir = $user->can('demandas.chamados.manage');
-        $filtros = FiltroDemanda::fromRequest($request)->toArray();
+        $filtros = FiltroDemanda::fromValidated($request->validate(FiltroDemanda::regras()))->toArray();
 
         $demandas = $this->repository->paginate($filtros, 15, (int) $user->id, $gerir)
             ->through(fn (Demanda $d): array => $this->resumo($d));
@@ -96,7 +96,7 @@ class DemandaController extends Controller
 
     public function store(StoreDemandaRequest $request): RedirectResponse
     {
-        $demanda = $this->escrita->abrir(CriarDemandaData::fromRequest($request));
+        $demanda = $this->escrita->abrir(CriarDemandaData::fromValidated($request->validated(), (int) $request->user()->id));
 
         return redirect()->route('demandas.show', $demanda->id)->with('success', 'Demanda aberta: '.$demanda->protocolo);
     }
@@ -158,7 +158,7 @@ class DemandaController extends Controller
     public function update(int $id, UpdateDemandaRequest $request): RedirectResponse
     {
         $demanda = $this->repository->findById($id) ?? abort(404);
-        $this->escrita->atualizar($demanda, AtualizarDemandaData::fromRequest($request), (int) $request->user()->id);
+        $this->escrita->atualizar($demanda, AtualizarDemandaData::fromValidated($request->validated()), (int) $request->user()->id);
 
         return redirect()->back()->with('success', 'Alterações salvas.');
     }
@@ -211,7 +211,7 @@ class DemandaController extends Controller
     {
         $demanda = $this->repository->findById($id) ?? abort(404);
         try {
-            $this->status->resolver($demanda, ResolucaoDemandaData::fromRequest($request), (int) $request->user()->id);
+            $this->status->resolver($demanda, ResolucaoDemandaData::fromValidated($request->validated()), (int) $request->user()->id);
         } catch (DomainException $e) {
             return redirect()->back()->withErrors(['resolvida_em' => $e->getMessage()]);
         }
@@ -285,7 +285,7 @@ class DemandaController extends Controller
         $this->authorize('export', Demanda::class);
 
         return $this->csvExporter->download(
-            FiltroDemanda::fromRequest($request)->toArray(),
+            FiltroDemanda::fromValidated($request->validate(FiltroDemanda::regras()))->toArray(),
             (int) $request->user()->id,
             $request->user()->can('demandas.chamados.manage'),
         );
