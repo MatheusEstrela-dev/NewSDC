@@ -108,13 +108,17 @@ export function useHybridAI() {
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
+            // Uma linha SSE pode chegar partida entre dois reads; a sobra fica
+            // no buffer ate o proximo pedaco completar a linha.
+            let buffer = '';
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n');
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {

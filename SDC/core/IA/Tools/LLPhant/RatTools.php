@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Core\IA\Tools\LLPhant;
 
-use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\Models\RatOcorrencia;
+use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class RatTools
 {
-    protected RatRepositoryInterface $ratRepository;
+    protected RatWriteService $ratService;
 
     public function __construct()
     {
-        $this->ratRepository = app(RatRepositoryInterface::class);
+        $this->ratService = app(RatWriteService::class);
     }
 
     /**
@@ -27,6 +28,14 @@ class RatTools
     {
         try {
             $query = RatOcorrencia::query()->orderByDesc('created_at');
+
+            if (trim($municipio) !== '') {
+                $query->whereExists(fn ($q) => $q->selectRaw('1')
+                    ->from('rat_relato_dados_gerais as dg')
+                    ->whereColumn('dg.ocorrencia_id', 'rat_ocorrencias.id')
+                    ->whereNull('dg.deleted_at')
+                    ->where('dg.local_municipio_nome', 'ilike', '%' . trim($municipio) . '%'));
+            }
 
             if ($status) {
                 $statusInt = match (strtolower(trim($status))) {
@@ -94,13 +103,20 @@ class RatTools
     }
 
     /**
-     * Busca um RAT pelo ID numerico ou UUID interno do sistema. Use este metodo quando o usuario fornecer um ID exato; prefira buscarRatPorProtocolo quando tiver o numero do protocolo.
-     * @param string $id identificador unico do RAT (UUID ou ID numerico)
+     * Busca um RAT pelo UUID interno do sistema. Use este metodo quando o usuario fornecer um UUID exato; prefira buscarRatPorProtocolo quando tiver o numero do protocolo.
+     * @param string $id identificador unico do RAT (UUID, ex: 018f2a3b-0000-7000-8000-000000000001)
      */
     public function buscarRatPorId(string $id): string
     {
+        if (! Str::isUuid(trim($id))) {
+            return json_encode([
+                'encontrado' => false,
+                'mensagem'   => "ID de RAT invalido (esperado UUID): {$id}. Para numero de protocolo use buscarRatPorProtocolo.",
+            ]);
+        }
+
         try {
-            $rat = $this->ratRepository->findById(trim($id));
+            $rat = $this->ratService->findById(trim($id));
 
             if (!$rat) {
                 return json_encode([
@@ -187,18 +203,18 @@ class RatTools
 
     private function mapRatToArray(object $rat): array
     {
+        // dados_gerais vem do accessor do model (relato RatRelatoDadosGerais).
         $dadosGerais = is_array($rat->dados_gerais) ? $rat->dados_gerais : [];
-        $local       = is_array($rat->local)        ? $rat->local        : [];
 
         return [
             'id'             => $rat->id,
             'protocolo'      => $rat->protocolo,
             'status'         => $rat->status,
-            'municipio'      => $dadosGerais['local_municipio'] ?? $local['municipio'] ?? 'Nao informado',
+            'municipio'      => $dadosGerais['local_municipio_nome'] ?? $dadosGerais['local_municipio'] ?? 'Nao informado',
             'tipo_ocorrencia'=> $dadosGerais['nat_nome_operacao'] ?? 'Nao informado',
             'cobrade'        => $dadosGerais['nat_cobrade_id'] ?? null,
             'data_fato'      => $dadosGerais['data_fato'] ?? null,
-            'tem_vistoria'   => (bool) $rat->tem_vistoria,
+            'tem_vistoria'   => (bool) ($dadosGerais['tem_vistoria'] ?? false),
             'criado_em'      => $rat->created_at?->format('d/m/Y H:i'),
             'atualizado_em'  => $rat->updated_at?->format('d/m/Y H:i'),
         ];

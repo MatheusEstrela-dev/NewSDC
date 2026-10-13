@@ -62,9 +62,8 @@ class ChatController extends Controller
 
         $messages = $this->buildMessages($conversationId, $userInput);
 
-        $this->registerTools();
-
         try {
+            $this->registerTools();
             $content = $this->getChat()->generateChat($messages);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('AI Chat Error', [
@@ -82,8 +81,7 @@ class ChatController extends Controller
 
         $this->persistMessages($conversationId, $userInput, $content);
 
-        // Adicionar contexto RAG na resposta
-        $response['rag_context'] = $this->ragService->getContextData();
+        $elapsedMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
 
         return response()->json([
             'conversation_id'   => $conversationId,
@@ -108,12 +106,11 @@ class ChatController extends Controller
 
         $messages = $this->buildMessages($conversationId, $userInput);
 
-        $this->registerTools();
-
         // generateChat (nao-stream) executa o ciclo completo de function calling.
         // generateChatStream nao fecha o ciclo das tools no LLPhant — ver doc/ARCHITECTURE.
         // Pegamos a resposta completa e fazemos pseudo-stream em chunks para preservar UX.
         try {
+            $this->registerTools();
             $fullContent = $this->getChat()->generateChat($messages);
         } catch (\Throwable $err) {
             \Illuminate\Support\Facades\Log::error('AI Stream Error', [
@@ -289,7 +286,8 @@ class ChatController extends Controller
             }
 
             return "\n\n--- CONTEXTO DO BANCO (RAG) ---\n".implode("\n", $contextParts)."\n---";
-        } catch (\Exception) {
+        } catch (\Throwable) {
+            // RAG e opcional: sem chave de embeddings ou sem vector store, o chat segue sem contexto.
             return '';
         }
     }
@@ -352,6 +350,11 @@ class ChatController extends Controller
     protected function humanizeError(\Throwable $e): string
     {
         $msg = $e->getMessage();
+
+        // Chave ausente: o cliente OpenAI/Gemini recusa apiKey null ao ser construido.
+        if (str_contains($msg, 'withApiKey()') || str_contains($msg, '($apiKey) must be of type string')) {
+            return 'O assistente de IA nao esta configurado neste ambiente (chave da API ausente). Contate o suporte.';
+        }
 
         if (str_contains($msg, '"code": 429') || str_contains($msg, 'RESOURCE_EXHAUSTED')) {
             return 'Limite de uso da IA atingido. Tente novamente em alguns minutos.';
