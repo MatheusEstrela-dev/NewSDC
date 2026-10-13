@@ -63,7 +63,7 @@ Ao editar migrations para qualquer correção de schema, consolidar a alteraçã
 - Pmda e demais updates parciais: confirmar ausência versus `null` versus `false`/`0`.
 - Integrações: texto numérico inválido deve ser recusado ou tratado como ausência, nunca como medição zero.
 
-O checklist operacional está em `docs/plans/checklist_correcoes.md`. Nenhuma correção de código foi aplicada por este plano.
+O checklist operacional está em `docs/plans/checklist_correcoes.md`. A execução das correções está descrita na seção 7.
 
 ## 5. Avaliação por módulo
 
@@ -107,3 +107,23 @@ Esta tabela resume o alinhamento de cada módulo ao fluxo de **entrada e escrita
 - **Domínio e integração:** `Notificacoes/NotificacaoSpec`, `Resgate/Carteira`, os sete DTOs de `Ranking`, `Medalhao/PayloadBruto`, `Sismos/SismoDTO`, `Treinamento/ResultadoAutenticacaoCidadao`, os quatro DTOs de diretório de `Acessos` e `Tdap/VinculoPmdaDTO` cumprem papéis diferentes de um DTO de formulário; não se deve classificá-los como incorretos por não seguirem o fluxo HTTP de escrita.
 
 "Adequado" aqui significa compatível com a finalidade observada no código. A confirmação de persistência de ponta a ponta depende dos cenários de regressão da seção 4; não há aprovação global de todos os campos de cada DTO sem essa execução.
+
+## 7. Execução — 13/10/2026
+
+O plano foi executado integralmente na `dev` (etapas 0 a 3 da seção 3). Status item a item, commits e testes estão em `docs/plans/checklist_correcoes.md`, seção "Estado de execução".
+
+### Ferramentas compartilhadas criadas
+
+| Peça | Onde | Para quê |
+|---|---|---|
+| `SafeCastingTrait` | `App\Modules\Shared\DTOs\Traits` | Conversões que distinguem inválido, ausente e zero/falso: `asBoolOrNull` entende `"false"`, `asIntOrNull`/`asFloatOrNull` devolvem `null` para texto (nunca `0`) e aceitam vírgula decimal, `asUuidOrNull` mantém UUID como string. |
+| `LeituraComPresenca` | `App\Modules\Shared\DTOs\Traits` | O DTO registra quais colunas vieram no payload; `somentePresentes()` entrega ao update só essas — ausente preserva, `null`/`''` limpa, `false`/`0` grava. |
+
+O exemplo da #63 cita `App\Shared\...`; a pasta compartilhada real do projeto é `app/Modules/Shared`, por isso os traits ficaram lá.
+
+### Contrato aplicado
+
+1. **Controller monta o DTO** a partir de `validated()` (ou da query string, nos filtros) e o entrega tipado ao Service. Nenhum DTO importa `Request`/`FormRequest`; nenhum Service reconstrói DTO de entrada a partir de array (RAT: `RatRelatosDTO`).
+2. **Create × update.** Default de criação vem da coluna do banco (`ativo`, `tem_*`, `qtd_*`), não do DTO: ausente no update não reativa nem zera. `legacy_id` só entra no `toArray()` quando preenchido pela carga do legado.
+3. **Validação cobre tudo o que é persistido** (`RatVistoriaRequest` com as 109 colunas; `status` de Decretações validado por `StatusProcesso::regraDoCampo()`, aceitando o status legado já gravado).
+4. **Imutabilidade:** DTOs de entrada são `final readonly` quando nada os altera depois de criados.
