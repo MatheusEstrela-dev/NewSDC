@@ -138,7 +138,7 @@ function removerFoto() {
     <div class="flex max-h-full flex-col overflow-hidden">
       <div v-if="form.processing || fotoBusy" class="h-1 w-full overflow-hidden bg-slate-200 dark:bg-slate-700"><div class="h-full w-1/2 animate-pulse rounded-r-full bg-blue-600" /></div>
       <!-- Header: foto dedicada, identificacao do COMPDEC e bloco legivel da prefeitura -->
-      <div class="relative border-b border-slate-200 bg-gradient-to-r from-slate-100 via-white to-blue-50 px-6 py-5 dark:border-slate-700/50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900">
+      <div class="relative border-b border-slate-200 bg-gradient-to-r from-slate-100 via-white to-blue-50 px-4 sm:px-6 py-5 dark:border-slate-700/50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900">
         <button type="button" class="absolute right-4 top-4 rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-white" @click="fechar">
           <XMarkIcon class="h-5 w-5" />
         </button>
@@ -203,7 +203,7 @@ function removerFoto() {
       </div>
 
       <!-- Abas (pílula) -->
-      <nav class="flex items-center gap-1 overflow-x-auto border-b border-slate-200 bg-slate-50 px-6 py-2 scrollbar-hide dark:border-slate-700/50 dark:bg-slate-800/50">
+      <nav class="flex items-center gap-1 overflow-x-auto border-b border-slate-200 bg-slate-50 px-4 sm:px-6 py-2 scrollbar-hide dark:border-slate-700/50 dark:bg-slate-800/50">
         <button
           v-for="t in TABS" :key="t.id" type="button"
           class="flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all"
@@ -218,7 +218,7 @@ function removerFoto() {
       </nav>
 
       <!-- Corpo -->
-      <div class="flex-1 overflow-y-auto bg-slate-50 p-6 scrollbar-hide dark:bg-slate-900/50">
+      <div class="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 scrollbar-hide dark:bg-slate-900/50">
         <Transition mode="out-in" enter-active-class="transition-opacity duration-200" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition-opacity duration-150" leave-from-class="opacity-100" leave-to-class="opacity-0">
 
           <!-- ABA 1: DADOS -->
@@ -378,7 +378,7 @@ function removerFoto() {
       </div>
 
       <!-- Rodapé -->
-      <footer class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700/50 dark:bg-slate-800">
+      <footer class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-white px-4 sm:px-6 py-3 sm:py-4 dark:border-slate-700/50 dark:bg-slate-800">
         <Button variant="danger" size="sm" type="button" @click="fechar">Cancelar</Button>
         <Button variant="primary" size="sm" :loading="form.processing" :disabled="form.processing" @click="gravar">Salvar Alterações</Button>
       </footer>

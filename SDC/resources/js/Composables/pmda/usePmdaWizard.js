@@ -30,14 +30,32 @@ export const TOTAL_ETAPAS = PMDA_STEPS.length;
  *                                     (Inicio + ISS sao campos do plano e rodam em memoria;
  *                                     COMPDEC+ exige o ID, entao a criacao persiste ao chegar la).
  */
+/**
+ * Etapa mais alta ja alcancada por um plano salvo, deduzida dos dados (#56,
+ * "Travar as abas ate prosseguir"): reabrir um rascunho nao libera etapa que o
+ * municipio ainda nao percorreu.
+ */
+export function progressoDoPlano(plano, equipe = []) {
+  if (!plano) return 2;
+  let etapa = 3;
+  if (plano.compdec_coordenador || equipe.length) etapa = 4;
+  if (etapa === 4 && plano.pontos?.length) etapa = 5;
+  if (etapa === 5 && plano.comunidades?.length) etapa = 6;
+  const temAcao = plano.acao_decreto_se || plano.acao_caminhao_pipa || plano.acao_cestas_basicas || plano.justificativa_apoio;
+  if (etapa === 6 && temAcao) etapa = 7;
+  return etapa;
+}
+
 export function usePmdaWizard({ allUnlocked = false, initialTab = 1, maxUnlocked = 1 } = {}) {
   const activeTab = ref(initialTab);
+  // "Salvar e Avancar" libera a proxima etapa; clicar numa aba travada nao.
+  const alcancada = ref(0);
 
   // allUnlocked/maxUnlocked podem ser valor, ref ou getter (reativos no Create).
   const resolve = (v) => (typeof v === 'function' ? v() : unref(v));
 
   // No Create as etapas <= maxUnlocked ficam liberadas (as demais exigem o plano salvo).
-  const isUnlocked = (id) => resolve(allUnlocked) || id <= resolve(maxUnlocked);
+  const isUnlocked = (id) => resolve(allUnlocked) || id <= Math.max(resolve(maxUnlocked), alcancada.value);
 
   const tabs = computed(() =>
     PMDA_STEPS.map((s) => ({
@@ -49,7 +67,11 @@ export function usePmdaWizard({ allUnlocked = false, initialTab = 1, maxUnlocked
   const goTo = (id) => {
     if (isUnlocked(id)) activeTab.value = id;
   };
-  const next = () => goTo(Math.min(activeTab.value + 1, TOTAL_ETAPAS));
+  const next = () => {
+    const proxima = Math.min(activeTab.value + 1, TOTAL_ETAPAS);
+    alcancada.value = Math.max(alcancada.value, proxima);
+    goTo(proxima);
+  };
   const prev = () => goTo(Math.max(activeTab.value - 1, 1));
 
   return { activeTab, tabs, isUnlocked, goTo, next, prev };

@@ -28,6 +28,15 @@
       @update:model-value="local.municipio_id = $event"
     />
 
+    <FilterField
+      label="Ano"
+      type="select"
+      :model-value="local.ano"
+      :options="anoOptions"
+      placeholder="Todos os anos"
+      @update:model-value="local.ano = $event"
+    />
+
     <div>
       <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Criação — Data inicial</span>
       <DatePicker v-model="local.data_inicio" />
@@ -55,6 +64,7 @@ const props = defineProps({
   statusOpcoes: { type: Array, default: () => [] },
   municipios: { type: Array, default: () => [] },
   ocultarMunicipio: { type: Boolean, default: false },
+  anos: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(['apply', 'clear']);
@@ -63,10 +73,13 @@ const municipioOptions = computed(() =>
   props.municipios.map((m) => ({ value: m.id, label: `${m.nome} / ${m.uf}` }))
 );
 
+const anoOptions = computed(() => props.anos.map((a) => ({ value: a, label: String(a) })));
+
 const local = reactive({
   buscar: props.filters.buscar ?? '',
   status: props.filters.status ?? '',
   municipio_id: props.filters.municipio_id ?? '',
+  ano: props.filters.ano ?? '',
   data_inicio: props.filters.data_inicio ?? '',
   data_fim: props.filters.data_fim ?? '',
 });
@@ -75,6 +88,7 @@ function limpar() {
   local.buscar = '';
   local.status = '';
   local.municipio_id = '';
+  local.ano = '';
   local.data_inicio = '';
   local.data_fim = '';
   emit('clear');

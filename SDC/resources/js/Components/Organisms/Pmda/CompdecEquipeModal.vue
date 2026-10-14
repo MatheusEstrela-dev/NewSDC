@@ -103,7 +103,7 @@ function excluir(m) {
     <div class="flex max-h-full flex-col overflow-hidden">
       <div v-if="form.processing || acaoBusy" class="h-1 w-full overflow-hidden bg-slate-200 dark:bg-slate-700"><div class="h-full w-1/2 animate-pulse rounded-r-full bg-blue-600" /></div>
       <!-- Header -->
-      <div class="flex items-start justify-between border-b border-slate-200 bg-gradient-to-r from-slate-100 to-slate-200 px-6 py-4 dark:border-slate-700/50 dark:from-slate-800 dark:to-slate-900">
+      <div class="flex items-start justify-between border-b border-slate-200 bg-gradient-to-r from-slate-100 to-slate-200 px-4 sm:px-6 py-3 sm:py-4 dark:border-slate-700/50 dark:from-slate-800 dark:to-slate-900">
         <div class="flex items-center gap-3">
           <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-slate-700/50">
             <UsersIcon class="h-6 w-6 text-blue-500 dark:text-blue-400" />
@@ -118,7 +118,7 @@ function excluir(m) {
         </button>
       </div>
 
-      <div class="flex-1 space-y-6 overflow-y-auto bg-slate-50 p-6 scrollbar-hide dark:bg-slate-900/50">
+      <div class="flex-1 space-y-6 overflow-y-auto bg-slate-50 p-4 sm:p-6 scrollbar-hide dark:bg-slate-900/50">
         <!-- Formulario de membro -->
         <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
           <h3 class="mb-4 text-base font-bold text-slate-800 dark:text-slate-100">{{ editandoId ? 'Editar Membro' : 'Adicionar Membro' }}</h3>
@@ -210,7 +210,7 @@ function excluir(m) {
         </section>
       </div>
 
-      <footer class="flex shrink-0 items-center justify-end border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700/50 dark:bg-slate-800">
+      <footer class="flex shrink-0 items-center justify-end border-t border-slate-200 bg-white px-4 sm:px-6 py-3 sm:py-4 dark:border-slate-700/50 dark:bg-slate-800">
         <Button variant="danger" size="sm" type="button" @click="$emit('close')">Cancelar</Button>
       </footer>
     </div>

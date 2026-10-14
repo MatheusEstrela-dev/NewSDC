@@ -199,7 +199,7 @@ function remover(anexo) {
   <Modal :show="show" max-width="5xl" @close="fechar">
     <div class="flex max-h-full flex-col overflow-hidden bg-white dark:bg-slate-900">
       <div v-if="ausenciaForm.processing" class="h-1 w-full overflow-hidden bg-slate-200 dark:bg-slate-700"><div class="h-full w-1/2 animate-pulse rounded-r-full bg-blue-600" /></div>
-      <header class="flex items-start justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 px-6 py-5 dark:border-slate-700/50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900">
+      <header class="flex items-start justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 px-4 sm:px-6 py-5 dark:border-slate-700/50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900">
         <div class="flex min-w-0 items-start gap-3">
           <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30">
             <DocumentTextIcon class="h-6 w-6" />
@@ -217,7 +217,7 @@ function remover(anexo) {
         </button>
       </header>
 
-      <div class="flex-1 space-y-5 overflow-y-auto bg-slate-50 p-6 dark:bg-slate-900/60">
+      <div class="flex-1 space-y-5 overflow-y-auto bg-slate-50 p-4 sm:p-6 dark:bg-slate-900/60">
         <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-800/70">
           <div class="mb-4">
             <h3 class="text-sm font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">Leis e Decretos</h3>
@@ -283,7 +283,7 @@ function remover(anexo) {
         </section>
 
         <section class="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/60 dark:bg-slate-800/70">
-          <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700/60">
+          <div class="border-b border-slate-200 px-5 py-3 sm:py-4 dark:border-slate-700/60">
             <h3 class="text-sm font-bold text-slate-900 dark:text-white">Histórico de documentos</h3>
             <p class="text-xs text-slate-500 dark:text-slate-400">Clique em um bloco acima (Lei, Decreto ou Portaria) para anexar. Aqui ficam os arquivos enviados, com tipo, nome, datas e histórico.</p>
           </div>
@@ -332,7 +332,7 @@ function remover(anexo) {
         </section>
       </div>
 
-      <footer class="flex items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700/60 dark:bg-slate-900">
+      <footer class="flex items-center justify-end gap-3 border-t border-slate-200 bg-white px-4 sm:px-6 py-3 sm:py-4 dark:border-slate-700/60 dark:bg-slate-900">
         <Button variant="danger" size="sm" type="button" @click="fechar">Cancelar</Button>
         <Button variant="primary" size="sm" :loading="ausenciaForm.processing" :disabled="ausenciaForm.processing" @click="salvarDeclaracoes">Salvar Declarações</Button>
       </footer>

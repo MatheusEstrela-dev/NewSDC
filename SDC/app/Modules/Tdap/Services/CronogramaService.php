@@ -279,6 +279,19 @@ class CronogramaService
             return [false, 'Cronograma encerrado nao pode ser reativado.'];
         }
 
+        // 1 TDAP por municipio (#56): um cronograma em execucao por vez. A
+        // demanda maior se resolve com mais caminhoes no mesmo cronograma
+        // (locacao de frota), nao com um segundo cronograma em paralelo.
+        $outroAtivo = Cronograma::query()
+            ->where('municipio_id', $cronograma->municipio_id)
+            ->whereKeyNot($cronograma->id)
+            ->where('ativo', true)
+            ->whereNull('encerrado_em')
+            ->value('numero');
+        if ($outroAtivo !== null) {
+            return [false, "O municipio ja tem o cronograma {$outroAtivo} em execucao. Encerre-o antes de ativar outro."];
+        }
+
         $cronograma->loadCount('caminhoes');
         if ((int) $cronograma->caminhoes_count === 0) {
             return [false, 'Cronograma exige ao menos 1 caminhao alocado.'];

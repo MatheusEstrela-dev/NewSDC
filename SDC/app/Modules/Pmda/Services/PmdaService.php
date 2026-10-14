@@ -18,6 +18,7 @@ use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Pmda\Models\PmdaPlanoEvento;
 use App\Modules\Pmda\Models\PmdaPonto;
 use App\Modules\Pmda\Models\PmdaRepresentante;
+use App\Modules\Pmda\Support\NomeDeLugar;
 use App\Modules\Shared\BaseService;
 use App\Support\Cache\CachedRepository;
 use App\Modules\Shared\Events\RecursoAtualizado;
@@ -121,6 +122,9 @@ class PmdaPlanoService extends BaseService
                 $q->where('protocolo', 'ilike', "%{$termo}%")
                     ->orWhereHas('municipio', fn ($m) => $m->where('nome', 'ilike', "%{$termo}%"));
             });
+        }
+        if (! empty($filtros['ano'])) {
+            $query->whereYear('data', (int) $filtros['ano']);
         }
         if (! empty($filtros['data_inicio'])) {
             $query->whereDate('data', '>=', $filtros['data_inicio']);
@@ -473,6 +477,11 @@ class ComunidadeService
             if ($mestre === null) {
                 throw new \DomainException('Comunidade não encontrada para este município.');
             }
+            // 1 comunidade por PMDA (#56): nem repetida no mesmo plano, nem em
+            // dois planos ativos ao mesmo tempo.
+            if ($plano->comunidades()->where('comunidade_id', (int) $comunidadeId)->exists()) {
+                throw new \DomainException('Esta comunidade já está neste PMDA.');
+            }
             if ($this->jaEmPlanoAtivo((int) $comunidadeId, $plano->id)) {
                 throw new \DomainException('Esta comunidade já está vinculada a outro PMDA ativo.');
             }
@@ -499,6 +508,7 @@ class ComunidadeService
         }
 
         $data['municipio_id'] = $plano->municipio_id;
+        $data['ponto_id'] = $this->pontoDoPlano($plano, $data['ponto_id'] ?? null);
 
         $comunidade = $plano->comunidades()->create($data);
         $this->planos->recalcularStatus($plano);
@@ -534,6 +544,26 @@ class ComunidadeService
             ->get();
     }
 
+    /**
+     * Ponto de captacao que abastece a comunidade (#56): tem de ser um dos
+     * pontos da aba anterior do proprio plano. Sem escolha, vale o primeiro
+     * ponto do plano (o fallback que a tela tambem aplica); sem pontos, null.
+     */
+    private function pontoDoPlano(PmdaPlano $plano, mixed $pontoId): ?int
+    {
+        $pontosDoPlano = $plano->pontos()->orderBy('pip_pmda_ponto.id')->pluck('pip_pmda_ponto.id')->map(fn ($id) => (int) $id);
+
+        if ($pontoId === null || $pontoId === '') {
+            return $pontosDoPlano->first();
+        }
+
+        if (! $pontosDoPlano->contains((int) $pontoId)) {
+            throw new \DomainException('O ponto de captação escolhido não pertence a este PMDA.');
+        }
+
+        return (int) $pontoId;
+    }
+
     private function jaEmPlanoAtivo(int $comunidadeId, int $planoIdAtual): bool
     {
         return PmdaComunidade::query()
@@ -554,11 +584,14 @@ class ComunidadeSolicitacaoService
     {
         $nome = trim($data['nome']);
 
+        // Comparacao por NomeDeLugar, e nao LOWER(nome): "Olhos d'Água" e
+        // "Olhos Dagua" sao a mesma comunidade (#56). Os nomes de um municipio
+        // sao poucos, entao a comparacao roda em memoria.
         $duplicada = ComunidadeSolicitacao::query()
             ->where('municipio_id', $plano->municipio_id)
             ->where('status', SolicitacaoComunidadeStatus::PENDENTE->value)
-            ->whereRaw('LOWER(nome) = ?', [mb_strtolower($nome)])
-            ->exists();
+            ->pluck('nome')
+            ->contains(fn ($existente) => NomeDeLugar::iguais($existente, $nome));
 
         if ($duplicada) {
             throw new \DomainException('Já existe uma solicitação pendente com este nome para o município.');
@@ -566,11 +599,11 @@ class ComunidadeSolicitacaoService
 
         $jaCadastrada = Comunidade::query()
             ->where('municipio_id', $plano->municipio_id)
-            ->whereRaw('LOWER(nome) = ?', [mb_strtolower($nome)])
-            ->exists();
+            ->pluck('nome')
+            ->first(fn ($existente) => NomeDeLugar::iguais($existente, $nome));
 
-        if ($jaCadastrada) {
-            throw new \DomainException('Esta comunidade já está cadastrada. Use "Adicionar Comunidade".');
+        if ($jaCadastrada !== null) {
+            throw new \DomainException("Esta comunidade já está cadastrada como \"{$jaCadastrada}\". Use \"Adicionar Comunidade\".");
         }
 
         return ComunidadeSolicitacao::create([

@@ -14,7 +14,7 @@ import PmdaPontoSection from '@/Components/Organisms/Pmda/PmdaPontoSection.vue';
 import PmdaDistribuicaoSection from '@/Components/Organisms/Pmda/PmdaDistribuicaoSection.vue';
 import PmdaAcoesSection from '@/Components/Organisms/Pmda/PmdaAcoesSection.vue';
 import PmdaAnexosSection from '@/Components/Organisms/Pmda/PmdaAnexosSection.vue';
-import { usePmdaWizard } from '@/Composables/pmda/usePmdaWizard.js';
+import { progressoDoPlano, usePmdaWizard } from '@/Composables/pmda/usePmdaWizard.js';
 
 defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
@@ -25,6 +25,7 @@ const props = defineProps({
   compdec_ficha: { type: Object, default: () => ({}) },
   compdec_anexos: { type: Array, default: () => [] },
   compdec_equipe: { type: Array, default: () => [] },
+  iss_travados: { type: Array, default: () => [] },
 });
 
 // Resource FLAT com campo proprio "data" (string ISO): so desembrulha quando "data"
@@ -35,10 +36,10 @@ const dados = computed(() => {
   return p.data && typeof p.data === 'object' ? p.data : p;
 });
 
-// Edit: edicao de um PMDA existente — todas as etapas liberadas.
-// (A CRIACAO roda inteira no contexto Create/continuar, nunca aqui.)
+// Edit: as etapas ja cobertas pelos dados ficam liberadas; as seguintes abrem
+// conforme o municipio avanca (#56, "Travar as abas ate prosseguir").
 const { activeTab, tabs, goTo, next, prev } = usePmdaWizard({
-  allUnlocked: true,
+  maxUnlocked: () => progressoDoPlano(dados.value, props.compdec_equipe),
   initialTab: 1,
 });
 
@@ -168,6 +169,7 @@ function voltar() {
       <PmdaIssSection
         v-else-if="activeTab === 2"
         :form="form"
+        :travados="iss_travados"
         :saving="form.processing"
         @next="salvarEAvancar"
         @prev="prev"

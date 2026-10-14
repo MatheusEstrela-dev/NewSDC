@@ -46,6 +46,9 @@ const totalDemanda = computed(() => comunidades.value.reduce((s, c) => s + (Numb
 
 const fmt = (n) => new Intl.NumberFormat('pt-BR').format(n ?? 0);
 
+// Ponto de captacao da aba anterior que abastece a comunidade.
+const nomePonto = (id) => (id ? (props.plano.pontos ?? []).find((p) => p.id === id)?.nome ?? null : null);
+
 function remover(id) {
   router.delete(route('pmda.comunidades.destroy', id), { preserveScroll: true });
 }
@@ -103,7 +106,12 @@ function remover(id) {
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
           <tr v-for="c in comunidades" :key="c.id" class="text-slate-700 dark:text-slate-300">
-            <td class="px-4 py-2.5 font-medium">{{ c.nome }}</td>
+            <td class="px-4 py-2.5 font-medium">
+              {{ c.nome }}
+              <span v-if="nomePonto(c.ponto_id)" class="block text-xs font-normal text-slate-500 dark:text-slate-400">
+                Captação: {{ nomePonto(c.ponto_id) }}
+              </span>
+            </td>
             <td class="px-4 py-2.5">{{ fmt(c.pop_atendida) }}</td>
             <td class="px-4 py-2.5">{{ c.distancia_km ? `${c.distancia_km} km` : '—' }}</td>
             <td class="px-4 py-2.5 font-semibold text-blue-600 dark:text-blue-400">{{ fmt(c.demanda_litros) }} L</td>
@@ -159,6 +167,7 @@ function remover(id) {
       :show="showAdd"
       :plano-id="plano.id"
       :comunidades="comunidadesDisponiveis"
+      :pontos="plano.pontos ?? []"
       @close="showAdd = false"
     />
     <ComunidadeSolicitarModal

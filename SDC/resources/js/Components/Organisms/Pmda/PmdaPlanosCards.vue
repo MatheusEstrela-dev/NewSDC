@@ -25,6 +25,7 @@
           @click="$emit('imprimir', plano.id)"
         />
         <ActionButton
+          v-if="plano.pode_editar"
           action="edit" module="pmda" resource="planos"
           :allowed="canEdit" :show-label="false" size="sm"
           tooltip-text="Editar PMDA"

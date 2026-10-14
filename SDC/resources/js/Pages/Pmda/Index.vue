@@ -54,6 +54,7 @@
       :filters="filtros"
       :status-opcoes="statusOpcoes"
       :municipios="municipios"
+      :anos="anos"
       :ocultar-municipio="perfil.e_compdec"
       @apply="aplicar"
       @clear="limpar"
@@ -103,6 +104,7 @@
                     @click="imprimir(plano.id)"
                   />
                   <ActionButton
+                    v-if="plano.pode_editar"
                     action="edit" module="pmda" resource="planos"
                     :allowed="can('pmda.planos.edit')" :show-label="false" size="sm"
                     tooltip-text="Editar PMDA"
@@ -325,6 +327,7 @@ function onExport(params) {
   handleExport(params, {
     status: filtros.status || undefined,
     municipio_id: filtros.municipio_id || undefined,
+    ano: filtros.ano || undefined,
   });
 }
 
@@ -334,6 +337,7 @@ const props = defineProps({
   statistics: { type: Object, default: () => ({ total: 0, emEdicao: 0, emAnalise: 0, aprovados: 0 }) },
   statusOpcoes: { type: Array, default: () => [] },
   municipios: { type: Array, default: () => [] },
+  anos: { type: Array, default: () => [] },
   // e_compdec recorta a tela ao municipio do usuario; pode_criar espelha a
   // PmdaPlanoPolicy::create para o front nao reimplementar a regra.
   perfil: { type: Object, default: () => ({ e_compdec: false, e_cedec: false, pode_criar: false }) },
@@ -357,6 +361,7 @@ function aplicar(f) {
     buscar: f.buscar || undefined,
     status: f.status || undefined,
     municipio_id: f.municipio_id || undefined,
+    ano: f.ano || undefined,
     data_inicio: f.data_inicio || undefined,
     data_fim: f.data_fim || undefined,
   }, { preserveState: true, replace: true });

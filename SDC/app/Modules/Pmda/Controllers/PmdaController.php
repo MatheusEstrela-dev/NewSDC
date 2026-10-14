@@ -41,6 +41,7 @@ use App\Modules\Pmda\Services\PlanoPontoService;
 use App\Modules\Pmda\Services\PmdaCopiaService;
 use App\Modules\Pmda\Services\PmdaPlanoService;
 use App\Modules\Pmda\Services\RepresentanteService;
+use App\Modules\Pmda\Support\IssDaPrefeitura;
 use App\Modules\Pmda\Support\PerfilPmda;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Http\RedirectResponse;
@@ -274,7 +275,7 @@ class PmdaPlanoController extends Controller
         // nao o municipio de gravacao: super-admin le o estado inteiro mesmo
         // lotado num COMPDEC. Quem grava continua usando municipioId().
         $municipioId = $perfil->municipioDoEscopo();
-        $filtros = $perfil->aplicarEscopo($request->only(['buscar', 'status', 'municipio_id', 'data_inicio', 'data_fim']));
+        $filtros = $perfil->aplicarEscopo($request->only(['buscar', 'status', 'municipio_id', 'ano', 'data_inicio', 'data_fim']));
         $page = max(1, (int) $request->query('page', '1'));
         $path = $request->url();
 
@@ -303,6 +304,14 @@ class PmdaPlanoController extends Controller
             'statusOpcoes' => collect(\App\Modules\Pmda\Enums\PmdaStatus::cases())
                 ->map(fn ($s) => ['value' => $s->value, 'label' => $s->getLabel()])->values(),
             'municipios'   => $partes['municipios'],
+            // Filtro por ano (#56): so os anos que tem PMDA no recorte de leitura.
+            'anos'         => PmdaPlano::query()
+                ->when($municipioId !== null, fn ($q) => $q->where('municipio_id', $municipioId))
+                ->whereNotNull('data')
+                ->selectRaw('DISTINCT EXTRACT(YEAR FROM data)::int AS ano')
+                ->orderByDesc('ano')
+                ->pluck('ano')
+                ->all(),
             'perfil'       => [
                 'e_compdec' => $perfil->eCompdec(),
                 'e_cedec'   => $perfil->eCedec(),
@@ -353,8 +362,10 @@ class PmdaPlanoController extends Controller
 
         return Inertia::render('Pmda/Create', [
             'municipio' => ['id' => $municipio->id, 'nome' => $municipio->nome, 'uf' => $municipio->uf],
-            // Fallback: pre-preenche a aba ISS com os dados do ultimo PMDA do municipio.
-            'iss_fallback' => $this->issFallback($municipioId),
+            // Fallback da aba ISS: o cadastro da Prefeitura (fonte de verdade, campos
+            // travados) por cima do ultimo PMDA do municipio (#56).
+            'iss_fallback' => array_merge($this->issFallback($municipioId) ?? [], IssDaPrefeitura::dados($municipioId)) ?: null,
+            'iss_travados' => IssDaPrefeitura::travados($municipioId),
         ]);
     }
 
@@ -417,7 +428,10 @@ class PmdaPlanoController extends Controller
             $plano = $this->service->criar(
                 municipioId: (int) $request->validated('municipio_id'),
                 userId: (int) $request->user()->id,
-                dto: PmdaPlanoDTO::deFormulario(collect($request->validated())->except('municipio_id')->toArray()),
+                dto: PmdaPlanoDTO::deFormulario(IssDaPrefeitura::aplicar(
+                    (int) $request->validated('municipio_id'),
+                    collect($request->validated())->except('municipio_id')->toArray(),
+                )),
             );
         } catch (\DomainException $e) {
             return to_route('pmda.planos.index')->with('error', $e->getMessage());
@@ -467,6 +481,7 @@ class PmdaPlanoController extends Controller
             'compdec_ficha' => $this->compdecFicha->fichaDoPlano($plano),
             'compdec_anexos' => $this->compdecAnexosDoPlano($plano),
             'compdec_equipe' => $this->compdecEquipeDoPlano($plano),
+            'iss_travados' => IssDaPrefeitura::travados((int) $plano->municipio_id),
         ];
     }
 
@@ -515,15 +530,25 @@ class PmdaPlanoController extends Controller
         return Inertia::render('Pmda/Create', $this->wizardProps($plano));
     }
 
-    public function edit(PmdaPlano $plano): Response
+    public function edit(PmdaPlano $plano): Response|RedirectResponse
     {
+        // #56 "Retirar opcao de Edicao": plano enviado/aprovado/encerrado nao
+        // abre o formulario -- todo salvamento seria recusado pelo
+        // GarantirPmdaEditavel. A consulta continua pela ficha e pelo historico.
+        if (! $plano->status->permiteEdicao()) {
+            return to_route('pmda.planos.index')->with('error', sprintf(
+                'Este PMDA está %s e não aceita mais edição. Para alterar, duplique o plano.',
+                mb_strtolower($plano->status->getLabel()),
+            ));
+        }
+
         return Inertia::render('Pmda/Edit', $this->wizardProps($plano));
     }
 
     public function update(UpdatePmdaPlanoRequest $request, PmdaPlano $plano): RedirectResponse
     {
         try {
-            $this->service->atualizar($plano, PmdaPlanoDTO::deFormulario($request->validated()), (int) $request->user()->id);
+            $this->service->atualizar($plano, PmdaPlanoDTO::deFormulario(IssDaPrefeitura::aplicar((int) $plano->municipio_id, $request->validated())), (int) $request->user()->id);
         } catch (\DomainException $e) {
             return back()->withErrors(['plano' => $e->getMessage()]);
         }

@@ -132,3 +132,36 @@
     color: rgb(253 230 138);
     border-color: rgb(133 77 14 / 0.5);
 }
+
+/* ==========================================================================
+   Responsividade (#56): 1024x728 e 640x400.
+   Telas estreitas: menos respiro lateral e rodape que quebra em vez de
+   espremer os botoes. Telas BAIXAS (400px de altura): cabecalho do card
+   compacto para o formulario aparecer sem rolar meia tela.
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .pmda-step-head { padding: 1rem 1.25rem; }
+    .pmda-step-body { padding: 1.25rem; }
+    .pmda-step-foot { padding: 0.875rem 1.25rem; }
+}
+
+@media (max-width: 640px) {
+    .pmda-step-head { padding: 0.875rem 1rem; gap: 0.625rem; }
+    .pmda-step-icon { width: 2.25rem; height: 2.25rem; }
+    .pmda-step-icon svg { width: 1.15rem; height: 1.15rem; }
+    .pmda-step-title { font-size: 1rem; }
+    .pmda-step-body { padding: 1rem; }
+    .pmda-step-foot {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+    .pmda-step-foot > * { flex: 1 1 auto; }
+    .pmda-btn-next { justify-content: center; }
+}
+
+@media (max-height: 500px) {
+    .pmda-step-head { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+    .pmda-step-sub { display: none; }
+    .pmda-step-body { padding-top: 0.875rem; padding-bottom: 0.875rem; }
+}

@@ -41,14 +41,14 @@ const etapas = [
     leave-from-class="opacity-100"
     leave-to-class="opacity-0"
   >
-    <div v-if="show" class="fixed inset-0 z-[10050] flex items-center justify-center p-4 sm:p-6 md:p-10">
+    <div v-if="show" class="fixed inset-0 z-[10050] flex items-center justify-center p-3 sm:p-6 md:p-10">
       <!-- Backdrop -->
       <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="close"></div>
 
       <!-- Container -->
-      <div class="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all dark:bg-slate-900">
+      <div class="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl sm:max-h-[90vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all dark:bg-slate-900">
         <!-- Header -->
-        <div class="flex shrink-0 items-center justify-between bg-blue-700 p-6 text-white dark:bg-blue-900">
+        <div class="flex shrink-0 items-center justify-between bg-blue-700 p-4 text-white dark:bg-blue-900 sm:p-6">
           <div class="flex items-center gap-4">
             <div class="rounded-lg bg-white/20 p-2">
               <DocumentTextIcon class="h-8 w-8" />
@@ -66,7 +66,7 @@ const etapas = [
         </div>
 
         <!-- Conteúdo -->
-        <div class="flex-1 overflow-y-auto bg-slate-50 p-6 dark:bg-slate-950 md:p-10">
+        <div class="flex-1 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950 sm:p-6 md:p-10">
           <div class="space-y-8">
             <!-- 1. O que é -->
             <div class="group">

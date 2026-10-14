@@ -1,7 +1,7 @@
 <template>
   <Modal :show="open" max-width="2xl" @close="$emit('close')">
     <div class="flex max-h-full min-h-0 flex-col modal-serie-corpo">
-      <div class="shrink-0 px-4 py-4 md:px-6 md:py-5 modal-serie-header">
+      <div class="shrink-0 px-4 py-3 sm:py-4 md:px-6 md:py-5 modal-serie-header">
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-full bg-slate-900/40 border border-slate-700/40 flex items-center justify-center">

@@ -15,7 +15,7 @@ import PmdaDistribuicaoSection from '@/Components/Organisms/Pmda/PmdaDistribuica
 import PmdaAcoesSection from '@/Components/Organisms/Pmda/PmdaAcoesSection.vue';
 import PmdaAnexosSection from '@/Components/Organisms/Pmda/PmdaAnexosSection.vue';
 import InstrucoesPmdaModal from '@/Components/Organisms/InstrucoesPmdaModal.vue';
-import { usePmdaWizard } from '@/Composables/pmda/usePmdaWizard.js';
+import { progressoDoPlano, usePmdaWizard } from '@/Composables/pmda/usePmdaWizard.js';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -31,6 +31,7 @@ const props = defineProps({
   compdec_anexos: { type: Array, default: () => [] },
   compdec_equipe: { type: Array, default: () => [] },
   iss_fallback: { type: Object, default: null },
+  iss_travados: { type: Array, default: () => [] },
 });
 
 // O PmdaPlanoResource e serializado FLAT (sem envelope "data") e possui um campo
@@ -55,9 +56,10 @@ const municipioLabel = computed(() => {
 // Antes de criar: Inicio + ISS liberados (campos do plano, em memoria).
 // Apos criar: tudo liberado; comeca no COMPDEC (Inicio+ISS ja preenchidos).
 // allUnlocked reativo: ao persistir (criado true), libera todas as abas sem remount.
+// Abas travadas ate o municipio prosseguir (#56): antes de criar, Inicio + ISS;
+// depois, ate a etapa que os dados ja cobrem, e cada "Salvar e Avancar" libera a seguinte.
 const { activeTab, tabs, goTo, next, prev } = usePmdaWizard({
-  allUnlocked: criado,
-  maxUnlocked: 2,
+  maxUnlocked: () => (criado.value ? progressoDoPlano(dados.value, props.compdec_equipe) : 2),
   initialTab: criado.value ? 3 : 1,
 });
 
@@ -181,6 +183,7 @@ function voltar() {
       <PmdaIssSection
         v-else-if="activeTab === 2"
         :form="form"
+        :travados="iss_travados"
         :saving="form.processing"
         @next="salvarEAvancar"
         @prev="prev"

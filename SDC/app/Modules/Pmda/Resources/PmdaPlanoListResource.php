@@ -27,6 +27,8 @@ class PmdaPlanoListResource extends JsonResource
             'dt_analise'   => $this->dt_analise?->toIso8601String(),
             'resp_homolog' => $this->resp_homolog,
             'pode_copiar'  => $this->status->permiteCopia(),
+            // Sem edicao fora dos status editaveis: a listagem esconde o botao.
+            'pode_editar'  => $this->status->permiteEdicao(),
             // Exclusao: admin/super-admin em qualquer status; demais so ATENDIDO.
             'pode_excluir' => ($request->user()?->hasAnyRole('super-admin', 'admin') ?? false)
                 || $this->status === PmdaStatus::ATENDIDO,
