@@ -125,6 +125,48 @@ class RatWriteService
         });
     }
 
+    public function findById(string $id): ?RatOcorrencia
+    {
+        return RatOcorrencia::with([
+            'creator',
+            'updater',
+            'historicos',
+            'ratAnexos',
+            'relatosMorph.conteudo', // Carrega vistoria, envolvidos, recursos, dados_gerais
+            'ocorrenciaOrigem',
+            'ocorrenciasFilhas',
+        ])->find($id);
+    }
+
+    public function finalize(string $id): RatOcorrencia
+    {
+        $ocorrencia = RatOcorrencia::findOrFail($id);
+        abort_if($ocorrencia->status === 1, 422, 'RAT já está finalizado.');
+
+        // Finalizar manualmente e permitido a qualquer momento: e o autor
+        // abrindo mao do restante da janela de edicao de 48h. O prazo_edicao
+        // existe para BLOQUEAR edicao apos vencer (update()) e para o
+        // fechamento automatico (rat:close-expired) — nao para impedir o
+        // fechamento manual antecipado (com o bloqueio, ninguem finalizava:
+        // antes das 48h a regra proibia e depois o cron ja tinha fechado).
+        // Transacao: o RelatorioFinalizadoV1 tem de cair no outbox junto com a
+        // virada de status, senao o marco existe no banco e nunca no ranking
+        // (ou o contrario, se o outbox gravasse fora).
+        return DB::transaction(function () use ($ocorrencia): RatOcorrencia {
+            $userId = $this->actorUserId();
+
+            $ocorrencia->update([
+                'status'     => 1,
+                'updated_by' => $userId,
+            ]);
+
+            $this->publicarRelatorioFinalizado($ocorrencia, $userId, 'manual');
+
+            return $ocorrencia->fresh();
+        });
+    }
+
+
     public function saveDraft(string $id, RatRelatosDTO $relatos): RatOcorrencia
     {
         return DB::transaction(function () use ($id, $relatos) {

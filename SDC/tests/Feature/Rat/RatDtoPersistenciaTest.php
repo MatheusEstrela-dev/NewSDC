@@ -312,6 +312,19 @@ class RatDtoPersistenciaTest extends TestCase
         $this->assertNull(RatOcorrencia::find($o->id));
     }
 
+    // ── Telas e finalizacao (findById/finalize) ─────────────────────────────
+
+    public function test_rat_abre_edita_e_finaliza(): void
+    {
+        $id = $this->postJson(route('rat.store'), $this->payloadFormulario())->assertCreated()->json('id');
+
+        $this->get(route('rat.show', $id))->assertOk();
+        $this->get(route('rat.edit', $id))->assertOk();
+
+        $this->patch(route('rat.finalize', $id))->assertRedirect();
+        $this->assertSame(1, (int) RatOcorrencia::findOrFail($id)->status);
+    }
+
     // ── Historico (API v1) ──────────────────────────────────────────────────
 
     public function test_historico_da_ocorrencia_aceita_uuid(): void
