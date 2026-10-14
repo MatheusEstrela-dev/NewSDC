@@ -10,6 +10,7 @@
     >
       <template #actions>
         <ActionButton action="view" :allowed="true" variant="secondary" label="Frota e Vistorias" @click="router.visit(route('tdap.frota.index'))" />
+        <ActionButton action="view" :allowed="true" variant="secondary" label="Agenda" @click="router.visit(route('tdap.frota.vistorias.agenda'))" />
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
         <!-- Abre o seletor de caminhao, e nao a rota direto: `vistorias.create`
              exige o caminhao no caminho (`frota/{caminhao}/vistorias/nova`).
@@ -186,7 +187,7 @@
       </template>
 
       <template #mobile-actions="{ item: v }">
-        <div class="flex items-center justify-end gap-1">
+        <div class="flex flex-wrap items-center justify-end gap-1">
         <ActionButton
         action="view"
         module="tdap"

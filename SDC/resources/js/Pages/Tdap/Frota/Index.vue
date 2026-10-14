@@ -230,7 +230,7 @@
       </template>
 
       <template #mobile-actions="{ item: caminhao }">
-        <div class="flex items-center justify-end">
+        <div class="flex flex-wrap items-center justify-end">
         <ActionButton module="tdap" resource="caminhoes" :actions="acoesDaLinha(caminhao)" />
         </div>
       </template>

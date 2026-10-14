@@ -62,6 +62,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Texto do periodo sem eventos (a agenda de vistorias da TDAP reaproveita o calendario).
+  textoVazio: {
+    type: String,
+    default: 'Nenhum plantao escalado neste periodo.',
+  },
+  // Linha "dia inteiro" na grade de horas, para eventos sem horario.
+  comDiaInteiro: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['selecionar-dia', 'selecionar-vaga', 'mudar-mes']);
@@ -156,7 +166,7 @@ const opcoes = computed(() => ({
   // expandRows FALSE de proposito: com true as linhas se esticam para preencher
   // a altura e a rolagem desaparece, que e o oposto do pedido.
   expandRows: false,
-  allDaySlot: false,
+  allDaySlot: props.comDiaInteiro,
   nowIndicator: true,
   // "dom 31" em vez de "domingo, 31 de agosto": sao sete colunas estreitas.
   dayHeaderFormat: telaEstreita.value
@@ -165,7 +175,7 @@ const opcoes = computed(() => ({
   // Rotulos curtos: "Semana" e "Dia" inteiros estouram a barra em 375px.
   buttonText: { day: 'Dia', week: 'Semana' },
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-  noEventsContent: 'Nenhum plantao escalado neste periodo.',
+  noEventsContent: props.textoVazio,
   datesSet: aoMudarIntervalo,
   eventClick: aoClicarEvento,
   dateClick: aoClicarDia,

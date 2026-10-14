@@ -40,8 +40,15 @@
           <option value="viagem">Viagem</option>
           <option value="vistoria">Vistoria</option>
           <option value="crono_caminhao">Caminhão alocado</option>
+          <option value="prestador">Prestador</option>
+          <option value="caminhao">Caminhão</option>
+          <option value="ata">Ata</option>
+          <option value="lote">Lote</option>
         </select>
-        <input v-model="filtroTipo" type="text" placeholder="tipo_evento (ex: cronograma.ativado)" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm md:col-span-2" @keyup.enter="aplicarFiltros" />
+        <select v-model="filtroTipo" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm md:col-span-2" @change="aplicarFiltros">
+          <option value="">Tipo de evento</option>
+          <option v-for="t in tiposEvento" :key="t.value" :value="t.value">{{ t.label }}</option>
+        </select>
         <DatePicker v-model="filtroDe" placeholder="Data inicial" @update:model-value="aplicarFiltros" />
         <DatePicker v-model="filtroAte" placeholder="Data final" @update:model-value="aplicarFiltros" />
       </div>
@@ -70,9 +77,9 @@
                   <tr v-for="h in historicos.data" :key="h.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-300 text-xs">{{ fmtDateTime(h.data_evento) }}</td>
                     <td class="px-4 py-3">
-                      <span :class="classeBadgeDoEvento(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs">{{ h.tipo_evento }}</span>
+                      <span :class="classeBadgeDoEvento(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs" :title="h.tipo_evento">{{ h.tipo_rotulo ?? h.tipo_evento }}</span>
                     </td>
-                    <td class="px-4 py-3 text-xs">{{ h.entity_type }}#{{ h.entity_id }}</td>
+                    <td class="px-4 py-3 text-xs"><Link v-if="h.entidade?.url" :href="h.entidade.url" class="text-sky-600 hover:underline">{{ h.entidade.rotulo }}</Link><span v-else :class="h.entidade?.excluido ? 'text-slate-400 line-through' : ''">{{ h.entidade?.rotulo ?? `${h.entity_type} ${h.entity_id}` }}</span></td>
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.obs || '—' }}</td>
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.user?.name || 'Sistema' }}</td>
                     <td class="px-4 py-3 text-right">
@@ -98,11 +105,11 @@
       </template>
 
       <template #mobile-c1="{ item: h }">
-        <span :class="classeBadgeDoEvento(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs">{{ h.tipo_evento }}</span>
+        <span :class="classeBadgeDoEvento(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs" :title="h.tipo_evento">{{ h.tipo_rotulo ?? h.tipo_evento }}</span>
       </template>
 
       <template #mobile-c2="{ item: h }">
-        {{ h.entity_type }}#{{ h.entity_id }}
+        <Link v-if="h.entidade?.url" :href="h.entidade.url" class="text-sky-600 hover:underline">{{ h.entidade.rotulo }}</Link><span v-else :class="h.entidade?.excluido ? 'text-slate-400 line-through' : ''">{{ h.entidade?.rotulo ?? `${h.entity_type} ${h.entity_id}` }}</span>
       </template>
 
       <template #mobile-c3="{ item: h }">
@@ -114,7 +121,7 @@
       </template>
 
       <template #mobile-actions="{ item: h }">
-        <div class="flex items-center justify-end gap-1">
+        <div class="flex flex-wrap items-center justify-end gap-1">
         <ActionButton
         action="view"
         module="tdap"
@@ -163,6 +170,7 @@ const props = defineProps({
   historicos:   { type: Object, default: () => ({ data: [], meta: {} }) },
   estatisticas: { type: Object, default: () => ({ total:0, mes_atual:0, cronogramas_envolvidos:0 }) },
   filtros:      { type: Object, default: () => ({}) },
+  tiposEvento:  { type: Array, default: () => [] },
 });
 
 const filtroEntityType = ref(props.filtros.entity_type ?? '');

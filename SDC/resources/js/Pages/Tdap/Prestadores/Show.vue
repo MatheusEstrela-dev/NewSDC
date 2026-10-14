@@ -84,12 +84,7 @@
       <aside class="space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
           <p class="text-sm text-slate-500">Status</p>
-          <span
-            :class="p.ativo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'"
-            class="mt-2 inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium"
-          >
-            {{ p.ativo ? 'Ativo' : 'Inativo' }}
-          </span>
+          <div class="mt-2"><TdapStatusBadge :active="p.ativo" /></div>
         </div>
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
           <p class="text-sm text-slate-500">Caminhões vinculados</p>

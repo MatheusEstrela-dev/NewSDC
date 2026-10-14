@@ -143,6 +143,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::middleware('can:tdap.vistorias.view')->group(function () {
                 Route::get('/', [FrotaVistoriaController::class, 'index'])->name('index');
                 Route::get('/export', [FrotaVistoriaController::class, 'export'])->name('export');
+                Route::get('/agenda', [FrotaVistoriaController::class, 'agenda'])->name('agenda');
                 Route::get('/{vistoria}', [FrotaVistoriaController::class, 'show'])
                     ->name('show')->whereNumber('vistoria');
 
@@ -310,6 +311,8 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
                 ->name('show')->whereNumber('cronograma');
             Route::get('/{cronograma}/impressao', [CronogramaController::class, 'impressao'])
                 ->name('impressao')->whereNumber('cronograma');
+            Route::get('/{cronograma}/relatorio', [CronogramaController::class, 'relatorio'])
+                ->name('relatorio')->whereNumber('cronograma');
             Route::get('/{cronograma}/comprovantes/{comprovante}/download', [CronogramaComprovanteController::class, 'download'])
                 ->name('comprovantes.download')->whereNumber('cronograma')->whereNumber('comprovante');
         });

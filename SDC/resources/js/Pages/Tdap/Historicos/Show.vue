@@ -3,7 +3,7 @@
   <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       :title="`Evento #${h.id}`"
-      :description="h.tipo_evento"
+      :description="h.tipo_rotulo ?? h.tipo_evento"
       :icon="ClockIcon"
     >
     </TdapPageHeader>
@@ -11,8 +11,8 @@
     <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
       <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <div><dt class="font-medium text-slate-500 dark:text-slate-400">Data do evento</dt><dd>{{ fmtDateTime(h.data_evento) }}</dd></div>
-        <div><dt class="font-medium text-slate-500 dark:text-slate-400">Tipo</dt><dd class="">{{ h.tipo_evento }}</dd></div>
-        <div><dt class="font-medium text-slate-500 dark:text-slate-400">Entidade</dt><dd class="">{{ h.entity_type }}#{{ h.entity_id }}</dd></div>
+        <div><dt class="font-medium text-slate-500 dark:text-slate-400">Tipo</dt><dd class="">{{ h.tipo_rotulo ?? h.tipo_evento }} <span class="text-xs text-slate-400">({{ h.tipo_evento }})</span></dd></div>
+        <div><dt class="font-medium text-slate-500 dark:text-slate-400">Entidade</dt><dd class=""><Link v-if="h.entidade?.url" :href="h.entidade.url" class="text-sky-600 hover:underline">{{ h.entidade.rotulo }}</Link><span v-else :class="h.entidade?.excluido ? 'text-slate-400 line-through' : ''">{{ h.entidade?.rotulo ?? `${h.entity_type} ${h.entity_id}` }}</span></dd></div>
         <div><dt class="font-medium text-slate-500 dark:text-slate-400">Usuário</dt><dd>{{ h.user?.name || 'Sistema' }}</dd></div>
         <div class="md:col-span-2"><dt class="font-medium text-slate-500 dark:text-slate-400">Mensagem</dt><dd class="whitespace-pre-line">{{ h.obs || '—' }}</dd></div>
       </dl>

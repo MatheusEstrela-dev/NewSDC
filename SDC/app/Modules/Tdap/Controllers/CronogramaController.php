@@ -16,8 +16,11 @@ use App\Modules\Tdap\Requests\StoreCronogramaRequest;
 use App\Modules\Tdap\Requests\UpdateCronogramaRequest;
 use App\Modules\Tdap\Resources\CronogramaIndexResource;
 use App\Modules\Tdap\Resources\CronogramaResource;
+use App\Modules\Tdap\Services\CronogramaRelatorioService;
 use App\Modules\Tdap\Services\CronogramaService;
+use App\Modules\Tdap\Support\EscopoDeLeitura;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -169,6 +172,29 @@ class CronogramaController extends Controller
         return response()->json([
             'cronograma'      => CronogramaResource::make($cronograma)->resolve(),
             'pontos_captacao' => $this->pontosParaExibir($cronograma),
+        ]);
+    }
+
+    /**
+     * Relatorio (PDF pela impressao do navegador) em tres perspectivas:
+     * cedec, prestador (Prestador/COMPDEC) e copasa (#62).
+     */
+    public function relatorio(Cronograma $cronograma, Request $request, CronogramaRelatorioService $relatorios): JsonResponse
+    {
+        $perspectiva = $request->validate([
+            'perspectiva' => ['nullable', Rule::in(CronogramaRelatorioService::PERSPECTIVAS)],
+        ])['perspectiva'] ?? $relatorios->perspectivaPadrao($request->user());
+
+        // Quem le so o proprio municipio (COMPDEC) nao tira relatorio de outro.
+        $escopo = EscopoDeLeitura::municipioId($request->user());
+        abort_if($escopo !== null && $escopo !== (int) $cronograma->municipio_id, 403);
+
+        $cronograma = $this->service->obter($cronograma->id);
+
+        return response()->json([
+            'cronograma'      => CronogramaResource::make($cronograma)->resolve(),
+            'pontos_captacao' => $this->pontosParaExibir($cronograma),
+            'relatorio'       => $relatorios->montar($cronograma, $perspectiva),
         ]);
     }
 

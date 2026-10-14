@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Tdap\Models\Historico;
 use App\Modules\Tdap\Resources\HistoricoResource;
 use App\Modules\Tdap\Services\HistoricoService;
+use App\Modules\Tdap\Support\EntidadeDoHistorico;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -26,11 +27,17 @@ class HistoricoController extends Controller
         $filtros = $request->only(['entity_type', 'entity_id', 'tipo_evento', 'user_id', 'de', 'ate']);
 
         $historicos = $this->service->listar($perPage, $filtros);
+        EntidadeDoHistorico::resolver($historicos->getCollection());
 
         return Inertia::render('Tdap/Historicos/Index', [
             'historicos'   => HistoricoResource::collection($historicos),
             'estatisticas' => fn () => $this->service->obterEstatisticas(),
             'filtros'      => $filtros,
+            // Filtro por evento em lista, e nao texto livre: so os tipos que
+            // existem no banco, com rotulo legivel.
+            'tiposEvento'  => fn () => Historico::query()->distinct()->orderBy('tipo_evento')->pluck('tipo_evento')
+                ->map(fn (string $t) => ['value' => $t, 'label' => EntidadeDoHistorico::rotuloDoEvento($t)])
+                ->values(),
         ]);
     }
 
@@ -63,6 +70,8 @@ class HistoricoController extends Controller
 
     public function show(Historico $historico): Response
     {
+        EntidadeDoHistorico::resolver([$historico]);
+
         return Inertia::render('Tdap/Historicos/Show', [
             'historico' => HistoricoResource::make($historico->load('user')),
         ]);

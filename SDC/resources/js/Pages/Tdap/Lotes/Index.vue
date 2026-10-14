@@ -220,7 +220,7 @@
       </template>
 
       <template #mobile-actions="{ item: l }">
-        <div class="flex items-center justify-end gap-1">
+        <div class="flex flex-wrap items-center justify-end gap-1">
         <ActionButton
         action="view"
         module="tdap"

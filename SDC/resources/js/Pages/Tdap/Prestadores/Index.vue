@@ -26,19 +26,14 @@
       </template>
     </TdapPageHeader>
 
+    <!-- Mesmos StatCards das demais abas do TDAP; o clique filtra pelo status. -->
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-        <p class="text-sm text-slate-500 dark:text-slate-400">Total</p>
-        <p class="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
-      </div>
-      <div class="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm dark:border-emerald-500/25 dark:bg-slate-900/60">
-        <p class="text-sm text-slate-500 dark:text-slate-400">Ativos</p>
-        <p class="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-300">{{ estatisticas.ativos }}</p>
-      </div>
-      <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-        <p class="text-sm text-slate-500 dark:text-slate-400">Inativos</p>
-        <p class="mt-2 text-2xl font-bold text-slate-500 dark:text-slate-300">{{ estatisticas.inativos }}</p>
-      </div>
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="BuildingIcon" variant="info"
+        clickable @click="filtrarStatus('')" />
+      <StatCard title="Ativos" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success"
+        clickable @click="filtrarStatus('1')" />
+      <StatCard title="Inativos" :value="estatisticas.inativos ?? 0" :icon="ExclamationTriangleIcon" variant="warning"
+        clickable @click="filtrarStatus('0')" />
     </div>
 
     <TdapPrestadoresFiltersSection
@@ -181,7 +176,7 @@
       </template>
 
       <template #mobile-actions="{ item: prestador }">
-        <div class="flex items-center justify-end gap-1">
+        <div class="flex flex-wrap items-center justify-end gap-1">
         <ActionButton
         action="view"
         module="tdap"
@@ -241,6 +236,9 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
@@ -280,6 +278,11 @@ function queryDeFiltros(filters) {
 
 function aplicarFiltros(filters = activeFilters.value) {
   router.get(route('tdap.prestadores.index'), queryDeFiltros(filters), { preserveState: true, replace: true });
+}
+
+function filtrarStatus(ativo) {
+  activeFilters.value = { ...activeFilters.value, ativo };
+  aplicarFiltros();
 }
 
 function limparFiltros() {

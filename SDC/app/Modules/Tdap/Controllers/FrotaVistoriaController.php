@@ -16,6 +16,7 @@ use App\Modules\Tdap\Resources\VistoriaFotoResource;
 use App\Modules\Tdap\Resources\VistoriaIndexResource;
 use App\Modules\Tdap\Resources\VistoriaResource;
 use App\Modules\Tdap\Resources\VistoriaSerieResource;
+use App\Modules\Tdap\Services\VistoriaAgendaService;
 use App\Modules\Tdap\Services\VistoriaFotoService;
 use App\Modules\Tdap\Services\VistoriaService;
 use App\Modules\Tdap\Support\ExportadorCsv;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -87,6 +89,34 @@ class FrotaVistoriaController extends Controller
             'canCreate'     => $request->user()?->can('tdap.vistorias.create') ?? false,
             'canEdit'       => $request->user()?->can('tdap.vistorias.edit') ?? false,
             'canDelete'     => $request->user()?->can('tdap.vistorias.delete') ?? false,
+        ]);
+    }
+
+    /**
+     * Visao do vistoriador (#62): calendario do mes com vistorias, vencimentos
+     * (revistoria) e os turnos dele no Plantao, e a fila de revistoria.
+     */
+    public function agenda(Request $request, VistoriaAgendaService $agenda): Response
+    {
+        $dados = $request->validate([
+            'ano'     => ['nullable', 'integer', 'min:2000', 'max:2100'],
+            'mes'     => ['nullable', 'integer', 'min:1', 'max:12'],
+            'minhas'  => ['nullable', 'boolean'],
+        ]);
+
+        $inicio = Carbon::create((int) ($dados['ano'] ?? now()->year), (int) ($dados['mes'] ?? now()->month), 1)->startOfDay();
+        // A grade do mes mostra dias do mes vizinho: uma semana de folga nas pontas.
+        $de = $inicio->copy()->subDays(7);
+        $ate = $inicio->copy()->endOfMonth()->addDays(7);
+        $minhas = (bool) ($dados['minhas'] ?? false);
+
+        return Inertia::render('Tdap/Frota/Vistorias/Agenda', [
+            'dataInicial'  => $inicio->toDateString(),
+            'minhas'       => $minhas,
+            'eventos'      => $agenda->eventos($de, $ate, $request->user(), $minhas),
+            'revistorias'  => $agenda->revistorias(),
+            'diasAlerta'   => VistoriaAgendaService::DIAS_ALERTA,
+            'canCreate'    => $request->user()?->can('tdap.vistorias.create') ?? false,
         ]);
     }
 

@@ -722,6 +722,16 @@
           Frota e Vistorias
         </NavItem>
         <NavItem
+          v-if="_routes.hasTdapAgendaVistoria && podeVerVistorias"
+          :href="route('tdap.frota.vistorias.agenda')"
+          :active="isRouteActive('tdap.frota.vistorias.agenda')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Agenda do vistoriador
+        </NavItem>
+        <NavItem
           v-if="_routes.hasTdapAtas"
           :href="route('tdap.atas.index')"
           :active="isRouteActive('tdap.atas.*')"
@@ -983,6 +993,7 @@ const _routes = {
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
   hasTdapFrota: route().has('tdap.frota.index'),
+  hasTdapAgendaVistoria: route().has('tdap.frota.vistorias.agenda'),
   hasTdapAtas: route().has('tdap.atas.index'),
   hasTdapLotes: route().has('tdap.lotes.index'),
   hasTdapCronogramas: route().has('tdap.cronogramas.index'),
@@ -1203,6 +1214,7 @@ const canSeeCedecPrefeituras = computed(() => {
 // A confirmacao e do municipio: quem nao tem o slug nao ve o item, mesmo
 // enxergando o resto do TDAP.
 const podeConfirmarViagens = computed(() => hasPermission(['tdap.viagens.confirmar', 'tdap.viagens.reprovar']));
+const podeVerVistorias = computed(() => hasPermission(['tdap.vistorias.view']));
 
 const canSeeTdap = computed(() => {
   return hasPermission([

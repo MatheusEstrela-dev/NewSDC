@@ -18,6 +18,15 @@
       Procure o administrador para vincular seu usuário à COMPDEC do município.
     </div>
 
+    <!-- Cards no mesmo padrao das demais abas: o que espera decisao, o que
+         esta fora do limite e o volume da selecao atual. -->
+    <div v-if="!semMunicipio" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCard title="Aguardando decisão" :value="viagens.meta?.total ?? viagens.data.length" :icon="ClockIcon" variant="info" />
+      <StatCard title="Liberadas (nesta página)" :value="selecionaveis.length" :icon="CheckIcon" variant="success" />
+      <StatCard title="Fora do limite (nesta página)" :value="viagens.data.length - selecionaveis.length" :icon="XMarkIcon" variant="danger" />
+      <StatCard title="Volume selecionado (m³)" :value="fmtNum(totalM3Selecionado)" :icon="CheckIcon" variant="warning" />
+    </div>
+
     <div v-if="podeAgir" class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-700/40 bg-white dark:bg-slate-900/40 px-4 py-3">
       <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
         <input
@@ -222,6 +231,7 @@ import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
 import PrazoBadge from '@/Components/Organisms/Tdap/PrazoBadge.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';

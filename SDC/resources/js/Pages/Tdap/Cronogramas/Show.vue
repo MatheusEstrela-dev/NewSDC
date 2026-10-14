@@ -28,6 +28,13 @@
           @click="impressaoOpen = true"
         />
         <ActionButton
+          action="pdf"
+          :allowed="true"
+          :show-label="false"
+          tooltip-text="Relatório em PDF (CEDEC, Prestador/COMPDEC, COPASA)"
+          @click="relatorioOpen = true"
+        />
+        <ActionButton
           action="archive"
           :allowed="canDelete"
           :show-label="false"
@@ -262,6 +269,12 @@
       @close="impressaoOpen = false"
     />
 
+    <RelatorioCronogramaModal
+      :show="relatorioOpen"
+      :cronograma-id="c.id"
+      @close="relatorioOpen = false"
+    />
+
     <CronogramaHistoricoModal
       :open="historicoOpen"
       :numero="c.numero"
@@ -296,6 +309,7 @@ import RegistrarViagemModal from '@/Components/Organisms/Tdap/RegistrarViagemMod
 import CronogramaComprovantesSection from '@/Components/Organisms/Tdap/CronogramaComprovantesSection.vue';
 import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHistoricoModal.vue';
 import PrintCronogramaModal from '@/Components/Organisms/Tdap/Print/PrintCronogramaModal.vue';
+import RelatorioCronogramaModal from '@/Components/Organisms/Tdap/Print/RelatorioCronogramaModal.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -329,6 +343,7 @@ const c = computed(() => props.cronograma.data ?? props.cronograma).value;
 // A ficha ja tem tudo o que o impresso usa: monta o mesmo formato do endpoint
 // tdap.cronogramas.impressao (usado pela listagem) sem nova requisicao.
 const impressaoOpen = ref(false);
+const relatorioOpen = ref(false);
 const dadosImpressao = computed(() => ({ cronograma: c, pontos_captacao: props.pontosCaptacao }));
 const ativando = ref(false);
 const showAlocar = ref(false);

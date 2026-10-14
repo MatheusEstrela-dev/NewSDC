@@ -238,6 +238,10 @@ defineExpose({ printContentRef, handlePrint });
             </div>
 
             <div class="max-h-[80vh] overflow-y-auto p-6 bg-gray-100 dark:bg-gray-900">
+              <!-- Controles do documento (fora do printContentRef: nao saem na impressao). -->
+              <div v-if="$slots.toolbar" class="mb-4">
+                <slot name="toolbar" />
+              </div>
               <div v-if="loading" class="flex items-center justify-center py-12">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
                 <span class="ml-3 text-gray-600 dark:text-gray-400">Carregando dados...</span>

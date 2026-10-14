@@ -163,6 +163,14 @@
                           @click="imprimir(c.id)"
                         />
                         <ActionButton
+                          action="pdf"
+                          :allowed="true"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Relatório em PDF"
+                          @click="relatorioId = c.id"
+                        />
+                        <ActionButton
                           action="archive"
                           :allowed="canDelete"
                           :show-label="false"
@@ -205,7 +213,7 @@
       </template>
 
       <template #mobile-actions="{ item: c }">
-        <div class="flex items-center justify-end gap-1">
+        <div class="flex flex-wrap items-center justify-end gap-1">
         <ActionButton
         action="view"
         module="tdap"
@@ -255,6 +263,14 @@
         :loading="impressaoCarregandoId === c.id"
         @click="imprimir(c.id)"
         />
+      <ActionButton
+        action="pdf"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Relatório em PDF"
+        @click="relatorioId = c.id"
+      />
         <ActionButton
         action="archive"
         :allowed="canDelete"
@@ -297,6 +313,12 @@
       @cancel="cancelArchive"
     />
 
+    <RelatorioCronogramaModal
+      :show="relatorioId !== null"
+      :cronograma-id="relatorioId"
+      @close="relatorioId = null"
+    />
+
     <PrintCronogramaModal
       :show="impressaoOpen"
       :loading="impressaoCarregandoId !== null"
@@ -333,6 +355,7 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHistoricoModal.vue';
 import PrintCronogramaModal from '@/Components/Organisms/Tdap/Print/PrintCronogramaModal.vue';
+import RelatorioCronogramaModal from '@/Components/Organisms/Tdap/Print/RelatorioCronogramaModal.vue';
 import { useToast } from '@/Composables/useToast.js';
 import CronogramaViagensBar from '@/Components/Organisms/Tdap/CronogramaViagensBar.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
@@ -525,6 +548,7 @@ const { show: toast } = useToast();
 const impressaoOpen = ref(false);
 const impressaoCarregandoId = ref(null);
 const impressaoDados = ref(null);
+const relatorioId = ref(null);
 
 async function imprimir(id) {
   impressaoCarregandoId.value = id;
