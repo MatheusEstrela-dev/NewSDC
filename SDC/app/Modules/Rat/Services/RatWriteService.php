@@ -29,6 +29,7 @@ class RatWriteService
     public function __construct(
         private readonly RatProtocoloService $protocoloService,
         private readonly OutboxDispatcher $outbox,
+        private readonly RatTermoInterdicaoService $termoInterdicao,
     ) {}
 
     public function create(): RatOcorrencia
@@ -88,6 +89,14 @@ class RatWriteService
 
     public function createWithData(RatRelatosDTO $relatos): RatOcorrencia
     {
+        // Termo de interdicao (#57) so existe depois que o RAT existe: criar ja
+        // finalizado com interdicao marcada deixaria a interdicao sem termo.
+        abort_if(
+            $relatos->finalizar && ($relatos->vistoria?->vEncInterdicaoParcial || $relatos->vistoria?->vEncInterdicaoTotal),
+            422,
+            'A vistoria indica interdição: salve o RAT e emita o termo de interdição antes de finalizar.'
+        );
+
         return DB::transaction(function () use ($relatos) {
             $protocolo = $this->protocoloService->generate();
             $userId    = Auth::id();
@@ -142,6 +151,7 @@ class RatWriteService
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
         abort_if($ocorrencia->status === 1, 422, 'RAT já está finalizado.');
+        $this->termoInterdicao->exigirParaFinalizar((string) $ocorrencia->id);
 
         // Finalizar manualmente e permitido a qualquer momento: e o autor
         // abrindo mao do restante da janela de edicao de 48h. O prazo_edicao

@@ -33,6 +33,7 @@ use App\Modules\Rat\Services\RatExportService;
 use App\Modules\Rat\Services\RatHistoricoService;
 use App\Modules\Rat\Services\RatOcorrenciaService;
 use App\Modules\Rat\Services\RatRelatoService;
+use App\Modules\Rat\Services\RatTermoInterdicaoService;
 use App\Modules\Rat\Services\RatWriteService;
 use App\Support\Cobrade;
 use App\Support\Concurrency\Concurrency;
@@ -369,6 +370,7 @@ class RatUnifiedController extends BaseController
             'rat'        => $ratData,
             'lastUpdate' => $ocorrencia->updated_at?->toIso8601String(),
             'cobrades'   => Cobrade::opcoes(),
+            'termoInterdicao' => app(RatTermoInterdicaoService::class)->contexto($ocorrencia, Auth::user()),
         ]);
     }
 

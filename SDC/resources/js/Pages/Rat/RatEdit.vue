@@ -56,6 +56,7 @@
                   @save="handleSaveVistoria"
                   @update="handleUpdateVistoria"
                 />
+                <RatTermoInterdicao v-if="rat?.id && termoInterdicao" :rat-id="rat.id" :contexto="termoInterdicao" />
               </div>
 
               <!-- Aba 5: Histórico -->
@@ -104,6 +105,7 @@ import RatInspection from '@/Components/Rat/RatInspection.vue';
 import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
+import RatTermoInterdicao from '@/Components/Rat/RatTermoInterdicao.vue';
 import { useRat } from '@/Composables/useRat';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
@@ -116,6 +118,7 @@ const props = defineProps({
   rat: { type: Object, default: () => ({}) },
   lastUpdate: { type: String, default: null },
   cobrades: { type: Array, default: () => [] },
+  termoInterdicao: { type: Object, default: null },
 });
 
 const initialTab = (() => {

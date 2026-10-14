@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Rat\Controllers\LegadoRatController;
+use App\Modules\Rat\Controllers\RatTermoInterdicaoController;
 use App\Modules\Rat\Controllers\RatUnifiedController;
 use Illuminate\Support\Facades\Route;
 
@@ -61,6 +62,10 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ── Wildcards com {id} ───────────────────────────────────────────────────
     Route::post('/{id}/relacionar', [RatUnifiedController::class, 'createRelacionado'])->name('relacionar.store')->middleware('can:rat.protocolos.edit');
     Route::get('/{id}/print',      [RatUnifiedController::class, 'print'])->name('print')->middleware('can:rat.protocolos.view');
+    // Termo de interdicao da vistoria (#57): a permissao fina fica no service
+    // (rat.vistoria.interditar no -001, rat.vistoria.crea no relacionado).
+    Route::put('/{id}/termo-interdicao',         [RatTermoInterdicaoController::class, 'salvar'])->name('termo-interdicao.salvar')->middleware('can:rat.protocolos.edit');
+    Route::post('/{id}/termo-interdicao/emitir', [RatTermoInterdicaoController::class, 'emitir'])->name('termo-interdicao.emitir')->middleware('can:rat.protocolos.edit');
     Route::get('/{id}/edit',     [RatUnifiedController::class, 'edit'])->name('edit')->middleware('can:rat.protocolos.edit');
     Route::get('/{id}/json',     [RatUnifiedController::class, 'showJson'])->name('show-json')->middleware('can:rat.protocolos.view');
     Route::put('/{id}',          [RatUnifiedController::class, 'update'])->name('update')->middleware('can:rat.protocolos.edit');

@@ -146,6 +146,10 @@ return [
             'Historico' => [
                 'view' => 'rat.historico.view',
             ],
+            'Vistoria' => [
+                'interditar' => 'rat.vistoria.interditar',
+                'crea' => 'rat.vistoria.crea',
+            ],
         ],
         'DEMANDAS' => [
             'Chamados' => [
@@ -751,6 +755,7 @@ return [
             'rat.protocolos.export',
             'rat.api.access',
             'rat.historico.view',
+            'rat.vistoria.interditar',
             // Demandas - gestao completa
             'demandas.chamados.view',
             'demandas.chamados.create',
@@ -1373,6 +1378,8 @@ return [
             'tdap.viagens.confirmar',
             'tdap.viagens.reprovar',
             'tdap.cronogramas.view',
+            // RAT - termo de interdicao do RAT original (#57).
+            'rat.vistoria.interditar',
         ],
     ],
 

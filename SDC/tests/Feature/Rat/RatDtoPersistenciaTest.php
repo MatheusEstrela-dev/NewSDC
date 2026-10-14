@@ -321,6 +321,14 @@ class RatDtoPersistenciaTest extends TestCase
         $this->get(route('rat.show', $id))->assertOk();
         $this->get(route('rat.edit', $id))->assertOk();
 
+        // A vistoria do payload marca interdicao total: sem termo emitido o
+        // RAT nao finaliza (#57).
+        $this->patch(route('rat.finalize', $id))->assertStatus(422);
+        $this->putJson(route('rat.termo-interdicao.salvar', $id), [
+            'tipo' => 'total', 'area_interditada' => 'Imovel inteiro', 'fundamentacao' => 'Risco de colapso',
+        ])->assertOk();
+        $this->postJson(route('rat.termo-interdicao.emitir', $id))->assertOk();
+
         $this->patch(route('rat.finalize', $id))->assertRedirect();
         $this->assertSame(1, (int) RatOcorrencia::findOrFail($id)->status);
     }
