@@ -20,11 +20,11 @@ const variants = {
     classes: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/15 dark:text-emerald-300',
   },
   atencao: {
-    label: 'Atencao',
+    label: 'Vence em breve',
     classes: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/15 dark:text-amber-300',
   },
   critico: {
-    label: 'Critico',
+    label: 'Vencido',
     classes: 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/25 dark:bg-red-500/15 dark:text-red-300',
   },
   quarentena: {

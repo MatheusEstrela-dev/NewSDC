@@ -163,6 +163,26 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
 
     // Modulo Ajuda Humanitaria: fornecimento de dados, somente leitura.
     // Paridade de contrato com os endpoints publicos do legado, agora sob token.
+    // Modulo Estoque (#32 inventario de donativos, #33 movimentacoes): mesma
+    // regra da tela /estoque, com envelope SuccessResponse/ErrorResponse.
+    Route::get('inventario', [\App\Http\Controllers\Api\V1\Estoque\InventarioApiController::class, 'index'])
+        ->name('api.v1.inventario.index')
+        ->middleware(['can:estoque.produtos.view', 'throttle:120,1']);
+    Route::post('inventario', [\App\Http\Controllers\Api\V1\Estoque\InventarioApiController::class, 'store'])
+        ->name('api.v1.inventario.store')
+        ->middleware(['can:estoque.produtos.create', 'throttle:60,1']);
+    Route::prefix('estoque')->name('api.v1.estoque.')->group(function () {
+        Route::get('movimentacoes', [\App\Http\Controllers\Api\V1\Estoque\MovimentacaoApiController::class, 'index'])
+            ->name('movimentacoes.index')
+            ->middleware(['can:estoque.movimentacoes.view', 'throttle:120,1']);
+        Route::post('movimentacoes', [\App\Http\Controllers\Api\V1\Estoque\MovimentacaoApiController::class, 'store'])
+            ->name('movimentacoes.store')
+            ->middleware(['can:estoque.movimentacoes.create', 'throttle:60,1']);
+        Route::get('saldos', [\App\Http\Controllers\Api\V1\Estoque\MovimentacaoApiController::class, 'saldos'])
+            ->name('saldos.index')
+            ->middleware(['can:estoque.produtos.view', 'throttle:120,1']);
+    });
+
     Route::prefix('ajuda-humanitaria')->name('api.v1.ajuda-humanitaria.')->group(function () {
         Route::get('liberacoes', [AhLiberacaoApiController::class, 'index'])
             ->name('liberacoes.index')

@@ -2,255 +2,186 @@
   <div class="estoque-container">
     <PageHeader
       title="Estoque"
-      description="MVP de produtos, lotes, kits, validade e movimentacoes"
+      description="Donativos e insumos por almoxarifado, lote e validade"
       :icon="ArchiveBoxIcon"
       :icon-image="moduleIcon('estoque')"
       variant="gradient"
     >
       <template #actions>
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <ViewModeToggle v-model="viewMode" />
-          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="exportar">
             <span class="hidden sm:inline">Exportar</span>
           </Button>
-          <ActionButton
-            module="estoque"
-            resource="produtos"
-            action="create"
-            :allowed="canCreate"
-            size="md"
-            label="Novo Produto"
-            @click="emit('create')"
-          >
-            <span>Novo Produto</span>
-          </ActionButton>
+          <Button v-if="canCreate" variant="secondary" size="md" :icon="PlusIcon" icon-position="left" @click="abrirCadastro('produto')">Produto</Button>
+          <Button v-if="canMove" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="abrirEntrada(null)">Entrada</Button>
+          <Button v-if="canMove" variant="primary" size="md" :icon="ArrowUpTrayIcon" icon-position="left" @click="abrirSaida(null)">Saída</Button>
         </div>
       </template>
     </PageHeader>
 
-    <ExportCsvModal
-      :show="showExportModal"
-      module-name="Estoque"
-      @close="showExportModal = false"
-      @export="handleExportCsv"
-    />
-
-    <EstoqueStatsCards
-      :statistics="statistics"
-      :loading="loading"
-    />
-
-    <EstoqueFiltersSection
-      v-model:filters="localFilters"
-      :filter-options="filterOptions"
-      @apply="handleApplyFilters"
-      @clear="handleClearFilters"
-    />
-
-
-    <EstoqueAlertsPanel v-if="activeSection === 'dashboard'" :alertas="alertas" class="mb-6" />
-
-
-    <EstoqueGrid
-        v-if="(activeSection === 'dashboard' || activeSection === 'produtos') && (viewMode === 'grid' || isMobile)"
-      :produtos="produtosPaginados"
-      :loading="loading"
-      :can-edit="canEdit"
-      :can-delete="canDelete"
-      :can-move="canMove"
-      @edit="emit('edit', $event)"
-      @delete="emit('delete', $event)"
-      @move="emit('move', $event)"
-    />
-
-    <EstoqueTable
-      v-else-if="activeSection === 'dashboard' || activeSection === 'produtos'"
-      :produtos="produtosPaginados"
-      :loading="loading"
-      :can-edit="canEdit"
-      :can-delete="canDelete"
-      :can-move="canMove"
-      @edit="emit('edit', $event)"
-      @delete="emit('delete', $event)"
-      @move="emit('move', $event)"
-    />
-
-    <Pagination
-      v-if="activeSection === 'dashboard' || activeSection === 'produtos'"
-      :pagination="pagination"
-      @page-change="goToPage"
-    />
-
-    <div v-if="activeSection === 'dashboard'" class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-      <EstoqueKitsPanel
-      :kits="kits"
-      :can-assemble="canAssemble"
-      @assemble="emit('assemble', $event)"
-    />
-      <EstoqueMovementsPanel :movimentacoes="movimentacoes" />
+    <div v-if="erroGeral" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+      {{ erroGeral }}
     </div>
 
-    <EstoqueKitsPanel
-      v-else-if="activeSection === 'kits'"
-      class="mt-6"
-      :kits="kits"
-      :can-assemble="canAssemble"
-      @assemble="emit('assemble', $event)"
-    />
+    <EstoqueStatsCards :statistics="statistics" @filtrar="aplicarFiltros({ ...filters, ...$event })" />
 
-    <EstoqueMovementsPanel
-      v-else-if="activeSection === 'movimentacoes'"
-      class="mt-6"
-      :movimentacoes="movimentacoes"
+    <EstoqueFiltersSection :filters="filters" :filter-options="filterOptions" @apply="aplicarFiltros" @clear="aplicarFiltros({})" />
+
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_22rem]">
+      <div class="min-w-0 space-y-6">
+        <EstoqueAlertsPanel v-if="activeSection === 'dashboard' && alertas.length" :alertas="alertas" />
+        <EstoqueLotesLista
+          v-if="activeSection !== 'kits' && activeSection !== 'movimentacoes'"
+          :pagina="lotes"
+          :filtros="filters"
+          :can-move="canMove"
+          :can-quarentena="canQuarentena"
+          @entrada="abrirEntrada"
+          @saida="abrirSaida"
+          @quarentena="alternarQuarentena"
+        />
+        <EstoqueKitsPanel
+          v-if="activeSection === 'kits'"
+          :kits="kits"
+          :can-move="canMove"
+          :can-create="canCreateKit"
+          @saida="(kit) => abrirSaida({ kit })"
+          @novo="abrirCadastro('kit')"
+        />
+        <EstoqueMovementsPanel v-if="activeSection === 'movimentacoes'" :movimentacoes="movimentacoesExibidas" />
+      </div>
+
+      <aside class="space-y-6">
+        <EstoqueOcupacaoPanel
+          :almoxarifados="ocupacao"
+          :selecionado="String(filters.almoxarifado_id ?? '')"
+          :can-create="canCreate"
+          @filtrar="(id) => aplicarFiltros({ ...filters, almoxarifado_id: String(filters.almoxarifado_id) === String(id) ? undefined : id })"
+          @novo="abrirCadastro('almoxarifado')"
+        />
+        <EstoqueKitsPanel
+          v-if="activeSection !== 'kits'"
+          :kits="kits"
+          :can-move="canMove"
+          :can-create="canCreateKit"
+          @saida="(kit) => abrirSaida({ kit })"
+          @novo="abrirCadastro('kit')"
+        />
+        <EstoqueMovementsPanel v-if="activeSection !== 'movimentacoes'" :movimentacoes="movimentacoesExibidas" />
+      </aside>
+    </div>
+
+    <EstoqueEntradaModal :show="modal === 'entrada'" :catalogo="catalogo" :almoxarifados="filterOptions.almoxarifados ?? []" :inicial="inicial" @close="fecharModal" />
+    <EstoqueSaidaModal
+      :show="modal === 'saida'"
+      :catalogo="catalogo"
+      :almoxarifados="filterOptions.almoxarifados ?? []"
+      :municipios="municipios"
+      :kits="kits"
+      :inicial="inicial"
+      @close="fecharModal"
+    />
+    <EstoqueCadastroModal
+      :show="modal === 'cadastro'"
+      :tipo="tipoCadastro"
+      :categorias="filterOptions.categorias ?? []"
+      :catalogo="catalogo"
+      :municipios="municipios"
+      @close="fecharModal"
     />
   </div>
 </template>
 
 <script setup>
-import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import EstoqueAlertsPanel from '@/Components/Organisms/Estoque/EstoqueAlertsPanel.vue';
+import EstoqueCadastroModal from '@/Components/Organisms/Estoque/EstoqueCadastroModal.vue';
+import EstoqueEntradaModal from '@/Components/Organisms/Estoque/EstoqueEntradaModal.vue';
 import EstoqueFiltersSection from '@/Components/Organisms/Estoque/EstoqueFiltersSection.vue';
-import EstoqueGrid from '@/Components/Organisms/Estoque/EstoqueGrid.vue';
 import EstoqueKitsPanel from '@/Components/Organisms/Estoque/EstoqueKitsPanel.vue';
+import EstoqueLotesLista from '@/Components/Organisms/Estoque/EstoqueLotesLista.vue';
 import EstoqueMovementsPanel from '@/Components/Organisms/Estoque/EstoqueMovementsPanel.vue';
+import EstoqueOcupacaoPanel from '@/Components/Organisms/Estoque/EstoqueOcupacaoPanel.vue';
+import EstoqueSaidaModal from '@/Components/Organisms/Estoque/EstoqueSaidaModal.vue';
 import EstoqueStatsCards from '@/Components/Organisms/Estoque/EstoqueStatsCards.vue';
-import EstoqueTable from '@/Components/Organisms/Estoque/EstoqueTable.vue';
-import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
-import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
-import { useExport } from '@/Composables/useExport';
-import { useMobile } from '@/Composables/useMobile';
-import { usePagination } from '@/Composables/data/usePagination';
-import { ArchiveBoxIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { ref, toRef, watch } from 'vue';
+import { ArchiveBoxIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, PlusIcon } from '@heroicons/vue/24/outline';
+import { router, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
-  produtos: {
-    type: Array,
-    default: () => [],
-  },
-  kits: {
-    type: Array,
-    default: () => [],
-  },
-  movimentacoes: {
-    type: Array,
-    default: () => [],
-  },
-  alertas: {
-    type: Array,
-    default: () => [],
-  },
-  activeSection: {
-    type: String,
-    default: 'dashboard',
-  },
-  excelSheets: {
-    type: Array,
-    default: () => [],
-  },
-  statistics: {
-    type: Object,
-    default: () => ({
-      produtos: 0,
-      saldo_total: 0,
-      kits_montaveis: 0,
-      lotes_vencendo: 0,
-      requisicoes: 0,
-    }),
-  },
-  filters: {
-    type: Object,
-    default: () => ({}),
-  },
-  filterOptions: {
-    type: Object,
-    default: () => ({}),
-  },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
-  canCreate: {
-    type: Boolean,
-    default: false,
-  },
-  canEdit: {
-    type: Boolean,
-    default: false,
-  },
-  canDelete: {
-    type: Boolean,
-    default: false,
-  },
-  canExport: {
-    type: Boolean,
-    default: false,
-  },
-  canMove: {
-    type: Boolean,
-    default: false,
-  },
-  canAssemble: {
-    type: Boolean,
-    default: false,
-  },
+  activeSection: { type: String, default: 'dashboard' },
+  lotes: { type: Object, default: () => ({ data: [], next_page_url: null }) },
+  statistics: { type: Object, default: () => ({}) },
+  ocupacao: { type: Array, default: () => [] },
+  alertas: { type: Array, default: () => [] },
+  kits: { type: Array, default: () => [] },
+  movimentacoes: { type: Array, default: () => [] },
+  catalogo: { type: Array, default: () => [] },
+  municipios: { type: Array, default: () => [] },
+  filters: { type: Object, default: () => ({}) },
+  filterOptions: { type: Object, default: () => ({}) },
+  canCreate: { type: Boolean, default: false },
+  canCreateKit: { type: Boolean, default: false },
+  canExport: { type: Boolean, default: false },
+  canMove: { type: Boolean, default: false },
+  canQuarentena: { type: Boolean, default: false },
 });
 
-const emit = defineEmits([
-  'filter-change',
-  'clear-filters',
-  'create',
-  'edit',
-  'delete',
-  'move',
-  'assemble',
-]);
+const modal = ref(null);
+const inicial = ref(null);
+const tipoCadastro = ref('produto');
+const page = usePage();
+const erroGeral = computed(() => page.props.errors?.estoque ?? null);
 
-const { isMobile } = useMobile();
-const viewMode = ref('table');
-const localFilters = ref({ ...props.filters });
+// O painel antigo esperava `status`; o extrato traz o lote e quem lancou.
+const movimentacoesExibidas = computed(() => props.movimentacoes.map((m) => ({
+  ...m,
+  tipo: m.tipo === 'saida' ? 'Saída' : 'Entrada',
+  status: m.usuario ?? '',
+})));
 
-const {
-  pagination,
-  paginatedItems: produtosPaginados,
-  goToPage,
-} = usePagination(toRef(props, 'produtos'));
-
-const {
-  showExportModal,
-  handleExport: triggerExport,
-} = useExport('estoque.export-excel');
-
-watch(
-  () => props.filters,
-  (filters) => {
-    localFilters.value = { ...filters };
-  },
-  { deep: true }
-);
-
-function handleApplyFilters(filters) {
-  emit('filter-change', filters);
+function aplicarFiltros(filtros) {
+  const limpos = Object.fromEntries(Object.entries(filtros).filter(([, v]) => v !== '' && v !== null && v !== undefined));
+  router.get(route(routeDaSecao()), limpos, { preserveState: true, preserveScroll: true, replace: true });
 }
 
-function handleClearFilters() {
-  localFilters.value = {};
-  emit('clear-filters');
+function routeDaSecao() {
+  return { produtos: 'estoque.produtos.index', kits: 'estoque.kits.index', movimentacoes: 'estoque.movimentacoes.index' }[props.activeSection] ?? 'estoque.index';
 }
 
-function handleExportCsv(params) {
-  triggerExport(params, localFilters.value);
+function abrirEntrada(lote) {
+  inicial.value = lote;
+  modal.value = 'entrada';
+}
+
+function abrirSaida(origem) {
+  inicial.value = origem;
+  modal.value = 'saida';
+}
+
+function abrirCadastro(tipo) {
+  tipoCadastro.value = tipo;
+  modal.value = 'cadastro';
+}
+
+function fecharModal() {
+  modal.value = null;
+  inicial.value = null;
+}
+
+function alternarQuarentena(lote) {
+  router.patch(route('estoque.lotes.quarentena', lote.id), { bloqueado: !lote.bloqueado }, { preserveScroll: true });
+}
+
+function exportar() {
+  window.location.href = route('estoque.export-excel', props.filters);
 }
 </script>
 
 <style scoped>
 .estoque-container {
-  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+  @apply w-full pb-8;
 }
 </style>
-
-
