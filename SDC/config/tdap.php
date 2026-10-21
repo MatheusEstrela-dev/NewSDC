@@ -22,4 +22,24 @@ return [
         'exige_pmda_aprovado' => (bool) env('TDAP_PONTO_EXIGE_PMDA', true),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Ordem das decisoes sobre a viagem
+    |--------------------------------------------------------------------------
+    |
+    | exige_confirmacao_municipio: a CEDEC so aprova para pagamento depois que
+    | o municipio confirmou o recebimento, e o municipio deixa de decidir
+    | sobre viagem que a CEDEC ja validou. Sem isso o COMPDEC podia reprovar
+    | uma viagem ja paga, e a reprovacao nao desfazia o pagamento.
+    |
+    | Desligada, a CEDEC aprova sem esperar o municipio. Existe para recuar sem
+    | deploy: municipio sem usuario COMPDEC, ou cronograma ja fora do limite
+    | (LimiteDoCronograma barra a decisao municipal), deixam a viagem sem
+    | ninguem que possa confirma-la.
+    |
+    */
+    'viagens' => [
+        'exige_confirmacao_municipio' => (bool) env('TDAP_VIAGEM_EXIGE_CONFIRMACAO', true),
+    ],
+
 ];

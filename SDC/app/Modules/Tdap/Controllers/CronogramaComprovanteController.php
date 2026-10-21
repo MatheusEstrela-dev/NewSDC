@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\CronogramaComprovante;
 use App\Modules\Tdap\Services\CronogramaComprovanteService;
+use App\Modules\Tdap\Support\EscopoDeLeitura;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -20,6 +21,8 @@ class CronogramaComprovanteController extends Controller
 
     public function store(Request $request, Cronograma $cronograma): RedirectResponse
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         $request->validate([
             'comprovantes'   => ['required', 'array', 'min:1'],
             'comprovantes.*' => ['file', 'max:20480', 'mimes:pdf,jpg,jpeg,png,doc,docx,odt,xls,xlsx'],
@@ -35,17 +38,19 @@ class CronogramaComprovanteController extends Controller
         return back()->with('success', 'Comprovante(s) anexado(s) com sucesso.');
     }
 
-    public function download(Cronograma $cronograma, CronogramaComprovante $comprovante): StreamedResponse
+    public function download(Request $request, Cronograma $cronograma, CronogramaComprovante $comprovante): StreamedResponse
     {
         abort_unless($comprovante->cronograma_id === $cronograma->id, 404);
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
 
         return \Illuminate\Support\Facades\Storage::disk($comprovante->disk)
             ->download($comprovante->path, $comprovante->nome_original);
     }
 
-    public function destroy(Cronograma $cronograma, CronogramaComprovante $comprovante): RedirectResponse
+    public function destroy(Request $request, Cronograma $cronograma, CronogramaComprovante $comprovante): RedirectResponse
     {
         abort_unless($comprovante->cronograma_id === $cronograma->id, 404);
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
 
         $this->service->destroy($comprovante);
 

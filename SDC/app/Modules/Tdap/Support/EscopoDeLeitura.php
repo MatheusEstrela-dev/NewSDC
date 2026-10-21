@@ -30,4 +30,17 @@ final class EscopoDeLeitura
 
         return OrgaoDeLotacao::municipioId($user);
     }
+
+    /**
+     * 403 quando o registro e de municipio fora do escopo de quem pede.
+     *
+     * Para acesso por id: a listagem ja vem recortada, mas a URL de uma ficha
+     * pode ser digitada.
+     */
+    public static function garantir(?User $user, ?int $municipioId): void
+    {
+        $escopo = self::municipioId($user);
+
+        abort_if($escopo !== null && $escopo !== (int) $municipioId, 403);
+    }
 }

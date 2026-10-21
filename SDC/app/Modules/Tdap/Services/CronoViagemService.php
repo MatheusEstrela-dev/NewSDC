@@ -152,6 +152,9 @@ class CronoViagemService
                 fn ($q) => $q->whereRaw('1 = 0'),
             )
             ->naoConfirmada()
+            // A CEDEC ja decidiu: a palavra do municipio chegaria tarde e
+            // nao desfaria o pagamento.
+            ->when(CronoViagem::exigeConfirmacaoDoMunicipio(), fn ($q) => $q->pendente())
             ->whereHas('cronoCaminhao')
             ->with([
                 'cronoCaminhao.cronograma.municipio:id,nome,uf',
@@ -232,6 +235,7 @@ class CronoViagemService
                 ->whereIn('id', $ids)
                 ->doMunicipio($municipioId)
                 ->naoConfirmada()
+                ->when(CronoViagem::exigeConfirmacaoDoMunicipio(), fn ($q) => $q->pendente())
                 ->with('cronoCaminhao.cronograma')
                 ->lockForUpdate()
                 ->get();
@@ -288,11 +292,17 @@ class CronoViagemService
             ->selectRaw("count(*) FILTER (WHERE tdap_crono_viagens.data_registro < now() - interval '7 days') as aguardando_mais_de_7d")
             ->selectRaw('count(*) FILTER (WHERE c.encerrado_em is not null) as de_cronograma_encerrado')
             ->selectRaw('count(DISTINCT c.municipio_id) as municipios')
+            ->selectRaw('count(*) FILTER (WHERE tdap_crono_viagens.confirmado IS NULL) as aguardando_municipio')
             ->toBase()
             ->first();
 
         return [
             'pendentes'               => (int) ($linha->pendentes ?? 0),
+            // So conta como trava quando a regra esta ligada; desligada, a
+            // CEDEC aprova sem esperar e o card nao tem o que explicar.
+            'aguardando_municipio'    => CronoViagem::exigeConfirmacaoDoMunicipio()
+                ? (int) ($linha->aguardando_municipio ?? 0)
+                : 0,
             'aguardando_mais_de_7d'   => (int) ($linha->aguardando_mais_de_7d ?? 0),
             'de_cronograma_encerrado' => (int) ($linha->de_cronograma_encerrado ?? 0),
             'municipios'              => (int) ($linha->municipios ?? 0),
@@ -342,19 +352,25 @@ class CronoViagemService
      *
      * Rejeicao nao emite: nada foi entregue, nao ha execucao a acumular.
      */
-    public function validar(int $id, bool $aprovada, ?string $obsAprovacao = null): CronoViagem
+    public function validar(int $id, bool $aprovada, ?string $obsAprovacao = null, ?User $usuario = null): CronoViagem
     {
-        return DB::transaction(function () use ($id, $aprovada, $obsAprovacao): CronoViagem {
+        return DB::transaction(function () use ($id, $aprovada, $obsAprovacao, $usuario): CronoViagem {
             $viagem = CronoViagem::query()->lockForUpdate()->findOrFail($id);
+
+            // Mesma fila que a tela de pendentes mostra: o id vem do navegador,
+            // e sem isto um coordenador municipal decidia viagem de outro
+            // municipio trocando o numero na URL.
+            $escopo = EscopoDeLeitura::municipioId($usuario);
+            if ($escopo !== null && ! CronoViagem::query()->whereKey($viagem->id)->doMunicipio($escopo)->exists()) {
+                throw new \DomainException('Viagem fora do seu municipio.');
+            }
 
             if ($viagem->validado !== null) {
                 throw new \DomainException('Viagem ja foi validada anteriormente.');
             }
 
-            // O municipio atestou que a agua nao chegou: aprovar para pagamento
-            // pagaria entrega que nao houve. Rejeitar continua permitido.
-            if ($aprovada && $viagem->confirmado === CronoViagem::CONFIRMACAO_REPROVADA) {
-                throw new \DomainException('O municipio reprovou esta viagem; ela nao pode ser aprovada para pagamento.');
+            if ($aprovada && ($motivo = $viagem->motivoParaNaoAprovar()) !== null) {
+                throw new \DomainException($motivo);
             }
 
             $viagem->update([

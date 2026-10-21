@@ -170,7 +170,7 @@
                         <td class="px-4 py-3 text-right">{{ Number(cc.agua_entregue).toFixed(2) }}</td>
                         <td class="px-4 py-3 text-right">{{ cc.percentual }}%</td>
                         <td class="px-4 py-3 text-right space-x-2">
-                          <button v-if="c.estado === 'ativo'" @click="abrirRegistrarViagem(cc)" class="text-blue-600 hover:text-blue-800 text-sm">
+                          <button v-if="canRegistrarViagem && c.estado === 'ativo'" @click="abrirRegistrarViagem(cc)" class="text-blue-600 hover:text-blue-800 text-sm">
                             + Viagem
                           </button>
                           <button v-if="canAlocarCaminhao && c.estado !== 'encerrado'" @click="removerCaminhao(cc)" class="text-red-600 hover:text-red-800 text-sm">
@@ -199,7 +199,7 @@
       </template>
 
       <template #mobile-actions="{ item: cc }">
-        <button v-if="c.estado === 'ativo'" @click="abrirRegistrarViagem(cc)" class="text-blue-600 hover:text-blue-800 text-sm">
+        <button v-if="canRegistrarViagem && c.estado === 'ativo'" @click="abrirRegistrarViagem(cc)" class="text-blue-600 hover:text-blue-800 text-sm">
         + Viagem
         </button>
         <button v-if="canAlocarCaminhao && c.estado !== 'encerrado'" @click="removerCaminhao(cc)" class="text-red-600 hover:text-red-800 text-sm">
@@ -334,6 +334,7 @@ const props = defineProps({
   canProrrogar:      { type: Boolean, default: false },
   canAlocarCaminhao: { type: Boolean, default: false },
   canValidarViagem:  { type: Boolean, default: false },
+  canRegistrarViagem: { type: Boolean, default: false },
   // Cronograma ja ativado: retrato da ativacao; rascunho: vinculos atuais.
   pontosCaptacao:    { type: Array, default: () => [] },
 });

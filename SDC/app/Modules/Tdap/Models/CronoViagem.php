@@ -139,6 +139,36 @@ class CronoViagem extends Model
         };
     }
 
+    public static function exigeConfirmacaoDoMunicipio(): bool
+    {
+        return (bool) config('tdap.viagens.exige_confirmacao_municipio', true);
+    }
+
+    /**
+     * Por que a CEDEC nao pode aprovar esta viagem para pagamento; null = pode.
+     *
+     * Fonte unica para CronoViagemService::validar e CronoViagemResource: a
+     * tela desabilita exatamente o que o servidor recusaria.
+     */
+    public function motivoParaNaoAprovar(): ?string
+    {
+        if ($this->validado !== self::STATUS_PENDENTE) {
+            return 'Viagem ja foi validada anteriormente.';
+        }
+
+        // O municipio atestou que a agua nao chegou: aprovar para pagamento
+        // pagaria entrega que nao houve. Rejeitar continua permitido.
+        if ($this->confirmado === self::CONFIRMACAO_REPROVADA) {
+            return 'O municipio reprovou esta viagem; ela nao pode ser aprovada para pagamento.';
+        }
+
+        if ($this->confirmado === self::CONFIRMACAO_PENDENTE && self::exigeConfirmacaoDoMunicipio()) {
+            return 'Aguardando confirmacao do municipio.';
+        }
+
+        return null;
+    }
+
     /** Ainda sem decisao do municipio (nem confirmada, nem reprovada). */
     public function scopeNaoConfirmada(Builder $query): Builder
     {

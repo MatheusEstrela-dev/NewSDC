@@ -39,15 +39,16 @@ class CronogramaController extends Controller
     {
         $perPage = (int) $request->integer('per_page', 15);
         $filtros = $request->only(['estado', 'ata_id', 'prestador_id', 'municipio_id', 'search']);
+        $escopo = EscopoDeLeitura::municipioId($request->user());
 
-        $cronogramas = $this->service->listar($perPage, $filtros);
+        $cronogramas = $this->service->listar($perPage, $filtros, $escopo);
 
         return Inertia::render('Tdap/Cronogramas/Index', [
             'cronogramas'  => CronogramaIndexResource::collection($cronogramas),
-            'estatisticas' => fn () => $this->service->obterEstatisticas(),
+            'estatisticas' => fn () => $this->service->obterEstatisticas($escopo),
             'atas'         => fn () => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero']),
             'prestadores'  => fn () => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
-            'municipios'   => fn () => $this->service->municipiosDosLotes(),
+            'municipios'   => fn () => $this->service->municipiosDosLotes($escopo),
             'filtros'      => $filtros,
             'canCreate'    => $request->user()?->can('tdap.cronogramas.create') ?? false,
             'canEdit'      => $request->user()?->can('tdap.cronogramas.edit') ?? false,
@@ -59,7 +60,7 @@ class CronogramaController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $filtros = $request->only(['estado', 'ata_id', 'prestador_id', 'municipio_id', 'search', 'data_inicio', 'data_fim']);
-        $data = $this->service->exportar($filtros);
+        $data = $this->service->exportar($filtros, EscopoDeLeitura::municipioId($request->user()));
 
         $filename = 'cronogramas_'.now()->format('Y-m-d_H-i-s').'.csv';
 
@@ -132,6 +133,8 @@ class CronogramaController extends Controller
 
     public function show(Cronograma $cronograma, Request $request): Response
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         $cronograma = $this->service->obter($cronograma->id);
         [$podeAtivar, $motivoBloqueio] = $this->service->podeAtivar($cronograma);
 
@@ -155,6 +158,7 @@ class CronogramaController extends Controller
             'canProrrogar'     => $request->user()?->can('tdap.cronogramas.prorrogar') ?? false,
             'canAlocarCaminhao' => $request->user()?->can('tdap.cronogramas.edit') ?? false,
             'canValidarViagem' => $request->user()?->can('tdap.viagens.validar') ?? false,
+            'canRegistrarViagem' => $request->user()?->can('tdap.viagens.create') ?? false,
         ]);
     }
 
@@ -165,8 +169,10 @@ class CronogramaController extends Controller
      * listagem nao carrega caminhoes nem pontos, e buscar so ao clicar evita
      * pesar a paginacao inteira por causa de um botao.
      */
-    public function impressao(Cronograma $cronograma): JsonResponse
+    public function impressao(Cronograma $cronograma, Request $request): JsonResponse
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         $cronograma = $this->service->obter($cronograma->id);
 
         return response()->json([
@@ -186,8 +192,7 @@ class CronogramaController extends Controller
         ])['perspectiva'] ?? $relatorios->perspectivaPadrao($request->user());
 
         // Quem le so o proprio municipio (COMPDEC) nao tira relatorio de outro.
-        $escopo = EscopoDeLeitura::municipioId($request->user());
-        abort_if($escopo !== null && $escopo !== (int) $cronograma->municipio_id, 403);
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
 
         $cronograma = $this->service->obter($cronograma->id);
 
@@ -212,8 +217,10 @@ class CronogramaController extends Controller
             : $this->politicaPontos->apresentarVinculados($cronograma->pontosCaptacao);
     }
 
-    public function edit(Cronograma $cronograma): Response
+    public function edit(Cronograma $cronograma, Request $request): Response
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         return Inertia::render('Tdap/Cronogramas/Edit', [
             'cronograma' => CronogramaResource::make($cronograma->load(['ata', 'lote', 'municipio', 'prestador', 'pontosCaptacao'])),
             ...$this->propsDoFormulario($cronograma),
@@ -222,6 +229,8 @@ class CronogramaController extends Controller
 
     public function update(UpdateCronogramaRequest $request, Cronograma $cronograma): RedirectResponse
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         try {
             $atualizado = $this->service->atualizar($cronograma->id, CronogramaDTO::fromRequest($request->validated()));
 
@@ -233,8 +242,10 @@ class CronogramaController extends Controller
         }
     }
 
-    public function ativar(Cronograma $cronograma): RedirectResponse
+    public function ativar(Cronograma $cronograma, Request $request): RedirectResponse
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         try {
             $this->service->ativar($cronograma->id);
 
@@ -248,6 +259,8 @@ class CronogramaController extends Controller
 
     public function encerrar(Request $request, Cronograma $cronograma): RedirectResponse
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         try {
             $obs = (string) $request->input('observacao', '');
             $this->service->encerrar($cronograma->id, $obs !== '' ? $obs : null);
@@ -262,6 +275,8 @@ class CronogramaController extends Controller
 
     public function prorrogar(Request $request, Cronograma $cronograma): RedirectResponse
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         $request->validate([
             'dt_inicio_prorrogacao' => ['required', 'date'],
             'dt_final_prorrogacao'  => ['required', 'date', 'after_or_equal:dt_inicio_prorrogacao'],
@@ -284,15 +299,19 @@ class CronogramaController extends Controller
         }
     }
 
-    public function arquivar(Cronograma $cronograma): RedirectResponse
+    public function arquivar(Cronograma $cronograma, Request $request): RedirectResponse
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         $this->service->arquivar($cronograma->id);
 
         return back()->with('success', "Cronograma {$cronograma->numero} arquivado.");
     }
 
-    public function desarquivar(Cronograma $cronograma): RedirectResponse
+    public function desarquivar(Cronograma $cronograma, Request $request): RedirectResponse
     {
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+
         $this->service->desarquivar($cronograma->id);
 
         return back()->with('success', "Cronograma {$cronograma->numero} desarquivado.");
@@ -303,6 +322,7 @@ class CronogramaController extends Controller
         if (! $request->user()?->can('tdap.cronogramas.delete')) {
             abort(403);
         }
+        EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
 
         try {
             $numero = $cronograma->numero;

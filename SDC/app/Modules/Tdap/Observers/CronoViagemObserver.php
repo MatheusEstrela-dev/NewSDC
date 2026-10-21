@@ -28,6 +28,10 @@ class CronoViagemObserver
 
     public function updated(CronoViagem $viagem): void
     {
+        if ($viagem->wasChanged('confirmado') && $viagem->confirmado !== CronoViagem::CONFIRMACAO_PENDENTE) {
+            $this->registrarDecisaoDoMunicipio($viagem);
+        }
+
         if (! $viagem->wasChanged('validado')) {
             return;
         }
@@ -64,6 +68,24 @@ class CronoViagemObserver
                 ],
             );
         }
+    }
+
+    private function registrarDecisaoDoMunicipio(CronoViagem $viagem): void
+    {
+        $confirmada = $viagem->confirmado === CronoViagem::CONFIRMACAO_CONFIRMADA;
+
+        $this->historicoService->registrar(
+            tipoEvento: $confirmada ? 'viagem.confirmada' : 'viagem.reprovada_municipio',
+            entity: $viagem,
+            obs: $confirmada
+                ? 'Municipio confirmou o recebimento da viagem.'
+                : 'Municipio reprovou a viagem. '.($viagem->obs_confirmacao ?? ''),
+            payload: [
+                'confirmado_em'   => $viagem->confirmado_em?->toIso8601String(),
+                'confirmado_por'  => $viagem->confirmado_por,
+                'obs_confirmacao' => $viagem->obs_confirmacao,
+            ],
+        );
     }
 
     public function deleted(CronoViagem $viagem): void

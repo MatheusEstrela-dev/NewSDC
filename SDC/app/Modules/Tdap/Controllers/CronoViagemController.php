@@ -151,7 +151,7 @@ class CronoViagemController extends Controller
     {
         try {
             $aprovada = (bool) $request->boolean('aprovada');
-            $this->service->validar($viagem->id, $aprovada, $request->input('obs_aprovacao'));
+            $this->service->validar($viagem->id, $aprovada, $request->input('obs_aprovacao'), $request->user());
 
             $cronogramaId = $viagem->cronoCaminhao?->cronograma_id;
             $msg = $aprovada ? 'Viagem aprovada.' : 'Viagem rejeitada.';
@@ -170,6 +170,7 @@ class CronoViagemController extends Controller
         if (! $request->user()?->can('tdap.viagens.create')) {
             abort(403);
         }
+        EscopoDeLeitura::garantir($request->user(), $viagem->cronoCaminhao?->cronograma?->municipio_id);
 
         try {
             $cronogramaId = $viagem->cronoCaminhao?->cronograma_id;

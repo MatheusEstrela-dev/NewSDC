@@ -8,7 +8,7 @@
     />
 
     <!-- Cards clicáveis: cada um é um recorte da própria fila. -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
       <StatCard
         title="Pendentes"
         :value="estatisticas.pendentes"
@@ -23,6 +23,13 @@
         :icon="ClockIcon"
         variant="danger"
         subtitle="Fila parada"
+      />
+      <StatCard
+        title="Aguardando município"
+        :value="estatisticas.aguardando_municipio"
+        :icon="ClockIcon"
+        variant="warning"
+        subtitle="Sem confirmação do COMPDEC"
       />
       <StatCard
         title="De cronograma encerrado"
@@ -129,7 +136,7 @@
                 </td>
 
                 <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                  <button v-if="canValidar" :disabled="reprovadaPeloMunicipio(v)" :title="reprovadaPeloMunicipio(v) ? 'O município reprovou esta viagem' : ''" @click="abrirDecisao(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button v-if="canValidar" :disabled="!v.pode_aprovar" :title="v.motivo_nao_aprovacao ?? ''" @click="abrirDecisao(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">
                     Aprovar
                   </button>
                   <button v-if="canValidar" @click="abrirDecisao(v, false)" class="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700">
@@ -171,7 +178,7 @@
         </template>
 
         <template #mobile-actions="{ item: v }">
-          <button v-if="canValidar" :disabled="reprovadaPeloMunicipio(v)" :title="reprovadaPeloMunicipio(v) ? 'O município reprovou esta viagem' : ''" @click="abrirDecisao(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">
+          <button v-if="canValidar" :disabled="!v.pode_aprovar" :title="v.motivo_nao_aprovacao ?? ''" @click="abrirDecisao(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">
             Aprovar
           </button>
           <button v-if="canValidar" @click="abrirDecisao(v, false)" class="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700">
@@ -235,17 +242,11 @@ defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   viagens:      { type: Object, default: () => ({ data: [], meta: {} }) },
-  estatisticas: { type: Object, default: () => ({ pendentes: 0, aguardando_mais_de_7d: 0, de_cronograma_encerrado: 0, municipios: 0 }) },
+  estatisticas: { type: Object, default: () => ({ pendentes: 0, aguardando_mais_de_7d: 0, aguardando_municipio: 0, de_cronograma_encerrado: 0, municipios: 0 }) },
   municipios:   { type: Array, default: () => [] },
   filtros:      { type: Object, default: () => ({}) },
   canValidar:   { type: Boolean, default: false },
 });
-
-// Espelha a trava de CronoViagemService::validar -- o servidor recusa de
-// qualquer forma; aqui so evita o clique inutil.
-function reprovadaPeloMunicipio(v) {
-  return v.status_confirmacao === 'reprovada';
-}
 
 const form = reactive({
   search: props.filtros.search ?? '',

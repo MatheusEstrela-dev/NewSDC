@@ -9,6 +9,7 @@ use App\Core\Outbox\OutboxDispatcher;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
 use App\Modules\Tdap\Models\Cronograma;
+use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Carbon\Carbon;
@@ -27,10 +28,14 @@ class CronogramaService
 
     /**
      * @param  array<string, mixed>  $filtros
+     * @param  ?int  $municipioEscopo  EscopoDeLeitura de quem consulta (null =
+     *     estado inteiro). Soma-se ao filtro da tela, nunca o substitui: o
+     *     `municipio_id` da querystring so estreita dentro do escopo.
      */
-    public function listar(int $perPage = 15, array $filtros = []): LengthAwarePaginator
+    public function listar(int $perPage = 15, array $filtros = [], ?int $municipioEscopo = null): LengthAwarePaginator
     {
         return Cronograma::query()
+            ->when($municipioEscopo !== null, fn ($q) => $q->doMunicipio($municipioEscopo))
             ->with([
                 'ata:id,numero',
                 'lote:id,numero,nome',
@@ -71,9 +76,10 @@ class CronogramaService
      * @param  array<string, mixed>  $filtros
      * @return array<int, array<string, mixed>>
      */
-    public function exportar(array $filtros = []): array
+    public function exportar(array $filtros = [], ?int $municipioEscopo = null): array
     {
         $rows = Cronograma::query()
+            ->when($municipioEscopo !== null, fn ($q) => $q->doMunicipio($municipioEscopo))
             ->with([
                 'ata:id,numero',
                 'lote:id,numero',
@@ -226,6 +232,17 @@ class CronogramaService
         $cronograma = Cronograma::findOrFail($id);
         if ($cronograma->ativo) {
             throw new \DomainException('Cronograma ativo nao pode ser excluido. Encerre antes.');
+        }
+
+        // Excluir tirava a agua ja aprovada dos totais: as viagens ficam na
+        // tabela, mas toda contagem passa pelo cronograma (CronoViagem::vinculada).
+        // Arquivar esconde sem apagar a execucao.
+        if ($cronograma->encerrado_em) {
+            throw new \DomainException('Cronograma encerrado e registro historico. Arquive em vez de excluir.');
+        }
+
+        if ($cronograma->viagens()->where('validado', CronoViagem::STATUS_APROVADA)->exists()) {
+            throw new \DomainException('Cronograma com viagem aprovada nao pode ser excluido. Arquive em vez de excluir.');
         }
 
         return (bool) $cronograma->delete();
@@ -511,12 +528,13 @@ class CronogramaService
      *
      * @return list<array{id: int, nome: string, uf: ?string, ata_ids: list<int>}>
      */
-    public function municipiosDosLotes(): array
+    public function municipiosDosLotes(?int $municipioEscopo = null): array
     {
         return DB::table('tdap_lote_municipios as lm')
             ->join('tdap_lotes as l', 'l.id', '=', 'lm.lote_id')
             ->join('municipios as m', 'm.id', '=', 'lm.municipio_id')
             ->whereNull('l.deleted_at')
+            ->when($municipioEscopo !== null, fn ($q) => $q->where('lm.municipio_id', $municipioEscopo))
             ->distinct()
             ->orderBy('m.nome')
             ->get(['m.id', 'm.nome', 'm.uf', 'l.ata_id'])

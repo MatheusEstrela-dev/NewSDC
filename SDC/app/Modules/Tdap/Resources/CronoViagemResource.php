@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Resources;
 
+use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Support\LimiteDoCronograma;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -93,7 +94,12 @@ class CronoViagemResource extends JsonResource
             // Mesma regra que o service aplica ao decidir: a tela desabilita
             // exatamente o que o servidor recusaria.
             'pode_decidir_confirmacao' => $this->status_confirmacao === 'pendente'
+                && ($this->validado === null || ! CronoViagem::exigeConfirmacaoDoMunicipio())
                 && LimiteDoCronograma::permiteDecisao($cronograma, $this->data_registro),
+
+            /* Validacao da CEDEC: mesma regra de CronoViagemService::validar */
+            'pode_aprovar'          => $this->motivoParaNaoAprovar() === null,
+            'motivo_nao_aprovacao'  => $this->motivoParaNaoAprovar(),
         ];
     }
 
