@@ -6,12 +6,12 @@
 services:
   app:
     environment:
-      TUNNEL_URL: https://parasitic-portfolio-module.ngrok-free.dev
-      APP_URL: https://parasitic-portfolio-module.ngrok-free.dev
-      L5_SWAGGER_CONST_HOST: https://parasitic-portfolio-module.ngrok-free.dev
+      TUNNEL_URL:  https://reversion-ashes-citric.ngrok-free.dev
+      APP_URL:  https://reversion-ashes-citric.ngrok-free.dev
+      L5_SWAGGER_CONST_HOST:  https://reversion-ashes-citric.ngrok-free.dev
       SESSION_SECURE_COOKIE: "true"
 
   queue:
     environment:
-      TUNNEL_URL: https://parasitic-portfolio-module.ngrok-free.dev
-      APP_URL: https://parasitic-portfolio-module.ngrok-free.dev
+      TUNNEL_URL:  https://reversion-ashes-citric.ngrok-free.dev
+      APP_URL:  https://reversion-ashes-citric.ngrok-free.dev

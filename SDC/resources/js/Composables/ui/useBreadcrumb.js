@@ -416,7 +416,6 @@ export function useBreadcrumb() {
             // Vistoria pertence a um caminhao, e o caminhao mora na frota: a
             // trilha passa por ela, nao pelo historico.
             'Tdap/Frota/Vistorias/Index': [inicio, tdap, frota, aqui('Histórico de vistorias')],
-            'Tdap/Frota/Vistorias/Agenda': [inicio, tdap, frota, aqui('Agenda do vistoriador')],
             // A vistoria nasce de um caminhao: com a rota aninhada, a placa
             // sempre chega na prop `caminhao` e a trilha pode nomea-la.
             'Tdap/Frota/Vistorias/Create': [

@@ -319,6 +319,28 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
 
+      # Assistente de IA (core/IA). O .env do host nao e montado e o entrypoint
+      # reescreve o .env do container sem estas chaves, entao elas vem do
+      # docker/.env, como APP_KEY. Vazia, o chat responde "assistente nao
+      # configurado" em vez de falhar. O container precisa ser recriado depois
+      # de preencher a chave: o boot roda config:cache.
+      AI_DRIVER: ${AI_DRIVER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash-lite}
+      GEMINI_MAX_TOKENS: ${GEMINI_MAX_TOKENS:-4096}
+      # Saida HTTP. Nesta maquina o proxy.prodemge.gov.br:8080 nao abre (a porta
+      # estoura tempo) e o Google responde direto; forcar o proxy manda o chat
+      # para um host morto. Na VM, preencha HTTP_PROXY/HTTPS_PROXY/NO_PROXY no
+      # docker/.env. Vazio aqui significa conexao direta. NO_PROXY precisa
+      # incluir db, redis, mailhog, reverb e host.docker.internal quando o
+      # proxy estiver ligado, senao o curl interno passa por ele.
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,db,redis,mailhog,reverb,host.docker.internal,.prodemge.gov.br,.mg.gov.br}
+      http_proxy: ${HTTP_PROXY:-}
+      https_proxy: ${HTTPS_PROXY:-}
+      no_proxy: ${NO_PROXY:-localhost,127.0.0.1,db,redis,mailhog,reverb,host.docker.internal,.prodemge.gov.br,.mg.gov.br}
+
     ports:
       - "8000:8000"     # HTTP (Swoole) — externo=interno p/ assets baterem
 
