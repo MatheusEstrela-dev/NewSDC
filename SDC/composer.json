@@ -8,7 +8,7 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": ">=8.3.36 <8.4.0 || >=8.4.27 <8.5.0 || >=8.5.12 <9.0.0",
         "ext-pdo_pgsql": "*",
         "azure-oss/storage-blob-flysystem": "^1.6",
         "darkaonline/l5-swagger": "^8.6",
@@ -109,7 +109,7 @@
             "php-http/discovery": true
         },
         "platform": {
-            "php": "8.3.30"
+            "php": "8.3.36"
         },
         "platform-check": false
     },

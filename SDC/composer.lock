@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e979f8bdfb2118185246f22dabc66b60",
+    "content-hash": "b597a4b93322116b31341b29b7776dc4",
     "packages": [
         {
             "name": "azure-oss/identity",
@@ -16072,12 +16072,12 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.3",
+        "php": ">=8.3.36 <8.4.0 || >=8.4.27 <8.5.0 || >=8.5.12 <9.0.0",
         "ext-pdo_pgsql": "*"
     },
     "platform-dev": [],
     "platform-overrides": {
-        "php": "8.3.30"
+        "php": "8.3.36"
     },
     "plugin-api-version": "2.6.0"
 }

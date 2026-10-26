@@ -3,9 +3,13 @@
 # Octane sobre Swoole: coroutines + I/O assincrono + task workers.
 # Imagem UNICA de producao do app (o legado FrankenPHP foi removido); tuning
 # opcache/JIT para workers persistentes.
+#
+# PHP 8.4.27 corrige CVE-2026-109618 e CVE-2026-109619. A tag flutuante
+# 8.4-cli-alpine pode permanecer em cache num patch anterior. Nao usar
+# 8.3.36 aqui: o lock exige PHP ^8.4 (doctrine/instantiator).
 # ============================================================================
 
-FROM php:8.4-cli-alpine
+FROM php:8.4.27-cli-alpine
 
 LABEL maintainer="SDC Team"
 LABEL environment="production"
@@ -110,13 +114,15 @@ RUN apk add --no-cache curl bash unzip \
     && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
 
 # Configuracao PHP: memoria, limites de upload e opcache/JIT calibrado para
-# workers persistentes.
+# workers persistentes. session.upload_progress.enabled=0 cobre CVE-2026-115560
+# ate o proximo patch (8.4.27 nao inclui essa correcao). O app nao usa o recurso.
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     && { \
         echo "memory_limit=512M"; \
         echo "max_execution_time=30"; \
         echo "upload_max_filesize=64M"; \
         echo "post_max_size=64M"; \
+        echo "session.upload_progress.enabled=0"; \
     } > /usr/local/etc/php/conf.d/99-memory.ini \
     && { \
         echo "opcache.enable=1"; \
