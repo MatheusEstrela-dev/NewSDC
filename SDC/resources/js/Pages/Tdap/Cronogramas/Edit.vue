@@ -15,7 +15,8 @@
       :lotes="lotes"
       :pontos-captacao="pontosCaptacao"
       :exige-pmda="exigePmda"
-      :pode-ver-pmda="podeVerPmda"
+      :cronograma-id="c.id"
+      origem="edit"
       submit-label="Salvar alterações"
       @submit="submit"
       @cancel="cancelar"
@@ -42,7 +43,6 @@ const props = defineProps({
   // Agrupado por municipio: { [municipio_id]: [ponto, ...] }.
   pontosCaptacao: { type: [Object, Array], default: () => ({}) },
   exigePmda:      { type: Boolean, default: true },
-  podeVerPmda:    { type: Boolean, default: false },
 });
 
 const c = props.cronograma.data;

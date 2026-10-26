@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Contracts;
 
+use App\Modules\Tdap\DTOs\ResumoPmdaDTO;
 use App\Modules\Tdap\DTOs\VinculoPmdaDTO;
 
 /**
@@ -32,4 +33,15 @@ interface PontosCaptacaoDoPmda
      * @return array<int, ?string> id do plano => protocolo
      */
     public function protocolos(array $pmdaPlanoIds): array;
+
+    /**
+     * Plano que a tela de consulta do cronograma exibe, com os pontos ATIVOS.
+     *
+     * Sem $pmdaPlanoId: o vigente do municipio (APROVADO/ATENDIDO mais recente),
+     * ou null quando o municipio nao tem um. Com $pmdaPlanoId: esse plano, mesmo
+     * que outro ja seja o vigente -- e o que autorizou o cronograma.
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException plano inexistente ou de outro municipio
+     */
+    public function resumoParaCronograma(int $municipioId, ?int $pmdaPlanoId = null): ?ResumoPmdaDTO;
 }

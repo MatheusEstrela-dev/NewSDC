@@ -118,7 +118,6 @@ class CronogramaController extends Controller
             'prestadores'    => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
             'pontosCaptacao' => $this->politicaPontos->opcoesPorMunicipio($municipioIds, $vinculados),
             'exigePmda'      => $this->politicaPontos->exigePmda(),
-            'podeVerPmda'    => request()->user()?->can('pmda.planos.view') ?? false,
         ];
     }
 

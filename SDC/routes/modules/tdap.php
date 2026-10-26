@@ -6,6 +6,7 @@ use App\Modules\Tdap\Controllers\AtaController;
 use App\Modules\Tdap\Controllers\CronoCaminhaoController;
 use App\Modules\Tdap\Controllers\CronogramaComprovanteController;
 use App\Modules\Tdap\Controllers\CronogramaController;
+use App\Modules\Tdap\Controllers\CronogramaPmdaController;
 use App\Modules\Tdap\Controllers\CronoViagemController;
 use App\Modules\Tdap\Controllers\FrotaController;
 use App\Modules\Tdap\Controllers\FrotaVistoriaController;
@@ -306,6 +307,9 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
         Route::middleware('can:tdap.cronogramas.view')->group(function () {
             Route::get('/', [CronogramaController::class, 'index'])->name('index');
             Route::get('/export', [CronogramaController::class, 'export'])->name('export');
+            // Estatica antes de /{cronograma}: a consulta do PMDA do municipio
+            // fica no modulo, no lugar de abrir a lista geral de planos.
+            Route::get('/pmda', [CronogramaPmdaController::class, 'show'])->name('pmda');
             Route::get('/{cronograma}', [CronogramaController::class, 'show'])
                 ->name('show')->whereNumber('cronograma');
             Route::get('/{cronograma}/impressao', [CronogramaController::class, 'impressao'])

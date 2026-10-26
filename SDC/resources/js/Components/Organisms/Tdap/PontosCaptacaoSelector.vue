@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
 
 /**
  * Escolha dos pontos de captacao de um cronograma.
@@ -8,14 +9,19 @@ import { computed } from 'vue';
  * regra do PMDA ligada, so os pontos ATIVOS do PMDA aprovado do municipio,
  * mais os que o cronograma ja tinha (marcados "Legado"). Este componente nao
  * decide nada sobre elegibilidade, so mostra e seleciona.
+ *
+ * O protocolo abre a consulta do PMDA dentro de Cronogramas, o mesmo plano
+ * que autorizou o ponto -- sem sair para a lista geral do modulo PMDA.
  */
 const props = defineProps({
-  modelValue:  { type: Array, default: () => [] },
-  pontos:      { type: Array, default: () => [] },
-  disabled:    { type: Boolean, default: false },
-  exigePmda:   { type: Boolean, default: true },
-  podeVerPmda: { type: Boolean, default: false },
-  error:       { type: String, default: '' },
+  modelValue:   { type: Array, default: () => [] },
+  pontos:       { type: Array, default: () => [] },
+  municipioId:  { type: [Number, String], default: null },
+  cronogramaId: { type: [Number, String], default: null },
+  origem:       { type: String, default: 'create' },
+  disabled:     { type: Boolean, default: false },
+  exigePmda:    { type: Boolean, default: true },
+  error:        { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -32,6 +38,16 @@ function alternar(id) {
 function fmtCapacidade(v) {
   const n = Number(v || 0);
   return n > 0 ? `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m³` : '—';
+}
+
+function hrefDoPmda(pmdaPlanoId = null) {
+  const params = {
+    municipio_id: props.municipioId,
+    origem: props.origem || 'create',
+  };
+  if (pmdaPlanoId) params.pmda_plano_id = pmdaPlanoId;
+  if (props.cronogramaId) params.cronograma = props.cronogramaId;
+  return route('tdap.cronogramas.pmda', params);
 }
 </script>
 
@@ -74,8 +90,16 @@ function fmtCapacidade(v) {
             <td class="px-4 py-2.5">{{ p.tipo_nome }}</td>
             <td class="px-4 py-2.5 text-right">{{ fmtCapacidade(p.capacidade) }}</td>
             <td class="px-4 py-2.5">
+              <Link
+                v-if="p.no_pmda && p.pmda_plano_id && municipioId"
+                :href="hrefDoPmda(p.pmda_plano_id)"
+                class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:underline dark:bg-emerald-500/15 dark:text-emerald-300"
+                @click.stop
+              >
+                PMDA {{ p.protocolo || `#${p.pmda_plano_id}` }}
+              </Link>
               <span
-                v-if="p.no_pmda"
+                v-else-if="p.no_pmda"
                 class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
               >
                 PMDA {{ p.protocolo || `#${p.pmda_plano_id}` }}
@@ -93,14 +117,14 @@ function fmtCapacidade(v) {
             <td colspan="5" class="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
               <template v-if="disabled">Selecione o município primeiro.</template>
               <template v-else-if="exigePmda">
-                Este município não tem PMDA aprovado com ponto de captação ATIVO.
+                Este município não tem PMDA aprovado com ponto de captação ativo.
                 Os pontos são cadastrados no PMDA do município.
-                <a
-                  v-if="podeVerPmda"
-                  :href="route('pmda.planos.index')"
+                <Link
+                  v-if="municipioId"
+                  :href="hrefDoPmda()"
                   class="font-medium text-blue-600 hover:underline dark:text-blue-400"
                   @click.stop
-                >Abrir PMDA</a>
+                >Ver PMDA do município</Link>
               </template>
               <template v-else>Nenhum ponto de captação cadastrado para este município.</template>
             </td>

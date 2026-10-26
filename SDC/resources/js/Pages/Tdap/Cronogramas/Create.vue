@@ -12,7 +12,6 @@
       :lotes="lotes"
       :pontos-captacao="pontosCaptacao"
       :exige-pmda="exigePmda"
-      :pode-ver-pmda="podeVerPmda"
       submit-label="Cadastrar"
       @submit="submit"
       @cancel="cancelar"
@@ -37,7 +36,6 @@ defineProps({
   // Agrupado por municipio: { [municipio_id]: [ponto, ...] }.
   pontosCaptacao: { type: [Object, Array], default: () => ({}) },
   exigePmda:      { type: Boolean, default: true },
-  podeVerPmda:    { type: Boolean, default: false },
 });
 
 const form = useForm({

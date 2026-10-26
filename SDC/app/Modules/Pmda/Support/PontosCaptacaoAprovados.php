@@ -8,7 +8,10 @@ use App\Modules\Pmda\Enums\PmdaStatus;
 use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Pmda\Models\PmdaPonto;
 use App\Modules\Tdap\Contracts\PontosCaptacaoDoPmda;
+use App\Modules\Tdap\DTOs\ResumoPmdaDTO;
 use App\Modules\Tdap\DTOs\VinculoPmdaDTO;
+use App\Modules\Tdap\Models\PontoCaptacao;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Pontos de captacao que o PMDA vigente de cada municipio autoriza.
@@ -82,6 +85,77 @@ final class PontosCaptacaoAprovados implements PontosCaptacaoDoPmda
             ->all();
     }
 
+    public function resumoParaCronograma(int $municipioId, ?int $pmdaPlanoId = null): ?ResumoPmdaDTO
+    {
+        $vigente = array_values($this->planosVigentes([$municipioId]))[0] ?? null;
+
+        if ($pmdaPlanoId === null) {
+            return $vigente === null ? null : $this->montarResumo($vigente, $vigente);
+        }
+
+        $plano = PmdaPlano::withTrashed()->find($pmdaPlanoId);
+        if ($plano === null || (int) $plano->municipio_id !== $municipioId) {
+            throw (new ModelNotFoundException())->setModel(PmdaPlano::class, [$pmdaPlanoId]);
+        }
+
+        return $this->montarResumo($plano, $vigente);
+    }
+
+    private function montarResumo(PmdaPlano $plano, ?PmdaPlano $vigente): ResumoPmdaDTO
+    {
+        $status = $plano->status;
+        $protocolo = $plano->protocolo !== null ? (string) $plano->protocolo : null;
+        $vigenteId = $vigente !== null ? (int) $vigente->id : null;
+
+        return new ResumoPmdaDTO(
+            id: $plano->id,
+            municipioId: (int) $plano->municipio_id,
+            protocolo: $protocolo,
+            status: $status->value,
+            statusLabel: $status->getLabel(),
+            statusCor: $status->getCor(),
+            dataAprov: $plano->data_aprov?->toDateString(),
+            vigente: $vigenteId !== null && $vigenteId === (int) $plano->id,
+            vigenteId: $vigenteId,
+            vigenteProtocolo: $vigente?->protocolo !== null ? (string) $vigente->protocolo : null,
+            excluido: $plano->trashed(),
+            pontos: $this->pontosAtivosDoPlano($plano, $protocolo),
+        );
+    }
+
+    /**
+     * Pontos ATIVOS daquele plano, do mesmo municipio. SECO fica de fora: e o
+     * ponto de onde o caminhao nao tira agua, a mesma regra de vinculosVigentes.
+     *
+     * @return list<array{id: int, nome: string, tipo_nome: string, capacidade: float, pmda_plano_id: int, protocolo: ?string}>
+     */
+    private function pontosAtivosDoPlano(PmdaPlano $plano, ?string $protocolo): array
+    {
+        return PmdaPonto::query()
+            ->join('pmda_plano_ponto as pp', 'pp.ponto_id', '=', 'pip_pmda_ponto.id')
+            ->where('pp.pmda_plano_id', $plano->id)
+            ->where('pp.situacao', self::SITUACAO_ATIVO)
+            ->where('pip_pmda_ponto.ativo', true)
+            ->where('pip_pmda_ponto.municipio_id', $plano->municipio_id)
+            ->orderBy('pip_pmda_ponto.nome')
+            ->get([
+                'pip_pmda_ponto.id',
+                'pip_pmda_ponto.nome',
+                'pip_pmda_ponto.tipo',
+                'pip_pmda_ponto.capacidade',
+            ])
+            ->map(fn (PmdaPonto $ponto) => [
+                'id'            => (int) $ponto->id,
+                'nome'          => (string) $ponto->nome,
+                'tipo_nome'     => PontoCaptacao::TIPOS[(int) $ponto->tipo] ?? 'OUTRO',
+                'capacidade'    => (float) $ponto->capacidade,
+                'pmda_plano_id' => (int) $plano->id,
+                'protocolo'     => $protocolo,
+            ])
+            ->values()
+            ->all();
+    }
+
     /**
      * O plano aprovado mais recente de cada municipio, indexado pelo id.
      *
@@ -97,7 +171,7 @@ final class PontosCaptacaoAprovados implements PontosCaptacaoDoPmda
         return PmdaPlano::query()
             ->whereIn('municipio_id', $municipioIds)
             ->whereIn('status', array_map(fn (PmdaStatus $s) => $s->value, self::STATUS_APROVADOS))
-            ->get(['id', 'municipio_id', 'protocolo', 'data_aprov'])
+            ->get(['id', 'municipio_id', 'protocolo', 'status', 'data_aprov'])
             ->sortByDesc(fn (PmdaPlano $p) => [$p->data_aprov?->getTimestamp() ?? PHP_INT_MIN, $p->id])
             ->unique('municipio_id')
             ->keyBy('id')

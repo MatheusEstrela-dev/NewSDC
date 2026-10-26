@@ -86,8 +86,18 @@
                   <template v-if="p.latitude && p.longitude"> · {{ p.latitude }}, {{ p.longitude }}</template>
                 </p>
               </div>
+              <Link
+                v-if="p.pmda_plano_id && c.municipio_id"
+                :href="route('tdap.cronogramas.pmda', {
+                  municipio_id: c.municipio_id,
+                  pmda_plano_id: p.pmda_plano_id,
+                  cronograma: c.id,
+                  origem: 'show',
+                })"
+                class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:underline dark:bg-emerald-500/15 dark:text-emerald-300"
+              >PMDA {{ p.protocolo || `#${p.pmda_plano_id}` }}</Link>
               <span
-                v-if="p.pmda_plano_id"
+                v-else-if="p.pmda_plano_id"
                 class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
               >PMDA {{ p.protocolo || `#${p.pmda_plano_id}` }}</span>
               <span

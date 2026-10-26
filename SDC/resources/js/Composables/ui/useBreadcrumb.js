@@ -451,6 +451,14 @@ export function useBreadcrumb() {
             'Tdap/Cronogramas/Create': [inicio, tdap, cronogramas, aqui('Novo cronograma')],
             'Tdap/Cronogramas/Show': [inicio, tdap, cronogramas, aqui(rotulo(cronograma?.numero, 'Visualizar'))],
             'Tdap/Cronogramas/Edit': [inicio, tdap, cronogramas, aqui(`Editar ${rotulo(cronograma?.numero, 'cronograma')}`)],
+            'Tdap/Cronogramas/Pmda': [
+                inicio,
+                tdap,
+                cronogramas,
+                aqui(props?.plano?.protocolo
+                    ? `PMDA ${props.plano.protocolo}`
+                    : `PMDA ${rotulo(props?.municipio?.nome, 'do município')}`),
+            ],
 
             // As duas filas sao irmas e nao filhas uma da outra: confirmar e da
             // COMPDEC, validar e da CEDEC. Pendurar uma na outra sugeriria uma

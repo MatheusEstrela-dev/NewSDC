@@ -103,9 +103,11 @@
       <PontosCaptacaoSelector
         v-model="form.ponto_captacao_ids"
         :pontos="pontosDoMunicipio"
+        :municipio-id="form.municipio_id"
+        :cronograma-id="cronogramaId"
+        :origem="origem"
         :disabled="!form.municipio_id"
         :exige-pmda="exigePmda"
-        :pode-ver-pmda="podeVerPmda"
         :error="erroPontos"
       />
     </div>
@@ -228,7 +230,8 @@ const props = defineProps({
   // Agrupado por municipio e ja filtrado pelo backend: { [municipio_id]: [ponto, ...] }.
   pontosCaptacao: { type: [Object, Array], default: () => ({}) },
   exigePmda:      { type: Boolean, default: true },
-  podeVerPmda:    { type: Boolean, default: false },
+  cronogramaId:   { type: [Number, String], default: null },
+  origem:         { type: String, default: 'create' },
   submitLabel:    { type: String, default: 'Salvar' },
 });
 

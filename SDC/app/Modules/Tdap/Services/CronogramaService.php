@@ -71,6 +71,40 @@ class CronogramaService
     }
 
     /**
+     * Cronogramas do municipio cujo ponto foi autorizado por este PMDA.
+     *
+     * O vinculo e o pivo `tdap_cronograma_ponto.pmda_plano_id`, o mesmo que a
+     * ficha mostra no selo do ponto. A consulta olha o pivô direto para o
+     * cronograma continuar correspondente mesmo se o ponto tiver sido excluido.
+     *
+     * @return list<array{id: int, numero: string, estado: string, arquivado: bool, dt_inicio: ?string, dt_final: ?string}>
+     */
+    public function vinculadosAoPmda(int $pmdaPlanoId, int $municipioId): array
+    {
+        return Cronograma::query()
+            ->where('municipio_id', $municipioId)
+            ->whereExists(function ($query) use ($pmdaPlanoId): void {
+                $query->selectRaw('1')
+                    ->from('tdap_cronograma_ponto as cp')
+                    ->whereColumn('cp.cronograma_id', 'tdap_cronogramas.id')
+                    ->where('cp.pmda_plano_id', $pmdaPlanoId);
+            })
+            ->orderByDesc('dt_inicio')
+            ->orderByDesc('id')
+            ->get(['id', 'numero', 'ativo', 'encerrado_em', 'arquivado_em', 'dt_inicio', 'dt_final'])
+            ->map(fn (Cronograma $cronograma) => [
+                'id'         => $cronograma->id,
+                'numero'     => $cronograma->numero,
+                'estado'     => $cronograma->estado,
+                'arquivado'  => $cronograma->arquivado_em !== null,
+                'dt_inicio'  => $cronograma->dt_inicio?->toDateString(),
+                'dt_final'   => $cronograma->dt_final?->toDateString(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * Linhas planas para exportacao CSV (respeita os filtros da listagem).
      *
      * @param  array<string, mixed>  $filtros
