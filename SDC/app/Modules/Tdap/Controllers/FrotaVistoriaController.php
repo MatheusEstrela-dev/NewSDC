@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Tdap\DTOs\CaminhaoDTO;
 use App\Modules\Tdap\DTOs\VistoriaDTO;
 use App\Modules\Tdap\Enums\ParecerVistoria;
 use App\Modules\Tdap\Models\Caminhao;
+use App\Modules\Tdap\Models\Prestador;
 use App\Modules\Tdap\Models\Vistoria;
+use App\Modules\Tdap\Requests\StoreVistoriaComCaminhaoRequest;
 use App\Modules\Tdap\Requests\StoreVistoriaRequest;
 use App\Modules\Tdap\Requests\UpdateVistoriaRequest;
 use App\Modules\Tdap\Resources\CaminhaoResource;
@@ -16,6 +19,7 @@ use App\Modules\Tdap\Resources\VistoriaFotoResource;
 use App\Modules\Tdap\Resources\VistoriaIndexResource;
 use App\Modules\Tdap\Resources\VistoriaResource;
 use App\Modules\Tdap\Resources\VistoriaSerieResource;
+use App\Modules\Tdap\Services\FrotaService;
 use App\Modules\Tdap\Services\VistoriaFotoService;
 use App\Modules\Tdap\Services\VistoriaService;
 use App\Modules\Tdap\Support\ExportadorCsv;
@@ -44,6 +48,7 @@ class FrotaVistoriaController extends Controller
     public function __construct(
         private readonly VistoriaService $service,
         private readonly VistoriaFotoService $fotoService,
+        private readonly FrotaService $frota,
     ) {}
 
     /** Itens por pagina, dentro de um intervalo que a tela aguenta. */
@@ -84,9 +89,12 @@ class FrotaVistoriaController extends Controller
             'caminhoes'     => fn () => $this->caminhoesAtivos(),
             'pareceres'     => ParecerVistoria::options(),
             'filtros'       => $filtros,
-            'canCreate'     => $request->user()?->can('tdap.vistorias.create') ?? false,
             'canEdit'       => $request->user()?->can('tdap.vistorias.edit') ?? false,
             'canDelete'     => $request->user()?->can('tdap.vistorias.delete') ?? false,
+            // O botao abre a pagina que grava caminhao e vistoria juntos.
+            // Sem as duas permissoes ele nao aparece -- a rota tambem recusa.
+            'canCadastrarCaminhaoNovo' => ($request->user()?->can('tdap.caminhoes.create') ?? false)
+                && ($request->user()?->can('tdap.vistorias.create') ?? false),
         ]);
     }
 
@@ -131,6 +139,59 @@ class FrotaVistoriaController extends Controller
             ],
             'vistorias' => $vistorias,
         ]);
+    }
+
+    /**
+     * Ficha unica: o caminhao ainda nao esta na frota.
+     *
+     * A tela e a mesma de "novo caminhao"; o que ela grava agora e o veiculo
+     * junto com a primeira vistoria. `?prestador_id=` vem do atalho na ficha
+     * do prestador e so cola se o id estiver entre os ativos.
+     */
+    public function nova(Request $request): Response
+    {
+        $prestadores = Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']);
+        $prestadorId = $request->integer('prestador_id') ?: null;
+
+        return Inertia::render('Tdap/Frota/Create', [
+            'prestadores'      => $prestadores,
+            'prestadorId'      => $prestadores->contains('id', $prestadorId) ? $prestadorId : null,
+            'pareceres'        => ParecerVistoria::options(),
+            'itensEstruturais' => Vistoria::ITENS_ESTRUTURAIS,
+            'itensTanque'      => Vistoria::ITENS_TANQUE,
+        ]);
+    }
+
+    /**
+     * Grava o caminhao e a vistoria na mesma transacao.
+     *
+     * Cada service so aceita o seu DTO, montado a partir de `validated()`.
+     * Foto que falha no disco desfaz os dois inserts -- o mesmo desenho de
+     * `store()`, agora com o veiculo nascendo junto.
+     */
+    public function storeComCaminhao(StoreVistoriaComCaminhaoRequest $request): RedirectResponse
+    {
+        $vistoria = DB::transaction(function () use ($request): Vistoria {
+            $caminhao = $this->frota->criar(
+                CaminhaoDTO::fromRequest($request->dadosDoCaminhao()),
+            );
+
+            $vistoria = $this->service->criar(
+                VistoriaDTO::fromRequest($request->dadosDaVistoria($caminhao->id)),
+            );
+
+            foreach ($request->file('fotos') ?? [] as $arquivo) {
+                $this->fotoService->store($vistoria, $arquivo, $request->validated('descricao'));
+            }
+
+            $vistoria->setRelation('caminhao', $caminhao);
+
+            return $vistoria;
+        });
+
+        return redirect()
+            ->route('tdap.frota.vistorias.show', $vistoria->id)
+            ->with('success', "Vistoria do caminhão {$vistoria->caminhao->placa} registrada.");
     }
 
     /**

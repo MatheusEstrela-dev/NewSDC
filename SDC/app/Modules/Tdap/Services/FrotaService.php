@@ -10,7 +10,6 @@ use App\Modules\Tdap\Models\Caminhao;
 use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Support\VigenciaVistoria;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -82,27 +81,6 @@ class FrotaService
                 };
             })
             ->orderBy('placa');
-    }
-
-    /**
-     * A frota inteira para o seletor de "Nova vistoria".
-     *
-     * Sem paginacao e sem os filtros da tela: quem abre o seletor quer achar UM
-     * caminhao entre os 132, e a pagina em que ele caiu na grade -- ou o
-     * recorte que estava aplicado -- nao tem relacao nenhuma com isso.
-     *
-     * Reusa `consultaDaFrota` para a situacao de vistoria sair pela mesma regra
-     * da listagem: o badge do seletor e o badge da linha, nao uma segunda
-     * leitura do mesmo dado que um dia diverge.
-     *
-     * So os ativos: vistoriar veiculo que saiu do cadastro nao e um fluxo, e
-     * uma lista onde ele aparece so aumenta a chance de escolher o errado.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection<int, Caminhao>
-     */
-    public function listarParaSelecaoDeVistoria(): EloquentCollection
-    {
-        return $this->consultaDaFrota(['ativo' => true])->get();
     }
 
     /**

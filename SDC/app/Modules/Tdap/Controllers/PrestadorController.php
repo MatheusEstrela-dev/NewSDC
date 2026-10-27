@@ -98,6 +98,10 @@ class PrestadorController extends Controller
             'prestador'  => PrestadorResource::make($prestador),
             'canEdit'    => $request->user()?->can('tdap.prestadores.edit') ?? false,
             'canDelete'  => $request->user()?->can('tdap.prestadores.delete') ?? false,
+            // Nova vistoria daqui cadastra o caminhao junto. Editar o prestador
+            // nao libera esse cadastro.
+            'canNovaVistoria' => ($request->user()?->can('tdap.caminhoes.create') ?? false)
+                && ($request->user()?->can('tdap.vistorias.create') ?? false),
         ]);
     }
 

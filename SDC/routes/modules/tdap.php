@@ -141,6 +141,18 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
         | a ordem explicita evita depender disso.
         */
         Route::prefix('vistorias')->name('vistorias.')->group(function () {
+            /*
+            | Caminhao novo e primeira vistoria, no mesmo endereco.
+            |
+            | Declarado antes de `/{vistoria}`: `nova` nao e um id. As duas
+            | permissoes porque o POST grava nas duas tabelas; o Form Request
+            | repete a checagem para quem chamar a rota direto.
+            */
+            Route::middleware(['can:tdap.vistorias.create', 'can:tdap.caminhoes.create'])->group(function () {
+                Route::get('/nova', [FrotaVistoriaController::class, 'nova'])->name('nova');
+                Route::post('/nova', [FrotaVistoriaController::class, 'storeComCaminhao'])->name('store-nova');
+            });
+
             Route::middleware('can:tdap.vistorias.view')->group(function () {
                 Route::get('/', [FrotaVistoriaController::class, 'index'])->name('index');
                 Route::get('/export', [FrotaVistoriaController::class, 'export'])->name('export');

@@ -33,26 +33,15 @@
           label="Exportar"
           @click="openExportModal"
         />
-        <!-- O fluxo de cadastro de vistoria comeca aqui, e nao so no menu da
-             linha: quem vem "registrar a vistoria de hoje" chega pelo topo da
-             tela, e ate agora tinha de caçar a placa na grade paginada antes de
-             achar a acao. O modal pergunta o caminhao -- a rota e aninhada
-             nele -- e leva direto a ficha. -->
+        <!-- Uma pagina so: caminhao e vistoria no mesmo formulario. A rota
+             grava os dois, entao o botao exige as duas permissoes. -->
         <ActionButton
           action="create"
           module="tdap"
           resource="vistorias"
           label="Nova Vistoria"
-          :allowed="canCriarVistoria"
-          @click="abrirSeletorDeVistoria"
-        />
-        <ActionButton
-          action="create"
-          module="tdap"
-          resource="caminhoes"
-          label="Novo Caminhão"
-          :allowed="canCreate"
-          @click="router.visit(route('tdap.frota.create'))"
+          :allowed="canCreate && canCriarVistoria"
+          @click="router.visit(route('tdap.frota.vistorias.nova'))"
         />
       </template>
     </TdapPageHeader>
@@ -194,7 +183,7 @@
                       <td colspan="7" class="px-4 py-10 text-center">
                         <TruckIcon class="mx-auto h-12 w-12 text-slate-400" />
                         <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum caminhão encontrado</p>
-                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou cadastre um novo caminhão.</p>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou registre uma nova vistoria.</p>
                       </td>
                     </tr>
                   </tbody>
@@ -258,14 +247,6 @@
       @close="caminhaoDoHistorico = null"
     />
 
-    <NovaVistoriaCaminhaoModal
-      :open="seletorDeVistoriaAberto"
-      :caminhoes="frotaDoSeletor"
-      :carregando="carregandoFrotaDoSeletor"
-      @close="seletorDeVistoriaAberto = false"
-      @select="irParaNovaVistoria"
-    />
-
     <!-- Exclusao passa por confirmacao, como no PAE: o caminhao pode estar
          alocado em cronograma vivo, e o servico recusa com mensagem de negocio
          -- sem o dialogo, o clique errado so aparecia depois do redirect. -->
@@ -284,7 +265,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -303,7 +284,6 @@ import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import VistoriaHistoricoModal from '@/Components/Organisms/Tdap/VistoriaHistoricoModal.vue';
-import NovaVistoriaCaminhaoModal from '@/Components/Organisms/Tdap/NovaVistoriaCaminhaoModal.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { formatarDia } from '@/Support/dataLocal';
 
@@ -319,9 +299,6 @@ const props = defineProps({
   canDelete:    { type: Boolean, default: false },
   canVerVistoria:   { type: Boolean, default: false },
   canCriarVistoria: { type: Boolean, default: false },
-  // Prop `lazy` do controller: so chega depois do reload disparado ao abrir o
-  // seletor de "Nova Vistoria". Ate la e undefined, dai o default.
-  frotaParaVistoria: { type: [Object, Array], default: () => [] },
 });
 
 const activeFilters = ref({
@@ -420,47 +397,6 @@ function acoesDaLinha(caminhao) {
       handler: () => { caminhaoParaExcluir.value = caminhao; },
     },
   ];
-}
-
-/* ---------------------------------------------- Nova vistoria pelo cabecalho */
-
-const seletorDeVistoriaAberto = ref(false);
-const carregandoFrotaDoSeletor = ref(false);
-
-// CaminhaoIndexResource::collection envelopa em `data`; aceitar as duas formas
-// evita quebrar se o Resource mudar de envelope.
-const frotaDoSeletor = computed(() => props.frotaParaVistoria?.data ?? props.frotaParaVistoria ?? []);
-
-/**
- * Abre o seletor e so entao busca a frota.
- *
- * A grade desta tela e paginada (15 de 132) e obedece aos filtros aplicados --
- * escolher por ela o caminhao da vistoria deixaria de fora justamente quem o
- * operador procura, e "nao esta na lista" viraria "nao existe". O reload
- * parcial traz a frota inteira sem recarregar grade, filtros nem estatisticas.
- *
- * Uma vez carregada, fica: reabrir o seletor na mesma visita nao repete a
- * consulta.
- */
-function abrirSeletorDeVistoria() {
-  seletorDeVistoriaAberto.value = true;
-
-  if (frotaDoSeletor.value.length > 0) return;
-
-  carregandoFrotaDoSeletor.value = true;
-
-  router.reload({
-    only: ['frotaParaVistoria'],
-    onFinish: () => { carregandoFrotaDoSeletor.value = false; },
-  });
-}
-
-function irParaNovaVistoria(caminhao) {
-  seletorDeVistoriaAberto.value = false;
-
-  // Posicional, nao `{ placa_id }`: a rota e aninhada no caminhao -- o mesmo
-  // motivo documentado na acao "Nova vistoria" da linha.
-  router.visit(route('tdap.frota.vistorias.create', caminhao.id));
 }
 
 const caminhaoDoHistorico = ref(null);

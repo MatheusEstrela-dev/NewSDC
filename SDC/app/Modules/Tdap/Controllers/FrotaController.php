@@ -119,25 +119,6 @@ class FrotaController extends Controller
             // sai daqui, nao de um item de menu proprio.
             'canVerVistoria'   => $request->user()?->can('tdap.vistorias.view') ?? false,
             'canCriarVistoria' => $request->user()?->can('tdap.vistorias.create') ?? false,
-
-            /*
-            | A frota inteira para o seletor de "Nova Vistoria" do cabecalho.
-            |
-            | `lazy`: sao 132 registros que so interessam a quem abre o modal --
-            | pendura-los em toda visita a listagem seria pagar o custo em cada
-            | carga de pagina por causa de um botao. O Vue busca com
-            | `router.reload({ only: ['frotaParaVistoria'] })` na abertura.
-            |
-            | Sob `tdap.vistorias.create`, e nao `tdap.caminhoes.view`: a
-            | situacao de vistoria vai junto de cada placa, e quem nao pode
-            | registrar vistoria nao tem o que fazer com esta lista. Mesma
-            | separacao que tirou a serie historica do controller de caminhao.
-            */
-            'frotaParaVistoria' => Inertia::lazy(
-                fn () => $request->user()?->can('tdap.vistorias.create')
-                    ? CaminhaoIndexResource::collection($this->service->listarParaSelecaoDeVistoria())
-                    : [],
-            ),
         ]);
     }
 
@@ -151,19 +132,21 @@ class FrotaController extends Controller
         );
     }
 
-    public function create(Request $request): Response
+    /**
+     * O cadastro solto do caminhao virou a ficha unica de nova vistoria.
+     *
+     * O endereco antigo (`/frota/novo/cadastrar`, inclusive `?prestador_id=`)
+     * continua existindo para link guardado. A tela e a permissao moram na
+     * rota nova, que exige criar caminhao e criar vistoria.
+     */
+    public function create(Request $request): RedirectResponse
     {
-        $prestadores = $this->prestadoresAtivos();
+        $prestadorId = $request->integer('prestador_id');
 
-        // `?prestador_id=` vem do botao "Cadastrar caminhao" da ficha do
-        // prestador: sem o pre-preenchimento o usuario tinha que reencontrar a
-        // empresa numa lista de todos os prestadores ativos.
-        $prestadorId = $request->integer('prestador_id') ?: null;
-
-        return Inertia::render('Tdap/Frota/Create', [
-            'prestadores'  => $prestadores,
-            'prestadorId'  => $prestadores->contains('id', $prestadorId) ? $prestadorId : null,
-        ]);
+        return redirect()->route(
+            'tdap.frota.vistorias.nova',
+            $prestadorId > 0 ? ['prestador_id' => $prestadorId] : [],
+        );
     }
 
     public function store(StoreCaminhaoRequest $request): RedirectResponse

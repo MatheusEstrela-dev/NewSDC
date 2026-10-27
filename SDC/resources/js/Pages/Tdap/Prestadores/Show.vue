@@ -45,11 +45,11 @@
           <div class="flex items-center justify-between gap-3 mb-4">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Caminhões-tanque</h3>
             <Link
-              v-if="canEdit"
-              :href="route('tdap.frota.create', { prestador_id: p.id })"
+              v-if="canNovaVistoria"
+              :href="route('tdap.frota.vistorias.nova', { prestador_id: p.id })"
               class="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400"
             >
-              + Cadastrar caminhão
+              Nova vistoria
             </Link>
           </div>
 
@@ -118,6 +118,7 @@ const props = defineProps({
   prestador: { type: Object, required: true },
   canEdit:   { type: Boolean, default: false },
   canDelete: { type: Boolean, default: false },
+  canNovaVistoria: { type: Boolean, default: false },
 });
 
 const p = computed(() => props.prestador.data ?? props.prestador);

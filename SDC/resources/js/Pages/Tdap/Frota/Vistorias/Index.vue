@@ -11,17 +11,13 @@
       <template #actions>
         <ActionButton action="view" :allowed="true" variant="secondary" label="Frota e Vistorias" @click="router.visit(route('tdap.frota.index'))" />
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
-        <!-- Abre o seletor de caminhao, e nao a rota direto: `vistorias.create`
-             exige o caminhao no caminho (`frota/{caminhao}/vistorias/nova`).
-             Sem o parametro, o `route()` do Ziggy LANCA na renderizacao -- esta
-             tela ficava em branco para quem tem permissao de criar vistoria. -->
         <Button
-          v-if="canCreate"
+          v-if="canCadastrarCaminhaoNovo"
           variant="primary"
           size="md"
           :icon="PlusIcon"
           icon-position="left"
-          @click="seletorDeVistoriaAberto = true"
+          @click="router.visit(route('tdap.frota.vistorias.nova'))"
         >
           <span>Nova Vistoria</span>
         </Button>
@@ -221,15 +217,6 @@
       @export="onExport"
     />
 
-    <!-- Mesma janela da tela de frota: o fluxo de cadastro de vistoria e um so,
-         venha do botao daqui ou do de la. A lista e a que o filtro de caminhao
-         desta tela ja usa (ativos, por placa). -->
-    <NovaVistoriaCaminhaoModal
-      :open="seletorDeVistoriaAberto"
-      :caminhoes="caminhoes"
-      @close="seletorDeVistoriaAberto = false"
-      @select="irParaNovaVistoria"
-    />
   </div>
 </template>
 
@@ -258,7 +245,6 @@ import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
-import NovaVistoriaCaminhaoModal from '@/Components/Organisms/Tdap/NovaVistoriaCaminhaoModal.vue';
 import { formatarDia } from '@/Support/dataLocal';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -269,19 +255,10 @@ const props = defineProps({
   caminhoes:    { type: Array, default: () => [] },
   pareceres:    { type: Array, default: () => [] },
   filtros:      { type: Object, default: () => ({}) },
-  canCreate:    { type: Boolean, default: false },
   canEdit:      { type: Boolean, default: false },
   canDelete:    { type: Boolean, default: false },
+  canCadastrarCaminhaoNovo: { type: Boolean, default: false },
 });
-
-const seletorDeVistoriaAberto = ref(false);
-
-function irParaNovaVistoria(caminhao) {
-  seletorDeVistoriaAberto.value = false;
-
-  // Posicional: a rota e aninhada no caminhao (frota/{caminhao}/vistorias/nova).
-  router.visit(route('tdap.frota.vistorias.create', caminhao.id));
-}
 
 const filtroSearch   = ref(props.filtros.search ?? '');
 const filtroCaminhao = ref(props.filtros.placa_id ?? '');

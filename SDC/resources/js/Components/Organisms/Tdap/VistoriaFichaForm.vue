@@ -57,13 +57,55 @@
       <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Caminhão vistoriado</h3>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!--
+          Caminhao novo: prestador, placa e marca sao do cadastro do veiculo.
+          Modelo, cor, ano e capacidade ficam nos campos abaixo e sao gravados
+          nos dois lados -- a vistoria guarda o que o fiscal viu, o caminhao
+          nasce com o mesmo valor.
+        -->
+        <template v-if="novoCaminhao">
+          <div class="md:col-span-3">
+            <InputLabel for="prestador_id" value="Prestador *" />
+            <select
+              id="prestador_id"
+              v-model="form.prestador_id"
+              class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+              required
+            >
+              <option :value="null">Selecione um prestador</option>
+              <option v-for="p in prestadores" :key="p.id" :value="p.id">
+                {{ p.nome }} ({{ p.cnpj }})
+              </option>
+            </select>
+            <InputError :message="form.errors.prestador_id" class="mt-2" />
+          </div>
+          <div>
+            <InputLabel for="placa" value="Placa *" />
+            <TextInput
+              id="placa"
+              v-model="form.placa"
+              type="text"
+              class="mt-1 block w-full uppercase"
+              placeholder="AAA1A11"
+              maxlength="8"
+              required
+            />
+            <InputError :message="form.errors.placa" class="mt-2" />
+            <p class="mt-1 text-xs text-slate-500">Mercosul (AAA1A11) ou antigo (AAA1111).</p>
+          </div>
+          <div>
+            <InputLabel for="marca" value="Marca" />
+            <TextInput id="marca" v-model="form.marca" type="text" class="mt-1 block w-full" maxlength="50" />
+            <InputError :message="form.errors.marca" class="mt-2" />
+          </div>
+        </template>
+        <!--
           Caminhao fixo: a vistoria nasce da linha do proprio veiculo na tela de
           Frota, e a rota e aninhada (tdap/frota/{caminhao}/vistorias). Oferecer
           um select com a frota inteira convidaria a trocar o veiculo depois de
           ja ter clicado nele -- e o backend ignoraria a troca, porque `placa_id`
           vem da URL (ver StoreVistoriaRequest::prepareForValidation).
         -->
-        <div v-if="caminhaoFixo" class="md:col-span-2">
+        <div v-else-if="caminhaoFixo" class="md:col-span-2">
           <InputLabel value="Caminhão" />
           <p class="mt-1 flex items-center rounded-md border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 text-slate-900 dark:text-slate-100">
             {{ caminhaoFixo.placa }} — {{ caminhaoFixo.marca || '' }} {{ caminhaoFixo.modelo || '' }}
@@ -92,9 +134,10 @@
         <!--
           Placa do caminhao selecionado, em leitura: o texto da opcao fica
           cortado no select em telas estreitas e a placa e o dado que o fiscal
-          confere contra o veiculo no patio.
+          confere contra o veiculo no patio. No cadastro de caminhao novo a
+          placa ja e um campo editavel, acima.
         -->
-        <div>
+        <div v-if="!novoCaminhao">
           <InputLabel value="Placa" />
           <p class="mt-1 flex items-center rounded-md border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 font-semibold text-slate-900 dark:text-slate-100">
             {{ caminhaoSelecionado?.placa || '—' }}
@@ -102,7 +145,16 @@
         </div>
         <div>
           <InputLabel for="capacidade" value="Capacidade (m³) *" />
-          <TextInput id="capacidade" v-model="form.capacidade" type="number" step="0.01" min="0.01" max="999.99" class="mt-1 block w-full" required />
+          <TextInput
+            id="capacidade"
+            v-model="form.capacidade"
+            type="number"
+            step="0.01"
+            :min="novoCaminhao ? 0.5 : 0.01"
+            max="999.99"
+            class="mt-1 block w-full"
+            required
+          />
           <InputError :message="form.errors.capacidade" class="mt-2" />
         </div>
         <div>
@@ -208,6 +260,10 @@ const props = defineProps({
   // Quando a vistoria vem de uma rota aninhada, o veiculo ja esta decidido pela
   // URL e o select da lugar a um bloco de leitura.
   caminhaoFixo: { type: Object, default: null },
+  // Cadastro unificado: o caminhao ainda nao existe e a ficha pede prestador,
+  // placa e marca junto com a vistoria.
+  novoCaminhao: { type: Boolean, default: false },
+  prestadores: { type: Array, default: () => [] },
   pareceres: { type: Array, default: () => [] },
   itensEstruturais: { type: Array, default: () => [] },
   itensTanque: { type: Array, default: () => [] },

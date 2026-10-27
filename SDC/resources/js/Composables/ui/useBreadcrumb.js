@@ -409,7 +409,7 @@ export function useBreadcrumb() {
 
             // O caminho do componente agora e o mesmo da tela: Frota.
             'Tdap/Frota/Index': [inicio, tdap, aqui('Frota e Vistorias')],
-            'Tdap/Frota/Create': [inicio, tdap, frota, aqui('Novo caminhão')],
+            'Tdap/Frota/Create': [inicio, tdap, frota, aqui('Nova vistoria')],
             'Tdap/Frota/Show': [inicio, tdap, frota, aqui(rotulo(caminhao?.placa, 'Visualizar'))],
             'Tdap/Frota/Edit': [inicio, tdap, frota, aqui(`Editar ${rotulo(caminhao?.placa, 'caminhão')}`)],
 
