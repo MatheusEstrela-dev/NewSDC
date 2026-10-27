@@ -156,6 +156,10 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::middleware('can:tdap.vistorias.view')->group(function () {
                 Route::get('/', [FrotaVistoriaController::class, 'index'])->name('index');
                 Route::get('/export', [FrotaVistoriaController::class, 'export'])->name('export');
+                // Antes de `/{vistoria}`: o segmento extra nao casaria com o
+                // show, mas a ordem deixa a ficha impressa explicita.
+                Route::get('/{vistoria}/impressao', [FrotaVistoriaController::class, 'impressao'])
+                    ->name('impressao')->whereNumber('vistoria');
                 Route::get('/{vistoria}', [FrotaVistoriaController::class, 'show'])
                     ->name('show')->whereNumber('vistoria');
 

@@ -237,6 +237,12 @@
       @export="onExport"
     />
 
+    <PrintVistoriaModal
+      :show="vistoriaDoPdf !== null"
+      :vistoria-id="vistoriaDoPdf"
+      @close="vistoriaDoPdf = null"
+    />
+
     <!-- Serie historica em modal, no desenho do PAE: o operador consulta
          caminhao a caminhao, e sair da listagem a cada consulta custava
          filtro, pagina e posicao de rolagem. -->
@@ -284,6 +290,7 @@ import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import VistoriaHistoricoModal from '@/Components/Organisms/Tdap/VistoriaHistoricoModal.vue';
+import PrintVistoriaModal from '@/Components/Organisms/Tdap/Print/PrintVistoriaModal.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { formatarDia } from '@/Support/dataLocal';
 
@@ -345,8 +352,8 @@ function filtrarPorVistoria(situacao) {
 /**
  * Acoes da linha, no padrao de grupo do PAE.
  *
- * Duas ficam inline -- ver e editar, as que o operador usa a cada passagem --
- * e o resto vai para o menu de opcoes. Antes eram quatro icones soltos lado a
+ * Ver, editar e PDF ficam inline, como icone. O resto vai para o menu de
+ * opcoes. Antes eram quatro icones soltos lado a
  * lado, sem rotulo: com a coluna de vistoria a linha ficou mais densa, e
  * quatro alvos iguais de 32px e onde se clica em "excluir" achando que era
  * "nova vistoria".
@@ -368,6 +375,16 @@ function acoesDaLinha(caminhao) {
       allowed: props.canEdit,
       handler: () => router.visit(route('tdap.frota.edit', caminhao.id)),
     },
+    // So existe ficha quando ha vistoria. A entrada some da lista, e nao por
+    // `allowed: false`: super-admin ignora o RBAC e veria PDF num caminhao
+    // nunca vistoriado. A rota cobra leitura de vistoria, nao de caminhao.
+    ...(caminhao.vistoria ? [{
+      action: 'pdf',
+      module: 'tdap',
+      resource: 'vistorias',
+      aliasOverride: 'view',
+      handler: () => { vistoriaDoPdf.value = caminhao.vistoria.id; },
+    }] : []),
     ...(temSerie && props.canVerVistoria ? [{
       action: 'history',
       placement: 'menu',
@@ -399,6 +416,7 @@ function acoesDaLinha(caminhao) {
   ];
 }
 
+const vistoriaDoPdf = ref(null);
 const caminhaoDoHistorico = ref(null);
 const caminhaoParaExcluir = ref(null);
 const excluindo = ref(false);

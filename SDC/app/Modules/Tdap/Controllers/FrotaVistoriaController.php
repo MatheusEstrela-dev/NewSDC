@@ -22,6 +22,7 @@ use App\Modules\Tdap\Resources\VistoriaSerieResource;
 use App\Modules\Tdap\Services\FrotaService;
 use App\Modules\Tdap\Services\VistoriaFotoService;
 use App\Modules\Tdap\Services\VistoriaService;
+use App\Modules\Tdap\Support\Documento;
 use App\Modules\Tdap\Support\ExportadorCsv;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
@@ -239,6 +240,33 @@ class FrotaVistoriaController extends Controller
         return redirect()
             ->route('tdap.frota.vistorias.show', $vistoria->id)
             ->with('success', "Vistoria do caminhão {$caminhao->placa} registrada.");
+    }
+
+    /**
+     * Ficha de UMA vistoria para o PDF (impressao do navegador).
+     *
+     * JSON sob demanda, no molde do cronograma: a listagem so traz o resumo
+     * da ultima vistoria, e o checklist inteiro so sai quando o icone da
+     * linha e clicado.
+     */
+    public function impressao(Vistoria $vistoria): JsonResponse
+    {
+        $vistoria = $this->service->obter($vistoria->id);
+        $dados = VistoriaResource::make($vistoria)->resolve();
+
+        $cnpj = $dados['caminhao']['prestador']['cnpj'] ?? null;
+        if (is_string($cnpj)) {
+            $dados['caminhao']['prestador']['cnpj'] = Documento::cnpj($cnpj);
+        }
+
+        $dados['valido_ate'] = $vistoria->valido_ate?->toDateString();
+
+        return response()->json([
+            'gerado_em'    => now()->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+            'vistoria'     => $dados,
+            'estruturais'  => Vistoria::ITENS_ESTRUTURAIS,
+            'tanque'       => Vistoria::ITENS_TANQUE,
+        ]);
     }
 
     public function show(Vistoria $vistoria, Request $request): Response
