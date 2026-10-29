@@ -448,6 +448,7 @@ export function useBreadcrumb() {
             'Tdap/Lotes/Edit': [inicio, tdap, lotes, aqui(`Editar ${rotulo(lote?.numero ?? lote?.nome, 'lote')}`)],
 
             'Tdap/Cronogramas/Index': [inicio, tdap, aqui('Cronogramas')],
+            'Tdap/Acompanhamento/Index': [inicio, tdap, aqui('Acompanhamento')],
             'Tdap/Cronogramas/Create': [inicio, tdap, cronogramas, aqui('Novo cronograma')],
             'Tdap/Cronogramas/Show': [inicio, tdap, cronogramas, aqui(rotulo(cronograma?.numero, 'Visualizar'))],
             'Tdap/Cronogramas/Edit': [inicio, tdap, cronogramas, aqui(`Editar ${rotulo(cronograma?.numero, 'cronograma')}`)],

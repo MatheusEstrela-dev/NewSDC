@@ -22,9 +22,9 @@
 
     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
       <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info" clickable @click="filtrarPorEstado('')" />
-      <StatCard title="Ativos" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" clickable @click="filtrarPorEstado('ativo')" />
-      <StatCard title="Rascunhos" :value="estatisticas.rascunhos ?? 0" :icon="DocumentTextIcon" variant="warning" clickable @click="filtrarPorEstado('rascunho')" />
-      <StatCard title="Encerrados" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="info" clickable @click="filtrarPorEstado('encerrado')" />
+      <StatCard title="Em execução" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" clickable @click="filtrarPorEstado('em_execucao')" />
+      <StatCard title="Em tramitação" :value="estatisticas.rascunhos ?? 0" :icon="DocumentTextIcon" variant="warning" clickable @click="filtrarPorEstado('rascunho')" />
+      <StatCard title="Entregues" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="info" clickable @click="filtrarPorEstado('encerrado')" />
       <StatCard title="Volume ativo (m³)" :value="Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0})" :subtitle="`${Number(estatisticas.volume_entregue_m3 || 0).toLocaleString('pt-BR', {maximumFractionDigits:0})} entregues`" :icon="CubeIcon" variant="info" :format-number="false" />
     </div>
 
@@ -37,7 +37,7 @@
         @update:model-value="filtroSearch = $event"
       />
       <FilterField
-        label="Estado"
+        label="Acompanhamento"
         type="select"
         :model-value="filtroEstado"
         :options="estadoOptions"
@@ -80,7 +80,7 @@
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Volume (m³)</th>
                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Caminhões</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Viagens</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Estado</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Acompanhamento</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
@@ -109,7 +109,7 @@
                       <CronogramaViagensBar :previstas="c.viagens_previstas" :realizadas="c.viagens_realizadas" :dias-restantes="c.dias_restantes" />
                     </td>
                     <td class="px-4 py-3 text-sm">
-                      <EstadoBadge :estado="c.estado" />
+                      <FaseTramiteBadge v-if="c.fase_tramite" :fase="c.fase_tramite" :encerrado="c.estado === 'encerrado'" />
                     </td>
                     <td class="px-4 py-3 text-right">
                       <div class="flex items-center justify-end gap-1">
@@ -209,7 +209,7 @@
       </template>
 
       <template #mobile-c6="{ item: c }">
-        <EstadoBadge :estado="c.estado" />
+        <FaseTramiteBadge v-if="c.fase_tramite" :fase="c.fase_tramite" :encerrado="c.estado === 'encerrado'" />
       </template>
 
       <template #mobile-actions="{ item: c }">
@@ -349,7 +349,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
+import FaseTramiteBadge from '@/Components/Organisms/Tdap/FaseTramiteBadge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
@@ -399,9 +399,12 @@ const filtroAta    = ref(props.filtros.ata_id ?? '');
 
 const estadoOptions = [
   { value: '', label: 'Todos' },
-  { value: 'rascunho', label: 'Rascunho' },
-  { value: 'ativo', label: 'Ativo' },
-  { value: 'encerrado', label: 'Encerrado' },
+  // Fases do Acompanhamento (FaseCronograma); 'encerrado' = Entregues.
+  { value: 'elaboracao', label: 'Em elaboração' },
+  { value: 'em_analise', label: 'Em análise CEDEC' },
+  { value: 'aprovado', label: 'Aprovado, aguardando ativação' },
+  { value: 'em_execucao', label: 'Em execução' },
+  { value: 'encerrado', label: 'Entregues' },
   { value: 'arquivado', label: 'Arquivado' },
 ];
 const ataOptions = computed(() => [
@@ -501,6 +504,9 @@ const EVENTO_LABELS = {
   'cronograma.arquivado':    'Cronograma arquivado',
   'cronograma.desarquivado': 'Cronograma desarquivado',
   'cronograma.pontos_alterados': 'Pontos de captação alterados',
+  'cronograma.enviado_analise': 'Enviado para análise',
+  'cronograma.aprovado':        'Aprovado na análise',
+  'cronograma.devolvido':       'Devolvido',
 };
 
 function tipoCategoria(tipoEvento) {
@@ -620,6 +626,6 @@ const CAMPOS_MOBILE = [
   { key: 'c3', label: 'Município / Prestador' },
   { key: 'c4', label: 'Volume (m³)' },
   { key: 'viagens', label: 'Viagens' },
-  { key: 'c6', label: 'Estado' },
+  { key: 'c6', label: 'Acompanhamento' },
 ];
 </script>

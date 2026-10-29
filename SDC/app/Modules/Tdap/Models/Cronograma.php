@@ -6,6 +6,7 @@ namespace App\Modules\Tdap\Models;
 
 use App\Models\Municipio;
 use App\Models\User;
+use App\Modules\Tdap\Enums\FaseCronograma;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Support\VigenciaAta;
 use Illuminate\Database\Eloquent\Builder;
@@ -47,6 +48,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property ?array          $stored_municipio
  * @property ?array          $stored_prestador
  * @property ?string         $processo_tdap_id
+ * @property FaseCronograma  $fase_tramite  com quem o cronograma esta (Acompanhamento)
  */
 class Cronograma extends Model
 {
@@ -83,6 +85,9 @@ class Cronograma extends Model
         'stored_municipio',
         'stored_prestador',
         'processo_tdap_id',
+        // `fase_tramite` fica FORA de proposito: so a tramitacao (e ativar /
+        // encerrar) muda a fase, sempre com tramite gravado. Um
+        // update($request->all()) futuro nao pode pular a analise.
     ];
 
     protected $casts = [
@@ -106,6 +111,7 @@ class Cronograma extends Model
         'stored_pmda_ponto'      => 'array',
         'stored_municipio'       => 'array',
         'stored_prestador'       => 'array',
+        'fase_tramite'           => FaseCronograma::class,
     ];
 
     public function ata(): BelongsTo
@@ -156,6 +162,12 @@ class Cronograma extends Model
         return $this->hasMany(CronogramaComprovante::class, 'cronograma_id')->latest();
     }
 
+    /** Passos da tramitacao, do mais recente para o mais antigo. */
+    public function tramites(): HasMany
+    {
+        return $this->hasMany(CronogramaTramite::class, 'cronograma_id')->latest('id');
+    }
+
     /**
      * Todas as viagens do cronograma, atravessando os caminhoes alocados.
      *
@@ -183,6 +195,22 @@ class Cronograma extends Model
         if ($this->encerrado_em) return 'encerrado';
         if ($this->ativo)        return 'ativo';
         return 'rascunho';
+    }
+
+    /**
+     * Em analise ou aprovado: a CEDEC esta olhando (ou ja olhou) uma versao
+     * especifica do cronograma. Mexer nele agora faria o gestor ativar algo que
+     * a analise nunca viu -- para alterar, devolva para a elaboracao antes.
+     *
+     * Vale so com a tramitacao exigida (config tdap.cronogramas.exige_tramite) e
+     * so para rascunho: o ativo segue o proprio regime (locacao de frota).
+     */
+    public function getTramitacaoTravadaAttribute(): bool
+    {
+        return (bool) config('tdap.cronogramas.exige_tramite', true)
+            && ! $this->ativo
+            && $this->encerrado_em === null
+            && in_array($this->fase_tramite, [FaseCronograma::EmAnalise, FaseCronograma::Aprovado], true);
     }
 
     public function getDtInicioEfetivaAttribute(): ?\Carbon\Carbon
@@ -374,6 +402,26 @@ class Cronograma extends Model
     public function scopeEncerrado(Builder $query): Builder
     {
         return $query->whereNotNull('encerrado_em');
+    }
+
+    /**
+     * Filtro "Acompanhamento" da listagem: aceita as fases (FaseCronograma) e
+     * os estados antigos, que os cards de estatistica ainda mandam.
+     *
+     * As fases anteriores a execucao sao rascunho; `em_execucao` e o ativo nao
+     * encerrado, e `encerrado` e o Concluido -- o mesmo corte do badge.
+     */
+    public function scopeNoEstadoOuFase(Builder $query, string $valor): Builder
+    {
+        return match ($valor) {
+            'rascunho'    => $query->rascunho(),
+            'ativo', FaseCronograma::EmExecucao->value => $query->ativo(),
+            'encerrado', FaseCronograma::Entregue->value => $query->encerrado(),
+            FaseCronograma::Elaboracao->value,
+            FaseCronograma::EmAnalise->value,
+            FaseCronograma::Aprovado->value => $query->rascunho()->where('fase_tramite', $valor),
+            default       => $query,
+        };
     }
 
     public function scopeArquivado(Builder $query): Builder

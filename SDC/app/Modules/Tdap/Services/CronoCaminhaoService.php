@@ -64,6 +64,14 @@ class CronoCaminhaoService
             ->findOrFail($id);
     }
 
+    /** Alocacao do cronograma em analise/aprovado e congelada (ver Cronograma::tramitacao_travada). */
+    private function garantirEditavel(?Cronograma $cronograma): void
+    {
+        if ($cronograma?->tramitacao_travada) {
+            throw new \DomainException('Cronograma em analise ou aprovado nao aceita alteracao de caminhoes. Devolva-o para a elaboracao no Acompanhamento.');
+        }
+    }
+
     public function alocar(CronoCaminhaoDTO $dto): CronoCaminhao
     {
         return DB::transaction(function () use ($dto): CronoCaminhao {
@@ -72,6 +80,7 @@ class CronoCaminhaoService
             if ($cronograma->encerrado_em) {
                 throw new \DomainException('Cronograma encerrado nao aceita novos caminhoes.');
             }
+            $this->garantirEditavel($cronograma);
 
             $caminhao = Caminhao::findOrFail($dto->caminhao_id);
             if (! $caminhao->ativo) {
@@ -125,7 +134,7 @@ class CronoCaminhaoService
     {
         return DB::transaction(function () use ($id, $dto): CronoCaminhao {
             $cc = CronoCaminhao::query()
-                ->with(['cronograma:id,encerrado_em', 'caminhao:id,capacidade_m3'])
+                ->with(['cronograma:id,ativo,encerrado_em,fase_tramite', 'caminhao:id,capacidade_m3'])
                 ->findOrFail($id);
 
             // Mesmo guard de alocar(): cronograma encerrado e registro fechado.
@@ -134,6 +143,7 @@ class CronoCaminhaoService
             if ($cc->cronograma?->encerrado_em) {
                 throw new \DomainException('Cronograma encerrado nao aceita alteracao de alocacao.');
             }
+            $this->garantirEditavel($cc->cronograma);
 
             // somente campos editaveis (caminhao nao pode trocar via update; remova e aloque outro)
             $cc->update([
@@ -150,8 +160,11 @@ class CronoCaminhaoService
     public function remover(int $id): bool
     {
         $cc = CronoCaminhao::query()
+            ->with('cronograma:id,ativo,encerrado_em,fase_tramite')
             ->withCount('viagens')
             ->findOrFail($id);
+
+        $this->garantirEditavel($cc->cronograma);
 
         if ($cc->viagens_count > 0) {
             throw new \DomainException(

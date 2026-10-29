@@ -249,6 +249,15 @@ return [
                 'ativar' => 'tdap.cronogramas.ativar',
                 'prorrogar' => 'tdap.cronogramas.prorrogar',
                 'export' => 'tdap.cronogramas.export',
+                // Cada passo do Acompanhamento tem o seu profissional:
+                // quem cadastra envia, a CEDEC analisa (aprova ou devolve),
+                // o gestor ativa e encerra.
+                'enviar' => 'tdap.cronogramas.enviar',
+                'analisar' => 'tdap.cronogramas.analisar',
+                'encerrar' => 'tdap.cronogramas.encerrar',
+            ],
+            'Acompanhamento' => [
+                'view' => 'tdap.acompanhamento.view',
             ],
             'Viagens' => [
                 'view' => 'tdap.viagens.view',
@@ -814,6 +823,10 @@ return [
             'tdap.cronogramas.ativar',
             'tdap.cronogramas.prorrogar',
             'tdap.cronogramas.export',
+            'tdap.cronogramas.enviar',
+            'tdap.cronogramas.analisar',
+            'tdap.cronogramas.encerrar',
+            'tdap.acompanhamento.view',
             'tdap.viagens.view',
             'tdap.viagens.create',
             'tdap.viagens.validar',
@@ -1066,6 +1079,8 @@ return [
             'tdap.lotes.view',
             'tdap.cronogramas.view',
             'tdap.cronogramas.create',
+            'tdap.cronogramas.enviar',
+            'tdap.acompanhamento.view',
             'tdap.viagens.view',
             'tdap.viagens.create',
             'tdap.vistorias.view',

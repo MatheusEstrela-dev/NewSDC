@@ -17,7 +17,9 @@ use App\Modules\Tdap\Requests\UpdateCronogramaRequest;
 use App\Modules\Tdap\Resources\CronogramaIndexResource;
 use App\Modules\Tdap\Resources\CronogramaResource;
 use App\Modules\Tdap\Services\CronogramaRelatorioService;
+use App\Modules\Tdap\Enums\AcaoTramite;
 use App\Modules\Tdap\Services\CronogramaService;
+use App\Modules\Tdap\Services\TramitacaoCronogramaService;
 use App\Modules\Tdap\Support\EscopoDeLeitura;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Illuminate\Validation\Rule;
@@ -33,6 +35,7 @@ class CronogramaController extends Controller
     public function __construct(
         private readonly CronogramaService $service,
         private readonly PoliticaPontoCaptacao $politicaPontos,
+        private readonly TramitacaoCronogramaService $tramitacao,
     ) {}
 
     public function index(Request $request): Response
@@ -154,6 +157,7 @@ class CronogramaController extends Controller
             'canEdit'          => $request->user()?->can('tdap.cronogramas.edit') ?? false,
             'canDelete'        => $request->user()?->can('tdap.cronogramas.delete') ?? false,
             'canAtivar'        => $request->user()?->can('tdap.cronogramas.ativar') ?? false,
+            'canEncerrar'      => $request->user()?->can('tdap.cronogramas.encerrar') ?? false,
             'canProrrogar'     => $request->user()?->can('tdap.cronogramas.prorrogar') ?? false,
             'canAlocarCaminhao' => $request->user()?->can('tdap.cronogramas.edit') ?? false,
             'canValidarViagem' => $request->user()?->can('tdap.viagens.validar') ?? false,
@@ -246,7 +250,14 @@ class CronogramaController extends Controller
         EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
 
         try {
-            $this->service->ativar($cronograma->id);
+            // Pela tramitacao, e nao direto no service: a ficha passa pelas
+            // mesmas regras do Acompanhamento (permissao da acao e segregacao
+            // de funcoes -- quem aprovou nao ativa).
+            if (config('tdap.cronogramas.exige_tramite', true)) {
+                $this->tramitacao->tramitar($cronograma->id, AcaoTramite::Ativar, $request->user());
+            } else {
+                $this->service->ativar($cronograma->id);
+            }
 
             return redirect()
                 ->route('tdap.cronogramas.show', $cronograma->id)

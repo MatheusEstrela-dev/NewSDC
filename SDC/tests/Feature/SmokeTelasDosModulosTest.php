@@ -73,6 +73,7 @@ class SmokeTelasDosModulosTest extends TestCase
             'rat.statistics',
             'suporte.index',
             'tdap.dashboard',
+            'tdap.acompanhamento.index',
             'tdap.atas.index',
             'tdap.atas.create',
             'tdap.cronogramas.index',

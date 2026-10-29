@@ -200,7 +200,7 @@ class PmdaRegrasIssue56Test extends TestCase
         $base = ['ata_id' => $ata, 'lote_id' => $lote, 'prestador_id' => $prestador, 'municipio_id' => $this->municipioId, 'dt_inicio' => '2026-10-01', 'dt_final' => '2026-10-31'] + $agora;
 
         DB::table('tdap_cronogramas')->insert(['numero' => 'CR56-ATIVO', 'ativo' => true] + $base);
-        $rascunho = Cronograma::findOrFail(DB::table('tdap_cronogramas')->insertGetId(['numero' => 'CR56-NOVO', 'ativo' => false] + $base));
+        $rascunho = Cronograma::findOrFail(DB::table('tdap_cronogramas')->insertGetId(['numero' => 'CR56-NOVO', 'ativo' => false, 'fase_tramite' => 'aprovado'] + $base));
 
         [$pode, $motivo] = app(CronogramaService::class)->podeAtivar($rascunho);
 

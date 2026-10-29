@@ -42,4 +42,28 @@ return [
         'exige_confirmacao_municipio' => (bool) env('TDAP_VIAGEM_EXIGE_CONFIRMACAO', true),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tramitacao do cronograma
+    |--------------------------------------------------------------------------
+    |
+    | exige_tramite: o cronograma so e ativado depois de passar pela analise
+    | da CEDEC e chegar a fase `aprovado` (FaseCronograma). O botao "Ativar"
+    | da ficha passa pela mesma regra.
+    |
+    | Desligada, a ativacao volta a ser direta a partir do rascunho, como era
+    | antes do Acompanhamento. Existe para recuar sem deploy.
+    |
+    */
+    'cronogramas' => [
+        'exige_tramite' => (bool) env('TDAP_CRONOGRAMA_EXIGE_TRAMITE', true),
+
+        /*
+        | segregacao_funcoes: ninguem confere o proprio trabalho -- quem enviou
+        | para analise nao aprova, quem aprovou nao ativa (CronogramaWorkflow).
+        | Desligar so para equipe de uma pessoa, sem deploy.
+        */
+        'segregacao_funcoes' => (bool) env('TDAP_CRONOGRAMA_SEGREGACAO', true),
+    ],
+
 ];

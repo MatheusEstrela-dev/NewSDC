@@ -8,7 +8,10 @@ use App\Core\Events\DomainEvent;
 use App\Core\Outbox\OutboxDispatcher;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
+use App\Modules\Tdap\Enums\AcaoTramite;
+use App\Modules\Tdap\Enums\FaseCronograma;
 use App\Modules\Tdap\Models\Cronograma;
+use App\Modules\Tdap\Models\CronogramaTramite;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
@@ -53,14 +56,7 @@ class CronogramaService
                 fn ($q) => $q->arquivado(),
                 fn ($q) => $q->naoArquivado(),
             )
-            ->when($filtros['estado'] ?? null, function ($q, $estado) {
-                match ($estado) {
-                    'rascunho'  => $q->rascunho(),
-                    'ativo'     => $q->ativo(),
-                    'encerrado' => $q->encerrado(),
-                    default     => null,
-                };
-            })
+            ->when($filtros['estado'] ?? null, fn ($q, $estado) => $q->noEstadoOuFase((string) $estado))
             ->when($filtros['ata_id'] ?? null, fn ($q, $id) => $q->where('ata_id', (int) $id))
             ->when($filtros['prestador_id'] ?? null, fn ($q, $id) => $q->where('prestador_id', (int) $id))
             ->when($filtros['municipio_id'] ?? null, fn ($q, $id) => $q->where('municipio_id', (int) $id))
@@ -77,7 +73,7 @@ class CronogramaService
      * ficha mostra no selo do ponto. A consulta olha o pivô direto para o
      * cronograma continuar correspondente mesmo se o ponto tiver sido excluido.
      *
-     * @return list<array{id: int, numero: string, estado: string, arquivado: bool, dt_inicio: ?string, dt_final: ?string}>
+     * @return list<array{id: int, numero: string, estado: string, fase_tramite: ?array, arquivado: bool, dt_inicio: ?string, dt_final: ?string}>
      */
     public function vinculadosAoPmda(int $pmdaPlanoId, int $municipioId): array
     {
@@ -91,11 +87,12 @@ class CronogramaService
             })
             ->orderByDesc('dt_inicio')
             ->orderByDesc('id')
-            ->get(['id', 'numero', 'ativo', 'encerrado_em', 'arquivado_em', 'dt_inicio', 'dt_final'])
+            ->get(['id', 'numero', 'ativo', 'encerrado_em', 'arquivado_em', 'dt_inicio', 'dt_final', 'fase_tramite'])
             ->map(fn (Cronograma $cronograma) => [
                 'id'         => $cronograma->id,
                 'numero'     => $cronograma->numero,
                 'estado'     => $cronograma->estado,
+                'fase_tramite' => $cronograma->fase_tramite?->toArray(),
                 'arquivado'  => $cronograma->arquivado_em !== null,
                 'dt_inicio'  => $cronograma->dt_inicio?->toDateString(),
                 'dt_final'   => $cronograma->dt_final?->toDateString(),
@@ -132,14 +129,7 @@ class CronogramaService
                 fn ($q) => $q->arquivado(),
                 fn ($q) => $q->naoArquivado(),
             )
-            ->when($filtros['estado'] ?? null, function ($q, $estado) {
-                match ($estado) {
-                    'rascunho'  => $q->rascunho(),
-                    'ativo'     => $q->ativo(),
-                    'encerrado' => $q->encerrado(),
-                    default     => null,
-                };
-            })
+            ->when($filtros['estado'] ?? null, fn ($q, $estado) => $q->noEstadoOuFase((string) $estado))
             ->when($filtros['ata_id'] ?? null, fn ($q, $id) => $q->where('ata_id', (int) $id))
             ->when($filtros['prestador_id'] ?? null, fn ($q, $id) => $q->where('prestador_id', (int) $id))
             ->when($filtros['municipio_id'] ?? null, fn ($q, $id) => $q->where('municipio_id', (int) $id))
@@ -206,7 +196,10 @@ class CronogramaService
             $data['user_id'] = Auth::id();
             $data['ativo'] = false;
 
-            $cronograma = Cronograma::create($data);
+            // fase_tramite nao e fillable: atribuida explicitamente.
+            $cronograma = new Cronograma($data);
+            $cronograma->fase_tramite = FaseCronograma::Elaboracao;
+            $cronograma->save();
             $this->sincronizarPontos($cronograma, $dto->ponto_captacao_ids);
 
             return $cronograma;
@@ -219,6 +212,9 @@ class CronogramaService
             $cronograma = Cronograma::findOrFail($id);
             if ($cronograma->ativo) {
                 throw new \DomainException('Cronograma ativo nao pode ter cabecalho editado. Encerre ou crie novo.');
+            }
+            if ($cronograma->tramitacao_travada) {
+                throw new \DomainException('Cronograma em analise ou aprovado nao pode ser editado. Devolva-o para a elaboracao no Acompanhamento.');
             }
             $cronograma->update($dto->toArray());
 
@@ -330,6 +326,19 @@ class CronogramaService
             return [false, 'Cronograma encerrado nao pode ser reativado.'];
         }
 
+        // Arquivado esta fora de circulacao: so a tramitacao bloqueava, e a
+        // ficha ativava mesmo assim.
+        if ($cronograma->arquivado_em !== null) {
+            return [false, 'Cronograma arquivado nao pode ser ativado. Desarquive antes.'];
+        }
+
+        // Acompanhamento: a ativacao e o ultimo passo da tramitacao. Sem esta
+        // guarda o botao "Ativar" da ficha pularia a analise da CEDEC.
+        if (config('tdap.cronogramas.exige_tramite', true) && $cronograma->fase_tramite !== FaseCronograma::Aprovado) {
+            return [false, 'Cronograma precisa ser aprovado na analise da CEDEC antes da ativacao (fase atual: '
+                .$cronograma->fase_tramite->label().').'];
+        }
+
         // 1 TDAP por municipio (#56): um cronograma em execucao por vez. A
         // demanda maior se resolve com mais caminhoes no mesmo cronograma
         // (locacao de frota), nao com um segundo cronograma em paralelo.
@@ -412,10 +421,19 @@ class CronogramaService
         }
     }
 
-    public function ativar(int $id): Cronograma
+    public function ativar(int $id, ?string $observacao = null): Cronograma
     {
-        return DB::transaction(function () use ($id): Cronograma {
+        return DB::transaction(function () use ($id, $observacao): Cronograma {
             $cronograma = Cronograma::query()->lockForUpdate()->findOrFail($id);
+
+            // "1 cronograma ativo por municipio": o lock acima e da LINHA, entao
+            // dois cronogramas do mesmo municipio ativados juntos passavam os
+            // dois pela checagem de `outroAtivo`. A trava por municipio
+            // serializa as ativacoes (solta no fim da transacao). Nao ha
+            // indice unico: o acervo ja tem municipio com mais de um ativo.
+            if (DB::getDriverName() === 'pgsql') {
+                DB::select('select pg_advisory_xact_lock(?, ?)', [7101, (int) $cronograma->municipio_id]);
+            }
 
             [$ok, $erro] = $this->podeAtivar($cronograma);
             if (! $ok) {
@@ -438,7 +456,21 @@ class CronogramaService
                     'num_viagens'    => (int) $cc->num_viagens,
                 ])->toArray();
             $cronograma->stored_pmda_ponto = $this->snapshotDosPontos($cronograma);
+
+            // Ativar e o passo final da tramitacao, venha da ficha ou do
+            // Acompanhamento: o trâmite fica aqui para os dois caminhos.
+            $faseAnterior = $cronograma->fase_tramite;
+            $cronograma->fase_tramite = FaseCronograma::EmExecucao;
             $cronograma->save();
+
+            CronogramaTramite::create([
+                'cronograma_id' => $cronograma->id,
+                'fase_anterior' => $faseAnterior,
+                'fase_nova'     => FaseCronograma::EmExecucao,
+                'acao'          => AcaoTramite::Ativar,
+                'user_id'       => Auth::id(),
+                'observacao'    => $observacao,
+            ]);
 
             $fresh = $cronograma->fresh(['prestador', 'municipio', 'ata', 'lote']);
 
@@ -478,7 +510,9 @@ class CronogramaService
     public function encerrar(int $id, ?string $obs = null): Cronograma
     {
         return DB::transaction(function () use ($id, $obs): Cronograma {
-            $cronograma = Cronograma::findOrFail($id);
+            // Com lock, como o ativar: dois cliques/abas gravavam dois
+            // tramites `encerrar` e sobrescreviam `encerrado_em`.
+            $cronograma = Cronograma::query()->lockForUpdate()->findOrFail($id);
             if (! $cronograma->ativo) {
                 throw new \DomainException('Apenas cronogramas ativos podem ser encerrados.');
             }
@@ -488,7 +522,20 @@ class CronogramaService
             if ($obs) {
                 $cronograma->observacao = trim(($cronograma->observacao ?? '') . "\n[ENCERRAMENTO] " . $obs);
             }
+
+            // Encerrado = Entregues no Acompanhamento.
+            $faseAnterior = $cronograma->fase_tramite;
+            $cronograma->fase_tramite = FaseCronograma::Entregue;
             $cronograma->save();
+
+            CronogramaTramite::create([
+                'cronograma_id' => $cronograma->id,
+                'fase_anterior' => $faseAnterior,
+                'fase_nova'     => FaseCronograma::Entregue,
+                'acao'          => AcaoTramite::Encerrar,
+                'user_id'       => Auth::id(),
+                'observacao'    => $obs,
+            ]);
 
             return $cronograma->fresh();
         });

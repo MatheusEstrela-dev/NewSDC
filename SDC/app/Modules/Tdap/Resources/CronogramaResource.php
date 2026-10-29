@@ -23,6 +23,7 @@ class CronogramaResource extends JsonResource
             'empenho'               => $this->empenho,
             'nota_empenho'          => $this->nota_empenho,
             'estado'                => $this->estado,
+            'fase_tramite'          => $this->fase_tramite?->toArray(),
             'ativo'                 => (bool) $this->ativo,
             'ativado_em'            => $this->ativado_em?->toIso8601String(),
             'encerrado_em'          => $this->encerrado_em?->toIso8601String(),

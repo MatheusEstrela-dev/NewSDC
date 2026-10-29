@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Tdap\Controllers\AcompanhamentoCronogramaController;
 use App\Modules\Tdap\Controllers\AtaController;
 use App\Modules\Tdap\Controllers\CronoCaminhaoController;
 use App\Modules\Tdap\Controllers\CronogramaComprovanteController;
@@ -358,6 +359,11 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
         Route::middleware('can:tdap.cronogramas.ativar')->group(function () {
             Route::post('/{cronograma}/ativar', [CronogramaController::class, 'ativar'])
                 ->name('ativar')->whereNumber('cronograma');
+        });
+
+        // Encerrar (fase Entregues) tem slug proprio: e um ato distinto de
+        // ativar, e o Acompanhamento separa cada passo por responsavel.
+        Route::middleware('can:tdap.cronogramas.encerrar')->group(function () {
             Route::post('/{cronograma}/encerrar', [CronogramaController::class, 'encerrar'])
                 ->name('encerrar')->whereNumber('cronograma');
         });
@@ -375,6 +381,25 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::patch('/{cronograma}/desarquivar', [CronogramaController::class, 'desarquivar'])
                 ->name('desarquivar')->whereNumber('cronograma');
         });
+    });
+
+    /*
+    | Acompanhamento de cronograma: painel das 4 fases da tramitacao.
+    |
+    | O detalhe abre tambem para quem so ve cronogramas, porque a ficha mostra
+    | a tramitacao. Tramitar exige alguma das permissoes de responsavel; QUAL
+    | delas vale depende da fase, e isso o CronogramaWorkflow decide.
+    */
+    Route::prefix('acompanhamento')->name('acompanhamento.')->group(function () {
+        Route::get('/', [AcompanhamentoCronogramaController::class, 'index'])
+            ->middleware('can:tdap.acompanhamento.view')
+            ->name('index');
+        Route::get('/{cronograma}', [AcompanhamentoCronogramaController::class, 'detalhe'])
+            ->middleware('permission:tdap.acompanhamento.view|tdap.cronogramas.view')
+            ->name('detalhe')->whereNumber('cronograma');
+        Route::post('/{cronograma}/tramitar', [AcompanhamentoCronogramaController::class, 'tramitar'])
+            ->middleware('permission:tdap.cronogramas.enviar|tdap.cronogramas.analisar|tdap.cronogramas.ativar')
+            ->name('tramitar')->whereNumber('cronograma');
     });
 
     /* CronoCaminhoes - subrota gerenciada pelo Cronograma (Fase 3) */

@@ -5,7 +5,8 @@
         <Text size="sm" color="muted" weight="medium" class="mb-0.5 sm:mb-1 text-xs sm:text-sm leading-tight">
           {{ title }}
         </Text>
-        <Heading :level="2" class="mb-0 text-xl sm:text-2xl md:text-3xl">
+        <!-- Valor longo (ex.: R$ em bilhoes) encolhe a fonte em vez de vazar do card. -->
+        <Heading :level="2" :class="valueClasses" :title="String(formattedValue)">
           {{ formattedValue }}
         </Heading>
         <Text v-if="subtitle" size="xs" color="muted" class="mt-0.5 sm:mt-1 hidden sm:block">
@@ -13,7 +14,7 @@
         </Text>
       </div>
 
-      <div v-if="icon" :class="iconContainerClasses">
+      <div v-if="icon" :class="iconContainerClasses" class="shrink-0">
         <component :is="icon" class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
       </div>
     </div>
@@ -89,6 +90,25 @@ const formattedValue = computed(() => {
     return props.value.toLocaleString('pt-BR');
   }
   return props.value;
+});
+
+/*
+ * Tamanho do valor conforme o numero de caracteres: o card tem largura fixa
+ * pela grade, entao quanto maior o numero, menor a fonte. Classes por extenso
+ * (string dinamica some no purge do Tailwind). `break-all` e rede de
+ * seguranca para o caso de ainda assim nao caber.
+ */
+const valueClasses = computed(() => {
+  const tamanho = String(formattedValue.value ?? '').length;
+
+  let escala;
+  if (tamanho <= 8) escala = '!text-xl sm:!text-2xl md:!text-3xl';
+  else if (tamanho <= 11) escala = '!text-lg sm:!text-xl md:!text-2xl';
+  else if (tamanho <= 15) escala = '!text-base sm:!text-lg md:!text-xl';
+  else if (tamanho <= 19) escala = '!text-sm sm:!text-base md:!text-lg';
+  else escala = '!text-xs sm:!text-sm md:!text-base';
+
+  return `mb-0 min-w-0 break-all leading-tight ${escala}`;
 });
 
 const emit = defineEmits(['click']);

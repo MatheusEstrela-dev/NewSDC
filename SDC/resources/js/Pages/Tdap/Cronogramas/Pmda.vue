@@ -112,7 +112,7 @@
             <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
               <tr class="text-left text-slate-500 dark:text-slate-400">
                 <th class="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Número</th>
-                <th class="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Estado</th>
+                <th class="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Acompanhamento</th>
                 <th class="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Vigência</th>
               </tr>
             </thead>
@@ -125,7 +125,7 @@
                 </td>
                 <td class="px-4 py-2.5">
                   <span class="inline-flex items-center gap-2">
-                    <EstadoBadge :estado="c.estado" />
+                    <FaseTramiteBadge v-if="c.fase_tramite" :fase="c.fase_tramite" :encerrado="c.estado === 'encerrado'" />
                     <span v-if="c.arquivado" class="text-xs text-slate-500">Arquivado</span>
                   </span>
                 </td>
@@ -149,7 +149,7 @@ import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
-import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
+import FaseTramiteBadge from '@/Components/Organisms/Tdap/FaseTramiteBadge.vue';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';

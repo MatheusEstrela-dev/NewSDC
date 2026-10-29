@@ -280,6 +280,7 @@ const navigationIndex = computed(() => [
 
     // TDAP - Transporte e Distribuicao de Agua Potavel
     { id: 'nav_tdap_dash', title: 'TDAP Dashboard', subtitle: 'Transporte de Água Potável', url: safeRoute('tdap.dashboard'), icon: 'document', category: 'navigation', keywords: ['tdap', 'agua', 'caminhao', 'pipa', 'prestador', 'cronograma'] },
+    { id: 'nav_tdap_acompanhamento', title: 'TDAP Acompanhamento', subtitle: 'Tramitação dos cronogramas', url: safeRoute('tdap.acompanhamento.index'), icon: 'document', category: 'navigation', keywords: ['tdap', 'cronograma', 'acompanhamento', 'tramitacao', 'analise', 'aprovacao'] },
 
     // Outros
     { id: 'nav_treino', title: 'Treinamentos', subtitle: 'Cursos e Capacitações', url: safeRoute('treinamentos.index'), icon: 'academic', category: 'navigation', keywords: ['curso', 'aula', 'ead'] },

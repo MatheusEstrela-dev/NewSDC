@@ -10,7 +10,7 @@
         <PrimaryButton v-if="canAtivar && c.estado === 'rascunho'" :disabled="!podeAtivar || ativando" @click="ativar">
           {{ ativando ? 'Ativando...' : 'Ativar' }}
         </PrimaryButton>
-        <DangerButton v-if="canAtivar && c.estado === 'ativo'" @click="encerrar">
+        <DangerButton v-if="canEncerrar && c.estado === 'ativo'" @click="encerrar">
           Encerrar
         </DangerButton>
         <ActionButton
@@ -241,10 +241,15 @@
 
       <aside class="space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
-          <p class="text-sm text-slate-500 mb-2">Estado</p>
-          <EstadoBadge :estado="c.estado" />
+          <p class="text-sm text-slate-500 mb-2">Acompanhamento</p>
+          <FaseTramiteBadge v-if="c.fase_tramite" :fase="c.fase_tramite" :encerrado="c.estado === 'encerrado'" />
           <p v-if="c.ativado_em" class="text-xs text-slate-500 mt-3">Ativado em {{ fmtDateTime(c.ativado_em) }}</p>
           <p v-if="c.encerrado_em" class="text-xs text-slate-500">Encerrado em {{ fmtDateTime(c.encerrado_em) }}</p>
+        </div>
+        <!-- Tramitacao (Acompanhamento): fase atual, acoes do responsavel e trilha. -->
+        <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
+          <p class="text-sm text-slate-500 mb-3">Acompanhamento</p>
+          <CronogramaTramitacaoPanel :cronograma-id="c.id" />
         </div>
         <div v-if="c.user" class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
           <p class="text-sm text-slate-500">Criado por</p>
@@ -313,11 +318,12 @@ import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
-import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
+import FaseTramiteBadge from '@/Components/Organisms/Tdap/FaseTramiteBadge.vue';
 import AlocarCaminhaoModal from '@/Components/Organisms/Tdap/AlocarCaminhaoModal.vue';
 import RegistrarViagemModal from '@/Components/Organisms/Tdap/RegistrarViagemModal.vue';
 import CronogramaComprovantesSection from '@/Components/Organisms/Tdap/CronogramaComprovantesSection.vue';
 import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHistoricoModal.vue';
+import CronogramaTramitacaoPanel from '@/Components/Organisms/Tdap/CronogramaTramitacaoPanel.vue';
 import PrintCronogramaModal from '@/Components/Organisms/Tdap/Print/PrintCronogramaModal.vue';
 import RelatorioCronogramaModal from '@/Components/Organisms/Tdap/Print/RelatorioCronogramaModal.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -341,6 +347,7 @@ const props = defineProps({
   canEdit:           { type: Boolean, default: false },
   canDelete:         { type: Boolean, default: false },
   canAtivar:         { type: Boolean, default: false },
+  canEncerrar:       { type: Boolean, default: false },
   canProrrogar:      { type: Boolean, default: false },
   canAlocarCaminhao: { type: Boolean, default: false },
   canValidarViagem:  { type: Boolean, default: false },
@@ -426,6 +433,9 @@ const EVENTO_LABELS = {
   'cronograma.arquivado':    'Cronograma arquivado',
   'cronograma.desarquivado': 'Cronograma desarquivado',
   'cronograma.pontos_alterados': 'Pontos de captação alterados',
+  'cronograma.enviado_analise': 'Enviado para análise',
+  'cronograma.aprovado':        'Aprovado na análise',
+  'cronograma.devolvido':       'Devolvido',
 };
 
 function tipoCategoria(tipoEvento) {

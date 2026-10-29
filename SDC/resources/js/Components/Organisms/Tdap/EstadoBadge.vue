@@ -12,10 +12,13 @@ const props = defineProps({
   estado: { type: String, required: true }, // 'rascunho' | 'ativo' | 'encerrado'
 });
 
+// Rotulos na lingua do Acompanhamento (FaseTramiteBadge): ativo = Em execucao,
+// encerrado = Entregues. Rascunho cobre as 3 fases antes da ativacao; quem
+// tem a fase exata usa o FaseTramiteBadge.
 const config = {
-  rascunho:  { cor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',    ponto: 'bg-amber-500',   label: 'Rascunho' },
-  ativo:     { cor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', ponto: 'bg-emerald-500', label: 'Ativo' },
-  encerrado: { cor: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',        ponto: 'bg-slate-500',   label: 'Encerrado' },
+  rascunho:  { cor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',    ponto: 'bg-amber-500',   label: 'Em tramitação' },
+  ativo:     { cor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', ponto: 'bg-emerald-500', label: 'Em execução' },
+  encerrado: { cor: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',        ponto: 'bg-slate-500',   label: 'Entregue' },
 };
 
 const cor   = computed(() => config[props.estado]?.cor   ?? config.rascunho.cor);

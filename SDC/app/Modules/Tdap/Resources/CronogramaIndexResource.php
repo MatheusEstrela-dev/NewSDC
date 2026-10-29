@@ -21,6 +21,7 @@ class CronogramaIndexResource extends JsonResource
             'id'              => $this->id,
             'numero'          => $this->numero,
             'estado'          => $this->estado,
+            'fase_tramite'    => $this->fase_tramite?->toArray(),
             'ativo'           => (bool) $this->ativo,
             'arquivado'       => $this->arquivado_em !== null,
             'encerrado_em'    => $this->encerrado_em?->toIso8601String(),

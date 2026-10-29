@@ -751,6 +751,16 @@
         >
           Cronogramas
         </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapAcompanhamento && podeVerAcompanhamento"
+          :href="route('tdap.acompanhamento.index')"
+          :active="isRouteActive('tdap.acompanhamento.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Acompanhamento
+        </NavItem>
         <!-- Confirmacao do municipio: item proprio, nao aba da fila da CEDEC.
              Sao publicos e atos diferentes -- o COMPDEC atesta recebimento, a
              CEDEC libera pagamento -- e o gate de cada um ja separa quem ve o
@@ -986,6 +996,7 @@ const _routes = {
   hasTdapAtas: route().has('tdap.atas.index'),
   hasTdapLotes: route().has('tdap.lotes.index'),
   hasTdapCronogramas: route().has('tdap.cronogramas.index'),
+  hasTdapAcompanhamento: route().has('tdap.acompanhamento.index'),
   hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
   hasTdapViagensConfirmacao: route().has('tdap.viagens.confirmacao'),
   hasTdapHistoricos: route().has('tdap.historicos.index'),
@@ -1051,6 +1062,7 @@ const _activeRoutes = computed(() => {
     'tdap.atas.*': route().current('tdap.atas.*'),
     'tdap.lotes.*': route().current('tdap.lotes.*'),
     'tdap.cronogramas.*': route().current('tdap.cronogramas.*'),
+    'tdap.acompanhamento.*': route().current('tdap.acompanhamento.*'),
     'tdap.viagens.*': route().current('tdap.viagens.*'),
     // Cada fila tem o seu destaque: sao duas telas irmas sob o mesmo prefixo,
     // e o padrao 'tdap.viagens.*' acenderia as duas ao mesmo tempo.
@@ -1203,6 +1215,7 @@ const canSeeCedecPrefeituras = computed(() => {
 // A confirmacao e do municipio: quem nao tem o slug nao ve o item, mesmo
 // enxergando o resto do TDAP.
 const podeConfirmarViagens = computed(() => hasPermission(['tdap.viagens.confirmar', 'tdap.viagens.reprovar']));
+const podeVerAcompanhamento = computed(() => hasPermission(['tdap.acompanhamento.view']));
 
 const canSeeTdap = computed(() => {
   return hasPermission([
@@ -1212,6 +1225,7 @@ const canSeeTdap = computed(() => {
     'tdap.atas.view',
     'tdap.lotes.view',
     'tdap.cronogramas.view',
+    'tdap.acompanhamento.view',
     'tdap.viagens.view',
     'tdap.vistorias.view',
     'tdap.historico.view',

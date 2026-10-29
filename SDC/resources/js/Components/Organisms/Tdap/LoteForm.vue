@@ -46,31 +46,21 @@
         -->
         <div>
           <InputLabel value="Municípios atendidos *" />
-          <div class="mt-1 rounded-md border border-slate-300 dark:border-slate-700 dark:bg-slate-900/50">
-            <div class="p-2 border-b border-slate-200 dark:border-slate-700">
-              <TextInput
-                v-model="buscaMunicipio"
-                type="search"
-                class="block w-full text-sm"
-                placeholder="Buscar município..."
-              />
-            </div>
-            <div
-              v-if="municipiosSelecionados.length"
-              class="flex flex-wrap gap-1 p-2 border-b border-slate-200 dark:border-slate-700"
+          <div ref="municipioBox" class="mt-1 relative">
+            <TextInput
+              v-model="buscaMunicipio"
+              type="search"
+              class="block w-full text-sm"
+              placeholder="Digite para buscar o município..."
+              autocomplete="off"
+              @input="listaAberta = true"
+              @click="listaAberta = buscaMunicipio.trim() !== ''"
+              @keydown.esc="listaAberta = false"
+            />
+            <ul
+              v-if="listaAberta && buscaMunicipio.trim()"
+              class="absolute z-20 mt-1 w-full max-h-52 overflow-y-auto p-2 space-y-1 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg"
             >
-              <button
-                v-for="m in municipiosSelecionados"
-                :key="m.id"
-                type="button"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-xs text-blue-800 dark:text-blue-200"
-                :title="`Remover ${m.nome}`"
-                @click="alternarMunicipio(m.id)"
-              >
-                {{ m.nome }}<span aria-hidden="true">×</span>
-              </button>
-            </div>
-            <ul class="max-h-52 overflow-y-auto p-2 space-y-1">
               <li v-for="m in municipiosFiltrados" :key="m.id">
                 <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
                   <input
@@ -86,6 +76,21 @@
                 Nenhum município encontrado.
               </li>
             </ul>
+          </div>
+          <div
+            v-if="municipiosSelecionados.length"
+            class="flex flex-wrap gap-1 mt-2"
+          >
+            <button
+              v-for="m in municipiosSelecionados"
+              :key="m.id"
+              type="button"
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-xs text-blue-800 dark:text-blue-200"
+              :title="`Remover ${m.nome}`"
+              @click="alternarMunicipio(m.id)"
+            >
+              {{ m.nome }}<span aria-hidden="true">×</span>
+            </button>
           </div>
           <p class="mt-1 text-xs text-slate-500">{{ municipiosSelecionados.length }} selecionado(s)</p>
           <InputError :message="form.errors.municipio_ids" class="mt-2" />
@@ -180,7 +185,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -200,6 +205,19 @@ defineEmits(['submit', 'cancel']);
 // Multi-selecao de municipios: o catalogo tem 853 itens, entao a lista e
 // filtrada por busca (sem acento/caixa) e os escolhidos aparecem como chips.
 const buscaMunicipio = ref('');
+
+// A lista fica fechada ate o usuario digitar; fecha ao clicar fora ou com Esc.
+const listaAberta = ref(false);
+const municipioBox = ref(null);
+
+function fecharAoClicarFora(e) {
+  if (municipioBox.value && !municipioBox.value.contains(e.target)) {
+    listaAberta.value = false;
+  }
+}
+
+onMounted(() => document.addEventListener('mousedown', fecharAoClicarFora));
+onBeforeUnmount(() => document.removeEventListener('mousedown', fecharAoClicarFora));
 
 const semAcento = (v) => (v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
