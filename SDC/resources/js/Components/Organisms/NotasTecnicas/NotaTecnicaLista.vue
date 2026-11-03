@@ -1,9 +1,9 @@
 <template>
   <section aria-label="Lista de notas técnicas" class="flex h-full min-h-0 flex-col">
-    <header class="shrink-0 border-b border-slate-200 p-2 dark:border-slate-700/50">
+    <header ref="cabecalho" class="shrink-0 border-b border-slate-200 p-2 dark:border-slate-700/50">
       <SearchInput
         v-model="termo"
-        placeholder="Buscar por código, título ou resumo"
+        placeholder="Buscar no código, título, resumo ou texto do PDF"
         size="sm"
       />
     </header>
@@ -74,18 +74,30 @@ const paginacao = computed(() => ({
 }));
 
 const termo = ref(props.busca ?? '');
+const cabecalho = ref(null);
 let temporizador = null;
 
 watch(termo, (valor) => {
   clearTimeout(temporizador);
+  temporizador = null;
   // Igual ao que o servidor ja aplicou (ex.: sincronizado pelo watch abaixo): nada a pedir.
   if (valor.trim() === (props.busca ?? '')) return;
-  temporizador = setTimeout(() => emit('buscar', valor.trim()), ESPERA_BUSCA_MS);
+  temporizador = setTimeout(() => {
+    temporizador = null;
+    emit('buscar', valor.trim());
+  }, ESPERA_BUSCA_MS);
 });
 
-// Busca limpa por fora (card "Em vigor", troca de pasta) volta ao campo.
+// Busca mudada por fora (card "Em vigor", troca de pasta, voltar do navegador)
+// volta ao campo. Mas a resposta do servidor tambem chega por aqui: com busca
+// pendente (temporizador ativo) ou digitacao em curso (foco no campo) o texto da
+// pessoa e mais novo que o do servidor e nao pode ser sobrescrito.
 watch(() => props.busca, (valor) => {
-  if ((valor ?? '') !== termo.value.trim()) termo.value = valor ?? '';
+  const novo = valor ?? '';
+  if (novo === termo.value.trim()) return;
+  if (temporizador !== null) return;
+  if (cabecalho.value?.contains(document.activeElement) && novo !== '') return;
+  termo.value = novo;
 });
 
 onBeforeUnmount(() => clearTimeout(temporizador));

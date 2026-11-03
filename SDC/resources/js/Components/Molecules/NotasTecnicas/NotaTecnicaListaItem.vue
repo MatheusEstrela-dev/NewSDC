@@ -36,6 +36,19 @@
           <span v-if="nota.versao_atual" class="shrink-0">· v{{ nota.versao_atual }}</span>
           <span v-if="nota.total_versoes > 1" class="shrink-0">· {{ nota.total_versoes }} versões</span>
         </span>
+        <!-- Termo buscado encontrado no texto do PDF: o trecho, com o termo marcado. -->
+        <span
+          v-if="trecho.length"
+          class="mt-1.5 block rounded-md bg-slate-100 px-2 py-1 text-xs leading-relaxed text-slate-600 dark:bg-slate-800/70 dark:text-slate-300"
+        >
+          <span class="font-semibold text-slate-500 dark:text-slate-400">No PDF: </span>…<template
+            v-for="(parte, i) in trecho"
+            :key="i"
+          ><mark
+            v-if="parte.destaque"
+            class="rounded bg-amber-200 px-0.5 text-slate-900 dark:bg-amber-400/30 dark:text-amber-100"
+          >{{ parte.texto }}</mark><template v-else>{{ parte.texto }}</template></template>…
+        </span>
       </span>
     </button>
 
@@ -70,6 +83,17 @@ const props = defineProps({
 });
 
 defineEmits(['select', 'select-versao']);
+
+/**
+ * O backend marca o termo com [[ ]] (ts_headline). Partir em pedacos e
+ * renderizar como texto evita v-html com conteudo vindo do PDF.
+ */
+const trecho = computed(() => (props.nota.trecho ?? '')
+  .split(/(\[\[.*?\]\])/)
+  .filter(Boolean)
+  .map((parte) => (parte.startsWith('[[') && parte.endsWith(']]')
+    ? { texto: parte.slice(2, -2), destaque: true }
+    : { texto: parte.replace(/\s+/g, ' '), destaque: false })));
 
 // Rascunho nao entra na conta de "nao lida": ninguem precisa dar ciencia nele.
 const naoLida = computed(() => props.nota.status === 'publicada' && !props.nota.lida);

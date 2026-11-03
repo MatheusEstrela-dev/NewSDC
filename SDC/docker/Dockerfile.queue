@@ -15,6 +15,7 @@ RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy" && { 
 
 # Instalar dependencias do sistema e extensoes PHP usadas pelos jobs Laravel.
 # session.upload_progress.enabled=0 cobre CVE-2026-115560 ate o proximo patch.
+# poppler-utils: pdftotext, extracao do texto dos PDFs de Notas Tecnicas.
 RUN apk add --no-cache \
     bash \
     git \
@@ -29,6 +30,7 @@ RUN apk add --no-cache \
     postgresql-libs \
     libldap \
     icu-libs \
+    poppler-utils \
     mysql-client \
     postgresql-client \
     supervisor \
