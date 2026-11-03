@@ -15,6 +15,29 @@
       >
         <template #actions>
           <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <!--
+              Acoes da nota aberta: o rascunho so vira documento oficial ao ser
+              publicado, entao Publicar fica a vista, e nao escondido no painel.
+            -->
+            <Button
+              v-if="podePublicarSelecionada"
+              variant="success"
+              :icon="CheckBadgeIcon"
+              :title="`Publicar ${selecionada.codigo} como documento oficial`"
+              @click="publicar(selecionada)"
+            >
+              {{ selecionada.status === 'revogada' ? 'Republicar' : 'Publicar' }}
+            </Button>
+            <ActionButton
+              v-if="permissoes.editar && selecionada"
+              action="edit"
+              module="notas-tecnicas"
+              resource="notas"
+              label="Editar"
+              :allowed="true"
+              :tooltip-text="`Editar ${selecionada.codigo}: dados, versões e publicação`"
+              @click="router.visit(route('notas-tecnicas.edit', selecionada.id))"
+            />
             <ActionButton
               v-if="permissoes.criar"
               action="create"
@@ -24,19 +47,26 @@
               :allowed="true"
               @click="novaNota"
             />
+            <!-- Paineis: cheio = aberto, contorno = recolhido. Cor fixa por painel. -->
             <template v-if="isDesktop">
-              <ButtonIcon
+              <Button
+                :variant="pastasAbertas ? 'warning' : 'outline'"
                 :icon="FolderIcon"
                 :title="pastasAbertas ? 'Recolher pastas' : 'Mostrar pastas'"
-                :variant="pastasAbertas ? 'primary' : 'secondary'"
+                :aria-pressed="pastasAbertas"
                 @click="alternarPastas"
-              />
-              <ButtonIcon
+              >
+                Pastas
+              </Button>
+              <Button
+                :variant="informacoesAbertas ? 'sky' : 'outline'"
                 :icon="InformationCircleIcon"
                 :title="informacoesAbertas ? 'Recolher informações' : 'Mostrar informações'"
-                :variant="informacoesAbertas ? 'primary' : 'secondary'"
+                :aria-pressed="informacoesAbertas"
                 @click="alternarInformacoes"
-              />
+              >
+                Informações
+              </Button>
             </template>
           </div>
         </template>
@@ -111,6 +141,13 @@
     </template>
   </NotasTecnicasWorkspaceTemplate>
 
+  <ConfirmDialog
+    :is-open="confirmacao.aberto"
+    v-bind="confirmacao.opcoes"
+    @confirm="confirmar"
+    @cancel="cancelar"
+  />
+
   <NotaTecnicaPastasModal
     v-if="permissoes.categorias"
     :show="modalPastas"
@@ -122,11 +159,13 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { CheckBadgeIcon, Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import NotaTecnicaStatCards from '@/Components/Organisms/NotasTecnicas/NotaTecnicaStatCards.vue';
 import NotaTecnicaCategoriaArvore from '@/Components/Organisms/NotasTecnicas/NotaTecnicaCategoriaArvore.vue';
 import NotaTecnicaLista from '@/Components/Organisms/NotasTecnicas/NotaTecnicaLista.vue';
@@ -137,6 +176,7 @@ import NotaTecnicaPastasModal from '@/Components/Organisms/NotasTecnicas/NotaTec
 import NotasTecnicasWorkspaceTemplate from '@/Templates/NotasTecnicas/NotasTecnicasWorkspaceTemplate.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { useNotaTecnicaWorkspace } from '@/Composables/notasTecnicas/useNotaTecnicaWorkspace';
+import { useNotaTecnicaPublicacao } from '@/Composables/notasTecnicas/useNotaTecnicaPublicacao';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -159,6 +199,17 @@ const props = defineProps({
 const { isDesktop } = useMobile();
 const { pastasAbertas, informacoesAbertas, alternarPastas, alternarInformacoes } = useNotaTecnicaWorkspace();
 const modalPastas = ref(false);
+
+// Publicar daqui recarrega a nota, a lista, os cards e as pastas (o rascunho
+// sai de "Rascunhos" e entra na contagem em vigor), mantendo o PDF aberto.
+const { confirmacao, confirmar, cancelar, publicar } = useNotaTecnicaPublicacao({
+  only: ['selecionada', 'notas', 'estatisticas', 'categorias', 'flash', 'errors'],
+  preserveState: true,
+});
+
+const podePublicarSelecionada = computed(() => props.permissoes.publicar
+  && props.selecionada?.versao
+  && ['rascunho', 'revogada'].includes(props.selecionada.status));
 const registrandoCiencia = ref(false);
 
 /** Ciencia so na versao vigente de nota publicada (o backend confere de novo). */

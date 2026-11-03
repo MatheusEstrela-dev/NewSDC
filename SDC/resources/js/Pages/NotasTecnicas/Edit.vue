@@ -44,7 +44,7 @@
               size="sm"
               :icon="CheckBadgeIcon"
               :disabled="!nota.versao"
-              @click="publicar"
+              @click="publicar(nota)"
             >
               {{ nota.status === 'revogada' ? 'Republicar' : 'Publicar' }}
             </Button>
@@ -53,7 +53,7 @@
               variant="warning"
               size="sm"
               :icon="ArchiveBoxIcon"
-              @click="revogar"
+              @click="revogar(nota)"
             >
               Revogar
             </Button>
@@ -62,7 +62,7 @@
               variant="danger"
               size="sm"
               :icon="TrashIcon"
-              @click="excluir"
+              @click="excluir(nota)"
             >
               Excluir
             </Button>
@@ -135,7 +135,7 @@ import FormActions from '@/Components/Molecules/Form/FormActions.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import NotaTecnicaFormSecoes from '@/Components/Organisms/NotasTecnicas/NotaTecnicaFormSecoes.vue';
 import NotaTecnicaNovaVersaoModal from '@/Components/Organisms/NotasTecnicas/NotaTecnicaNovaVersaoModal.vue';
-import { useConfirmacao } from '@/Composables/core/useConfirmacao';
+import { useNotaTecnicaPublicacao } from '@/Composables/notasTecnicas/useNotaTecnicaPublicacao';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -154,7 +154,7 @@ const cartao = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:b
 
 const form = useForm({ ...props.valores, vigencia_inicio: props.valores.vigencia_inicio ?? '' });
 const modalVersao = ref(false);
-const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
+const { confirmacao, confirmar, cancelar, publicar, revogar, excluir } = useNotaTecnicaPublicacao();
 
 // Publicar sem PDF e revogar rascunho voltam como erro de validacao em `nota`.
 const page = usePage();
@@ -172,42 +172,6 @@ function salvar() {
 
 function voltar() {
   router.visit(route('notas-tecnicas.index', { nota: props.nota.id }));
-}
-
-function acao(rota, opcoes, metodo = 'post') {
-  const url = route(rota, props.nota.id);
-
-  // router.delete(url, opcoes) nao recebe corpo; router.post(url, dados, opcoes) recebe.
-  pedirConfirmacao(opcoes, () => (metodo === 'delete'
-    ? router.delete(url)
-    : router.post(url, {}, { preserveScroll: true })));
-}
-
-function publicar() {
-  acao('notas-tecnicas.publicar', {
-    title: `Publicar ${props.nota.codigo}?`,
-    message: 'A nota passa a aparecer para todos os leitores, com você como aprovador.',
-    variant: 'success',
-    confirmText: 'Publicar',
-  });
-}
-
-function revogar() {
-  acao('notas-tecnicas.revogar', {
-    title: `Revogar ${props.nota.codigo}?`,
-    message: 'A nota sai da lista em vigor e fica marcada como obsoleta. Dá para republicar depois.',
-    variant: 'warning',
-    confirmText: 'Revogar',
-  });
-}
-
-function excluir() {
-  acao('notas-tecnicas.destroy', {
-    title: `Excluir ${props.nota.codigo}?`,
-    message: 'A nota e as versões somem do workspace. O código não é reaproveitado.',
-    variant: 'danger',
-    confirmText: 'Excluir',
-  }, 'delete');
 }
 
 function dataCurta(iso) {
