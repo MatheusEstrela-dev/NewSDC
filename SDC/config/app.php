@@ -248,6 +248,7 @@ return [
         App\Modules\Pae\PaeServiceProvider::class,
         App\Modules\Ranking\RankingServiceProvider::class,
         App\Modules\Resgate\ResgateServiceProvider::class,
+        App\Modules\NotasTecnicas\NotasTecnicasServiceProvider::class,
     ])->toArray(),
 
     /*

@@ -508,6 +508,24 @@ return [
                 'view' => 'cedec.contatos.view',
             ],
         ],
+        // Repositorio de notas tecnicas e POPs em PDF, com versoes e confirmacao
+        // de leitura. Publicar e separado de editar: quem redige a nota nao e,
+        // necessariamente, quem a coloca em vigor.
+        'NOTAS_TECNICAS' => [
+            'Notas' => [
+                'view'     => 'notas_tecnicas.notas.view',
+                'create'   => 'notas_tecnicas.notas.create',
+                'edit'     => 'notas_tecnicas.notas.edit',
+                'publicar' => 'notas_tecnicas.notas.publicar',
+                'delete'   => 'notas_tecnicas.notas.delete',
+            ],
+            'Categorias' => [
+                'manage' => 'notas_tecnicas.categorias.manage',
+            ],
+            'Leituras' => [
+                'view' => 'notas_tecnicas.leituras.view',
+            ],
+        ],
         // Placar de pontos por entrega de negocio, extrato e faixas
         // (Bronze/Prata/Ouro/Diamante). Leitura e separada por dimensao: ver o
         // proprio placar nao autoriza ver o extrato nominal de terceiros.
@@ -713,6 +731,7 @@ return [
             'cisternas.*',
             'compdec.*',
             'cedec.*',
+            'notas_tecnicas.*',
             'inventario.*',
             'acessos.*',
             'estoque.*',
@@ -935,6 +954,15 @@ return [
             'cedec.prefeituras.export',
             'cedec.contatos.view',
 
+            // NOTAS TECNICAS - gestao completa do repositorio.
+            'notas_tecnicas.notas.view',
+            'notas_tecnicas.notas.create',
+            'notas_tecnicas.notas.edit',
+            'notas_tecnicas.notas.publicar',
+            'notas_tecnicas.notas.delete',
+            'notas_tecnicas.categorias.manage',
+            'notas_tecnicas.leituras.view',
+
             'compdec.equipe.view',
             'compdec.equipe.create',
             'compdec.equipe.edit',
@@ -1002,6 +1030,8 @@ return [
             'pmda.analise.pedir_alteracao',
         ],
         'analyst' => [
+            // NOTAS TECNICAS - leitura das notas publicadas.
+            'notas_tecnicas.notas.view',
             // RANKING - placar do proprio orgao e extrato pessoal. Solicita
             // correcao, mas nao decide: quem pede ajuste nao aprova o proprio.
             'ranking.placar.view',
@@ -1182,6 +1212,8 @@ return [
             'estoque.inventarios.create',
         ],
         'operator' => [
+            // NOTAS TECNICAS - leitura das notas publicadas.
+            'notas_tecnicas.notas.view',
             // RANKING - placar e extrato proprios; solicita correcao.
             'ranking.placar.view',
             'ranking.extrato.view',
@@ -1289,6 +1321,8 @@ return [
             'estoque.movimentacoes.history',
         ],
         'viewer' => [
+            // NOTAS TECNICAS - leitura das notas publicadas.
+            'notas_tecnicas.notas.view',
             // RANKING - somente leitura do proprio placar.
             'ranking.placar.view',
             'ranking.regras.view',
@@ -1346,6 +1380,8 @@ return [
             'estoque.movimentacoes.history',
         ],
         'user' => [
+            // NOTAS TECNICAS - leitura das notas publicadas.
+            'notas_tecnicas.notas.view',
             // RANKING - so o proprio placar.
             'ranking.placar.view',
             // Acesso basico apenas

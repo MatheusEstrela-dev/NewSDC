@@ -235,6 +235,17 @@
           Prefeituras
         </NavItem>
 
+        <!-- Notas Tecnicas -->
+        <NavItem
+          v-if="canSeeNotasTecnicas && _routes.hasNotasTecnicas"
+          :href="route('notas-tecnicas.index')"
+          :active="isRouteActive('notas-tecnicas.*')"
+          icon="notas-tecnicas"
+          :collapsed="isCollapsed"
+        >
+          Notas Tecnicas
+        </NavItem>
+
         <!-- TDAP - drill-down (abre submenu como nova seccao) -->
         <button
           v-if="canSeeTdap"
@@ -990,6 +1001,7 @@ const _routes = {
   hasHumanitariaTransferencias: route().has('ajuda-humanitaria.transferencias.index'),
   hasCompdec: route().has('compdec.index'),
   hasCedec: route().has('cedec.prefeituras.index'),
+  hasNotasTecnicas: route().has('notas-tecnicas.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
   hasTdapFrota: route().has('tdap.frota.index'),
@@ -1211,6 +1223,8 @@ const canSeeOrgaos = computed(() => {
 const canSeeCedecPrefeituras = computed(() => {
   return hasPermission(['cedec.prefeituras.view']);
 });
+
+const canSeeNotasTecnicas = computed(() => hasPermission(['notas_tecnicas.notas.view']));
 
 // A confirmacao e do municipio: quem nao tem o slug nao ve o item, mesmo
 // enxergando o resto do TDAP.
