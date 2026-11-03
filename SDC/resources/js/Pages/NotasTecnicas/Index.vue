@@ -31,20 +31,18 @@
             <ActionButton
               v-if="permissoes.editar && selecionada"
               action="edit"
-              module="notas-tecnicas"
+              module="notas_tecnicas"
               resource="notas"
               label="Editar"
-              :allowed="true"
               :tooltip-text="`Editar ${selecionada.codigo}: dados, versões e publicação`"
               @click="router.visit(route('notas-tecnicas.edit', selecionada.id))"
             />
             <ActionButton
               v-if="permissoes.criar"
               action="create"
-              module="notas-tecnicas"
+              module="notas_tecnicas"
               resource="notas"
               label="Nova nota"
-              :allowed="true"
               @click="novaNota"
             />
             <!-- Paineis: azul cheio com borda escura = aberto; contorno = recolhido. -->
