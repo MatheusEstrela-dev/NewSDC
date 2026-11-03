@@ -40,7 +40,10 @@ final class NotaTecnicaLeituraService
             throw ValidationException::withMessages(['ciencia' => 'Esta não é a versão vigente da nota.']);
         }
 
-        return NotaTecnicaLeitura::query()->firstOrCreate(
+        // createOrFirst: o insert vai primeiro e a unique (user, versao) resolve a
+        // corrida de dois cliques/abas, devolvendo a leitura original (lida_em
+        // preservado) com wasRecentlyCreated=false para quem perdeu.
+        return NotaTecnicaLeitura::query()->createOrFirst(
             ['user_id' => $user->id, 'nota_tecnica_versao_id' => $versao->id],
             ['lida_em' => now()],
         );
@@ -85,18 +88,39 @@ final class NotaTecnicaLeituraService
     {
         yield ['Nome', 'E-mail', 'Situação', 'Lida em'];
 
-        foreach ($versao->leituras()->with('usuario:id,name,email')->orderBy('lida_em')->lazy() as $leitura) {
+        // Desempate por id: lazy() pagina por offset e, sem ordem total, linhas com
+        // o mesmo lida_em podem repetir ou sumir entre as paginas.
+        $lidas = $versao->leituras()->with('usuario:id,name,email')->orderBy('lida_em')->orderBy('id')->lazy(500);
+
+        foreach ($lidas as $leitura) {
             yield [
-                (string) $leitura->usuario?->name,
-                (string) $leitura->usuario?->email,
+                $this->neutralizarFormula((string) $leitura->usuario?->name),
+                $this->neutralizarFormula((string) $leitura->usuario?->email),
                 'Leu',
                 $leitura->lida_em->format('d/m/Y H:i'),
             ];
         }
 
-        foreach ($this->pendentesQuery($versao)->select(['users.id', 'users.name', 'users.email'])->orderBy('users.name')->lazyById(500, 'users.id', 'id') as $user) {
-            yield [(string) $user->name, (string) $user->email, 'Pendente', ''];
+        // lazyById descartaria o orderBy por nome; lazy() respeita a ordem, com id
+        // como desempate para a paginacao por offset ser estavel.
+        $pendentes = $this->pendentesQuery($versao)
+            ->select(['users.id', 'users.name', 'users.email'])
+            ->orderBy('users.name')
+            ->orderBy('users.id')
+            ->lazy(500);
+
+        foreach ($pendentes as $user) {
+            yield [$this->neutralizarFormula((string) $user->name), $this->neutralizarFormula((string) $user->email), 'Pendente', ''];
         }
+    }
+
+    /**
+     * CSV injection: o Excel executa como formula a celula que comeca com = + - @
+     * tab ou CR. O apostrofo na frente a transforma em texto.
+     */
+    private function neutralizarFormula(string $valor): string
+    {
+        return $valor !== '' && str_contains("=+-@\t\r", $valor[0]) ? "'" . $valor : $valor;
     }
 
     /** @return Builder<User> */

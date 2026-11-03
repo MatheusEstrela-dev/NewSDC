@@ -2,8 +2,8 @@
   <Head title="Notas Técnicas" />
 
   <NotasTecnicasWorkspaceTemplate
-    :pastas-abertas="pastasAbertas"
-    :informacoes-abertas="informacoesAbertas"
+    :pastas-abertas="pastasVisiveis"
+    :informacoes-abertas="informacoesVisiveis && (isDesktop || !!selecionada)"
   >
     <template #cabecalho>
       <PageHeader
@@ -76,7 +76,7 @@
         @select="filtrarPorPasta"
       >
         <template v-if="permissoes.categorias" #acoes>
-          <ButtonIcon :icon="Cog6ToothIcon" title="Organizar pastas" size="sm" @click="modalPastas = true" />
+          <ButtonIcon :icon="Cog6ToothIcon" title="Organizar pastas" size="lg" @click="modalPastas = true" />
         </template>
       </NotaTecnicaCategoriaArvore>
     </template>
@@ -107,17 +107,17 @@
               v-if="permissoes.leituras && selecionada?.versao && selecionada.status !== 'rascunho'"
               :icon="UsersIcon"
               title="Ver quem leu"
-              size="sm"
+              size="lg"
               @click="router.visit(route('notas-tecnicas.leituras', selecionada.id))"
             />
             <ButtonIcon
               v-if="permissoes.editar && selecionada"
               :icon="PencilSquareIcon"
               title="Editar nota, versões e publicação"
-              size="sm"
+              size="lg"
               @click="router.visit(route('notas-tecnicas.edit', selecionada.id))"
             />
-            <ButtonIcon v-if="isDesktop" :icon="XMarkIcon" title="Recolher informações" size="sm" @click="alternarInformacoes" />
+            <ButtonIcon v-if="isDesktop" :icon="XMarkIcon" title="Recolher informações" size="lg" @click="alternarInformacoes" />
           </div>
         </template>
         <template #ciencia>
@@ -145,6 +145,7 @@
     :show="modalPastas"
     :categorias="categorias"
     @close="modalPastas = false"
+    @excluida="aoExcluirPasta"
   />
 </template>
 
@@ -190,7 +191,7 @@ const props = defineProps({
 });
 
 const { isDesktop } = useMobile();
-const { pastasAbertas, informacoesAbertas, alternarPastas, alternarInformacoes } = useNotaTecnicaWorkspace();
+const { pastasAbertas, informacoesAbertas, pastasVisiveis, informacoesVisiveis, alternarPastas, alternarInformacoes } = useNotaTecnicaWorkspace();
 const modalPastas = ref(false);
 
 // Publicar daqui recarrega a nota, a lista, os cards e as pastas (o rascunho
@@ -269,11 +270,10 @@ function selecionar(nota, versao = '') {
 }
 
 function abrirNota(id) {
+  // Sem gravar no storage: abaixo de lg as informacoes ja aparecem empilhadas
+  // (informacoesVisiveis), e gravar aqui faria o painel nascer cobrindo o PDF
+  // na proxima visita em tela grande.
   selecionar(id);
-
-  // Abaixo de 2xl as informacoes flutuam sobre o PDF; no telefone sao o unico
-  // jeito de ver os metadados. Em tela larga a coluna ja esta onde estava.
-  if (!isDesktop.value) informacoesAbertas.value = true;
 }
 
 function abrirVersao(id) {
@@ -290,6 +290,11 @@ function filtrarPorCard(chave) {
   }
 
   filtrar({ ...base, status: chave ?? '' });
+}
+
+/** Pasta excluida que era a filtrada: limpa o filtro, senao a lista filtra por pasta fantasma. */
+function aoExcluirPasta(id) {
+  if (Number(props.filtros.categoria_id) === Number(id)) filtrarPorPasta(null);
 }
 
 function filtrarPorPasta(categoriaId) {

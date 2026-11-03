@@ -1,7 +1,7 @@
 <template>
   <button
     type="button"
-    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900"
+    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900"
     :class="ativo
       ? 'border-blue-800 bg-blue-600 text-white hover:bg-blue-500 dark:border-blue-300'
       : 'border-blue-200 bg-white text-blue-600 hover:border-blue-400 hover:bg-blue-50 dark:border-blue-500/40 dark:bg-slate-800/60 dark:text-blue-400 dark:hover:bg-slate-800'"

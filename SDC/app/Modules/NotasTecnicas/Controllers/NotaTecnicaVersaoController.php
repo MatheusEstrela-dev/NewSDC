@@ -19,6 +19,12 @@ final class NotaTecnicaVersaoController extends Controller
 
     public function store(StoreNotaTecnicaVersaoRequest $request, NotaTecnica $nota): RedirectResponse
     {
+        // Em nota publicada a versao nova entra em vigor na hora e zera a ciencia
+        // de todos: e ato de publicacao, nao basta editar. Rascunho so exige edit.
+        if ($nota->status === NotaTecnicaStatus::Publicada) {
+            $this->authorize('publicar', $nota);
+        }
+
         $versao = $this->notas->novaVersao($nota, NotaTecnicaVersaoDTO::fromRequest($request->validated()), $request->user());
 
         $mensagem = $nota->status === NotaTecnicaStatus::Publicada
