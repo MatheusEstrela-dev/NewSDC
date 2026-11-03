@@ -60,7 +60,9 @@ final class NotaTecnicaConsultaService
             ->withCount('versoes')
             ->orderByDesc('codigo');
 
-        $this->aplicarStatus($query, $filtro->status);
+        // Quem busca por codigo ou termo quer achar a nota, mesmo revogada (ela
+        // aparece com o selo). Sem busca, revogada fica so no card proprio.
+        $this->aplicarStatus($query, $filtro->status, incluirRevogadas: $filtro->busca !== null);
 
         if ($filtro->busca !== null) {
             $this->aplicarBusca($query, $filtro->busca);
@@ -214,11 +216,15 @@ final class NotaTecnicaConsultaService
      *
      * @param  Builder<NotaTecnica>  $query
      */
-    private function aplicarStatus(Builder $query, ?NotaTecnicaStatus $status): void
+    private function aplicarStatus(Builder $query, ?NotaTecnicaStatus $status, bool $incluirRevogadas = false): void
     {
         if ($status !== null) {
             $query->where('notas_tecnicas.status', $status->value);
 
+            return;
+        }
+
+        if ($incluirRevogadas) {
             return;
         }
 

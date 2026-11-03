@@ -50,7 +50,7 @@
             </Button>
             <Button
               v-if="permissoes.publicar && nota.status === 'publicada'"
-              variant="warning"
+              variant="danger"
               size="sm"
               :icon="ArchiveBoxIcon"
               @click="revogar(nota)"

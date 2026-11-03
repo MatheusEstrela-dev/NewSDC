@@ -57,12 +57,14 @@
     </button>
 
     <!-- Revisoes da nota aberta, como as conversas agrupadas do Notes. -->
-    <ul v-if="ativa && versoes.length > 1" class="space-y-0.5 border-t border-blue-200/70 px-3 py-2 dark:border-blue-500/20">
+    <ul v-if="ativa && versoes.length" class="space-y-0.5 border-t border-blue-200/70 px-3 py-2 dark:border-blue-500/20">
       <li v-for="versao in versoes" :key="versao.id">
         <NotaTecnicaVersaoItem
           :versao="versao"
           :ativa="versao.id === versaoId"
+          :pode-revogar="podeRevogar && versao.atual && nota.status === 'publicada'"
           @select="$emit('select-versao', $event)"
+          @revogar="$emit('revogar')"
         />
       </li>
     </ul>
@@ -85,9 +87,10 @@ const props = defineProps({
   ativa: { type: Boolean, default: false },
   versoes: { type: Array, default: () => [] },
   versaoId: { type: Number, default: null },
+  podeRevogar: { type: Boolean, default: false },
 });
 
-defineEmits(['select', 'select-versao']);
+defineEmits(['select', 'select-versao', 'revogar']);
 
 /**
  * O backend marca o termo com [[ ]] (ts_headline). Partir em pedacos e
