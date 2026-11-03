@@ -109,6 +109,28 @@ return new class extends Migration
             $table->index('nota_tecnica_versao_id');
         });
 
+        // Favoritos: marca pessoal do usuario sobre a nota (e nao sobre a versao).
+        Schema::create('nota_tecnica_favoritos', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('nota_tecnica_id')->constrained('notas_tecnicas')->cascadeOnDelete();
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->unique(['user_id', 'nota_tecnica_id']);
+        });
+
+        // Recentes: uma linha por (usuario, nota) com o ultimo acesso; reabrir so
+        // atualiza `acessado_em`, entao a tabela nao cresce a cada clique.
+        Schema::create('nota_tecnica_acessos', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('nota_tecnica_id')->constrained('notas_tecnicas')->cascadeOnDelete();
+            $table->timestamp('acessado_em');
+
+            $table->unique(['user_id', 'nota_tecnica_id']);
+            $table->index(['user_id', 'acessado_em']);
+        });
+
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
 
@@ -138,6 +160,8 @@ return new class extends Migration
 
     public function down(): void
     {
+        Schema::dropIfExists('nota_tecnica_acessos');
+        Schema::dropIfExists('nota_tecnica_favoritos');
         Schema::dropIfExists('nota_tecnica_leituras');
         Schema::dropIfExists('nota_tecnica_versoes');
         Schema::dropIfExists('notas_tecnicas');

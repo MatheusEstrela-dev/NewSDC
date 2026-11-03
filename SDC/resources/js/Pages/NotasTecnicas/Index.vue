@@ -73,7 +73,10 @@
       <NotaTecnicaCategoriaArvore
         :categorias="categorias"
         :categoria-id="filtros.categoria_id ?? null"
+        :colecao="filtros.colecao ?? null"
+        :colecoes="colecoes"
         @select="filtrarPorPasta"
+        @select-colecao="filtrarPorColecao"
       >
         <template v-if="permissoes.categorias" #acoes>
           <ButtonIcon :icon="Cog6ToothIcon" title="Organizar pastas" size="lg" @click="modalPastas = true" />
@@ -96,7 +99,7 @@
     </template>
 
     <template #leitor>
-      <NotaTecnicaLeitor :nota="selecionada" :embutir="isDesktop" />
+      <NotaTecnicaLeitor :nota="selecionada" :embutir="isDesktop" @alternar-favorito="alternarFavorito" />
     </template>
 
     <template #informacoes>
@@ -186,6 +189,7 @@ const props = defineProps({
     default: () => ({ total: 0, nao_lidas: 0, revogadas: 0, rascunhos: null }),
   },
   categorias: { type: Array, default: () => [] },
+  colecoes: { type: Object, default: () => ({ favoritas: 0, recentes: 0 }) },
   selecionada: { type: Object, default: null },
   permissoes: { type: Object, default: () => ({}) },
 });
@@ -197,7 +201,7 @@ const modalPastas = ref(false);
 // Publicar daqui recarrega a nota, a lista, os cards e as pastas (o rascunho
 // sai de "Rascunhos" e entra na contagem em vigor), mantendo o PDF aberto.
 const { confirmacao, confirmar, cancelar, publicar } = useNotaTecnicaPublicacao({
-  only: ['selecionada', 'notas', 'estatisticas', 'categorias', 'flash', 'errors'],
+  only: ['selecionada', 'notas', 'estatisticas', 'categorias', 'colecoes', 'flash', 'errors'],
   preserveState: true,
 });
 
@@ -222,11 +226,22 @@ const motivoSemCiencia = computed(() => {
  */
 function darCiencia() {
   router.post(route('notas-tecnicas.versoes.ciencia', props.selecionada.versao.id), {}, {
-    only: ['selecionada', 'notas', 'estatisticas', 'flash', 'errors'],
+    only: ['selecionada', 'notas', 'estatisticas', 'colecoes', 'flash', 'errors'],
     preserveState: true,
     preserveScroll: true,
     onStart: () => { registrandoCiencia.value = true; },
     onFinish: () => { registrandoCiencia.value = false; },
+  });
+}
+
+/** Alterna a estrela da nota aberta; recarrega so o que a estrela muda (lista, contador, nota). */
+function alternarFavorito() {
+  if (!props.selecionada) return;
+
+  router.post(route('notas-tecnicas.favorito', props.selecionada.id), {}, {
+    only: ['selecionada', 'notas', 'colecoes', 'flash', 'errors'],
+    preserveState: true,
+    preserveScroll: true,
   });
 }
 
@@ -249,7 +264,7 @@ function selecaoAtual() {
  */
 function filtrar(filtros) {
   router.get(route('notas-tecnicas.index'), paraQuery({ ...filtros, ...selecaoAtual() }), {
-    only: ['notas', 'filtros', 'categorias'],
+    only: ['notas', 'filtros', 'categorias', 'colecoes'],
     preserveState: true,
     preserveScroll: true,
     replace: true,
@@ -282,6 +297,7 @@ function abrirVersao(id) {
 
 /** Card substitui o eixo de status; busca e pasta continuam (sao refinamento). */
 function filtrarPorCard(chave) {
+  // Colecao fica de fora: o card mede o acervo, entao volta para "todas".
   const base = { busca: props.filtros.busca, categoria_id: props.filtros.categoria_id };
 
   if (chave === 'nao_lidas') {
@@ -292,13 +308,18 @@ function filtrarPorCard(chave) {
   filtrar({ ...base, status: chave ?? '' });
 }
 
+/** Colecao e pasta sao eixos exclusivos: escolher uma limpa a outra. */
+function filtrarPorColecao(colecao) {
+  filtrar({ busca: props.filtros.busca, colecao, categoria_id: '', page: '' });
+}
+
 /** Pasta excluida que era a filtrada: limpa o filtro, senao a lista filtra por pasta fantasma. */
 function aoExcluirPasta(id) {
   if (Number(props.filtros.categoria_id) === Number(id)) filtrarPorPasta(null);
 }
 
 function filtrarPorPasta(categoriaId) {
-  filtrar({ ...props.filtros, categoria_id: categoriaId ?? '', page: '' });
+  filtrar({ ...props.filtros, categoria_id: categoriaId ?? '', colecao: '', page: '' });
 }
 
 function buscarTexto(busca) {

@@ -9,6 +9,7 @@ use App\Modules\NotasTecnicas\DTOs\NotaTecnicaFiltroDTO;
 use App\Modules\NotasTecnicas\Models\NotaTecnica;
 use App\Modules\NotasTecnicas\Resources\NotaTecnicaDetalheResource;
 use App\Modules\NotasTecnicas\Resources\NotaTecnicaListaResource;
+use App\Modules\NotasTecnicas\Services\NotaTecnicaColecaoService;
 use App\Modules\NotasTecnicas\Services\NotaTecnicaConsultaService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
@@ -22,7 +23,10 @@ use Inertia\Response;
  */
 final class NotaTecnicaController extends Controller
 {
-    public function __construct(private readonly NotaTecnicaConsultaService $consulta) {}
+    public function __construct(
+        private readonly NotaTecnicaConsultaService $consulta,
+        private readonly NotaTecnicaColecaoService $colecoes,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -35,6 +39,7 @@ final class NotaTecnicaController extends Controller
             // Em closure: a selecao de nota recarrega so `selecionada`, e os
             // agregados abaixo nao sao refeitos a cada clique na lista.
             'estatisticas' => fn () => $this->consulta->estatisticas($user),
+            'colecoes' => fn () => $this->consulta->colecoes($user),
             'categorias' => fn () => $this->consulta->arvoreCategorias($user),
             'selecionada' => fn () => $this->selecionada($request),
             'permissoes' => fn () => [
@@ -76,6 +81,9 @@ final class NotaTecnicaController extends Controller
         if ($nota === null || $request->user()->cannot('view', $nota)) {
             return null;
         }
+
+        // Abrir a nota (e so isso) alimenta a colecao Recentes do usuario.
+        $this->colecoes->registrarAcesso($nota, $request->user());
 
         $versaoId = filter_var($request->query('versao'), FILTER_VALIDATE_INT);
 

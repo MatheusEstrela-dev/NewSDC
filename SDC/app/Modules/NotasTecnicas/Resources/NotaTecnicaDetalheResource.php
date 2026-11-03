@@ -33,6 +33,7 @@ final class NotaTecnicaDetalheResource extends JsonResource
             'codigo' => $nota->codigo,
             'titulo' => $nota->titulo,
             'resumo' => $nota->resumo,
+            'favorita' => (bool) $this->resource['favorita'],
             'status' => $nota->status->value,
             'status_label' => $nota->status->label(),
             'status_variante' => $nota->status->variante(),
