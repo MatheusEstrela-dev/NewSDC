@@ -42,6 +42,7 @@ final class NotaTecnicaController extends Controller
                 'editar' => $user->can('notas_tecnicas.notas.edit'),
                 'publicar' => $user->can('notas_tecnicas.notas.publicar'),
                 'categorias' => $user->can('notas_tecnicas.categorias.manage'),
+                'leituras' => $user->can('notas_tecnicas.leituras.view'),
             ],
         ]);
     }

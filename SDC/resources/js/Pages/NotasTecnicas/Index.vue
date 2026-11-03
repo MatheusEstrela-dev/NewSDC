@@ -15,6 +15,29 @@
       >
         <template #actions>
           <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <!--
+              Acoes da nota aberta: o rascunho so vira documento oficial ao ser
+              publicado, entao Publicar fica a vista, e nao escondido no painel.
+            -->
+            <Button
+              v-if="podePublicarSelecionada"
+              variant="success"
+              :icon="CheckBadgeIcon"
+              :title="`Publicar ${selecionada.codigo} como documento oficial`"
+              @click="publicar(selecionada)"
+            >
+              {{ selecionada.status === 'revogada' ? 'Republicar' : 'Publicar' }}
+            </Button>
+            <ActionButton
+              v-if="permissoes.editar && selecionada"
+              action="edit"
+              module="notas-tecnicas"
+              resource="notas"
+              label="Editar"
+              :allowed="true"
+              :tooltip-text="`Editar ${selecionada.codigo}: dados, versões e publicação`"
+              @click="router.visit(route('notas-tecnicas.edit', selecionada.id))"
+            />
             <ActionButton
               v-if="permissoes.criar"
               action="create"
@@ -24,17 +47,18 @@
               :allowed="true"
               @click="novaNota"
             />
+            <!-- Paineis: azul cheio com borda escura = aberto; contorno = recolhido. -->
             <template v-if="isDesktop">
-              <ButtonIcon
+              <ToggleIconButton
                 :icon="FolderIcon"
+                :ativo="pastasAbertas"
                 :title="pastasAbertas ? 'Recolher pastas' : 'Mostrar pastas'"
-                :variant="pastasAbertas ? 'primary' : 'secondary'"
                 @click="alternarPastas"
               />
-              <ButtonIcon
+              <ToggleIconButton
                 :icon="InformationCircleIcon"
+                :ativo="informacoesAbertas"
                 :title="informacoesAbertas ? 'Recolher informações' : 'Mostrar informações'"
-                :variant="informacoesAbertas ? 'primary' : 'secondary'"
                 @click="alternarInformacoes"
               />
             </template>
@@ -82,6 +106,13 @@
         <template #acoes>
           <div class="flex items-center gap-1">
             <ButtonIcon
+              v-if="permissoes.leituras && selecionada?.versao && selecionada.status !== 'rascunho'"
+              :icon="UsersIcon"
+              title="Ver quem leu"
+              size="sm"
+              @click="router.visit(route('notas-tecnicas.leituras', selecionada.id))"
+            />
+            <ButtonIcon
               v-if="permissoes.editar && selecionada"
               :icon="PencilSquareIcon"
               title="Editar nota, versões e publicação"
@@ -91,9 +122,25 @@
             <ButtonIcon v-if="isDesktop" :icon="XMarkIcon" title="Recolher informações" size="sm" @click="alternarInformacoes" />
           </div>
         </template>
+        <template #ciencia>
+          <NotaTecnicaCiencia
+            :lida-em="selecionada?.versao?.lida_em ?? null"
+            :pode-dar-ciencia="podeDarCiencia"
+            :motivo="motivoSemCiencia"
+            :processando="registrandoCiencia"
+            @confirmar="darCiencia"
+          />
+        </template>
       </NotaTecnicaMetadadosPainel>
     </template>
   </NotasTecnicasWorkspaceTemplate>
+
+  <ConfirmDialog
+    :is-open="confirmacao.aberto"
+    v-bind="confirmacao.opcoes"
+    @confirm="confirmar"
+    @cancel="cancelar"
+  />
 
   <NotaTecnicaPastasModal
     v-if="permissoes.categorias"
@@ -105,21 +152,26 @@
 
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
-import { Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { computed, ref } from 'vue';
+import { CheckBadgeIcon, Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import ToggleIconButton from '@/Components/Atoms/Button/ToggleIconButton.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import NotaTecnicaStatCards from '@/Components/Organisms/NotasTecnicas/NotaTecnicaStatCards.vue';
 import NotaTecnicaCategoriaArvore from '@/Components/Organisms/NotasTecnicas/NotaTecnicaCategoriaArvore.vue';
 import NotaTecnicaLista from '@/Components/Organisms/NotasTecnicas/NotaTecnicaLista.vue';
 import NotaTecnicaLeitor from '@/Components/Organisms/NotasTecnicas/NotaTecnicaLeitor.vue';
 import NotaTecnicaMetadadosPainel from '@/Components/Organisms/NotasTecnicas/NotaTecnicaMetadadosPainel.vue';
+import NotaTecnicaCiencia from '@/Components/Molecules/NotasTecnicas/NotaTecnicaCiencia.vue';
 import NotaTecnicaPastasModal from '@/Components/Organisms/NotasTecnicas/NotaTecnicaPastasModal.vue';
 import NotasTecnicasWorkspaceTemplate from '@/Templates/NotasTecnicas/NotasTecnicasWorkspaceTemplate.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { useNotaTecnicaWorkspace } from '@/Composables/notasTecnicas/useNotaTecnicaWorkspace';
+import { useNotaTecnicaPublicacao } from '@/Composables/notasTecnicas/useNotaTecnicaPublicacao';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -142,6 +194,42 @@ const props = defineProps({
 const { isDesktop } = useMobile();
 const { pastasAbertas, informacoesAbertas, alternarPastas, alternarInformacoes } = useNotaTecnicaWorkspace();
 const modalPastas = ref(false);
+
+// Publicar daqui recarrega a nota, a lista, os cards e as pastas (o rascunho
+// sai de "Rascunhos" e entra na contagem em vigor), mantendo o PDF aberto.
+const { confirmacao, confirmar, cancelar, publicar } = useNotaTecnicaPublicacao({
+  only: ['selecionada', 'notas', 'estatisticas', 'categorias', 'flash', 'errors'],
+  preserveState: true,
+});
+
+const podePublicarSelecionada = computed(() => props.permissoes.publicar
+  && props.selecionada?.versao
+  && ['rascunho', 'revogada'].includes(props.selecionada.status));
+const registrandoCiencia = ref(false);
+
+/** Ciencia so na versao vigente de nota publicada (o backend confere de novo). */
+const podeDarCiencia = computed(() => props.selecionada?.status === 'publicada' && props.selecionada?.versao?.atual === true);
+
+const motivoSemCiencia = computed(() => {
+  if (!props.selecionada?.versao) return '';
+  if (props.selecionada.status !== 'publicada') return 'Ciência só em nota publicada.';
+
+  return 'Esta é uma versão anterior. A ciência é dada na versão vigente.';
+});
+
+/**
+ * Recarrega a nota aberta, a lista (o ponto de nao lida some) e os contadores
+ * (o card "Nao lidas" baixa) -- o resto da tela fica como esta.
+ */
+function darCiencia() {
+  router.post(route('notas-tecnicas.versoes.ciencia', props.selecionada.versao.id), {}, {
+    only: ['selecionada', 'notas', 'estatisticas', 'flash', 'errors'],
+    preserveState: true,
+    preserveScroll: true,
+    onStart: () => { registrandoCiencia.value = true; },
+    onFinish: () => { registrandoCiencia.value = false; },
+  });
+}
 
 /** A nota nova ja nasce na pasta que estiver aberta no workspace. */
 function novaNota() {

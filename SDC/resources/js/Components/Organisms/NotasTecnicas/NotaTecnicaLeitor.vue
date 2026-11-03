@@ -35,6 +35,19 @@
       </div>
     </header>
 
+    <p
+      v-if="nota?.versao && nota.status !== 'publicada'"
+      class="flex shrink-0 items-center gap-2 border-b px-3 py-2 text-xs font-medium"
+      :class="nota.status === 'rascunho'
+        ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
+        : 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300'"
+    >
+      <ExclamationTriangleIcon class="h-4 w-4 shrink-0" />
+      {{ nota.status === 'rascunho'
+        ? 'Rascunho: este PDF ainda não é o documento oficial. Publique para torná-lo vigente.'
+        : 'Nota revogada: este procedimento não está mais em vigor.' }}
+    </p>
+
     <!--
       Leitor nativo do navegador (sumario, zoom, busca, impressao). :key na URL:
       trocar de versao recria o iframe em vez de deixar o PDF anterior na tela
@@ -85,7 +98,7 @@
  * iframe na rota que serve o arquivo inline; no telefone, um botao que abre o
  * PDF na aba propria.
  */
-import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, DocumentTextIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, DocumentTextIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 
 defineProps({
