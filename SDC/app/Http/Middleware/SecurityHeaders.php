@@ -24,7 +24,13 @@ class SecurityHeaders
         $isNativePHP = env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android');
         $viteDevActive = $isLocal || $isNativePHP || file_exists(public_path('hot'));
 
-        $csp = $this->buildCspHeader($isLocal, $isNativePHP, $viteDevActive);
+        // PDF servido inline (Notas Tecnicas, anexos) nao e pagina HTML: o leitor
+        // nativo do Chromium roda DENTRO do documento do PDF e e bloqueado pelo
+        // `object-src 'none'` do CSP de pagina. Para ele vale so o frame-ancestors,
+        // que mantem o iframe restrito a mesma origem.
+        $csp = str_starts_with((string) $response->headers->get('Content-Type'), 'application/pdf')
+            ? "frame-ancestors 'self'"
+            : $this->buildCspHeader($isLocal, $isNativePHP, $viteDevActive);
 
         $response->headers->set('Content-Security-Policy', $csp);
 
