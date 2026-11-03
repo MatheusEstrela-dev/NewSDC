@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\NotasTecnicas;
 
+use App\Modules\NotasTecnicas\Console\ReindexarNotasTecnicasCommand;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -20,6 +21,8 @@ class NotasTecnicasServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        if ($this->app->runningInConsole()) {
+            $this->commands([ReindexarNotasTecnicasCommand::class]);
+        }
     }
 }

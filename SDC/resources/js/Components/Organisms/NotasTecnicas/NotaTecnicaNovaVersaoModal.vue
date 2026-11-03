@@ -6,7 +6,7 @@
           <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Enviar nova versão</h2>
           <p class="text-xs text-slate-500 dark:text-slate-400">{{ codigo }}</p>
         </div>
-        <ButtonIcon :icon="XMarkIcon" title="Fechar" size="sm" @click="fechar" />
+        <ButtonIcon :icon="XMarkIcon" title="Fechar" size="lg" @click="fechar" />
       </header>
 
       <form class="space-y-4 px-5 py-4" @submit.prevent="enviar">

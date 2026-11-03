@@ -167,8 +167,20 @@ let temporizador = null;
 
 watch(busca, (valor) => {
   clearTimeout(temporizador);
+  temporizador = null;
   if (valor.trim() === (props.filtros.busca ?? '')) return;
-  temporizador = setTimeout(() => filtrar({ busca: valor.trim() }), 400);
+  temporizador = setTimeout(() => {
+    temporizador = null;
+    filtrar({ busca: valor.trim() });
+  }, 400);
+});
+
+// Voltar do navegador muda filtros.busca por fora. Com busca pendente a
+// digitacao e mais nova que a resposta do servidor e nao pode ser sobrescrita.
+watch(() => props.filtros.busca, (valor) => {
+  const novo = valor ?? '';
+  if (temporizador !== null || novo === busca.value.trim()) return;
+  busca.value = novo;
 });
 
 onBeforeUnmount(() => clearTimeout(temporizador));

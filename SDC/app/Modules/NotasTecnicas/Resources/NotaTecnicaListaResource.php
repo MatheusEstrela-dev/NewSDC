@@ -31,6 +31,8 @@ final class NotaTecnicaListaResource extends JsonResource
             'total_versoes' => (int) $this->versoes_count,
             'lida' => (bool) $this->lida,
             'atualizada_em' => $this->versaoAtual?->created_at?->toIso8601String(),
+            // So vem preenchido quando ha busca e o termo apareceu no PDF.
+            'trecho' => $this->trecho ?? null,
         ];
     }
 }

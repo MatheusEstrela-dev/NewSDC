@@ -1,23 +1,23 @@
 <template>
   <li>
     <div
-      class="group flex items-center gap-1 rounded-lg pr-2 text-sm transition-colors"
+      class="group flex items-center gap-0.5 rounded-lg pr-2 text-sm transition-colors"
       :class="ativa
         ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300'
         : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/60'"
-      :style="{ paddingLeft: `${0.25 + nivel * 0.875}rem` }"
+      :style="{ paddingLeft: `${0.125 + nivel * 0.5}rem` }"
     >
       <button
         v-if="temFilhas"
         type="button"
-        class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
         :aria-label="aberta ? `Recolher ${categoria.nome}` : `Expandir ${categoria.nome}`"
         :aria-expanded="aberta"
         @click="aberta = !aberta"
       >
         <ChevronRightIcon class="h-4 w-4 transition-transform" :class="{ 'rotate-90': aberta }" />
       </button>
-      <span v-else class="w-7 shrink-0" aria-hidden="true" />
+      <span v-else class="w-10 shrink-0" aria-hidden="true" />
 
       <button
         type="button"

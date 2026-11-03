@@ -3,7 +3,7 @@
     <div class="bg-white dark:bg-slate-900">
       <header class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700/50">
         <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Organizar pastas</h2>
-        <ButtonIcon :icon="XMarkIcon" title="Fechar" size="sm" @click="$emit('close')" />
+        <ButtonIcon :icon="XMarkIcon" title="Fechar" size="lg" @click="$emit('close')" />
       </header>
 
       <div class="space-y-4 px-5 py-4">
@@ -29,7 +29,9 @@
             <FolderIcon class="h-4 w-4 shrink-0 text-slate-400" />
             <input
               v-if="emEdicao === pasta.id"
+              :ref="definirCampoNome"
               v-model="nomeEditado"
+              :aria-label="`Novo nome da pasta ${pasta.nome}`"
               class="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               maxlength="120"
               @keydown.enter.prevent="renomear(pasta)"
@@ -39,17 +41,24 @@
             <span class="shrink-0 text-xs tabular-nums text-slate-400">{{ pasta.total }}</span>
 
             <template v-if="emEdicao === pasta.id">
-              <ButtonIcon :icon="CheckIcon" title="Salvar nome" size="sm" variant="success" @click="renomear(pasta)" />
+              <ButtonIcon :icon="CheckIcon" title="Salvar nome" size="lg" variant="success" @click="renomear(pasta)" />
             </template>
             <template v-else>
-              <ButtonIcon :icon="PencilSquareIcon" title="Renomear" size="sm" @click="editar(pasta)" />
-              <ButtonIcon :icon="TrashIcon" title="Excluir pasta vazia" size="sm" variant="danger" @click="excluir(pasta)" />
+              <ButtonIcon :icon="PencilSquareIcon" title="Renomear" size="lg" @click="editar(pasta)" />
+              <ButtonIcon :icon="TrashIcon" title="Excluir pasta vazia" size="lg" variant="danger" @click="excluir(pasta)" />
             </template>
           </li>
         </ul>
       </div>
     </div>
   </Modal>
+
+  <ConfirmDialog
+    :is-open="confirmacao.aberto"
+    v-bind="confirmacao.opcoes"
+    @confirm="confirmar"
+    @cancel="cancelar"
+  />
 </template>
 
 <script setup>
@@ -57,10 +66,12 @@
  * Gestao das pastas do workspace: criar (na raiz ou dentro de outra), renomear
  * e excluir pasta vazia. Recebe a mesma arvore que o painel de pastas exibe.
  */
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import { CheckIcon, FolderIcon, PencilSquareIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import Modal from '@/Components/Modal.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
@@ -71,7 +82,16 @@ const props = defineProps({
   categorias: { type: Array, default: () => [] },
 });
 
-defineEmits(['close']);
+// excluida: o organismo nao conhece o filtro da pagina; ela decide se limpa.
+const emit = defineEmits(['close', 'excluida']);
+
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
+let campoNome = null;
+
+// Ref em funcao: o input so existe durante a edicao (v-if) e ha um por linha.
+function definirCampoNome(el) {
+  campoNome = el;
+}
 
 /** Arvore achatada, com nivel para o recuo e caminho para o select. */
 const pastas = computed(() => {
@@ -118,6 +138,8 @@ function criar() {
 function editar(pasta) {
   emEdicao.value = pasta.id;
   nomeEditado.value = pasta.nome;
+  // Sem foco, quem usa teclado ou leitor de tela precisa achar o campo na mao.
+  nextTick(() => campoNome?.focus());
 }
 
 function renomear(pasta) {
@@ -130,6 +152,14 @@ function renomear(pasta) {
 }
 
 function excluir(pasta) {
-  router.delete(route('notas-tecnicas.categorias.destroy', pasta.id), recarga);
+  pedirConfirmacao({
+    title: `Excluir a pasta ${pasta.nome}?`,
+    message: 'Só pastas vazias podem ser excluídas. A ação não pode ser desfeita.',
+    variant: 'danger',
+    confirmText: 'Excluir',
+  }, () => router.delete(route('notas-tecnicas.categorias.destroy', pasta.id), {
+    ...recarga,
+    onSuccess: () => { erro.value = ''; emit('excluida', pasta.id); },
+  }));
 }
 </script>

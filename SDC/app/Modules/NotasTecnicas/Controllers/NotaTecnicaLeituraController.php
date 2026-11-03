@@ -34,10 +34,13 @@ final class NotaTecnicaLeituraController extends Controller
 
     public function relatorio(Request $request, NotaTecnica $nota): Response
     {
+        $this->autorizarRelatorio($nota);
+
         $versao = $this->versao($request, $nota);
         $aba = in_array($request->query('aba'), self::ABAS, true) ? $request->query('aba') : 'pendentes';
         $busca = $request->query('busca');
-        $busca = is_string($busca) ? $busca : null;
+        // mb_scrub: UTF-8 invalido na URL nao pode chegar ao Postgres (erro 500).
+        $busca = is_string($busca) ? mb_scrub($busca, 'UTF-8') : null;
 
         return Inertia::render('NotasTecnicas/Leituras', [
             'nota' => ['id' => $nota->id, 'codigo' => $nota->codigo, 'titulo' => $nota->titulo],
@@ -56,6 +59,8 @@ final class NotaTecnicaLeituraController extends Controller
 
     public function exportar(Request $request, NotaTecnica $nota): StreamedResponse
     {
+        $this->autorizarRelatorio($nota);
+
         $versao = $this->versao($request, $nota);
         abort_if($versao === null, 404);
 
@@ -71,6 +76,16 @@ final class NotaTecnicaLeituraController extends Controller
 
             fclose($handle);
         }, $arquivo, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * Alem da permissao de leituras (na rota), exige ver a nota: sem isso quem
+     * so le notas publicadas enxergaria o relatorio de um rascunho.
+     */
+    private function autorizarRelatorio(NotaTecnica $nota): void
+    {
+        $this->authorize('view', $nota);
+        $this->authorize('verLeituras', $nota);
     }
 
     /** Versao pedida em ?versao=, ou a vigente. */

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\NotasTecnicas\DTOs\NotaTecnicaDTO;
 use App\Modules\NotasTecnicas\DTOs\NotaTecnicaVersaoDTO;
 use App\Modules\NotasTecnicas\Enums\NotaTecnicaStatus;
+use App\Modules\NotasTecnicas\Jobs\ExtrairTextoNotaTecnicaJob;
 use App\Modules\NotasTecnicas\Models\NotaTecnica;
 use App\Modules\NotasTecnicas\Models\NotaTecnicaVersao;
 use Illuminate\Support\Facades\DB;
@@ -142,7 +143,7 @@ final class NotaTecnicaService
 
     private function gravarVersao(NotaTecnica $nota, NotaTecnicaVersaoDTO $versao, string $path, ?User $publicadaPor): NotaTecnicaVersao
     {
-        return $nota->versoes()->create([
+        $registro = $nota->versoes()->create([
             'numero' => $versao->numero,
             'arquivo_path' => $path,
             'arquivo_nome' => $versao->arquivo->getClientOriginalName(),
@@ -151,6 +152,12 @@ final class NotaTecnicaService
             'publicada_em' => $publicadaPor === null ? null : now(),
             'publicada_por' => $publicadaPor?->id,
         ]);
+
+        // afterCommit: o worker nao pode buscar uma versao que a transacao ainda
+        // nao gravou (ou que um rollback desfez).
+        ExtrairTextoNotaTecnicaJob::dispatch($registro->id)->afterCommit();
+
+        return $registro;
     }
 
     /**
@@ -163,12 +170,15 @@ final class NotaTecnicaService
         DB::select('select pg_advisory_xact_lock(hashtext(?))', [self::LOCK_CODIGO]);
 
         $prefixo = 'NT-' . now()->year . '-';
+        // Maximo numerico, nao lexicografico: como texto "999" > "1000" e o codigo
+        // se repetiria na milesima nota do ano. O filtro de digitos protege o cast.
         $ultimo = NotaTecnica::withTrashed()
             ->where('codigo', 'like', $prefixo . '%')
-            ->orderByDesc('codigo')
-            ->value('codigo');
+            ->whereRaw("substring(codigo from cast(? as integer)) ~ '^[0-9]+$'", [strlen($prefixo) + 1])
+            ->selectRaw('max(cast(substring(codigo from cast(? as integer)) as integer)) as ultimo', [strlen($prefixo) + 1])
+            ->value('ultimo');
 
-        $sequencia = $ultimo === null ? 1 : ((int) substr($ultimo, strlen($prefixo))) + 1;
+        $sequencia = ((int) $ultimo) + 1;
 
         return $prefixo . str_pad((string) $sequencia, 3, '0', STR_PAD_LEFT);
     }

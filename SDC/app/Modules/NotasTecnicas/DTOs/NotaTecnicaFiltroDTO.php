@@ -62,7 +62,9 @@ final readonly class NotaTecnicaFiltroDTO
             return null;
         }
 
-        $texto = trim((string) $valor);
+        // UTF-8 invalido na URL (ex.: %E7 em latin1) faria o Postgres recusar a
+        // consulta com erro 500. mb_scrub troca o byte ruim por "?".
+        $texto = trim(mb_scrub((string) $valor, 'UTF-8'));
 
         return $texto === '' ? null : $texto;
     }

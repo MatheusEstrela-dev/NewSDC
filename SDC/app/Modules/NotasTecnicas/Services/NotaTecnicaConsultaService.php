@@ -59,12 +59,7 @@ final class NotaTecnicaConsultaService
         $this->aplicarStatus($query, $filtro->status);
 
         if ($filtro->busca !== null) {
-            $termo = '%' . $filtro->busca . '%';
-            $query->where(function (Builder $q) use ($termo): void {
-                $q->where('notas_tecnicas.titulo', 'ILIKE', $termo)
-                    ->orWhere('notas_tecnicas.codigo', 'ILIKE', $termo)
-                    ->orWhere('notas_tecnicas.resumo', 'ILIKE', $termo);
-            });
+            $this->aplicarBusca($query, $filtro->busca);
         }
 
         if ($filtro->categoriaId !== null) {
@@ -204,6 +199,38 @@ final class NotaTecnicaConsultaService
         }
 
         $query->where('notas_tecnicas.status', '!=', NotaTecnicaStatus::Revogada->value);
+    }
+
+    /**
+     * Codigo, titulo e resumo por ILIKE (trigram); o PDF da versao vigente por
+     * full-text na config pt_sem_acento (ver a migration do modulo). Quando o termo aparece no PDF, a linha
+     * leva um `trecho` com o termo marcado entre [[ ]] -- o front destaca sem
+     * v-html.
+     *
+     * @param  Builder<NotaTecnica>  $query
+     */
+    private function aplicarBusca(Builder $query, string $busca): void
+    {
+        // Escapa \ % _ do termo: o usuario busca texto literal, nao curinga LIKE.
+        $termo = '%' . addcslashes($busca, '\%_') . '%';
+        $noPdf = 'exists(select 1 from nota_tecnica_versoes vb where vb.id = ' . self::VERSAO_ATUAL_SQL
+            . " and vb.conteudo_busca @@ websearch_to_tsquery('pt_sem_acento', ?))";
+
+        $query->where(function (Builder $q) use ($termo, $noPdf, $busca): void {
+            $q->where('notas_tecnicas.titulo', 'ILIKE', $termo)
+                ->orWhere('notas_tecnicas.codigo', 'ILIKE', $termo)
+                ->orWhere('notas_tecnicas.resumo', 'ILIKE', $termo)
+                ->orWhereRaw($noPdf, [$busca]);
+        });
+
+        // ts_headline so roda nas linhas da pagina, e so onde o PDF casou.
+        $query->selectRaw(
+            "(select ts_headline('pt_sem_acento', left(vt.conteudo_texto, " . NotaTecnicaIndexacaoService::LIMITE_VETOR . "), websearch_to_tsquery('pt_sem_acento', ?),"
+            . " 'MaxFragments=1, MaxWords=22, MinWords=10, StartSel=[[, StopSel=]]')"
+            . ' from nota_tecnica_versoes vt where vt.id = ' . self::VERSAO_ATUAL_SQL
+            . " and vt.conteudo_busca @@ websearch_to_tsquery('pt_sem_acento', ?)) as trecho",
+            [$busca, $busca],
+        );
     }
 
     /** @param  Builder<NotaTecnica>  $query */

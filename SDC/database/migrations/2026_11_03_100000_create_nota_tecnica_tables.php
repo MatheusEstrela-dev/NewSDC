@@ -34,6 +34,19 @@ return new class extends Migration
         ['nome' => 'Administrativo', 'slug' => 'administrativo', 'ordem' => 50],
     ];
 
+    /** Idempotente: CREATE TEXT SEARCH CONFIGURATION nao aceita IF NOT EXISTS. */
+    private const CONFIG_BUSCA_SQL = <<<'SQL'
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_ts_config WHERE cfgname = 'pt_sem_acento') THEN
+                CREATE TEXT SEARCH CONFIGURATION pt_sem_acento (COPY = portuguese);
+                ALTER TEXT SEARCH CONFIGURATION pt_sem_acento
+                    ALTER MAPPING FOR hword, hword_part, word WITH unaccent, portuguese_stem;
+            END IF;
+        END
+        $$
+        SQL;
+
     public function up(): void
     {
         Schema::create('nota_tecnica_categorias', function (Blueprint $table) {
@@ -103,10 +116,17 @@ return new class extends Migration
             DB::statement('CREATE INDEX notas_tecnicas_titulo_trgm_idx ON notas_tecnicas USING gin (titulo gin_trgm_ops)');
             DB::statement('CREATE INDEX notas_tecnicas_codigo_trgm_idx ON notas_tecnicas USING gin (codigo gin_trgm_ops)');
 
-            // Busca no conteudo do PDF. Coluna comum (nao GENERATED): unaccent nao
-            // e IMMUTABLE, entao o job de extracao grava o vetor explicitamente.
+            // Busca no conteudo do PDF. Coluna comum (nao GENERATED): o job de
+            // extracao grava o vetor explicitamente.
             DB::statement('ALTER TABLE nota_tecnica_versoes ADD COLUMN conteudo_busca tsvector');
             DB::statement('CREATE INDEX nota_tecnica_versoes_conteudo_busca_idx ON nota_tecnica_versoes USING gin (conteudo_busca)');
+
+            // Configuracao de texto `pt_sem_acento`: portugues com o acento tirado
+            // DENTRO do dicionario. Indice, consulta e ts_headline usam a mesma
+            // regra -- "inundacao" casa e destaca "inundação" no texto original.
+            // Com unaccent() so em volta do vetor, o destaque nao casava.
+            DB::statement('CREATE EXTENSION IF NOT EXISTS unaccent');
+            DB::statement(self::CONFIG_BUSCA_SQL);
         }
 
         $agora = now();
@@ -122,5 +142,9 @@ return new class extends Migration
         Schema::dropIfExists('nota_tecnica_versoes');
         Schema::dropIfExists('notas_tecnicas');
         Schema::dropIfExists('nota_tecnica_categorias');
+
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('DROP TEXT SEARCH CONFIGURATION IF EXISTS pt_sem_acento');
+        }
     }
 };
