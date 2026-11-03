@@ -76,6 +76,14 @@
               Nova versão
             </Button>
           </div>
+          <Link
+            v-if="permissoes.leituras && nota.versoes.length"
+            :href="route('notas-tecnicas.leituras', nota.id)"
+            class="mt-2 inline-flex min-h-[2.5rem] items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            <UsersIcon class="h-4 w-4" />
+            Ver quem leu
+          </Link>
 
           <ul class="mt-3 space-y-1">
             <li v-for="versao in nota.versoes" :key="versao.id" class="flex items-center gap-2 text-sm">
@@ -117,8 +125,8 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { ArchiveBoxIcon, ArrowUpTrayIcon, CheckBadgeIcon, DocumentIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { ArchiveBoxIcon, ArrowUpTrayIcon, CheckBadgeIcon, DocumentIcon, TrashIcon, UsersIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';

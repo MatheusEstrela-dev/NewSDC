@@ -71,6 +71,7 @@ final class NotaTecnicaGestaoController extends Controller
             'permissoes' => [
                 'publicar' => $request->user()->can('notas_tecnicas.notas.publicar'),
                 'excluir' => $request->user()->can('notas_tecnicas.notas.delete'),
+                'leituras' => $request->user()->can('notas_tecnicas.leituras.view'),
             ],
         ]);
     }

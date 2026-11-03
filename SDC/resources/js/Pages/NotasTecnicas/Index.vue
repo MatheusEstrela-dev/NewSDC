@@ -82,6 +82,13 @@
         <template #acoes>
           <div class="flex items-center gap-1">
             <ButtonIcon
+              v-if="permissoes.leituras && selecionada?.versao"
+              :icon="UsersIcon"
+              title="Ver quem leu"
+              size="sm"
+              @click="router.visit(route('notas-tecnicas.leituras', selecionada.id))"
+            />
+            <ButtonIcon
               v-if="permissoes.editar && selecionada"
               :icon="PencilSquareIcon"
               title="Editar nota, versões e publicação"
@@ -90,6 +97,15 @@
             />
             <ButtonIcon v-if="isDesktop" :icon="XMarkIcon" title="Recolher informações" size="sm" @click="alternarInformacoes" />
           </div>
+        </template>
+        <template #ciencia>
+          <NotaTecnicaCiencia
+            :lida-em="selecionada?.versao?.lida_em ?? null"
+            :pode-dar-ciencia="podeDarCiencia"
+            :motivo="motivoSemCiencia"
+            :processando="registrandoCiencia"
+            @confirmar="darCiencia"
+          />
         </template>
       </NotaTecnicaMetadadosPainel>
     </template>
@@ -105,8 +121,8 @@
 
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
-import { Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { computed, ref } from 'vue';
+import { Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
@@ -116,6 +132,7 @@ import NotaTecnicaCategoriaArvore from '@/Components/Organisms/NotasTecnicas/Not
 import NotaTecnicaLista from '@/Components/Organisms/NotasTecnicas/NotaTecnicaLista.vue';
 import NotaTecnicaLeitor from '@/Components/Organisms/NotasTecnicas/NotaTecnicaLeitor.vue';
 import NotaTecnicaMetadadosPainel from '@/Components/Organisms/NotasTecnicas/NotaTecnicaMetadadosPainel.vue';
+import NotaTecnicaCiencia from '@/Components/Molecules/NotasTecnicas/NotaTecnicaCiencia.vue';
 import NotaTecnicaPastasModal from '@/Components/Organisms/NotasTecnicas/NotaTecnicaPastasModal.vue';
 import NotasTecnicasWorkspaceTemplate from '@/Templates/NotasTecnicas/NotasTecnicasWorkspaceTemplate.vue';
 import { useMobile } from '@/Composables/useMobile';
@@ -142,6 +159,31 @@ const props = defineProps({
 const { isDesktop } = useMobile();
 const { pastasAbertas, informacoesAbertas, alternarPastas, alternarInformacoes } = useNotaTecnicaWorkspace();
 const modalPastas = ref(false);
+const registrandoCiencia = ref(false);
+
+/** Ciencia so na versao vigente de nota publicada (o backend confere de novo). */
+const podeDarCiencia = computed(() => props.selecionada?.status === 'publicada' && props.selecionada?.versao?.atual === true);
+
+const motivoSemCiencia = computed(() => {
+  if (!props.selecionada?.versao) return '';
+  if (props.selecionada.status !== 'publicada') return 'Ciência só em nota publicada.';
+
+  return 'Esta é uma versão anterior. A ciência é dada na versão vigente.';
+});
+
+/**
+ * Recarrega a nota aberta, a lista (o ponto de nao lida some) e os contadores
+ * (o card "Nao lidas" baixa) -- o resto da tela fica como esta.
+ */
+function darCiencia() {
+  router.post(route('notas-tecnicas.versoes.ciencia', props.selecionada.versao.id), {}, {
+    only: ['selecionada', 'notas', 'estatisticas', 'flash', 'errors'],
+    preserveState: true,
+    preserveScroll: true,
+    onStart: () => { registrandoCiencia.value = true; },
+    onFinish: () => { registrandoCiencia.value = false; },
+  });
+}
 
 /** A nota nova ja nasce na pasta que estiver aberta no workspace. */
 function novaNota() {

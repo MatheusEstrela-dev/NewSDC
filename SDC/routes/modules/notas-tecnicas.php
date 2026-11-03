@@ -6,6 +6,7 @@ use App\Modules\NotasTecnicas\Controllers\NotaTecnicaArquivoController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaCategoriaController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaGestaoController;
+use App\Modules\NotasTecnicas\Controllers\NotaTecnicaLeituraController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaVersaoController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +35,10 @@ Route::prefix('notas-tecnicas')->name('notas-tecnicas.')->group(function () {
     Route::get('/versoes/{versao}/pdf', [NotaTecnicaArquivoController::class, 'show'])
         ->name('versoes.pdf')->middleware('can:notas_tecnicas.notas.view')
         ->whereNumber('versao');
+    // Ciencia e do proprio leitor: basta `view` (a policy barra rascunho).
+    Route::post('/versoes/{versao}/ciencia', [NotaTecnicaLeituraController::class, 'ciencia'])
+        ->name('versoes.ciencia')->middleware('can:notas_tecnicas.notas.view')
+        ->whereNumber('versao');
 
     Route::prefix('categorias')->name('categorias.')
         ->middleware('can:notas_tecnicas.categorias.manage')
@@ -58,5 +63,9 @@ Route::prefix('notas-tecnicas')->name('notas-tecnicas.')->group(function () {
             ->name('revogar')->middleware('can:notas_tecnicas.notas.publicar');
         Route::delete('/', [NotaTecnicaGestaoController::class, 'destroy'])
             ->name('destroy')->middleware('can:notas_tecnicas.notas.delete');
+        Route::get('/leituras', [NotaTecnicaLeituraController::class, 'relatorio'])
+            ->name('leituras')->middleware('can:notas_tecnicas.leituras.view');
+        Route::get('/leituras/exportar', [NotaTecnicaLeituraController::class, 'exportar'])
+            ->name('leituras.exportar')->middleware('can:notas_tecnicas.leituras.view');
     });
 });
