@@ -14,6 +14,17 @@
         </p>
       </div>
       <div class="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+          :class="nota.favorita ? 'text-amber-500' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'"
+          :title="nota.favorita ? 'Remover das favoritas' : 'Adicionar às favoritas'"
+          :aria-label="nota.favorita ? 'Remover das favoritas' : 'Adicionar às favoritas'"
+          :aria-pressed="!!nota.favorita"
+          @click="$emit('alternar-favorito')"
+        >
+          <component :is="nota.favorita ? StarSolidIcon : StarIcon" class="h-5 w-5" />
+        </button>
         <a
           :href="nota.versao.pdf_url"
           target="_blank"
@@ -98,11 +109,15 @@
  * iframe na rota que serve o arquivo inline; no telefone, um botao que abre o
  * PDF na aba propria.
  */
-import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, DocumentTextIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, DocumentTextIcon, ExclamationTriangleIcon, StarIcon } from '@heroicons/vue/24/outline';
+import { StarIcon as StarSolidIcon } from '@heroicons/vue/24/solid';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 
 defineProps({
   nota: { type: Object, default: null },
   embutir: { type: Boolean, default: true },
 });
+
+// A pagina faz o POST; o organismo so avisa a intencao.
+defineEmits(['alternar-favorito']);
 </script>

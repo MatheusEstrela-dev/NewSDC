@@ -18,12 +18,17 @@ final readonly class NotaTecnicaFiltroDTO
 {
     private const PER_PAGE_VALIDOS = [25, 50, 100];
 
+    public const COLECAO_FAVORITAS = 'favoritas';
+
+    public const COLECAO_RECENTES = 'recentes';
+
     public function __construct(
         public ?string $busca = null,
         public ?int $categoriaId = null,
         public ?NotaTecnicaStatus $status = null,
         public bool $naoLidas = false,
         public int $perPage = 25,
+        public ?string $colecao = null,
     ) {}
 
     /**
@@ -39,11 +44,15 @@ final readonly class NotaTecnicaFiltroDTO
             status: NotaTecnicaStatus::tryFrom((string) ($query['status'] ?? '')),
             naoLidas: filter_var($query['nao_lidas'] ?? false, FILTER_VALIDATE_BOOLEAN),
             perPage: in_array($perPage, self::PER_PAGE_VALIDOS, true) ? $perPage : 25,
+            // Fora da lista vira null: colecao e um filtro fechado.
+            colecao: in_array($query['colecao'] ?? null, [self::COLECAO_FAVORITAS, self::COLECAO_RECENTES], true)
+                ? $query['colecao']
+                : null,
         );
     }
 
     /**
-     * @return array{busca: ?string, categoria_id: ?int, status: ?string, nao_lidas: bool, per_page: int}
+     * @return array{busca: ?string, categoria_id: ?int, status: ?string, nao_lidas: bool, per_page: int, colecao: ?string}
      */
     public function toArray(): array
     {
@@ -53,6 +62,7 @@ final readonly class NotaTecnicaFiltroDTO
             'status' => $this->status?->value,
             'nao_lidas' => $this->naoLidas,
             'per_page' => $this->perPage,
+            'colecao' => $this->colecao,
         ];
     }
 

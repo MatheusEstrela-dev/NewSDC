@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaArquivoController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaCategoriaController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaController;
+use App\Modules\NotasTecnicas\Controllers\NotaTecnicaFavoritoController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaGestaoController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaLeituraController;
 use App\Modules\NotasTecnicas\Controllers\NotaTecnicaVersaoController;
@@ -57,6 +58,9 @@ Route::prefix('notas-tecnicas')->name('notas-tecnicas.')->group(function () {
             ->name('update')->middleware('can:notas_tecnicas.notas.edit');
         Route::post('/versoes', [NotaTecnicaVersaoController::class, 'store'])
             ->name('versoes.store')->middleware('can:notas_tecnicas.notas.edit');
+        // Favorita e marca pessoal: basta `view` (a policy barra rascunho ao leitor).
+        Route::post('/favorito', [NotaTecnicaFavoritoController::class, 'alternar'])
+            ->name('favorito')->middleware('can:notas_tecnicas.notas.view');
         Route::post('/publicar', [NotaTecnicaGestaoController::class, 'publicar'])
             ->name('publicar')->middleware('can:notas_tecnicas.notas.publicar');
         Route::post('/revogar', [NotaTecnicaGestaoController::class, 'revogar'])

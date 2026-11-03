@@ -20,6 +20,10 @@
       <span class="min-w-0 flex-1">
         <span class="flex items-center gap-2">
           <span class="text-xs font-semibold tabular-nums text-slate-500 dark:text-slate-400">{{ nota.codigo }}</span>
+          <template v-if="nota.favorita">
+            <StarIcon class="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden="true" />
+            <span class="sr-only">Favorita</span>
+          </template>
           <Badge v-if="nota.status !== 'publicada'" :variant="nota.status_variante" size="sm">
             {{ nota.status_label }}
           </Badge>
@@ -72,6 +76,7 @@
  * como e-mail nao lido.
  */
 import { computed } from 'vue';
+import { StarIcon } from '@heroicons/vue/24/solid';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import NotaTecnicaVersaoItem from '@/Components/Molecules/NotasTecnicas/NotaTecnicaVersaoItem.vue';
 

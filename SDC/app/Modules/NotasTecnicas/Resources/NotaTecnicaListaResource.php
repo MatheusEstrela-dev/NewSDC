@@ -30,6 +30,7 @@ final class NotaTecnicaListaResource extends JsonResource
             'versao_atual' => $this->versaoAtual?->numero,
             'total_versoes' => (int) $this->versoes_count,
             'lida' => (bool) $this->lida,
+            'favorita' => (bool) $this->favorita,
             'atualizada_em' => $this->versaoAtual?->created_at?->toIso8601String(),
             // So vem preenchido quando ha busca e o termo apareceu no PDF.
             'trecho' => $this->trecho ?? null,

@@ -33,6 +33,8 @@ final class NotaTecnicaConsultaService
         . ' where v.nota_tecnica_id = notas_tecnicas.id'
         . ' order by v.created_at desc, v.id desc limit 1)';
 
+    public function __construct(private readonly NotaTecnicaColecaoService $colecoes) {}
+
     public function listar(NotaTecnicaFiltroDTO $filtro, User $user): LengthAwarePaginator
     {
         $query = $this->visiveis($user)
@@ -42,6 +44,7 @@ final class NotaTecnicaConsultaService
                 . ' and l.nota_tecnica_versao_id = ' . self::VERSAO_ATUAL_SQL . ') as lida',
                 [$user->id],
             )
+            ->selectRaw($this->colecoes->favoritaSql() . ' as favorita', [$user->id])
             ->with([
                 'categoria:id,nome',
                 // Colunas qualificadas: o ofMany() junta a tabela com ela mesma, e
@@ -69,6 +72,9 @@ final class NotaTecnicaConsultaService
         if ($filtro->naoLidas) {
             $this->apenasNaoLidas($query, $user);
         }
+
+        // Por ultimo: recentes troca a ordenacao padrao por codigo.
+        $this->colecoes->aplicar($query, $filtro->colecao, $user);
 
         return $query->paginate($filtro->perPage)->withQueryString();
     }
@@ -110,6 +116,27 @@ final class NotaTecnicaConsultaService
     }
 
     /**
+     * Contadores das colecoes pessoais da sidebar. Mesma regra da lista sem
+     * status: so notas em vigor visiveis ao usuario (revogadas ficam fora).
+     *
+     * @return array{favoritas: int, recentes: int}
+     */
+    public function colecoes(User $user): array
+    {
+        $base = function () use ($user): Builder {
+            $query = $this->visiveis($user);
+            $this->aplicarStatus($query, null);
+
+            return $query;
+        };
+
+        return [
+            'favoritas' => $this->colecoes->contar($base(), NotaTecnicaFiltroDTO::COLECAO_FAVORITAS, $user),
+            'recentes' => $this->colecoes->contar($base(), NotaTecnicaFiltroDTO::COLECAO_RECENTES, $user),
+        ];
+    }
+
+    /**
      * Arvore de pastas com a contagem de notas em vigor de cada uma, ja somando
      * as subpastas -- o numero ao lado da pasta e o que o clique vai mostrar.
      *
@@ -137,7 +164,7 @@ final class NotaTecnicaConsultaService
      * Detalhe da nota aberta: versoes, responsaveis e a versao escolhida (a
      * corrente, salvo quando o leitor abriu uma anterior pela lista).
      *
-     * @return array{nota: NotaTecnica, versao: ?NotaTecnicaVersao, lida_em: ?Carbon, rotas: list<array{rotulo: string, url: string}>}
+     * @return array{nota: NotaTecnica, versao: ?NotaTecnicaVersao, lida_em: ?Carbon, favorita: bool, rotas: list<array{rotulo: string, url: string}>}
      */
     public function detalhe(NotaTecnica $nota, ?int $versaoId, User $user): array
     {
@@ -163,6 +190,7 @@ final class NotaTecnicaConsultaService
             'nota' => $nota,
             'versao' => $versao,
             'lida_em' => $lidaEm === null ? null : Carbon::parse($lidaEm),
+            'favorita' => $this->colecoes->ehFavorita($nota, $user),
             'rotas' => $this->rotasRelacionadas($nota),
         ];
     }
