@@ -11,7 +11,7 @@ use App\Modules\NotasTecnicas\Models\NotaTecnica;
 use App\Modules\NotasTecnicas\Models\NotaTecnicaCategoria;
 use App\Modules\NotasTecnicas\Models\NotaTecnicaLeitura;
 use App\Modules\NotasTecnicas\Models\NotaTecnicaVersao;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
