@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\NotasTecnicas\Services;
 
 use App\Models\User;
+use App\Policies\NotaTecnicaPolicy;
 use App\Modules\NotasTecnicas\DTOs\NotaTecnicaFiltroDTO;
 use App\Modules\NotasTecnicas\Enums\NotaTecnicaStatus;
 use App\Modules\NotasTecnicas\Models\NotaTecnica;
@@ -111,7 +112,7 @@ final class NotaTecnicaConsultaService
             'total' => (int) $linha->total,
             'nao_lidas' => (int) $linha->nao_lidas,
             'revogadas' => (int) $linha->revogadas,
-            'rascunhos' => $this->podeEditar($user) ? (int) $linha->rascunhos : null,
+            'rascunhos' => NotaTecnicaPolicy::veRascunho($user) ? (int) $linha->rascunhos : null,
         ];
     }
 
@@ -195,17 +196,12 @@ final class NotaTecnicaConsultaService
         ];
     }
 
-    public function podeEditar(User $user): bool
-    {
-        return $user->can('notas_tecnicas.notas.edit');
-    }
-
     /** @return Builder<NotaTecnica> */
     private function visiveis(User $user): Builder
     {
         $query = NotaTecnica::query();
 
-        if (! $this->podeEditar($user)) {
+        if (! NotaTecnicaPolicy::veRascunho($user)) {
             $query->visiveisParaLeitor();
         }
 

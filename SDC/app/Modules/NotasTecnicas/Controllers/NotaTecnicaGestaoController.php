@@ -42,6 +42,8 @@ final class NotaTecnicaGestaoController extends Controller
 
     public function store(StoreNotaTecnicaRequest $request): RedirectResponse
     {
+        $this->authorize('create', NotaTecnica::class);
+
         $nota = $this->notas->criar(
             NotaTecnicaDTO::fromRequest($request->validated()),
             NotaTecnicaVersaoDTO::fromRequest($request->validated()),
@@ -55,6 +57,8 @@ final class NotaTecnicaGestaoController extends Controller
 
     public function edit(Request $request, NotaTecnica $nota): Response
     {
+        $this->authorize('update', $nota);
+
         return Inertia::render('NotasTecnicas/Edit', [
             ...$this->opcoesDoFormulario(),
             'nota' => (new NotaTecnicaDetalheResource(
@@ -78,6 +82,8 @@ final class NotaTecnicaGestaoController extends Controller
 
     public function update(UpdateNotaTecnicaRequest $request, NotaTecnica $nota): RedirectResponse
     {
+        $this->authorize('update', $nota);
+
         $this->notas->atualizar($nota, NotaTecnicaDTO::fromRequest($request->validated()));
 
         return back()->with('success', 'Dados da nota atualizados.');
@@ -85,6 +91,8 @@ final class NotaTecnicaGestaoController extends Controller
 
     public function publicar(Request $request, NotaTecnica $nota): RedirectResponse
     {
+        $this->autorizarPublicacao($nota);
+
         $this->notas->publicar($nota, $request->user());
 
         return back()->with('success', "Nota {$nota->codigo} publicada.");
@@ -92,6 +100,8 @@ final class NotaTecnicaGestaoController extends Controller
 
     public function revogar(NotaTecnica $nota): RedirectResponse
     {
+        $this->autorizarPublicacao($nota);
+
         $this->notas->revogar($nota);
 
         return back()->with('success', "Nota {$nota->codigo} revogada. Ela segue consultável como obsoleta.");
@@ -99,11 +109,25 @@ final class NotaTecnicaGestaoController extends Controller
 
     public function destroy(NotaTecnica $nota): RedirectResponse
     {
+        $this->authorize('view', $nota);
+        $this->authorize('delete', $nota);
+
         $this->notas->excluir($nota);
 
         return redirect()
             ->route('notas-tecnicas.index')
             ->with('success', "Nota {$nota->codigo} excluída.");
+    }
+
+    /**
+     * O middleware da rota so confere o slug; a policy confere a nota. Publicar
+     * ou revogar exige enxergar a nota (rascunho: edit ou publicar) -- nada de
+     * publicar as cegas pelo id.
+     */
+    private function autorizarPublicacao(NotaTecnica $nota): void
+    {
+        $this->authorize('view', $nota);
+        $this->authorize('publicar', $nota);
     }
 
     /** @return array<string, mixed> */

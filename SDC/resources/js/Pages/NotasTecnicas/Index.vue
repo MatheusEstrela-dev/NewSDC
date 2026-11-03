@@ -28,6 +28,19 @@
             >
               {{ selecionada.status === 'revogada' ? 'Republicar' : 'Publicar' }}
             </Button>
+            <!--
+              Revogar tambem fica no workspace: quem so tem `publicar` (aprovador)
+              nao acessa a tela de edicao, que exige `edit`.
+            -->
+            <Button
+              v-if="podeRevogarSelecionada"
+              variant="warning"
+              :icon="ArchiveBoxIcon"
+              :title="`Revogar ${selecionada.codigo}: deixa de estar em vigor`"
+              @click="revogar(selecionada)"
+            >
+              Revogar
+            </Button>
             <ActionButton
               v-if="permissoes.editar && selecionada"
               action="edit"
@@ -155,7 +168,7 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { CheckBadgeIcon, Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { ArchiveBoxIcon, CheckBadgeIcon, Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
@@ -200,10 +213,13 @@ const modalPastas = ref(false);
 
 // Publicar daqui recarrega a nota, a lista, os cards e as pastas (o rascunho
 // sai de "Rascunhos" e entra na contagem em vigor), mantendo o PDF aberto.
-const { confirmacao, confirmar, cancelar, publicar } = useNotaTecnicaPublicacao({
+const { confirmacao, confirmar, cancelar, publicar, revogar } = useNotaTecnicaPublicacao({
   only: ['selecionada', 'notas', 'estatisticas', 'categorias', 'colecoes', 'flash', 'errors'],
   preserveState: true,
 });
+
+const podeRevogarSelecionada = computed(() => props.permissoes.publicar
+  && props.selecionada?.status === 'publicada');
 
 const podePublicarSelecionada = computed(() => props.permissoes.publicar
   && props.selecionada?.versao

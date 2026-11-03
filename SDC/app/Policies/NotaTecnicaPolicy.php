@@ -8,8 +8,9 @@ use App\Models\User;
 use App\Modules\NotasTecnicas\Models\NotaTecnica;
 
 /**
- * Rascunho e invisivel para o leitor: so quem pode editar enxerga uma nota
- * antes da publicacao. Publicada e revogada ficam abertas a todo leitor -- a
+ * Rascunho e invisivel para o leitor: so quem redige (edit) ou aprova
+ * (publicar) enxerga uma nota antes da publicacao -- o aprovador precisa ver o
+ * que vai colocar em vigor. Publicada e revogada ficam abertas a todo leitor; a
  * revogada continua consultavel, marcada como obsoleta.
  */
 class NotaTecnicaPolicy extends BasePolicy
@@ -25,7 +26,7 @@ class NotaTecnicaPolicy extends BasePolicy
             return false;
         }
 
-        return $nota->status->visivelParaLeitor() || $user->can('notas_tecnicas.notas.edit');
+        return $nota->status->visivelParaLeitor() || self::veRascunho($user);
     }
 
     public function create(User $user): bool
@@ -51,5 +52,11 @@ class NotaTecnicaPolicy extends BasePolicy
     public function verLeituras(User $user, NotaTecnica $nota): bool
     {
         return $user->can('notas_tecnicas.leituras.view');
+    }
+
+    /** Fonte unica da regra de rascunho: a policy e a listagem usam a mesma. */
+    public static function veRascunho(User $user): bool
+    {
+        return $user->can('notas_tecnicas.notas.edit') || $user->can('notas_tecnicas.notas.publicar');
     }
 }
