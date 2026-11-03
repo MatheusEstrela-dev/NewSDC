@@ -28,19 +28,6 @@
             >
               {{ selecionada.status === 'revogada' ? 'Republicar' : 'Publicar' }}
             </Button>
-            <!--
-              Revogar tambem fica no workspace: quem so tem `publicar` (aprovador)
-              nao acessa a tela de edicao, que exige `edit`.
-            -->
-            <Button
-              v-if="podeRevogarSelecionada"
-              variant="warning"
-              :icon="ArchiveBoxIcon"
-              :title="`Revogar ${selecionada.codigo}: deixa de estar em vigor`"
-              @click="revogar(selecionada)"
-            >
-              Revogar
-            </Button>
             <ActionButton
               v-if="permissoes.editar && selecionada"
               action="edit"
@@ -108,6 +95,8 @@
         @select-versao="abrirVersao"
         @buscar="buscarTexto"
         @page="irParaPagina"
+        :pode-revogar="podeRevogarSelecionada"
+        @revogar="revogar(selecionada)"
       />
     </template>
 
@@ -168,7 +157,7 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { ArchiveBoxIcon, CheckBadgeIcon, Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { CheckBadgeIcon, Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
@@ -218,6 +207,8 @@ const { confirmacao, confirmar, cancelar, publicar, revogar } = useNotaTecnicaPu
   preserveState: true,
 });
 
+// Revogar fica no historico de versoes, ao lado do selo Vigente (pedido do
+// usuario): quem so tem `publicar` nao acessa a edicao, entao precisa dele aqui.
 const podeRevogarSelecionada = computed(() => props.permissoes.publicar
   && props.selecionada?.status === 'publicada');
 
