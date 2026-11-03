@@ -14,19 +14,30 @@
         :espaco-inferior="false"
       >
         <template #actions>
-          <div v-if="isDesktop" class="flex flex-wrap items-center gap-2 sm:gap-3">
-            <ButtonIcon
-              :icon="FolderIcon"
-              :title="pastasAbertas ? 'Recolher pastas' : 'Mostrar pastas'"
-              :variant="pastasAbertas ? 'primary' : 'secondary'"
-              @click="alternarPastas"
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <ActionButton
+              v-if="permissoes.criar"
+              action="create"
+              module="notas-tecnicas"
+              resource="notas"
+              label="Nova nota"
+              :allowed="true"
+              @click="novaNota"
             />
-            <ButtonIcon
-              :icon="InformationCircleIcon"
-              :title="informacoesAbertas ? 'Recolher informações' : 'Mostrar informações'"
-              :variant="informacoesAbertas ? 'primary' : 'secondary'"
-              @click="alternarInformacoes"
-            />
+            <template v-if="isDesktop">
+              <ButtonIcon
+                :icon="FolderIcon"
+                :title="pastasAbertas ? 'Recolher pastas' : 'Mostrar pastas'"
+                :variant="pastasAbertas ? 'primary' : 'secondary'"
+                @click="alternarPastas"
+              />
+              <ButtonIcon
+                :icon="InformationCircleIcon"
+                :title="informacoesAbertas ? 'Recolher informações' : 'Mostrar informações'"
+                :variant="informacoesAbertas ? 'primary' : 'secondary'"
+                @click="alternarInformacoes"
+              />
+            </template>
           </div>
         </template>
       </PageHeader>
@@ -41,7 +52,11 @@
         :categorias="categorias"
         :categoria-id="filtros.categoria_id ?? null"
         @select="filtrarPorPasta"
-      />
+      >
+        <template v-if="permissoes.categorias" #acoes>
+          <ButtonIcon :icon="Cog6ToothIcon" title="Organizar pastas" size="sm" @click="modalPastas = true" />
+        </template>
+      </NotaTecnicaCategoriaArvore>
     </template>
 
     <template #lista>
@@ -64,25 +79,44 @@
 
     <template #informacoes>
       <NotaTecnicaMetadadosPainel :nota="selecionada">
-        <template v-if="isDesktop" #acoes>
-          <ButtonIcon :icon="XMarkIcon" title="Recolher informações" size="sm" @click="alternarInformacoes" />
+        <template #acoes>
+          <div class="flex items-center gap-1">
+            <ButtonIcon
+              v-if="permissoes.editar && selecionada"
+              :icon="PencilSquareIcon"
+              title="Editar nota, versões e publicação"
+              size="sm"
+              @click="router.visit(route('notas-tecnicas.edit', selecionada.id))"
+            />
+            <ButtonIcon v-if="isDesktop" :icon="XMarkIcon" title="Recolher informações" size="sm" @click="alternarInformacoes" />
+          </div>
         </template>
       </NotaTecnicaMetadadosPainel>
     </template>
   </NotasTecnicasWorkspaceTemplate>
+
+  <NotaTecnicaPastasModal
+    v-if="permissoes.categorias"
+    :show="modalPastas"
+    :categorias="categorias"
+    @close="modalPastas = false"
+  />
 </template>
 
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
-import { FolderIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { ref } from 'vue';
+import { Cog6ToothIcon, FolderIcon, InformationCircleIcon, PencilSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import NotaTecnicaStatCards from '@/Components/Organisms/NotasTecnicas/NotaTecnicaStatCards.vue';
 import NotaTecnicaCategoriaArvore from '@/Components/Organisms/NotasTecnicas/NotaTecnicaCategoriaArvore.vue';
 import NotaTecnicaLista from '@/Components/Organisms/NotasTecnicas/NotaTecnicaLista.vue';
 import NotaTecnicaLeitor from '@/Components/Organisms/NotasTecnicas/NotaTecnicaLeitor.vue';
 import NotaTecnicaMetadadosPainel from '@/Components/Organisms/NotasTecnicas/NotaTecnicaMetadadosPainel.vue';
+import NotaTecnicaPastasModal from '@/Components/Organisms/NotasTecnicas/NotaTecnicaPastasModal.vue';
 import NotasTecnicasWorkspaceTemplate from '@/Templates/NotasTecnicas/NotasTecnicasWorkspaceTemplate.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { useNotaTecnicaWorkspace } from '@/Composables/notasTecnicas/useNotaTecnicaWorkspace';
@@ -107,6 +141,12 @@ const props = defineProps({
 
 const { isDesktop } = useMobile();
 const { pastasAbertas, informacoesAbertas, alternarPastas, alternarInformacoes } = useNotaTecnicaWorkspace();
+const modalPastas = ref(false);
+
+/** A nota nova ja nasce na pasta que estiver aberta no workspace. */
+function novaNota() {
+  router.visit(route('notas-tecnicas.create', paraQuery({ categoria_id: props.filtros.categoria_id })));
+}
 
 /** Nota aberta, lida da URL atual: e ela que sobrevive a troca de filtro. */
 function selecaoAtual() {

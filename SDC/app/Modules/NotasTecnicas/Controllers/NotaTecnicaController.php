@@ -10,7 +10,7 @@ use App\Modules\NotasTecnicas\Models\NotaTecnica;
 use App\Modules\NotasTecnicas\Resources\NotaTecnicaDetalheResource;
 use App\Modules\NotasTecnicas\Resources\NotaTecnicaListaResource;
 use App\Modules\NotasTecnicas\Services\NotaTecnicaConsultaService;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -41,6 +41,7 @@ final class NotaTecnicaController extends Controller
                 'criar' => $user->can('notas_tecnicas.notas.create'),
                 'editar' => $user->can('notas_tecnicas.notas.edit'),
                 'publicar' => $user->can('notas_tecnicas.notas.publicar'),
+                'categorias' => $user->can('notas_tecnicas.categorias.manage'),
             ],
         ]);
     }
