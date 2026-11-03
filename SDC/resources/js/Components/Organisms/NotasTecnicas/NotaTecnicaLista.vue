@@ -17,10 +17,8 @@
           :ativa="nota.id === notaId"
           :versoes="nota.id === notaId ? versoes : []"
           :versao-id="versaoId"
-          :pode-revogar="podeRevogar"
           @select="$emit('select-nota', $event)"
           @select-versao="$emit('select-versao', $event)"
-          @revogar="$emit('revogar')"
         />
       </ul>
       <ListEmptyState
@@ -60,10 +58,9 @@ const props = defineProps({
   notaId: { type: Number, default: null },
   versaoId: { type: Number, default: null },
   versoes: { type: Array, default: () => [] },
-  podeRevogar: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['select-nota', 'select-versao', 'buscar', 'page', 'revogar']);
+const emit = defineEmits(['select-nota', 'select-versao', 'buscar', 'page']);
 
 const itens = computed(() => props.notas?.data ?? []);
 
