@@ -106,7 +106,7 @@
         <template #acoes>
           <div class="flex items-center gap-1">
             <ButtonIcon
-              v-if="permissoes.leituras && selecionada?.versao"
+              v-if="permissoes.leituras && selecionada?.versao && selecionada.status !== 'rascunho'"
               :icon="UsersIcon"
               title="Ver quem leu"
               size="sm"

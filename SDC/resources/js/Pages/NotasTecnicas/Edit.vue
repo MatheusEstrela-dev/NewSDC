@@ -77,7 +77,7 @@
             </Button>
           </div>
           <Link
-            v-if="permissoes.leituras && nota.versoes.length"
+            v-if="permissoes.leituras && nota.status !== 'rascunho' && nota.versoes.length"
             :href="route('notas-tecnicas.leituras', nota.id)"
             class="mt-2 inline-flex min-h-[2.5rem] items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
           >
