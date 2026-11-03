@@ -47,26 +47,20 @@
               :allowed="true"
               @click="novaNota"
             />
-            <!-- Paineis: cheio = aberto, contorno = recolhido. Cor fixa por painel. -->
+            <!-- Paineis: azul cheio com borda escura = aberto; contorno = recolhido. -->
             <template v-if="isDesktop">
-              <Button
-                :variant="pastasAbertas ? 'warning' : 'outline'"
+              <ToggleIconButton
                 :icon="FolderIcon"
+                :ativo="pastasAbertas"
                 :title="pastasAbertas ? 'Recolher pastas' : 'Mostrar pastas'"
-                :aria-pressed="pastasAbertas"
                 @click="alternarPastas"
-              >
-                Pastas
-              </Button>
-              <Button
-                :variant="informacoesAbertas ? 'sky' : 'outline'"
+              />
+              <ToggleIconButton
                 :icon="InformationCircleIcon"
+                :ativo="informacoesAbertas"
                 :title="informacoesAbertas ? 'Recolher informações' : 'Mostrar informações'"
-                :aria-pressed="informacoesAbertas"
                 @click="alternarInformacoes"
-              >
-                Informações
-              </Button>
+              />
             </template>
           </div>
         </template>
@@ -165,6 +159,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import ToggleIconButton from '@/Components/Atoms/Button/ToggleIconButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import NotaTecnicaStatCards from '@/Components/Organisms/NotasTecnicas/NotaTecnicaStatCards.vue';
 import NotaTecnicaCategoriaArvore from '@/Components/Organisms/NotasTecnicas/NotaTecnicaCategoriaArvore.vue';
