@@ -14,10 +14,10 @@
           <ActionButton
             v-if="versaoId"
             action="spreadsheet"
-            module="notas-tecnicas"
+            module="notas_tecnicas"
             resource="leituras"
+            alias-override="view"
             label="Exportar CSV"
-            :allowed="true"
             @click="exportar"
           />
         </div>
