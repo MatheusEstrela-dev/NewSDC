@@ -121,6 +121,12 @@ return [
             'descricao' => 'Movimentacoes em decretos e reconhecimentos.',
             'icone' => 'DocumentTextIcon',
         ],
+        'notas-tecnicas' => [
+            'label' => 'Notas Tecnicas',
+            'nome_curto' => 'Nota',
+            'descricao' => 'Notas tecnicas e POPs publicados ou atualizados, para leitura e ciencia.',
+            'icone' => 'DocumentTextIcon',
+        ],
         'tdap' => [
             'label' => 'TDAP',
             'nome_curto' => 'Processo TDAP',

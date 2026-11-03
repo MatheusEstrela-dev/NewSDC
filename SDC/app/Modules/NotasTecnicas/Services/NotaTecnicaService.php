@@ -28,6 +28,8 @@ final class NotaTecnicaService
     /** Chave do advisory lock que serializa a geracao de codigo NT-AAAA-NNN. */
     private const LOCK_CODIGO = 'notas_tecnicas_codigo';
 
+    public function __construct(private readonly NotaTecnicaNotificacaoService $notificacao) {}
+
     public function criar(NotaTecnicaDTO $dados, NotaTecnicaVersaoDTO $versao, User $autor): NotaTecnica
     {
         return $this->comArquivo($versao, function (string $path) use ($dados, $versao, $autor): NotaTecnica {
@@ -53,12 +55,18 @@ final class NotaTecnicaService
 
     public function novaVersao(NotaTecnica $nota, NotaTecnicaVersaoDTO $versao, User $autor): NotaTecnicaVersao
     {
-        return $this->comArquivo($versao, fn (string $path): NotaTecnicaVersao => $this->gravarVersao(
-            $nota,
-            $versao,
-            $path,
-            $nota->status === NotaTecnicaStatus::Publicada ? $autor : null,
-        ));
+        $publicada = $nota->status === NotaTecnicaStatus::Publicada;
+
+        return $this->comArquivo($versao, function (string $path) use ($nota, $versao, $autor, $publicada): NotaTecnicaVersao {
+            $registro = $this->gravarVersao($nota, $versao, $path, $publicada ? $autor : null);
+
+            // Em rascunho ninguem le ainda: o aviso sai so quando publicar.
+            if ($publicada) {
+                $this->notificacao->avisarNovaVersao($nota, $registro, $autor);
+            }
+
+            return $registro;
+        });
     }
 
     /**
@@ -83,6 +91,8 @@ final class NotaTecnicaService
             if ($atual->publicada_em === null) {
                 $atual->update(['publicada_em' => now(), 'publicada_por' => $aprovador->id]);
             }
+
+            $this->notificacao->avisarPublicacao($nota, $atual, $aprovador);
         });
 
         return $nota;

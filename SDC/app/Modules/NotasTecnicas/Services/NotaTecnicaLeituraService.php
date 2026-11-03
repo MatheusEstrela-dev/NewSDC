@@ -54,7 +54,7 @@ final class NotaTecnicaLeituraService
     {
         return [
             'lidas' => $versao->leituras()->count(),
-            'publico' => $this->publico()->count(),
+            'publico' => $this->publicoAlvo()->count(),
             'pendentes' => $this->pendentesQuery($versao)->count(),
         ];
     }
@@ -123,8 +123,13 @@ final class NotaTecnicaLeituraService
         return $valor !== '' && str_contains("=+-@\t\r", $valor[0]) ? "'" . $valor : $valor;
     }
 
-    /** @return Builder<User> */
-    private function publico(): Builder
+    /**
+     * Quem deve ler as notas publicadas. Publico: a notificacao de publicacao
+     * (NotaTecnicaNotificacaoService) avisa exatamente este conjunto.
+     *
+     * @return Builder<User>
+     */
+    public function publicoAlvo(): Builder
     {
         return User::permission(self::PERMISSAO_LEITURA)->where('users.active', true);
     }
@@ -132,7 +137,7 @@ final class NotaTecnicaLeituraService
     /** @return Builder<User> */
     private function pendentesQuery(NotaTecnicaVersao $versao): Builder
     {
-        return $this->publico()->whereNotExists(fn ($q) => $q
+        return $this->publicoAlvo()->whereNotExists(fn ($q) => $q
             ->selectRaw('1')
             ->from('nota_tecnica_leituras as l')
             ->whereColumn('l.user_id', 'users.id')
