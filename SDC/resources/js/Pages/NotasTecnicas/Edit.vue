@@ -72,7 +72,17 @@
         <section :class="cartao">
           <div class="flex items-center justify-between gap-2">
             <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100">Versões</h3>
-            <Button variant="primary" size="sm" :icon="ArrowUpTrayIcon" @click="modalVersao = true">
+            <!--
+              Em nota publicada a versao nova entra em vigor na hora: o backend
+              exige `publicar`. Sem ela o botao some, em vez de terminar em 403.
+            -->
+            <Button
+              v-if="nota.status !== 'publicada' || permissoes.publicar"
+              variant="primary"
+              size="sm"
+              :icon="ArrowUpTrayIcon"
+              @click="modalVersao = true"
+            >
               Nova versão
             </Button>
           </div>
