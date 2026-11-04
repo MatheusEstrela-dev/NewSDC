@@ -95,7 +95,9 @@ final class PdoPoolRegistry
 
     /**
      * Pools das replicas, por host. Vazio quando a conexao nao tem
-     * replica_routing ou read_size <= 0 (leitura fica no primario).
+     * replica_routing. read_size abaixo de 1 vira 1, como antes da
+     * generalizacao: sem pool a ConsistentPostgresConnection abriria um leitor
+     * por coroutine, sem teto, e o guardrail do entrypoint nao conta isso.
      *
      * @return array<string, PdoPool>
      */
@@ -107,17 +109,18 @@ final class PdoPoolRegistry
 
         $definicao = $this->definicoes[$nome] ?? null;
         $conexao = $definicao['conexao'] ?? [];
-        if ($definicao === null || ! ($conexao['replica_routing'] ?? false) || $definicao['read_size'] <= 0) {
+        if ($definicao === null || ! ($conexao['replica_routing'] ?? false)) {
             return $this->poolsDeLeitura[$nome] = [];
         }
 
+        $tamanho = max(1, (int) $definicao['read_size']);
         $leitura = array_replace($conexao, (array) ($conexao['read'] ?? []));
         $pools = [];
         foreach ((array) $leitura['host'] as $host) {
             $pools[$host] = ($this->fabricaDeLeitura)(
                 "{$nome}:leitura",
                 array_replace($leitura, ['host' => $host]),
-                $definicao['read_size'],
+                $tamanho,
                 $definicao['timeout'],
             );
         }

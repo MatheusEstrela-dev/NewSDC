@@ -228,8 +228,7 @@ final class CoroutineDatabaseManager extends DatabaseManager
 
     /**
      * Leitores das replicas vem dos pools de leitura da propria conexao. Sem
-     * pools (read_size <= 0), a ConsistentPostgresConnection abre os leitores
-     * por conta propria, como fora do Swoole.
+     * pools (conexao sem replica_routing) nao ha leitor a ligar.
      */
     private function ligarReplicas(string $nome, ConsistentPostgresConnection $connection, array $config, ArrayAccess $ctx): void
     {
