@@ -59,7 +59,8 @@ return [
 
     'storage' => [
         'database' => [
-            'connection' => env('DB_CONNECTION', 'mysql'),
+            // Mesma conexao de log de queue.failed.database (so dev).
+            'connection' => env('DB_LOG_CONNECTION') ?: env('DB_CONNECTION', 'pgsql'),
             'chunk' => 1000,
         ],
     ],

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Models;
 
+use App\Modules\Notificacoes\Concerns\Notificavel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
 /**
  * Conta de cidadao externo do Portal de Treinamentos (guard "cidadao").
@@ -18,7 +18,7 @@ use Illuminate\Notifications\Notifiable;
  */
 class Cidadao extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notificavel, SoftDeletes;
 
     protected $table = 'cidadaos';
 

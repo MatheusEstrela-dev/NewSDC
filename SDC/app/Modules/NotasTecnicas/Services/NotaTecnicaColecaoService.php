@@ -9,6 +9,7 @@ use App\Modules\NotasTecnicas\DTOs\NotaTecnicaFiltroDTO;
 use App\Modules\NotasTecnicas\Models\NotaTecnica;
 use App\Modules\NotasTecnicas\Models\NotaTecnicaAcesso;
 use App\Modules\NotasTecnicas\Models\NotaTecnicaFavorito;
+use App\Support\Database\ConexaoDeLog;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -59,13 +60,20 @@ final class NotaTecnicaColecaoService
             ->exists();
     }
 
-    /** Upsert em uma query so: reabrir a nota apenas renova `acessado_em`. */
+    /**
+     * Upsert em uma query so: reabrir a nota apenas renova `acessado_em`.
+     *
+     * Vai pela conexao de log e, como upsert nao passa pelo save() da trait,
+     * pelo ConexaoDeLog::gravar explicito. A retentativa da fila so insere: num
+     * acesso repetido ela nao renova a data, o que e aceitavel para Recentes.
+     */
     public function registrarAcesso(NotaTecnica $nota, User $user): void
     {
-        NotaTecnicaAcesso::query()->upsert(
-            [['user_id' => $user->id, 'nota_tecnica_id' => $nota->id, 'acessado_em' => now()]],
-            ['user_id', 'nota_tecnica_id'],
-            ['acessado_em'],
+        $linha = ['user_id' => $user->id, 'nota_tecnica_id' => $nota->id, 'acessado_em' => now()];
+
+        ConexaoDeLog::gravar(
+            fn () => NotaTecnicaAcesso::query()->upsert([$linha], ['user_id', 'nota_tecnica_id'], ['acessado_em']),
+            fn (): array => ['nota_tecnica_acessos', [$linha]],
         );
     }
 
@@ -88,7 +96,9 @@ final class NotaTecnicaColecaoService
         }
 
         // O corte das 30 e por acesso do usuario; os demais filtros combinam
-        // depois, sobre esse conjunto.
+        // depois, sobre esse conjunto. As subqueries em nota_tecnica_acessos
+        // (tabela de log) rodam embutidas na consulta de notas_tecnicas, pela
+        // conexao default: mesmo banco, sem cruzar sessao.
         $query->whereIn('notas_tecnicas.id', NotaTecnicaAcesso::query()
             ->select('nota_tecnica_id')
             ->where('user_id', $user->id)

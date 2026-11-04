@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Support\Octane;
 
 use App\Support\Database\CoroutineDatabaseManager;
-use App\Support\Database\SwoolePdoPool;
+use App\Support\Database\PdoPool;
+use App\Support\Database\PdoPoolRegistry;
 use App\Support\Redis\CoroutineRedisManager;
 
 class OctaneDiagnostics
@@ -28,7 +29,10 @@ class OctaneDiagnostics
                 'db_persistent' => (bool) ($pgsqlOptions[\PDO::ATTR_PERSISTENT] ?? false),
             ],
             'pools' => [
+                // Mantido por compatibilidade com quem ja le pools.pgsql;
+                // o retrato completo, por conexao, esta em pools.database.
                 'pgsql' => $this->pgsqlPool(),
+                'database' => $this->databasePools(),
                 'redis' => $this->redisPools(),
             ],
         ];
@@ -42,7 +46,7 @@ class OctaneDiagnostics
         if (app()->bound('swoole.pgsql.pool')) {
             try {
                 $resolved = app('swoole.pgsql.pool');
-                $pool = $resolved instanceof SwoolePdoPool ? $resolved : null;
+                $pool = $resolved instanceof PdoPool ? $resolved : null;
             } catch (\Throwable $e) {
                 $error = $e->getMessage();
             }
@@ -55,18 +59,54 @@ class OctaneDiagnostics
         }
 
         return [
-            'configured_size' => (int) env('SWOOLE_PG_POOL_SIZE', 16),
-            'configured_timeout_seconds' => (float) env('SWOOLE_PG_POOL_TIMEOUT', 3.0),
+            // Do config, e nao de env(): com config:cache o env() devolve o
+            // default e o diagnostico mentiria sobre o tamanho real.
+            'configured_size' => (int) config('database.coroutine_pools.pgsql.size', 16),
+            'configured_timeout_seconds' => (float) config('database.coroutine_pools.pgsql.timeout', 3.0),
             'bound' => app()->bound('swoole.pgsql.pool'),
-            'active' => $pool instanceof SwoolePdoPool,
+            'active' => $pool instanceof PdoPool,
             'manager' => $manager ? $manager::class : null,
             'manager_coroutine_aware' => $manager instanceof CoroutineDatabaseManager,
-            'capacity' => $pool?->capacity(),
-            'created' => $pool?->created(),
-            'available' => $pool?->available(),
-            'timeout_seconds' => $pool?->timeout(),
+            ...PdoPoolRegistry::estado($pool),
             'error' => $error,
         ];
+    }
+
+    /**
+     * Um bloco por conexao de database.coroutine_pools: o que o config pede e,
+     * quando o registry existe (worker Swoole), o estado real de cada pool.
+     */
+    private function databasePools(): array
+    {
+        $registry = null;
+        $error = null;
+
+        if (app()->bound(PdoPoolRegistry::class)) {
+            try {
+                $registry = app(PdoPoolRegistry::class);
+            } catch (\Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
+
+        $runtime = $registry instanceof PdoPoolRegistry ? $registry->diagnostico() : [];
+        $saida = [];
+        foreach ((array) config('database.coroutine_pools', []) as $nome => $pool) {
+            $driver = config("database.connections.{$nome}.driver");
+            $saida[$nome] = [
+                'connection_driver' => $driver,
+                'poolable' => $driver === 'pgsql',
+                'configured_size' => (int) ($pool['size'] ?? 0),
+                'configured_timeout_seconds' => (float) ($pool['timeout'] ?? 0),
+                'configured_warm' => (bool) ($pool['warm'] ?? false),
+                'configured_read_size' => (int) ($pool['read_size'] ?? 0),
+                'registered' => isset($runtime[$nome]),
+                'runtime' => $runtime[$nome] ?? null,
+                'error' => $error,
+            ];
+        }
+
+        return $saida;
     }
 
     private function redisPools(): array

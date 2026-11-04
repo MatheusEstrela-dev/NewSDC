@@ -6,8 +6,7 @@ namespace App\Modules\Ranking\Services;
 
 use App\Modules\Ranking\DTOs\FiltroPlacar;
 use App\Modules\Ranking\Enums\EscopoPlacar;
-use Illuminate\Database\Connection;
-use Illuminate\Database\ConnectionInterface;
+use App\Modules\Ranking\Support\ResolveConexaoPorUso;
 use RuntimeException;
 
 /**
@@ -56,6 +55,8 @@ use RuntimeException;
  */
 final class SnapshotPlacar
 {
+    use ResolveConexaoPorUso;
+
     /** Conexao dedicada de escrita. Nunca herda a conexao default. */
     public const CONEXAO = 'ranking';
 
@@ -78,7 +79,7 @@ final class SnapshotPlacar
     private const LOTE_INSERCAO = 500;
 
     public function __construct(
-        private readonly ConnectionInterface $conexao,
+        private readonly string $nomeConexao,
         private readonly ?int $geracaoPadrao = null,
     ) {}
 
@@ -121,14 +122,14 @@ final class SnapshotPlacar
         // dentro do REPEATABLE READ, a snapshot seria fixada antes da espera e
         // o segundo publicador nao enxergaria a revisao que acabou de commitar.
         $chaveLock = $periodoChave.'|'.$escopo->value;
-        $this->conexao->selectOne(
+        $this->conexao()->selectOne(
             'SELECT pg_advisory_lock(hashtextextended(?, 0))',
             [$chaveLock],
             false,
         );
 
         try {
-            return $this->conexao->transaction(function () use (
+            return $this->conexao()->transaction(function () use (
                 $periodoChave,
                 $escopo,
                 $forcar,
@@ -196,7 +197,7 @@ final class SnapshotPlacar
                 );
             });
         } finally {
-            $this->conexao->selectOne(
+            $this->conexao()->selectOne(
                 'SELECT pg_advisory_unlock(hashtextextended(?, 0))',
                 [$chaveLock],
                 false,
@@ -215,7 +216,7 @@ final class SnapshotPlacar
      */
     public function watermarkDoPeriodo(int $periodoId): int
     {
-        $linha = $this->conexao->selectOne(
+        $linha = $this->conexao()->selectOne(
             <<<'SQL'
                 SELECT COALESCE(MAX(l.id), 0) AS watermark
                   FROM ranking.periodos p
@@ -236,7 +237,7 @@ final class SnapshotPlacar
      */
     public function ultimaRevisao(int $periodoId, EscopoPlacar $escopo): ?object
     {
-        return $this->conexao->selectOne(
+        return $this->conexao()->selectOne(
             <<<'SQL'
                 SELECT s.id, s.revisao, s.geracao, s.ledger_watermark
                   FROM ranking.snapshots s
@@ -257,7 +258,7 @@ final class SnapshotPlacar
      */
     public function itensDe(int $snapshotId): array
     {
-        $registros = $this->conexao->select(
+        $registros = $this->conexao()->select(
             <<<'SQL'
                 SELECT i.entidade_id, i.pontos, i.posicao, i.faixa
                   FROM ranking.snapshot_itens i
@@ -286,7 +287,7 @@ final class SnapshotPlacar
      */
     private function lerPlacar(string $periodoChave, EscopoPlacar $escopo, int $geracao): array
     {
-        $consulta = new LeaderboardQuery($this->conexao);
+        $consulta = new LeaderboardQuery($this->nomeConexao);
         $linhas = [];
         $pagina = 1;
 
@@ -361,7 +362,7 @@ final class SnapshotPlacar
 
     private function resolverPeriodo(string $periodoChave): int
     {
-        $linha = $this->conexao->selectOne(
+        $linha = $this->conexao()->selectOne(
             'SELECT p.id FROM ranking.periodos p WHERE p.chave = :chave FOR UPDATE',
             ['chave' => $periodoChave],
             false,
@@ -376,7 +377,7 @@ final class SnapshotPlacar
 
     private function geracaoAtiva(): int
     {
-        $linha = $this->conexao->selectOne(
+        $linha = $this->conexao()->selectOne(
             'SELECT COALESCE(MAX(geracao), 1) AS geracao FROM ranking.saldos',
             [],
             false,
@@ -401,7 +402,7 @@ final class SnapshotPlacar
         int $watermark,
         ?string $motivo,
     ): object {
-        $linha = $this->conexao->selectOne(
+        $linha = $this->conexao()->selectOne(
             <<<'SQL'
                 INSERT INTO ranking.snapshots
                     (periodo_id, escopo, revisao, geracao, ledger_watermark, motivo)
@@ -459,7 +460,7 @@ final class SnapshotPlacar
         );
 
         foreach (array_chunk($registros, self::LOTE_INSERCAO) as $lote) {
-            $this->conexao->table('ranking.snapshot_itens')->insert($lote);
+            $this->conexao()->table('ranking.snapshot_itens')->insert($lote);
         }
     }
 
@@ -471,15 +472,15 @@ final class SnapshotPlacar
      */
     private function isolarLeitura(): void
     {
-        if (! $this->conexao instanceof Connection || $this->conexao->transactionLevel() !== 1) {
+        if ($this->conexao()->transactionLevel() !== 1) {
             return;
         }
 
-        if ($this->conexao->getDriverName() !== 'pgsql') {
+        if ($this->conexao()->getDriverName() !== 'pgsql') {
             return;
         }
 
-        $this->conexao->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        $this->conexao()->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     }
 
     /**

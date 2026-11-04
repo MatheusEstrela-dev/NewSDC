@@ -9,6 +9,7 @@ use App\Modules\Compdec\Models\CompdecPlanoContingencia;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Support\LegacyParser;
 use App\Modules\Compdec\Support\MigracaoReport;
+use App\Support\Database\ConexaoDeLog;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -391,7 +392,7 @@ class PlanoContingenciaService
             return;
         }
 
-        DB::table('compdec_etl_log')->insert([
+        ConexaoDeLog::inserir('compdec_etl_log', [
             'recurso' => 'planos',
             'legacy_table' => 'com_plano_upload',
             'legacy_id' => $legacyId ?? 0,

@@ -196,7 +196,7 @@ return [
     */
 
     'batching' => [
-        'database' => env('DB_CONNECTION', 'mysql'),
+        'database' => env('DB_CONNECTION', 'pgsql'),
         'table' => 'job_batches',
     ],
 
@@ -213,7 +213,11 @@ return [
 
     'failed' => [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'mysql'),
+        // failed_jobs e log tecnico: vai pela conexao de log. Mesma regra de
+        // database.log_connection / ConexaoDeLog::nome(), repetida aqui porque
+        // config nao chama classe do app; ?: porque DB_LOG_CONNECTION vazia no
+        // .env chega como string vazia.
+        'database' => env('DB_LOG_CONNECTION') ?: env('DB_CONNECTION', 'pgsql'),
         'table' => 'failed_jobs',
     ],
 

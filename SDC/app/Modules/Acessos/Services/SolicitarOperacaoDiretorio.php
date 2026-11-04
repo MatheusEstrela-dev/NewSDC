@@ -18,9 +18,10 @@ use Illuminate\Support\Facades\DB;
 /**
  * Caso de uso unico de pedido ao AD (spec 6.1), para a tela de Acessos e para
  * a automacao de Demandas. O web nunca fala com o AD: valida localmente e, numa
- * so transacao, grava a operacao, a auditoria e o job da fila `diretorio` (fila
- * database no mesmo Postgres, sem afterCommit). Duas solicitacoes iguais em voo
- * viram uma: a segunda recebe a operacao existente.
+ * so transacao, grava a operacao e o job da fila `diretorio` (fila database no
+ * mesmo Postgres, sem afterCommit); a auditoria vai logo apos o commit, pela
+ * conexao de log. Duas solicitacoes iguais em voo viram uma: a segunda recebe a
+ * operacao existente.
  *
  * Nao autoriza: o chamador (FormRequest, servico de Demandas) tem de conferir
  * antes que o ator pode $acao->permissao(). Aqui ficam so as regras que valem

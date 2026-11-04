@@ -34,22 +34,16 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Resiliencia: arquiva webhook_events completed com idade > 90 dias.
-        // Roda semanalmente (domingo 03:00) para manter tabela operacional pequena.
-        $schedule->command('webhooks:archive --days=90 --chunk=500')
-            ->weeklyOn(0, '03:00')
+        // Retencao unica das notificacoes e dos logs tecnicos (config/retencao.php):
+        // apaga o que passou de 90 dias, em lotes curtos na conexao de log.
+        // Notificacao nao lida nunca e apagada. Substitui webhooks:archive e
+        // notificacoes:arquivar.
+        $schedule->command('log:podar')
+            ->dailyAt('03:30')
             ->onOneServer()
             ->withoutOverlapping()
-            ->runInBackground();
-
-        // Inbox de notificacoes: segrega o que passou de 90 dias para
-        // notifications_archive. Mesma tratativa do webhooks:archive -- nada e
-        // apagado, so sai da tabela quente, que e a que o sino e o badge consultam.
-        $schedule->command('notificacoes:arquivar --chunk=500')
-            ->weeklyOn(0, '03:30')
-            ->onOneServer()
-            ->withoutOverlapping()
-            ->runInBackground();
+            ->runInBackground()
+            ->name('log-podar');
 
         // Async exports: remove artefatos do disk 'exports' com idade > 7 dias.
         // Limpa tambem result_disk/result_path nos traces associados.

@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use App\Modules\Notificacoes\Concerns\Notificavel;
 use App\Modules\Treinamento\Models\Inscricao as TreinamentoInscricao;
 use App\Traits\HasHierarchy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 use Spatie\Permission\Traits\HasRoles;
@@ -16,7 +16,18 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, HasHierarchy, SoftDeletes;
+    use HasApiTokens, HasFactory, Notificavel, HasRoles, HasHierarchy, SoftDeletes;
+
+    /**
+     * Conexao explicita: User vive sempre no sdc. Sem isto, relacao vinda de
+     * model em outra conexao (log, treinamento, geo) faz o User herdar a
+     * conexao do pai -- MorphTo::createModelByType so respeita conexao ja
+     * definida -- e users seria lido pela sessao errada.
+     */
+    public function getConnectionName()
+    {
+        return $this->connection ?? config('database.default');
+    }
 
     /**
      * Guard usado pelo Spatie Permission para resolver roles/permissões.

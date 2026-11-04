@@ -10,6 +10,7 @@ use App\Modules\Compdec\Models\CompdecEquipe;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Support\LegacyParser;
 use App\Modules\Compdec\Support\MigracaoReport;
+use App\Support\Database\ConexaoDeLog;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -215,7 +216,7 @@ class EquipeService
             return;
         }
 
-        DB::table('compdec_etl_log')->insert([
+        ConexaoDeLog::inserir('compdec_etl_log', [
             'recurso' => 'equipes',
             'legacy_table' => 'com_eq_comdec',
             'legacy_id' => $legacyId ?? 0,

@@ -9,6 +9,7 @@ use App\Modules\Compdec\Models\CompdecAnexo;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Support\LegacyParser;
 use App\Modules\Compdec\Support\MigracaoReport;
+use App\Support\Database\ConexaoDeLog;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -254,7 +255,7 @@ class AnexoService
             return;
         }
 
-        DB::table('compdec_etl_log')->insert([
+        ConexaoDeLog::inserir('compdec_etl_log', [
             'recurso' => 'anexos',
             'legacy_table' => 'com_anexo',
             'legacy_id' => $legacyId ?? 0,

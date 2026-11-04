@@ -29,6 +29,16 @@ use Illuminate\Support\Str;
 $emularPrepares = filter_var(env('DB_EMULATE_PREPARES', false), FILTER_VALIDATE_BOOLEAN);
 
 $pgConnectTimeout = max(1, (int) env('DB_CONNECT_TIMEOUT', 2));
+
+// Tabelas de log vivem no schema `log` do proprio sdc (migration
+// move_tabelas_de_log_para_schema_log). `log` entra sempre DEPOIS do schema
+// principal: nome sem schema continua resolvendo, e tabela nova continua
+// nascendo em public. Nenhum codigo precisa qualificar `log.`.
+$searchPathComLog = implode(',', array_values(array_unique(array_merge(
+    array_filter(array_map('trim', explode(',', (string) env('DB_SEARCH_PATH', 'public')))),
+    ['log'],
+))));
+
 $readHosts = array_values(array_filter(array_map('trim', explode(',', (string) env('DB_READ_HOSTS', '')))));
 $replicaRouting = filter_var(env('DB_READ_ENABLED', false), FILTER_VALIDATE_BOOLEAN) && $readHosts !== [];
 $readWriteConfig = $replicaRouting ? [
@@ -46,6 +56,44 @@ $readWriteConfig = $replicaRouting ? [
     ],
 ] : [];
 
+// Conexao de um banco dedicado (geo, treinamento): host, porta e credenciais
+// por prefixo de env com heranca de DB_* (mesmo servidor por padrao); a
+// database NUNCA herda, para nao gravar dominio dedicado dentro do sdc. Sem
+// 'url' de proposito: DATABASE_URL aponta para o sdc e venceria os overrides.
+// Tabelas sempre com schema qualificado no codigo; search_path so public
+// (extensoes, ex.: PostGIS).
+$bancoDedicado = static fn (string $prefixo, string $database, string $sufixoApp, array $extra = []): array => array_replace([
+    'driver' => 'pgsql',
+    'host' => env("{$prefixo}_DB_HOST", env('DB_HOST', '127.0.0.1')),
+    'port' => env("{$prefixo}_DB_PORT", env('DB_PORT', '5432')),
+    'database' => env("{$prefixo}_DB_DATABASE", $database),
+    'username' => env("{$prefixo}_DB_USERNAME", env('DB_USERNAME', 'sdc')),
+    'password' => env("{$prefixo}_DB_PASSWORD", env('DB_PASSWORD', '')),
+    'charset' => 'utf8',
+    'prefix' => '',
+    'prefix_indexes' => true,
+    'search_path' => 'public',
+    'sslmode' => env("{$prefixo}_DB_SSLMODE", env('DB_SSLMODE', 'prefer')),
+    'sslrootcert' => env("{$prefixo}_DB_SSL_CA", env('DB_SSL_CA')) ?: null,
+    'application_name' => env('APP_NAME', 'sdc-laravel').'-'.$sufixoApp,
+    'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+    'options' => [
+        PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
+        PDO::ATTR_PERSISTENT => false,
+        PDO::ATTR_TIMEOUT => $pgConnectTimeout,
+    ],
+], $extra);
+
+// Leitura do geo nas replicas: so quando o banco geo esta no mesmo cluster do
+// sdc (as replicas fisicas carregam todos os bancos). Servidor proprio liga
+// com GEO_DB_READ_HOSTS.
+$geoReadHosts = array_values(array_filter(array_map('trim', explode(',', (string) env(
+    'GEO_DB_READ_HOSTS',
+    env('GEO_DB_HOST') === null ? env('DB_READ_HOSTS', '') : '',
+)))));
+$geoReplicaRouting = filter_var(env('GEO_DB_READ_ENABLED', env('DB_READ_ENABLED', false)), FILTER_VALIDATE_BOOLEAN)
+    && $geoReadHosts !== [];
+
 return [
 
     /*
@@ -60,6 +108,120 @@ return [
     */
 
     'default' => env('DB_CONNECTION', 'pgsql'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Conexao de log
+    |--------------------------------------------------------------------------
+    |
+    | Chave unica de troca para todos os tipos de log (ver App\Support\Database\
+    | ConexaoDeLog). Sem DB_LOG_CONNECTION resolve para a conexao default: o log
+    | segue na mesma sessao das operacoes, exatamente como antes. Com
+    | DB_LOG_CONNECTION=pgsql_log o log ganha sessao e pool proprios. Rollback e
+    | tirar a variavel e reiniciar.
+    |
+    */
+
+    'log_connection' => env('DB_LOG_CONNECTION', env('DB_CONNECTION', 'pgsql')),
+
+    // Mesmas regras da conexao de log (ver App\Support\Database\ConexaoSeparada):
+    // sem a env, o dominio segue na conexao default; com ela, banco proprio.
+    'geo_connection' => env('DB_GEO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
+    'treinamento_connection' => env('DB_TREINAMENTO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pools por coroutine (Octane/Swoole com hooks)
+    |--------------------------------------------------------------------------
+    |
+    | Um pool PROPRIO por conexao listada, por worker. Conexao fora desta lista
+    | cai no DatabaseManager padrao (um PDO por processo). So vale com
+    | OCTANE_HOOK_FLAGS_ENABLED; com hooks desligados nada aqui e instanciado.
+    |
+    | TETO DE CONEXOES: a soma de todos os pools x workers x instancias entra no
+    | guardrail do entrypoint.sh contra PG_MAX_CONNECTIONS (mesmo servidor).
+    |
+    */
+
+    'coroutine_pools' => [
+        'pgsql' => [
+            'size' => (int) env('SWOOLE_PG_POOL_SIZE', 16),
+            'timeout' => (float) env('SWOOLE_PG_POOL_TIMEOUT', 3.0),
+            'warm' => true,
+            // Pools das replicas; so com replica_routing ligado na conexao.
+            'read_size' => (int) env('SWOOLE_PG_READ_POOL_SIZE', 2),
+        ],
+        'pgsql_log' => [
+            'size' => (int) env('SWOOLE_PG_LOG_POOL_SIZE', 4),
+            // Curto de proposito: request esperando pool de log segura o PDO
+            // critico durante a espera. Esgotou, o log vai para a fila.
+            'timeout' => (float) env('SWOOLE_PG_LOG_POOL_TIMEOUT', 0.5),
+            'warm' => filter_var(env('SWOOLE_PG_LOG_POOL_WARM', false), FILTER_VALIDATE_BOOLEAN),
+        ],
+        // Mapas e ingestao: leitura de GeoJSON pode esperar um pouco mais que log.
+        'pgsql_geo' => [
+            'size' => (int) env('SWOOLE_PG_GEO_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_GEO_POOL_TIMEOUT', 1.0),
+            'warm' => false,
+        ],
+        'pgsql_geo_read' => [
+            'size' => (int) env('SWOOLE_PG_GEO_READ_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_GEO_POOL_TIMEOUT', 1.0),
+            'warm' => false,
+            'read_size' => (int) env('SWOOLE_PG_GEO_REPLICA_POOL_SIZE', 1),
+        ],
+        // Login e catalogo do cidadao sao request critico: nao falhar rapido demais.
+        'pgsql_treinamento' => [
+            'size' => (int) env('SWOOLE_PG_TREINAMENTO_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_TREINAMENTO_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        'ranking' => [
+            'size' => (int) env('SWOOLE_PG_RANKING_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_RANKING_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        'ranking_read' => [
+            'size' => (int) env('SWOOLE_PG_RANKING_READ_POOL_SIZE', 3),
+            'timeout' => (float) env('SWOOLE_PG_RANKING_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        'ranking_source_ro' => [
+            'size' => (int) env('SWOOLE_PG_RANKING_SOURCE_POOL_SIZE', 2),
+            'timeout' => (float) env('SWOOLE_PG_RANKING_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Bancos dedicados
+    |--------------------------------------------------------------------------
+    |
+    | Bancos fora do sdc, provisionados por `db:provisionar` e migrados no boot
+    | (entrypoint.sh) com a pasta propria de migrations. 'chave' e a chave de
+    | troca acima: o banco so e usado quando ela aponta para a conexao; null =
+    | sempre separado (ranking). Roles e senhas ficam com o DBA, fora do codigo.
+    |
+    */
+
+    'bancos_dedicados' => [
+        'pgsql_geo' => [
+            'chave' => 'geo_connection',
+            'extensoes' => ['postgis'],
+            'migrations' => 'database/migrations/geoespacial',
+        ],
+        'pgsql_treinamento' => [
+            'chave' => 'treinamento_connection',
+            'extensoes' => [],
+            'migrations' => 'database/migrations/treinamento',
+        ],
+        'ranking' => [
+            'chave' => null,
+            'extensoes' => [],
+            'migrations' => 'database/migrations/ranking',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -260,7 +422,7 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => env('DB_SEARCH_PATH', 'public'),
+            'search_path' => $searchPathComLog,
             'sslmode' => env('DB_SSLMODE', 'prefer'),
             'sslrootcert' => env('DB_SSL_CA') ?: null,
             'application_name' => env('APP_NAME', 'sdc-laravel'),
@@ -333,38 +495,48 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            // Le audit_logs (logins), que vive no schema log.
+            'search_path' => 'public,log',
             'timezone' => 'UTC',
             'sslmode' => env('RANKING_SOURCE_SSLMODE', 'prefer'),
             'application_name' => 'sdc-ranking-source-ro',
             'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares, PDO::ATTR_TIMEOUT => $pgConnectTimeout],
         ],
 
-        // Conexao isolada para jobs de webhook (ProcessWebhook, ProcessInboundWebhook).
-        // Aponta para o mesmo host do pgsql, mas com application_name distinto e
-        // sem ATTR_PERSISTENT — jobs nao reusam conexao entre execucoes.
-        // Combinado com semaforo proprio (DB_MAX_CONCURRENT_WEBHOOK), isola pico
-        // de webhooks externos do pool da web.
-        'pgsql_webhook' => [
+        // Conexao de TODOS os tipos de log: notificacoes, logs tecnicos (failed_jobs,
+        // webhooks, traces, IA, ETL), auditoria e historico dos modulos. Pool e
+        // sessao proprios: pico de log nao consome conexao das operacoes dos
+        // modulos. Substitui a antiga 'pgsql_webhook', que isolava so webhook.
+        //
+        // So entra em uso com DB_LOG_CONNECTION=pgsql_log (ver 'log_connection').
+        // Por padrao herda servidor, database e credenciais de DB_*: as tabelas
+        // continuam no `sdc`, muda apenas a conexao. LOG_DB_HOST/LOG_DB_DATABASE
+        // sao o caminho para levar o log a outro servidor no futuro.
+        //
+        // Sem 'url' de proposito: DATABASE_URL aponta para o `sdc` e venceria os
+        // overrides LOG_DB_*. Em producao, LOG_DB_USERNAME e uma role propria
+        // (sdc_log_app) com CONNECTION LIMIT e escrita so nas tabelas de log.
+        'pgsql_log' => [
             'driver' => 'pgsql',
-            'url' => env('DATABASE_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'sdc'),
-            'username' => env('DB_USERNAME', 'sdc'),
-            'password' => env('DB_PASSWORD', ''),
+            'host' => env('LOG_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('LOG_DB_PORT', env('DB_PORT', '5432')),
+            'database' => env('LOG_DB_DATABASE', env('DB_DATABASE', 'sdc')),
+            'username' => env('LOG_DB_USERNAME', env('DB_USERNAME', 'sdc')),
+            'password' => env('LOG_DB_PASSWORD', env('DB_PASSWORD', '')),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => env('DB_SEARCH_PATH', 'public'),
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
-            'sslrootcert' => env('DB_SSL_CA') ?: null,
-            'application_name' => env('APP_NAME', 'sdc-laravel').'-webhook',
+            'search_path' => $searchPathComLog,
+            'sslmode' => env('LOG_DB_SSLMODE', env('DB_SSLMODE', 'prefer')),
+            'sslrootcert' => env('LOG_DB_SSL_CA', env('DB_SSL_CA')) ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel').'-log',
             'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
             'options' => [
                 // false por padrao; true so ao ligar o PgBouncer. Ver o bloco no
                 // topo deste arquivo.
                 PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
+                // Mesmo racional da conexao pgsql: persistente e inseguro sob Octane.
+                PDO::ATTR_PERSISTENT => false,
                 PDO::ATTR_TIMEOUT => $pgConnectTimeout,
             ],
         ],
@@ -387,6 +559,34 @@ return [
         //
         // Split de leitura de verdade nao se faz aqui: seria um bloco
         // 'read'/'write' dentro da conexao 'pgsql', com 'sticky'.
+        // Banco sdc_geoespacial (medalhao por dominio). Escrita: ingestao,
+        // upsert silver, REFRESH das matviews. So usado com DB_GEO_CONNECTION.
+        'pgsql_geo' => $bancoDedicado('GEO', 'sdc_geoespacial', 'geo'),
+
+        // SELECT dos mapas. Role de leitura propria em producao
+        // (GEO_DB_READ_USERNAME); nas replicas quando houver.
+        'pgsql_geo_read' => $bancoDedicado('GEO', 'sdc_geoespacial', 'geo-read', array_filter([
+            'username' => env('GEO_DB_READ_USERNAME', env('GEO_DB_USERNAME', env('DB_USERNAME', 'sdc'))),
+            'password' => env('GEO_DB_READ_PASSWORD', env('GEO_DB_PASSWORD', env('DB_PASSWORD', ''))),
+            'replica_routing' => $geoReplicaRouting ?: null,
+            'sticky' => $geoReplicaRouting ?: null,
+            'read' => $geoReplicaRouting ? [
+                'host' => $geoReadHosts,
+                'read_only' => true,
+                'port' => env('GEO_DB_READ_PORT', env('DB_READ_PORT', env('DB_PORT', '5432'))),
+                'application_name' => env('APP_NAME', 'sdc-laravel').'-geo-reader',
+            ] : null,
+            'write' => $geoReplicaRouting ? [
+                'host' => env('GEO_DB_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('GEO_DB_PORT', env('DB_PORT', '5432')),
+            ] : null,
+        ], static fn ($valor): bool => $valor !== null)),
+
+        // Banco sdc_treinamento (schemas cadastro e treinamento): dado pessoal
+        // de cidadao (LGPD). Em producao role propria sdc_treinamento_app, sem
+        // acesso ao sdc. So usado com DB_TREINAMENTO_CONNECTION.
+        'pgsql_treinamento' => $bancoDedicado('TREINAMENTO', 'sdc_treinamento', 'treinamento'),
+
         'pgsql_ai' => [
             'driver' => 'pgsql',
             'host' => env('DB_PGSQL_HOST', env('DB_HOST', '127.0.0.1')),

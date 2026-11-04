@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Models;
 
 use App\Models\User;
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class RatOcorrenciaHistorico extends Model
 {
     use HasUuids;
+    use UsaConexaoDeLog;
 
     public $incrementing = false;
     protected $keyType = 'string';
