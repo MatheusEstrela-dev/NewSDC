@@ -18,8 +18,9 @@ interface PdoPool
 {
     /**
      * Empresta um PDO. Esgotado o prazo, lanca PoolEsgotado com label().
+     * $timeout substitui o prazo do pool nesta chamada (leitura usa prazo curto).
      */
-    public function acquire(): PDO;
+    public function acquire(?float $timeout = null): PDO;
 
     /**
      * Devolve o PDO limpo ao pool (rollback de transacao esquecida).

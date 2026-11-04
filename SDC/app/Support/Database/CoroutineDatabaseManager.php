@@ -49,6 +49,9 @@ final class CoroutineDatabaseManager extends DatabaseManager
     /** @var array<string, int> */
     private array $proximaReplica = [];
 
+    /** @var array<string, HostsPrimariosConhecidos> */
+    private array $primarios = [];
+
     private ?PdoPoolRegistry $registry = null;
 
     private readonly CoroutineContext $contexto;
@@ -238,14 +241,34 @@ final class CoroutineDatabaseManager extends DatabaseManager
         }
 
         $chaveLeitores = self::CHAVE_LEITORES.$nome;
+        $chaveEscritor = self::CHAVE_ESCRITOR.$nome;
+        // Prazo curto: pool de leitura cheio cai no proximo host/primario logo,
+        // em vez de esperar o timeout inteiro do pool por host.
+        $prazoLeitura = (float) ($config['read_timeout'] ?? 0.2);
+        $writerPool = $this->pools[$nome];
         $this->proximaReplica[$nome] ??= random_int(0, count($pools) - 1);
         $connection->startReplicaAt($this->proximaReplica[$nome]++);
         $connection->setReadPdoConfig(array_replace($config, $config['read']));
+        $connection->setKnownPrimaries($this->primarios[$nome] ??= new HostsPrimariosConhecidos);
+        $connection->setWriterReleaser(static function (\PDO $pdo) use ($writerPool, $ctx, $chaveEscritor): \Closure {
+            // So devolve o PDO que este contexto de fato emprestou.
+            if (($ctx[$chaveEscritor] ?? null) === $pdo) {
+                unset($ctx[$chaveEscritor]);
+                $writerPool->release($pdo);
+            }
+
+            return static function () use ($writerPool, $ctx, $chaveEscritor): \PDO {
+                $novo = $writerPool->acquire();
+                $ctx[$chaveEscritor] = $novo;
+
+                return $novo;
+            };
+        });
         $connection->setReplicaPdoResolver(
-            static function (string $host) use ($pools, $ctx, $chaveLeitores): \PDO {
+            static function (string $host) use ($pools, $ctx, $chaveLeitores, $prazoLeitura): \PDO {
                 $readers = $ctx[$chaveLeitores] ?? [];
                 if (! isset($readers[$host])) {
-                    $readers[$host] = [$pools[$host], $pools[$host]->acquire()];
+                    $readers[$host] = [$pools[$host], $pools[$host]->acquire($prazoLeitura)];
                     $ctx[$chaveLeitores] = $readers;
                 }
 
@@ -257,6 +280,15 @@ final class CoroutineDatabaseManager extends DatabaseManager
                     $readers[$host][0]->discard();
                     unset($readers[$host]);
                     $ctx[$chaveLeitores] = $readers;
+                }
+            },
+            static function (string $host) use ($ctx, $chaveLeitores): void {
+                $readers = $ctx[$chaveLeitores] ?? [];
+                if (isset($readers[$host])) {
+                    [$pool, $pdo] = $readers[$host];
+                    unset($readers[$host]);
+                    $ctx[$chaveLeitores] = $readers;
+                    $pool->release($pdo);
                 }
             },
         );

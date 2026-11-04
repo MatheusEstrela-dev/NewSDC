@@ -159,7 +159,7 @@ final class SwoolePdoPool implements PdoPool
         return $result;
     }
 
-    public function acquire(): PDO
+    public function acquire(?float $timeout = null): PDO
     {
         // Cria sob demanda ate o teto; senao espera uma conexao ser devolvida.
         // A checagem + incremento sao contiguos (sem yield), seguros no
@@ -177,7 +177,7 @@ final class SwoolePdoPool implements PdoPool
             }
         }
 
-        $pdo = $this->channel->pop($this->timeout);
+        $pdo = $this->channel->pop(max(0.001, $timeout ?? $this->timeout));
         if ($pdo === false) {
             throw new \App\Exceptions\PoolEsgotado($this->label, "SwoolePdoPool '{$this->label}' esgotado (timeout no acquire).");
         }
