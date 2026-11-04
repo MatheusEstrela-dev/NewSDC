@@ -6,6 +6,7 @@ namespace App\Modules\Pmda\Models;
 
 use App\Modules\Pmda\Enums\PmdaEventoTipo;
 use App\Modules\Pmda\Enums\PmdaStatus;
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PmdaPlanoEvento extends Model
 {
+    use UsaConexaoDeLog;
+
     protected $table = 'pmda_plano_eventos';
 
     protected $fillable = [

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Models;
 
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\User;
 
 class PaeTimeline extends Model
 {
+    use UsaConexaoDeLog;
+
     public $timestamps = false;
 
     protected $table = 'pae_timeline';
