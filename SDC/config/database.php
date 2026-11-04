@@ -29,6 +29,16 @@ use Illuminate\Support\Str;
 $emularPrepares = filter_var(env('DB_EMULATE_PREPARES', false), FILTER_VALIDATE_BOOLEAN);
 
 $pgConnectTimeout = max(1, (int) env('DB_CONNECT_TIMEOUT', 2));
+
+// Tabelas de log vivem no schema `log` do proprio sdc (migration
+// move_tabelas_de_log_para_schema_log). `log` entra sempre DEPOIS do schema
+// principal: nome sem schema continua resolvendo, e tabela nova continua
+// nascendo em public. Nenhum codigo precisa qualificar `log.`.
+$searchPathComLog = implode(',', array_values(array_unique(array_merge(
+    array_filter(array_map('trim', explode(',', (string) env('DB_SEARCH_PATH', 'public')))),
+    ['log'],
+))));
+
 $readHosts = array_values(array_filter(array_map('trim', explode(',', (string) env('DB_READ_HOSTS', '')))));
 $replicaRouting = filter_var(env('DB_READ_ENABLED', false), FILTER_VALIDATE_BOOLEAN) && $readHosts !== [];
 $readWriteConfig = $replicaRouting ? [
@@ -306,7 +316,7 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => env('DB_SEARCH_PATH', 'public'),
+            'search_path' => $searchPathComLog,
             'sslmode' => env('DB_SSLMODE', 'prefer'),
             'sslrootcert' => env('DB_SSL_CA') ?: null,
             'application_name' => env('APP_NAME', 'sdc-laravel'),
@@ -379,7 +389,8 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            // Le audit_logs (logins), que vive no schema log.
+            'search_path' => 'public,log',
             'timezone' => 'UTC',
             'sslmode' => env('RANKING_SOURCE_SSLMODE', 'prefer'),
             'application_name' => 'sdc-ranking-source-ro',
@@ -409,7 +420,7 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => env('DB_SEARCH_PATH', 'public'),
+            'search_path' => $searchPathComLog,
             'sslmode' => env('LOG_DB_SSLMODE', env('DB_SSLMODE', 'prefer')),
             'sslrootcert' => env('LOG_DB_SSL_CA', env('DB_SSL_CA')) ?: null,
             'application_name' => env('APP_NAME', 'sdc-laravel').'-log',
