@@ -2,6 +2,7 @@
 
 namespace App\Services\Queue;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Artisan;
@@ -20,11 +21,21 @@ use Illuminate\Support\Facades\Artisan;
 class DeadLetterQueueService
 {
     /**
+     * A mesma conexao e tabela em que o Laravel grava os jobs falhos
+     * (queue.failed): com a conexao de log ligada, failed_jobs sai da default.
+     */
+    private static function tabela(): Builder
+    {
+        return DB::connection(config('queue.failed.database'))
+            ->table((string) config('queue.failed.table', 'failed_jobs'));
+    }
+
+    /**
      * Lista todos os jobs que falharam
      */
     public static function listFailedJobs(int $limit = 50): array
     {
-        return DB::table('failed_jobs')
+        return self::tabela()
             ->orderBy('failed_at', 'desc')
             ->limit($limit)
             ->get()
@@ -70,7 +81,7 @@ class DeadLetterQueueService
      */
     public static function retryAll(): int
     {
-        $count = DB::table('failed_jobs')->count();
+        $count = self::tabela()->count();
 
         Artisan::call('queue:retry', ['id' => 'all']);
 
@@ -111,7 +122,7 @@ class DeadLetterQueueService
      */
     public static function flush(): int
     {
-        $count = DB::table('failed_jobs')->count();
+        $count = self::tabela()->count();
 
         Artisan::call('queue:flush');
 
@@ -128,19 +139,19 @@ class DeadLetterQueueService
      */
     public static function stats(): array
     {
-        $failedJobs = DB::table('failed_jobs');
-
+        // Uma consulta nova por indicador: reaproveitar o mesmo builder somava
+        // os where de um indicador no seguinte.
         return [
-            'total' => $failedJobs->count(),
-            'last_24h' => $failedJobs->where('failed_at', '>=', now()->subDay())->count(),
-            'last_7d' => $failedJobs->where('failed_at', '>=', now()->subWeek())->count(),
-            'by_queue' => $failedJobs
+            'total' => self::tabela()->count(),
+            'last_24h' => self::tabela()->where('failed_at', '>=', now()->subDay())->count(),
+            'last_7d' => self::tabela()->where('failed_at', '>=', now()->subWeek())->count(),
+            'by_queue' => self::tabela()
                 ->select('queue', DB::raw('count(*) as count'))
                 ->groupBy('queue')
                 ->get()
                 ->pluck('count', 'queue')
                 ->toArray(),
-            'by_connection' => $failedJobs
+            'by_connection' => self::tabela()
                 ->select('connection', DB::raw('count(*) as count'))
                 ->groupBy('connection')
                 ->get()
@@ -154,7 +165,7 @@ class DeadLetterQueueService
      */
     public static function topErrors(int $limit = 10): array
     {
-        $jobs = DB::table('failed_jobs')
+        $jobs = self::tabela()
             ->orderBy('failed_at', 'desc')
             ->limit(100) // Analisa os últimos 100 jobs
             ->get();
@@ -192,7 +203,7 @@ class DeadLetterQueueService
      */
     public static function isUnhealthy(): bool
     {
-        $recentFailed = DB::table('failed_jobs')
+        $recentFailed = self::tabela()
             ->where('failed_at', '>=', now()->subHour())
             ->count();
 

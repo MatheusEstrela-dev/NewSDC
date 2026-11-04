@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,10 +13,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Trace de request assincrono. Criado pelo trait AsynchronousResponse,
  * atualizado pelo job via TracksAsyncProgress, consultado pelo cliente
  * via GET /api/v1/traces/{id}.
+ *
+ * Log tecnico: conexao de log, e o log:podar apaga o trace com mais de 90 dias
+ * que nao tem mais export (result_path nulo, limpo pelo exports:cleanup).
  */
 class RequestTrace extends Model
 {
     use HasUuids;
+    use UsaConexaoDeLog;
 
     public const STATUS_PENDING = 'pending';
     public const STATUS_PROCESSING = 'processing';

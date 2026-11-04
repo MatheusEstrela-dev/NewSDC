@@ -723,7 +723,7 @@ class PmdaPlanoController extends Controller
             return [];
         }
 
-        return DB::table('notifications')
+        return \App\Modules\Notificacoes\Models\Notificacao::query()->toBase()
             ->where('group_key', 'like', $plano->moduloNotificacao().':'.$plano->getKey().':%')
             ->where('notifiable_id', $usuarioId)
             ->where('notifiable_type', \App\Models\User::class)
