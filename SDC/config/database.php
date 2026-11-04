@@ -63,6 +63,52 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Conexao de log
+    |--------------------------------------------------------------------------
+    |
+    | Chave unica de troca para todos os tipos de log (ver App\Support\Database\
+    | ConexaoDeLog). Sem DB_LOG_CONNECTION resolve para a conexao default: o log
+    | segue na mesma sessao das operacoes, exatamente como antes. Com
+    | DB_LOG_CONNECTION=pgsql_log o log ganha sessao e pool proprios. Rollback e
+    | tirar a variavel e reiniciar.
+    |
+    */
+
+    'log_connection' => env('DB_LOG_CONNECTION', env('DB_CONNECTION', 'pgsql')),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pools por coroutine (Octane/Swoole com hooks)
+    |--------------------------------------------------------------------------
+    |
+    | Um pool PROPRIO por conexao listada, por worker. Conexao fora desta lista
+    | cai no DatabaseManager padrao (um PDO por processo). So vale com
+    | OCTANE_HOOK_FLAGS_ENABLED; com hooks desligados nada aqui e instanciado.
+    |
+    | TETO DE CONEXOES: a soma de todos os pools x workers x instancias entra no
+    | guardrail do entrypoint.sh contra PG_MAX_CONNECTIONS (mesmo servidor).
+    |
+    */
+
+    'coroutine_pools' => [
+        'pgsql' => [
+            'size' => (int) env('SWOOLE_PG_POOL_SIZE', 16),
+            'timeout' => (float) env('SWOOLE_PG_POOL_TIMEOUT', 3.0),
+            'warm' => true,
+            // Pools das replicas; so com replica_routing ligado na conexao.
+            'read_size' => (int) env('SWOOLE_PG_READ_POOL_SIZE', 2),
+        ],
+        'pgsql_log' => [
+            'size' => (int) env('SWOOLE_PG_LOG_POOL_SIZE', 4),
+            // Curto de proposito: request esperando pool de log segura o PDO
+            // critico durante a espera. Esgotou, o log vai para a fila.
+            'timeout' => (float) env('SWOOLE_PG_LOG_POOL_TIMEOUT', 0.5),
+            'warm' => filter_var(env('SWOOLE_PG_LOG_POOL_WARM', false), FILTER_VALIDATE_BOOLEAN),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
     |
@@ -340,31 +386,40 @@ return [
             'options' => [PDO::ATTR_PERSISTENT => false, PDO::ATTR_EMULATE_PREPARES => $emularPrepares, PDO::ATTR_TIMEOUT => $pgConnectTimeout],
         ],
 
-        // Conexao isolada para jobs de webhook (ProcessWebhook, ProcessInboundWebhook).
-        // Aponta para o mesmo host do pgsql, mas com application_name distinto e
-        // sem ATTR_PERSISTENT — jobs nao reusam conexao entre execucoes.
-        // Combinado com semaforo proprio (DB_MAX_CONCURRENT_WEBHOOK), isola pico
-        // de webhooks externos do pool da web.
-        'pgsql_webhook' => [
+        // Conexao de TODOS os tipos de log: notificacoes, logs tecnicos (failed_jobs,
+        // webhooks, traces, IA, ETL), auditoria e historico dos modulos. Pool e
+        // sessao proprios: pico de log nao consome conexao das operacoes dos
+        // modulos. Substitui a antiga 'pgsql_webhook', que isolava so webhook.
+        //
+        // So entra em uso com DB_LOG_CONNECTION=pgsql_log (ver 'log_connection').
+        // Por padrao herda servidor, database e credenciais de DB_*: as tabelas
+        // continuam no `sdc`, muda apenas a conexao. LOG_DB_HOST/LOG_DB_DATABASE
+        // sao o caminho para levar o log a outro servidor no futuro.
+        //
+        // Sem 'url' de proposito: DATABASE_URL aponta para o `sdc` e venceria os
+        // overrides LOG_DB_*. Em producao, LOG_DB_USERNAME e uma role propria
+        // (sdc_log_app) com CONNECTION LIMIT e escrita so nas tabelas de log.
+        'pgsql_log' => [
             'driver' => 'pgsql',
-            'url' => env('DATABASE_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'sdc'),
-            'username' => env('DB_USERNAME', 'sdc'),
-            'password' => env('DB_PASSWORD', ''),
+            'host' => env('LOG_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('LOG_DB_PORT', env('DB_PORT', '5432')),
+            'database' => env('LOG_DB_DATABASE', env('DB_DATABASE', 'sdc')),
+            'username' => env('LOG_DB_USERNAME', env('DB_USERNAME', 'sdc')),
+            'password' => env('LOG_DB_PASSWORD', env('DB_PASSWORD', '')),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => env('DB_SEARCH_PATH', 'public'),
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
-            'sslrootcert' => env('DB_SSL_CA') ?: null,
-            'application_name' => env('APP_NAME', 'sdc-laravel').'-webhook',
+            'sslmode' => env('LOG_DB_SSLMODE', env('DB_SSLMODE', 'prefer')),
+            'sslrootcert' => env('LOG_DB_SSL_CA', env('DB_SSL_CA')) ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel').'-log',
             'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
             'options' => [
                 // false por padrao; true so ao ligar o PgBouncer. Ver o bloco no
                 // topo deste arquivo.
                 PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
+                // Mesmo racional da conexao pgsql: persistente e inseguro sob Octane.
+                PDO::ATTR_PERSISTENT => false,
                 PDO::ATTR_TIMEOUT => $pgConnectTimeout,
             ],
         ],
