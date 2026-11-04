@@ -84,6 +84,14 @@
           >
             <strong>{{ a.label }}:</strong> {{ a.bloqueio }}
           </p>
+          <!-- Aviso nao impede a acao: adianta o que a ativacao vai cobrar. -->
+          <p
+            v-for="a in detalhe.acoes.filter(x => x.aviso && !x.bloqueio)"
+            :key="`w-${a.value}`"
+            class="text-xs text-slate-600 dark:text-slate-300"
+          >
+            <strong>{{ a.label }}:</strong> a ativação vai exigir — {{ a.aviso }}
+          </p>
         </div>
       </div>
 

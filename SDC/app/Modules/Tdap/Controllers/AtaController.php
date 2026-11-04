@@ -13,6 +13,7 @@ use App\Modules\Tdap\Requests\UpdateAtaRequest;
 use App\Modules\Tdap\Resources\AtaIndexResource;
 use App\Modules\Tdap\Resources\AtaResource;
 use App\Modules\Tdap\Services\AtaService;
+use App\Modules\Tdap\Support\ExportadorCsv;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -50,26 +51,7 @@ class AtaController extends Controller
         $filtros = $request->only(['ativo', 'vigente', 'situacao', 'search']);
         $data = $this->service->exportar($filtros);
 
-        $filename = 'atas_'.now()->format('Y-m-d_H-i-s').'.csv';
-
-        return response()->streamDownload(function () use ($data): void {
-            $handle = fopen('php://output', 'w');
-
-            // BOM UTF-8 para Excel reconhecer acentuacao.
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            if (! empty($data)) {
-                fputcsv($handle, array_keys($data[0]), ';');
-            }
-
-            foreach ($data as $row) {
-                fputcsv($handle, array_values($row), ';');
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return ExportadorCsv::baixar($data, 'atas');
     }
 
     public function create(): Response

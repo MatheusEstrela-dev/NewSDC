@@ -141,6 +141,9 @@ class LoteService
     {
         return DB::transaction(function () use ($id, $dto): Lote {
             $lote = Lote::findOrFail($id);
+
+            // Reajuste do valor_m3 vale so para as proximas aprovacoes: cada
+            // viagem grava o preco na aprovacao (CronoViagemService::validar).
             $lote->update($dto->toArray());
             $lote->municipios()->sync($dto->municipio_ids);
 

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Requests;
 
+use App\Modules\Tdap\Models\CronoCaminhao;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\Lote;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 use Illuminate\Validation\Validator;
@@ -214,6 +216,50 @@ abstract class AbstractCronoCaminhaoRequest extends FormRequest
 
         return $rules;
     }
+
+    /** Cronograma da alocacao (Store: o do payload; Update: o da alocacao da rota). */
+    abstract protected function cronogramaDaAlocacao(): ?Cronograma;
+
+    /** Comunidade que a alocacao ja tem (Update); null no Store. */
+    abstract protected function comunidadeAtual(): ?int;
+
+    /**
+     * A comunidade tem de existir e ser do municipio do cronograma.
+     *
+     * `comunidade_id` era so `integer`: aceitava id inexistente ou de outro
+     * municipio. A comunidade que a alocacao JA TEM continua aceita: o acervo
+     * importado guarda ids do legado (pip_comunidade) que nao existem em
+     * `comunidades`, e sem a excecao nenhuma alocacao antiga seria editada.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v): void {
+            if ($v->errors()->has('comunidade_id')) {
+                return;
+            }
+
+            $comunidadeId = $this->input('comunidade_id');
+            if ($comunidadeId === null || $comunidadeId === '' || (int) $comunidadeId === $this->comunidadeAtual()) {
+                return;
+            }
+
+            $municipioDaComunidade = DB::table('comunidades')
+                ->where('id', (int) $comunidadeId)
+                ->whereNull('deleted_at')
+                ->value('municipio_id');
+
+            if ($municipioDaComunidade === null) {
+                $v->errors()->add('comunidade_id', 'A comunidade selecionada nao existe.');
+
+                return;
+            }
+
+            $cronograma = $this->cronogramaDaAlocacao();
+            if ($cronograma !== null && (int) $municipioDaComunidade !== (int) $cronograma->municipio_id) {
+                $v->errors()->add('comunidade_id', 'A comunidade nao pertence ao Municipio do cronograma.');
+            }
+        });
+    }
 }
 
 class StoreCronoCaminhaoRequest extends AbstractCronoCaminhaoRequest
@@ -227,10 +273,26 @@ class StoreCronoCaminhaoRequest extends AbstractCronoCaminhaoRequest
     {
         return true;
     }
+
+    protected function cronogramaDaAlocacao(): ?Cronograma
+    {
+        $id = (int) $this->input('cronograma_id');
+
+        return $id > 0 ? Cronograma::query()->find($id, ['id', 'municipio_id']) : null;
+    }
+
+    protected function comunidadeAtual(): ?int
+    {
+        return null;
+    }
 }
 
 class UpdateCronoCaminhaoRequest extends AbstractCronoCaminhaoRequest
 {
+    use \App\Modules\Tdap\Requests\Concerns\ResolveIdDaRota;
+
+    private ?CronoCaminhao $alocacao = null;
+
     public function authorize(): bool
     {
         return $this->user()?->can('tdap.cronogramas.edit') ?? false;
@@ -239,6 +301,27 @@ class UpdateCronoCaminhaoRequest extends AbstractCronoCaminhaoRequest
     protected function includeVinculo(): bool
     {
         return false;
+    }
+
+    private function alocacao(): ?CronoCaminhao
+    {
+        $id = $this->idDaRota('cronoCaminhao');
+
+        return $this->alocacao ??= ($id !== null ? CronoCaminhao::query()->find($id) : null);
+    }
+
+    protected function cronogramaDaAlocacao(): ?Cronograma
+    {
+        $cronogramaId = $this->alocacao()?->cronograma_id;
+
+        return $cronogramaId !== null ? Cronograma::query()->find($cronogramaId, ['id', 'municipio_id']) : null;
+    }
+
+    protected function comunidadeAtual(): ?int
+    {
+        $atual = $this->alocacao()?->comunidade_id;
+
+        return $atual !== null ? (int) $atual : null;
     }
 }
 
@@ -262,8 +345,21 @@ class StoreCronoViagemRequest extends FormRequest
     {
         return [
             'crono_caminhao_id' => ['required', 'integer', Rule::exists('tdap_crono_caminhoes', 'id')->whereNull('deleted_at')],
-            'data_registro'     => ['required', 'date'],
+            // `before:tomorrow` e nao `before_or_equal:today`: o campo e data E
+            // hora, e "hoje 14:00" seria posterior a "hoje 00:00". Compara por
+            // dia, como CronoViagemService::registrar.
+            'data_registro'     => ['required', 'date', 'before:tomorrow'],
             'obs'               => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'data_registro.before' => 'A data da viagem nao pode ser futura.',
         ];
     }
 }

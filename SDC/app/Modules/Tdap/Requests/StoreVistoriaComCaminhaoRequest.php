@@ -6,6 +6,7 @@ namespace App\Modules\Tdap\Requests;
 
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rules\Unique;
+use Illuminate\Validation\Validator;
 
 /**
  * Caminhao novo e primeira vistoria, no mesmo POST.
@@ -53,6 +54,15 @@ class StoreVistoriaComCaminhaoRequest extends AbstractCaminhaoRequest
             'fotos.*'   => StoreVistoriaFotoRequest::REGRAS_DO_ARQUIVO,
             'descricao' => ['nullable', 'string', 'max:255'],
         ]);
+    }
+
+    /**
+     * Primeira vistoria com parecer "Aprovada" cobra `tdap.vistorias.aprovar`,
+     * a mesma regra da ficha avulsa.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        AbstractVistoriaRequest::exigirPermissaoParaAprovar($validator, $this->user(), null);
     }
 
     /**

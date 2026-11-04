@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\DB;
 
 class CronoCaminhaoService
 {
+    public function __construct(
+        private readonly CronogramaService $cronogramas,
+    ) {}
+
     /**
      * Colunas QUALIFICADAS: `ultimaVistoriaAprovada` usa latestOfMany, que monta
      * um self-join sobre tdap_vistorias, e `placa_id` cru fica ambiguo entre as
@@ -72,10 +76,25 @@ class CronoCaminhaoService
         }
     }
 
+    /**
+     * Trava a linha do cronograma ate o fim da transacao corrente.
+     *
+     * A tramitacao (TramitacaoCronogramaService::tramitar) faz lockForUpdate no
+     * cronograma e confere a contagem de caminhoes. Sem a mesma trava aqui, a
+     * checagem de fase de garantirEditavel() corre sobre leitura velha: o INSERT
+     * ou DELETE entra depois do COMMIT do envio e a CEDEC analisa/aprova uma
+     * frota diferente da que foi congelada (ou o cronograma entra em analise
+     * com 0 caminhoes). Chamar SEMPRE dentro de DB::transaction.
+     */
+    private function travarCronograma(int $cronogramaId): Cronograma
+    {
+        return Cronograma::query()->lockForUpdate()->findOrFail($cronogramaId);
+    }
+
     public function alocar(CronoCaminhaoDTO $dto): CronoCaminhao
     {
         return DB::transaction(function () use ($dto): CronoCaminhao {
-            $cronograma = Cronograma::findOrFail($dto->cronograma_id);
+            $cronograma = $this->travarCronograma($dto->cronograma_id);
 
             if ($cronograma->encerrado_em) {
                 throw new \DomainException('Cronograma encerrado nao aceita novos caminhoes.');
@@ -113,6 +132,21 @@ class CronoCaminhaoService
                 ));
             }
 
+            /*
+             * Cronograma ATIVO (locacao de frota): o caminhao entra direto em
+             * execucao, sem passar de novo pela ativacao. Sem esta checagem a
+             * guarda de vistoria de podeAtivar/prorrogar era contornada
+             * alocando depois de ativar. Mesma regra: a vistoria tem de cobrir
+             * ate o fim efetivo do cronograma.
+             */
+            if ($cronograma->ativo) {
+                $caminhao->loadMissing('ultimaVistoriaAprovada');
+                $erro = $this->cronogramas->motivoVistoriaNaoCobre($caminhao, (string) $caminhao->placa, $cronograma->dt_final_efetiva);
+                if ($erro !== null) {
+                    throw new \DomainException($erro);
+                }
+            }
+
             $jaAlocado = CronoCaminhao::query()
                 ->where('cronograma_id', $dto->cronograma_id)
                 ->where('caminhao_id', $dto->caminhao_id)
@@ -137,6 +171,9 @@ class CronoCaminhaoService
                 ->with(['cronograma:id,ativo,encerrado_em,fase_tramite', 'caminhao:id,capacidade_m3'])
                 ->findOrFail($id);
 
+            // Fase/encerramento lidos APOS a trava, nao da leitura acima.
+            $cc->setRelation('cronograma', $this->travarCronograma($cc->cronograma_id));
+
             // Mesmo guard de alocar(): cronograma encerrado e registro fechado.
             // Sem ele era possivel remexer em agua_prevista depois do
             // encerramento e desalinhar o volume contratado do que foi pago.
@@ -159,20 +196,21 @@ class CronoCaminhaoService
 
     public function remover(int $id): bool
     {
-        $cc = CronoCaminhao::query()
-            ->with('cronograma:id,ativo,encerrado_em,fase_tramite')
-            ->withCount('viagens')
-            ->findOrFail($id);
+        return DB::transaction(function () use ($id): bool {
+            $cc = CronoCaminhao::query()->findOrFail($id);
 
-        $this->garantirEditavel($cc->cronograma);
+            $cc->setRelation('cronograma', $this->travarCronograma($cc->cronograma_id));
+            $this->garantirEditavel($cc->cronograma);
 
-        if ($cc->viagens_count > 0) {
-            throw new \DomainException(
-                "Este caminhao tem {$cc->viagens_count} viagem(ns) registrada(s). Remova-as antes."
-            );
-        }
+            $cc->loadCount('viagens');
+            if ($cc->viagens_count > 0) {
+                throw new \DomainException(
+                    "Este caminhao tem {$cc->viagens_count} viagem(ns) registrada(s). Remova-as antes."
+                );
+            }
 
-        return (bool) $cc->delete();
+            return (bool) $cc->delete();
+        });
     }
 
     /**
@@ -190,26 +228,32 @@ class CronoCaminhaoService
     }
 
     /**
-     * Formula unica da entrega: viagens APROVADAS x capacidade do caminhao, e
-     * o valor pelo preco do m3 do lote. Usada pelo recalculo a cada validacao
-     * e pela correcao em massa (tdap:recalcular-entregas).
+     * Formula unica da entrega: soma, viagem a viagem APROVADA, da capacidade
+     * e do preco do m3 GRAVADOS na aprovacao (CronoViagemService::validar).
+     * Usada pelo recalculo a cada validacao e pela correcao em massa
+     * (tdap:recalcular-entregas).
+     *
+     * Viagem aprovada sem valor gravado (anterior a coluna e fora do backfill)
+     * cai no cadastro atual do caminhao/lote, que e o que valia para ela.
      *
      * @return array{agua_entregue: float, vr_total: float}
      */
     public function entregaCalculada(CronoCaminhao $cc): array
     {
-        // withCount('viagensValidadas') de quem carrega em lote (a correcao em
-        // massa); sem ele, a contagem propria de sempre.
-        $viagensValidadas = (int) ($cc->viagens_validadas_count ?? CronoViagem::query()
+        $capacidadeAtual = (float) ($cc->caminhao?->capacidade_m3 ?? 0);
+        $valorAtual = (float) ($cc->cronograma?->lote?->valor_m3 ?? 0);
+
+        $soma = CronoViagem::query()
             ->where('crono_caminhao_id', $cc->id)
             ->where('validado', CronoViagem::STATUS_APROVADA)
-            ->count());
-
-        $aguaEntregue = round($viagensValidadas * (float) ($cc->caminhao?->capacidade_m3 ?? 0), 2);
+            ->selectRaw('COALESCE(SUM(COALESCE(capacidade_m3, ?)), 0) AS agua', [$capacidadeAtual])
+            ->selectRaw('COALESCE(SUM(COALESCE(capacidade_m3, ?) * COALESCE(valor_m3, ?)), 0) AS valor', [$capacidadeAtual, $valorAtual])
+            ->toBase()
+            ->first();
 
         return [
-            'agua_entregue' => $aguaEntregue,
-            'vr_total'      => round($aguaEntregue * (float) ($cc->cronograma?->lote?->valor_m3 ?? 0), 2),
+            'agua_entregue' => round((float) ($soma->agua ?? 0), 2),
+            'vr_total'      => round((float) ($soma->valor ?? 0), 2),
         ];
     }
 

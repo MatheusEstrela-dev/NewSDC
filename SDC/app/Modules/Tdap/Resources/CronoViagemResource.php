@@ -34,12 +34,15 @@ class CronoViagemResource extends JsonResource
         $cronograma = $cc?->cronograma;
         $caminhao = $cc?->caminhao;
 
-        // O m3 desta viagem e a capacidade do caminhao: e a mesma conta que
-        // CronoCaminhaoService::recalcularEntregas usa para fechar o entregue
-        // (validadas x capacidade_m3). Repetir a regra aqui manteria duas
-        // versoes da mesma verdade, entao o numero vem da mesma origem.
-        $capacidade = $caminhao !== null ? (float) $caminhao->capacidade_m3 : null;
-        $valorM3 = $cronograma?->lote !== null ? (float) $cronograma->lote->valor_m3 : null;
+        // O m3 e o preco desta viagem sao os gravados na aprovacao -- a mesma
+        // origem de CronoCaminhaoService::entregaCalculada. Pendente ainda nao
+        // tem valor gravado: mostra o cadastro atual (o que aprovar liberaria).
+        $capacidade = $this->capacidade_m3 !== null
+            ? (float) $this->capacidade_m3
+            : ($caminhao !== null ? (float) $caminhao->capacidade_m3 : null);
+        $valorM3 = $this->valor_m3 !== null
+            ? (float) $this->valor_m3
+            : ($cronograma?->lote !== null ? (float) $cronograma->lote->valor_m3 : null);
 
         return [
             'id'                => $this->id,

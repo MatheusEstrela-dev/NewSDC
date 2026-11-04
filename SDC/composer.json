@@ -109,7 +109,7 @@
             "php-http/discovery": true
         },
         "platform": {
-            "php": "8.3.36"
+            "php": "8.4.27"
         },
         "platform-check": false
     },

@@ -11,6 +11,7 @@ use App\Support\Perfil\OrgaoDeLotacao;
 use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
 use App\Modules\Tdap\DTOs\CronoViagemDTO;
 use App\Modules\Tdap\Models\CronoCaminhao;
+use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Domain\Exceptions\ViagemForaDoLimiteException;
 use App\Modules\Tdap\Support\EscopoDeLeitura;
@@ -18,6 +19,7 @@ use App\Modules\Tdap\Support\LimiteDoCronograma;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -312,13 +314,32 @@ class CronoViagemService
     public function registrar(CronoViagemDTO $dto): CronoViagem
     {
         return DB::transaction(function () use ($dto): CronoViagem {
-            $cc = CronoCaminhao::query()
-                ->with('cronograma:id,ativo,encerrado_em,dt_final,dt_final_prorrogacao')
-                ->findOrFail($dto->crono_caminhao_id);
+            /*
+             * Trava cronograma e alocacao antes de conferir, NESTA ORDEM
+             * (cronograma -> alocacao), a mesma de CronoCaminhaoService
+             * (alocar/atualizar/remover). Sem a trava a viagem entrava num
+             * cronograma encerrado ou numa alocacao removida no mesmo instante.
+             *
+             * Sem deadlock com validar()/remover(): eles travam viagem ->
+             * alocacao (recalcularEntregas) e nunca o cronograma; aqui nenhuma
+             * viagem existente e travada, so a nova e inserida.
+             */
+            $cronogramaId = CronoCaminhao::query()->whereKey($dto->crono_caminhao_id)->value('cronograma_id');
+            if ($cronogramaId === null) {
+                throw new \DomainException('Alocacao de caminhao nao encontrada ou removida.');
+            }
 
-            $cronograma = $cc->cronograma;
+            $cronograma = Cronograma::query()->lockForUpdate()->find($cronogramaId);
+            $cc = CronoCaminhao::query()->lockForUpdate()->find($dto->crono_caminhao_id);
 
-            if (! $cronograma?->ativo) {
+            // Revalida depois da trava: alocacao ou cronograma removidos entre
+            // a leitura acima e o lock.
+            if ($cc === null || $cronograma === null || (int) $cc->cronograma_id !== (int) $cronograma->id) {
+                throw new \DomainException('Alocacao de caminhao nao encontrada ou removida.');
+            }
+            $cc->setRelation('cronograma', $cronograma);
+
+            if (! $cronograma->ativo) {
                 throw new \DomainException('So e possivel registrar viagens em cronogramas ativos.');
             }
             if ($cronograma->encerrado_em) {
@@ -334,6 +355,13 @@ class CronoViagemService
                     .LimiteDoCronograma::limite($cronograma)?->format('d/m/Y').').'
                 );
             }
+
+            // Viagem e fato consumado: data futura e agua que ainda nao saiu.
+            // Compara por dia, como o limite acima (o campo e data e hora).
+            if (Carbon::parse($dto->data_registro)->startOfDay()->greaterThan(today())) {
+                throw new ViagemForaDoLimiteException('A data da viagem nao pode ser futura.');
+            }
+
             return CronoViagem::create([
                 'crono_caminhao_id' => $dto->crono_caminhao_id,
                 'data_registro'     => $dto->data_registro,
@@ -373,12 +401,21 @@ class CronoViagemService
                 throw new \DomainException($motivo);
             }
 
-            $viagem->update([
+            $viagem->fill([
                 'validado'          => $aprovada ? CronoViagem::STATUS_APROVADA : CronoViagem::STATUS_REJEITADA,
                 'data_aprovacao'    => now(),
                 'obs_aprovacao'     => $obsAprovacao,
                 'user_validacao_id' => Auth::id(),
             ]);
+
+            // A aprovacao grava capacidade e preco do m3 daquele momento: o que
+            // foi aprovado nao muda se o cadastro do caminhao ou do lote mudar
+            // depois (reajuste vale so dali para frente).
+            if ($aprovada) {
+                $viagem->forceFill($this->valoresDaAprovacao($viagem->crono_caminhao_id));
+            }
+
+            $viagem->save();
 
             // Recalcula agregados do CronoCaminhao parent
             $this->cronoCaminhaoService->recalcularEntregas($viagem->crono_caminhao_id);
@@ -391,14 +428,37 @@ class CronoViagemService
         });
     }
 
+    /**
+     * Capacidade do caminhao (mesmo excluido) e valor do m3 do lote do
+     * cronograma, como estao agora.
+     *
+     * @return array{capacidade_m3: float, valor_m3: float}
+     */
+    private function valoresDaAprovacao(int $cronoCaminhaoId): array
+    {
+        $cc = CronoCaminhao::query()
+            ->with(CronoCaminhaoService::relacoesDaEntrega())
+            ->find($cronoCaminhaoId);
+
+        return [
+            'capacidade_m3' => (float) ($cc?->caminhao?->capacidade_m3 ?? 0),
+            'valor_m3'      => (float) ($cc?->cronograma?->lote?->valor_m3 ?? 0),
+        ];
+    }
+
     public function remover(int $id): bool
     {
-        $viagem = CronoViagem::findOrFail($id);
-        if ($viagem->validado === CronoViagem::STATUS_APROVADA) {
-            throw new \DomainException('Viagem aprovada nao pode ser excluida. Rejeite primeiro.');
-        }
+        return DB::transaction(function () use ($id): bool {
+            // Lock na viagem (mesma ordem de validar: viagem -> alocacao): sem
+            // ele, excluir corria com a aprovacao e apagava viagem ja paga.
+            $viagem = CronoViagem::query()->lockForUpdate()->findOrFail($id);
 
-        return DB::transaction(function () use ($viagem): bool {
+            // validar() so decide viagem pendente: aprovada nao volta a ser
+            // rejeitada, entao "rejeite primeiro" mandava a um beco sem saida.
+            if ($viagem->validado === CronoViagem::STATUS_APROVADA) {
+                throw new \DomainException('Viagem aprovada nao pode ser excluida: ela ja conta na agua entregue e no valor do cronograma.');
+            }
+
             $cronoCaminhaoId = $viagem->crono_caminhao_id;
             $ok = (bool) $viagem->delete();
             $this->cronoCaminhaoService->recalcularEntregas($cronoCaminhaoId);
@@ -417,9 +477,7 @@ class CronoViagemService
      */
     private function publicarViagemValidada(CronoViagem $viagem): void
     {
-        $contexto = CronoCaminhao::query()
-            ->with('caminhao:id,capacidade_m3')
-            ->find($viagem->crono_caminhao_id);
+        $contexto = CronoCaminhao::query()->find($viagem->crono_caminhao_id);
 
         $this->outbox->persist(new ViagemValidadaV1(
             eventId:       DomainEvent::newId(),
@@ -430,7 +488,7 @@ class CronoViagemService
                 'viagem_id'         => $viagem->id,
                 'crono_caminhao_id' => $viagem->crono_caminhao_id,
                 'cronograma_id'     => $contexto?->cronograma_id,
-                'capacidade_m3'     => (float) ($contexto?->caminhao?->capacidade_m3 ?? 0),
+                'capacidade_m3'     => (float) ($viagem->capacidade_m3 ?? 0),
                 'user_id'           => Auth::id(),
                 'actor_user_id'     => $viagem->user_validacao_id,
                 'validador_user_id' => $viagem->user_validacao_id,

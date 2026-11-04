@@ -58,6 +58,10 @@ class CronoViagem extends Model
         'confirmado_em'     => 'datetime',
         'confirmado_por'    => 'integer',
         'confirmado'        => 'integer',
+        // Gravados na aprovacao (CronoViagemService::validar); fora de
+        // $fillable de proposito. NULL = ainda nao aprovada.
+        'capacidade_m3'     => 'decimal:2',
+        'valor_m3'          => 'decimal:2',
     ];
 
     public function cronoCaminhao(): BelongsTo

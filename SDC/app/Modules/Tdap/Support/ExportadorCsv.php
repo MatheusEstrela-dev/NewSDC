@@ -48,16 +48,52 @@ final class ExportadorCsv
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
 
             if ($linhas !== []) {
-                fputcsv($handle, array_keys($linhas[0]), self::SEPARADOR);
+                fputcsv($handle, self::neutralizarLinha(array_keys($linhas[0])), self::SEPARADOR);
             }
 
             foreach ($linhas as $linha) {
-                fputcsv($handle, array_values($linha), self::SEPARADOR);
+                fputcsv($handle, self::neutralizarLinha(array_values($linha)), self::SEPARADOR);
             }
 
             fclose($handle);
         }, $arquivo, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * @param  array<int, mixed>  $celulas
+     * @return array<int, mixed>
+     */
+    public static function neutralizarLinha(array $celulas): array
+    {
+        return array_map(self::neutralizar(...), $celulas);
+    }
+
+    /**
+     * Injecao de formula: o Excel/LibreOffice executa a celula que comeca com
+     * = + - @ (ou TAB/CR, que alguns leitores descartam antes de avaliar).
+     * Nome de prestador, observacao e afins sao texto digitado por usuario,
+     * entao a celula ganha um apostrofo na frente e abre como texto.
+     *
+     * Numero (int/float) nao e texto do usuario e passa direto, assim como a
+     * string que e so numero formatado ("-1.234,50"): sem letra nem
+     * parentese, nao ha formula a executar.
+     */
+    public static function neutralizar(mixed $valor): mixed
+    {
+        if (! is_string($valor) || $valor === '') {
+            return $valor;
+        }
+
+        if (! in_array($valor[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return $valor;
+        }
+
+        if (preg_match('/^[+-]?[0-9][0-9.,]*$/', $valor) === 1) {
+            return $valor;
+        }
+
+        return "'".$valor;
     }
 }
