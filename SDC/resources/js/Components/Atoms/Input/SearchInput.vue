@@ -63,7 +63,10 @@ const sizeClasses = {
 
 const inputClasses = computed(() => {
   const base = 'w-full rounded-xl border transition-colors duration-200 outline-none focus:ring-2';
-  const bgClass = 'bg-slate-900/50 border-slate-700 text-slate-200 placeholder-slate-500';
+  // Mesma paleta do TextInput (.atom-input), claro e escuro por classe. So a
+  // variante escura existia: no tema claro o campo virava um bloco cinza-escuro.
+  const bgClass = 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 hover:border-slate-400 '
+    + 'dark:bg-slate-900/50 dark:border-slate-700/50 dark:text-slate-200 dark:placeholder-slate-500 dark:hover:border-slate-600';
   const errorClass = props.error ? 'border-red-500 focus:ring-red-500/20' : 'focus:border-blue-500 focus:ring-blue-500/20';
   const disabledClass = props.disabled ? 'opacity-50 cursor-not-allowed' : '';
   
