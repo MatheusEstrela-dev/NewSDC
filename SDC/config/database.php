@@ -56,6 +56,44 @@ $readWriteConfig = $replicaRouting ? [
     ],
 ] : [];
 
+// Conexao de um banco dedicado (geo, treinamento): host, porta e credenciais
+// por prefixo de env com heranca de DB_* (mesmo servidor por padrao); a
+// database NUNCA herda, para nao gravar dominio dedicado dentro do sdc. Sem
+// 'url' de proposito: DATABASE_URL aponta para o sdc e venceria os overrides.
+// Tabelas sempre com schema qualificado no codigo; search_path so public
+// (extensoes, ex.: PostGIS).
+$bancoDedicado = static fn (string $prefixo, string $database, string $sufixoApp, array $extra = []): array => array_replace([
+    'driver' => 'pgsql',
+    'host' => env("{$prefixo}_DB_HOST", env('DB_HOST', '127.0.0.1')),
+    'port' => env("{$prefixo}_DB_PORT", env('DB_PORT', '5432')),
+    'database' => env("{$prefixo}_DB_DATABASE", $database),
+    'username' => env("{$prefixo}_DB_USERNAME", env('DB_USERNAME', 'sdc')),
+    'password' => env("{$prefixo}_DB_PASSWORD", env('DB_PASSWORD', '')),
+    'charset' => 'utf8',
+    'prefix' => '',
+    'prefix_indexes' => true,
+    'search_path' => 'public',
+    'sslmode' => env("{$prefixo}_DB_SSLMODE", env('DB_SSLMODE', 'prefer')),
+    'sslrootcert' => env("{$prefixo}_DB_SSL_CA", env('DB_SSL_CA')) ?: null,
+    'application_name' => env('APP_NAME', 'sdc-laravel').'-'.$sufixoApp,
+    'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+    'options' => [
+        PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
+        PDO::ATTR_PERSISTENT => false,
+        PDO::ATTR_TIMEOUT => $pgConnectTimeout,
+    ],
+], $extra);
+
+// Leitura do geo nas replicas: so quando o banco geo esta no mesmo cluster do
+// sdc (as replicas fisicas carregam todos os bancos). Servidor proprio liga
+// com GEO_DB_READ_HOSTS.
+$geoReadHosts = array_values(array_filter(array_map('trim', explode(',', (string) env(
+    'GEO_DB_READ_HOSTS',
+    env('GEO_DB_HOST') === null ? env('DB_READ_HOSTS', '') : '',
+)))));
+$geoReplicaRouting = filter_var(env('GEO_DB_READ_ENABLED', env('DB_READ_ENABLED', false)), FILTER_VALIDATE_BOOLEAN)
+    && $geoReadHosts !== [];
+
 return [
 
     /*
@@ -86,6 +124,11 @@ return [
 
     'log_connection' => env('DB_LOG_CONNECTION', env('DB_CONNECTION', 'pgsql')),
 
+    // Mesmas regras da conexao de log (ver App\Support\Database\ConexaoSeparada):
+    // sem a env, o dominio segue na conexao default; com ela, banco proprio.
+    'geo_connection' => env('DB_GEO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
+    'treinamento_connection' => env('DB_TREINAMENTO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
+
     /*
     |--------------------------------------------------------------------------
     | Pools por coroutine (Octane/Swoole com hooks)
@@ -114,6 +157,69 @@ return [
             // critico durante a espera. Esgotou, o log vai para a fila.
             'timeout' => (float) env('SWOOLE_PG_LOG_POOL_TIMEOUT', 0.5),
             'warm' => filter_var(env('SWOOLE_PG_LOG_POOL_WARM', false), FILTER_VALIDATE_BOOLEAN),
+        ],
+        // Mapas e ingestao: leitura de GeoJSON pode esperar um pouco mais que log.
+        'pgsql_geo' => [
+            'size' => (int) env('SWOOLE_PG_GEO_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_GEO_POOL_TIMEOUT', 1.0),
+            'warm' => false,
+        ],
+        'pgsql_geo_read' => [
+            'size' => (int) env('SWOOLE_PG_GEO_READ_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_GEO_POOL_TIMEOUT', 1.0),
+            'warm' => false,
+            'read_size' => (int) env('SWOOLE_PG_GEO_REPLICA_POOL_SIZE', 1),
+        ],
+        // Login e catalogo do cidadao sao request critico: nao falhar rapido demais.
+        'pgsql_treinamento' => [
+            'size' => (int) env('SWOOLE_PG_TREINAMENTO_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_TREINAMENTO_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        'ranking' => [
+            'size' => (int) env('SWOOLE_PG_RANKING_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_RANKING_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        'ranking_read' => [
+            'size' => (int) env('SWOOLE_PG_RANKING_READ_POOL_SIZE', 3),
+            'timeout' => (float) env('SWOOLE_PG_RANKING_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        'ranking_source_ro' => [
+            'size' => (int) env('SWOOLE_PG_RANKING_SOURCE_POOL_SIZE', 2),
+            'timeout' => (float) env('SWOOLE_PG_RANKING_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Bancos dedicados
+    |--------------------------------------------------------------------------
+    |
+    | Bancos fora do sdc, provisionados por `db:provisionar` e migrados no boot
+    | (entrypoint.sh) com a pasta propria de migrations. 'chave' e a chave de
+    | troca acima: o banco so e usado quando ela aponta para a conexao; null =
+    | sempre separado (ranking). Roles e senhas ficam com o DBA, fora do codigo.
+    |
+    */
+
+    'bancos_dedicados' => [
+        'pgsql_geo' => [
+            'chave' => 'geo_connection',
+            'extensoes' => ['postgis'],
+            'migrations' => 'database/migrations/geoespacial',
+        ],
+        'pgsql_treinamento' => [
+            'chave' => 'treinamento_connection',
+            'extensoes' => [],
+            'migrations' => 'database/migrations/treinamento',
+        ],
+        'ranking' => [
+            'chave' => null,
+            'extensoes' => [],
+            'migrations' => 'database/migrations/ranking',
         ],
     ],
 
@@ -453,6 +559,34 @@ return [
         //
         // Split de leitura de verdade nao se faz aqui: seria um bloco
         // 'read'/'write' dentro da conexao 'pgsql', com 'sticky'.
+        // Banco sdc_geoespacial (medalhao por dominio). Escrita: ingestao,
+        // upsert silver, REFRESH das matviews. So usado com DB_GEO_CONNECTION.
+        'pgsql_geo' => $bancoDedicado('GEO', 'sdc_geoespacial', 'geo'),
+
+        // SELECT dos mapas. Role de leitura propria em producao
+        // (GEO_DB_READ_USERNAME); nas replicas quando houver.
+        'pgsql_geo_read' => $bancoDedicado('GEO', 'sdc_geoespacial', 'geo-read', array_filter([
+            'username' => env('GEO_DB_READ_USERNAME', env('GEO_DB_USERNAME', env('DB_USERNAME', 'sdc'))),
+            'password' => env('GEO_DB_READ_PASSWORD', env('GEO_DB_PASSWORD', env('DB_PASSWORD', ''))),
+            'replica_routing' => $geoReplicaRouting ?: null,
+            'sticky' => $geoReplicaRouting ?: null,
+            'read' => $geoReplicaRouting ? [
+                'host' => $geoReadHosts,
+                'read_only' => true,
+                'port' => env('GEO_DB_READ_PORT', env('DB_READ_PORT', env('DB_PORT', '5432'))),
+                'application_name' => env('APP_NAME', 'sdc-laravel').'-geo-reader',
+            ] : null,
+            'write' => $geoReplicaRouting ? [
+                'host' => env('GEO_DB_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('GEO_DB_PORT', env('DB_PORT', '5432')),
+            ] : null,
+        ], static fn ($valor): bool => $valor !== null)),
+
+        // Banco sdc_treinamento (schemas cadastro e treinamento): dado pessoal
+        // de cidadao (LGPD). Em producao role propria sdc_treinamento_app, sem
+        // acesso ao sdc. So usado com DB_TREINAMENTO_CONNECTION.
+        'pgsql_treinamento' => $bancoDedicado('TREINAMENTO', 'sdc_treinamento', 'treinamento'),
+
         'pgsql_ai' => [
             'driver' => 'pgsql',
             'host' => env('DB_PGSQL_HOST', env('DB_HOST', '127.0.0.1')),

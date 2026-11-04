@@ -20,11 +20,13 @@ use Throwable;
  * mesma sessao e na mesma transacao das operacoes.
  *
  * Com a chave ligada o log tem sessao propria, e gravar DENTRO de uma transacao
- * critica aberta quebraria de tres jeitos: FK que nao enxerga a linha ainda nao
- * commitada, espera de lock que a propria transacao segura, e log fantasma
- * depois de rollback. Por isso gravar() adia a escrita para depois do commit da
- * conexao default (rollback descarta o log, que e o correto: o log reflete o
- * que de fato aconteceu) e, se a escrita falhar, manda para a fila em vez de
+ * aberta de um modulo quebraria de tres jeitos: FK que nao enxerga a linha
+ * ainda nao commitada, espera de lock que a propria transacao segura, e log
+ * fantasma depois de rollback. O mesmo vale com a chave desligada quando o
+ * modulo transaciona em OUTRA conexao (treinamento, geo). Por isso gravar()
+ * adia a escrita para depois do commit da transacao aberta, de qualquer
+ * conexao (rollback descarta o log, que e o correto: o log reflete o que de
+ * fato aconteceu) e, com sessao propria, manda para a fila se falhar em vez de
  * derrubar o modulo.
  *
  * Contrato:
@@ -35,10 +37,11 @@ use Throwable;
  */
 final class ConexaoDeLog
 {
+    public const CHAVE = 'log_connection';
+
     public static function nome(): string
     {
-        // ?: e nao ??: DB_LOG_CONNECTION vazia no .env chega como string vazia.
-        return (string) (config('database.log_connection') ?: config('database.default'));
+        return ConexaoSeparada::de(self::CHAVE)->nome();
     }
 
     /**
@@ -46,17 +49,17 @@ final class ConexaoDeLog
      */
     public static function separada(): bool
     {
-        return self::nome() !== (string) config('database.default');
+        return ConexaoSeparada::de(self::CHAVE)->separada();
     }
 
     public static function conexao(): Connection
     {
-        return DB::connection(self::nome());
+        return ConexaoSeparada::de(self::CHAVE)->conexao();
     }
 
     public static function tabela(string $tabela): Builder
     {
-        return self::conexao()->table($tabela);
+        return ConexaoSeparada::de(self::CHAVE)->tabela($tabela);
     }
 
     /**
@@ -87,18 +90,24 @@ final class ConexaoDeLog
      */
     public static function gravar(callable $escrita, callable $pendencia): mixed
     {
-        // Mesma sessao: escrita direta, atomica com a operacao, sem engolir
-        // excecao. E o comportamento anterior a separacao.
-        if (! self::separada()) {
+        $separada = self::separada();
+
+        // Log na mesma sessao de uma transacao aberta: escrita direta, atomica
+        // com a operacao, sem engolir excecao. E o comportamento anterior a
+        // separacao (inclusive a transacao externa dos testes).
+        if (! $separada && self::conexao()->transactionLevel() > 0) {
             return $escrita();
         }
 
-        // afterCommit roda na hora quando nao ha transacao aplicavel (inclusive
-        // a transacao externa dos testes com DatabaseTransactions).
+        // afterCommit anexa a escrita a ultima transacao aberta de QUALQUER
+        // conexao (o gerenciador de transacoes e unico) e roda na hora quando
+        // nao ha nenhuma aplicavel.
         $resultado = null;
 
-        DB::connection()->afterCommit(function () use ($escrita, $pendencia, &$resultado): void {
-            $resultado = self::executarOuEnfileirar($escrita, $pendencia);
+        DB::connection()->afterCommit(function () use ($escrita, $pendencia, $separada, &$resultado): void {
+            $resultado = $separada
+                ? self::executarOuEnfileirar($escrita, $pendencia)
+                : $escrita();
         });
 
         return $resultado;

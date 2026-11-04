@@ -19,6 +19,17 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notificavel, HasRoles, HasHierarchy, SoftDeletes;
 
     /**
+     * Conexao explicita: User vive sempre no sdc. Sem isto, relacao vinda de
+     * model em outra conexao (log, treinamento, geo) faz o User herdar a
+     * conexao do pai -- MorphTo::createModelByType so respeita conexao ja
+     * definida -- e users seria lido pela sessao errada.
+     */
+    public function getConnectionName()
+    {
+        return $this->connection ?? config('database.default');
+    }
+
+    /**
      * Guard usado pelo Spatie Permission para resolver roles/permissões.
      * No NewSDC a UI usa sessão (guard "web"), então manter como "web" evita
      * mismatch (ex.: Gate::before -> hasRole('super-admin') retornando falso).
