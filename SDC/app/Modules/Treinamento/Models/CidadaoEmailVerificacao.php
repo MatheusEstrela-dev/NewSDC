@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Models;
 
 use App\Support\Auth\MagicCodeVerifiable;
+use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,8 +21,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CidadaoEmailVerificacao extends Model
 {
     use MagicCodeVerifiable;
+    use UsaConexaoDeTreinamento;
 
-    protected $table = 'cidadao_email_verificacoes';
+    protected $table = 'cadastro.cidadao_email_verificacoes';
 
     protected $fillable = [
         'cidadao_id',

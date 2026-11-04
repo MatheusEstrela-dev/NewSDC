@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento;
 
+use App\Modules\Treinamento\Console\CopiarParaBancoCommand;
 use Illuminate\Support\ServiceProvider;
 
 class TreinamentoServiceProvider extends ServiceProvider
@@ -27,5 +28,9 @@ class TreinamentoServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Rotas carregadas via routes/web.php -> routes/modules/treinamento.php
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([CopiarParaBancoCommand::class]);
+        }
     }
 }

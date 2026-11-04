@@ -9,6 +9,7 @@ use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use App\Modules\Treinamento\Enums\StatusFrequencia;
 use App\Modules\Treinamento\Enums\StatusInscricao;
+use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -19,8 +20,9 @@ class Inscricao extends Model
 {
     use SoftDeletes;
     use TrilhaNoProtocoloPai;
+    use UsaConexaoDeTreinamento;
 
-    protected $table = 'inscricoes';
+    protected $table = 'treinamento.inscricoes';
 
     protected $fillable = [
         'treinamento_id',

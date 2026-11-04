@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Models;
 
 use App\Modules\Notificacoes\Concerns\Notificavel;
+use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -18,9 +19,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
  */
 class Cidadao extends Authenticatable
 {
-    use HasFactory, Notificavel, SoftDeletes;
+    use HasFactory, Notificavel, SoftDeletes, UsaConexaoDeTreinamento;
 
-    protected $table = 'cidadaos';
+    protected $table = 'cadastro.cidadaos';
 
     protected $fillable = [
         'name',

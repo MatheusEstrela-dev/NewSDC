@@ -10,6 +10,7 @@ use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Treinamento\Enums\CategoriaTreinamento;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
+use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,9 +19,9 @@ use Illuminate\Support\Str;
 
 class Treinamento extends Model implements Rastreavel
 {
-    use SoftDeletes, TrilhaDeAcoes;
+    use SoftDeletes, TrilhaDeAcoes, UsaConexaoDeTreinamento;
 
-    protected $table = 'treinamentos';
+    protected $table = 'treinamento.treinamentos';
 
     protected $fillable = [
         'titulo',

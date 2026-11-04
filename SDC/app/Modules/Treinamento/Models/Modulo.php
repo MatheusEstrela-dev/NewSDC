@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Models;
 
+use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Modulo extends Model
 {
-    protected $table = 'modulos';
+    use UsaConexaoDeTreinamento;
+
+    protected $table = 'treinamento.modulos';
 
     protected $fillable = [
         'treinamento_id',
