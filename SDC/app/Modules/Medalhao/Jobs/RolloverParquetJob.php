@@ -6,6 +6,8 @@ namespace App\Modules\Medalhao\Jobs;
 
 use App\Modules\Medalhao\Contracts\ArquivadorBronze;
 use App\Modules\Medalhao\Models\IngestaoBruta;
+use App\Modules\Medalhao\Support\TabelasGeo;
+use App\Support\Database\Geo\DominioGeo;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -34,7 +36,14 @@ class RolloverParquetJob implements ShouldQueue
     {
         $corte = Carbon::now()->subDays((int) config('medalhao.retencao_dias'));
 
-        $grupos = IngestaoBruta::query()
+        foreach (TabelasGeo::dominiosComIngestao() as $dominio) {
+            $this->arquivarDominio($arquivador, $dominio, $corte);
+        }
+    }
+
+    private function arquivarDominio(ArquivadorBronze $arquivador, DominioGeo $dominio, Carbon $corte): void
+    {
+        $grupos = IngestaoBruta::doDominio($dominio)->newQuery()
             ->where('coletado_em', '<', $corte)
             ->selectRaw('fonte, date(coletado_em) AS dia')
             ->groupBy('fonte')
@@ -44,7 +53,7 @@ class RolloverParquetJob implements ShouldQueue
         foreach ($grupos as $grupo) {
             $dia = Carbon::parse($grupo->dia);
 
-            $registros = IngestaoBruta::query()
+            $registros = IngestaoBruta::doDominio($dominio)->newQuery()
                 ->where('fonte', $grupo->fonte)
                 ->whereRaw('date(coletado_em) = ?', [$dia->toDateString()])
                 ->orderBy('id')
@@ -73,7 +82,7 @@ class RolloverParquetJob implements ShouldQueue
             // cujo arquivo nao foi confirmado.
             $caminho = $arquivador->arquivar($grupo->fonte, $dia, $linhas);
 
-            IngestaoBruta::query()->whereIn('id', $registros->pluck('id'))->delete();
+            IngestaoBruta::doDominio($dominio)->newQuery()->whereIn('id', $registros->pluck('id'))->delete();
 
             Log::info('medalhao: bronze arquivado em parquet', [
                 'fonte' => $grupo->fonte,

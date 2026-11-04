@@ -10,7 +10,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Medalhao\Support\RefreshGold;
+use App\Modules\Medalhao\Support\TabelasGeo;
 
 class AtualizarGoldSismosJob implements ShouldQueue
 {
@@ -41,8 +42,7 @@ class AtualizarGoldSismosJob implements ShouldQueue
         // Exige o indice unico criado na migration, e nao pode rodar dentro de
         // transacao — por isso este job nao deve ser chamado de dentro de um
         // DB::transaction().
-        DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY gold.sismos_mapa');
-        DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY gold.sismos_estatisticas');
+        RefreshGold::executar(TabelasGeo::sismosMapa(), TabelasGeo::sismosEstatisticas());
 
         // Avisa DEPOIS do refresh, nao na ingestao: e o refresh que torna o dado
         // visivel. Avisar antes faria o cliente rebuscar o estado anterior e a
