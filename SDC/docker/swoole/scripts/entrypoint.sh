@@ -254,7 +254,10 @@ echo "vCores=$(nproc 2>/dev/null || echo '?'); workers=${WORKERS}; task-workers=
 # instancia. O teto e o max_connections do Postgres, COMPARTILHADO por todos.
 # Conta:
 #   (WORKERS * CONN_POR_WORKER + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
-#       + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE  <= PG_MAX_CONNECTIONS
+#       + LOG_CONN_PROJECTED + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE
+#       <= PG_MAX_CONNECTIONS
+# LOG_CONN_PROJECTED e a conexao de log (DB_LOG_CONNECTION=pgsql_log), com
+# sessao e pool proprios no MESMO servidor; zero enquanto o log segue na pgsql.
 # Descubra o real: psql -c 'SHOW max_connections;'  (dev = 100)
 #   az postgres flexible-server parameter show -g <rg> -s <srv> -n max_connections
 TASK_WORKERS="${OCTANE_TASK_WORKERS:-4}"
@@ -326,6 +329,34 @@ echo "Modo de conexao: ${MODO_CONN}"
 # se aplica mais -- e a descoberta disso acontece com a janela de deploy aberta.
 POOLER_MODE="${DB_POOLER_MODE:-}"
 
+# Conexao de log: so abre sessao propria quando DB_LOG_CONNECTION aponta para
+# outra conexao (pgsql_log). Do contrario o log usa a mesma sessao da pgsql e ja
+# esta na conta acima. Mesma forma da conta principal: 1 PDO por worker com
+# hooks OFF, o pool de log inteiro por worker com hooks ON, + tasks e filas.
+# Os consumidores externos (filas dedicadas, scheduler) tambem gravam log, entao
+# EXTERNAL_DB_CONSUMERS entra de novo aqui, uma vez, como nos leitores.
+# Pelo pooler so passa quando LOG_DB_HOST nao foi definido (herda DB_HOST); com
+# LOG_DB_HOST (homolog: direto no db) as sessoes caem direto no Postgres.
+LOG_CONN_NAME="${DB_LOG_CONNECTION:-}"
+LOG_CONN_PER_INSTANCE=0
+LOG_CONN_PROJECTED=0
+LOG_VIA_POOLER=false
+if [ -n "${LOG_CONN_NAME}" ]    && [ "${LOG_CONN_NAME}" != "${DB_CONNECTION:-pgsql}" ]    && [ "${LOG_CONN_NAME}" != "pgsql" ]; then
+    LOG_CONN_POR_WORKER=1
+    MODO_LOG="hooks OFF: 1 conexao/worker"
+    if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+        LOG_CONN_POR_WORKER="${SWOOLE_PG_LOG_POOL_SIZE:-4}"
+        require_uint SWOOLE_PG_LOG_POOL_SIZE "$LOG_CONN_POR_WORKER"
+        MODO_LOG="hooks ON: ${LOG_CONN_POR_WORKER} conexoes/worker"
+    fi
+    LOG_CONN_PER_INSTANCE=$(((WORKERS * LOG_CONN_POR_WORKER) + TASK_WORKERS + QUEUE_WORKERS))
+    LOG_CONN_PROJECTED=$((LOG_CONN_PER_INSTANCE * APP_INSTANCES + EXTERNAL_DB_CONSUMERS))
+    if [ -n "${POOLER_MODE}" ] && [ -z "${LOG_DB_HOST:-}" ]; then
+        LOG_VIA_POOLER=true
+    fi
+    echo "Conexao de log ${LOG_CONN_NAME} (${MODO_LOG}): ${LOG_CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas = ${LOG_CONN_PROJECTED}"
+fi
+
 if [ -n "${POOLER_MODE}" ]; then
     PGB_MAX_CLIENTES="${PGBOUNCER_MAX_CLIENT_CONN:-1000}"
     PGB_POOL_SIZE="${PGBOUNCER_DEFAULT_POOL_SIZE:-25}"
@@ -333,8 +364,15 @@ if [ -n "${POOLER_MODE}" ]; then
     require_uint PGBOUNCER_DEFAULT_POOL_SIZE "$PGB_POOL_SIZE"
 
     CONN_APP=$((CONN_PER_INSTANCE * APP_INSTANCES))
+    CLIENTES_LOG=""
+    if [ "${LOG_VIA_POOLER}" = "true" ]; then
+        # Log pelo pooler: sao clientes dele, e o pool_size abaixo ja os cobre.
+        CONN_APP=$((CONN_APP + LOG_CONN_PROJECTED))
+        CLIENTES_LOG=" + ${LOG_CONN_PROJECTED} log"
+        LOG_CONN_PROJECTED=0
+    fi
     echo "Pooler: DB_POOLER_MODE=${POOLER_MODE} -- o app conecta no PgBouncer, nao no Postgres."
-    echo "Clientes no pooler: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} = ${CONN_APP} (teto ${PGB_MAX_CLIENTES})"
+    echo "Clientes no pooler: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES}${CLIENTES_LOG} = ${CONN_APP} (teto ${PGB_MAX_CLIENTES})"
 
     if [ "${CONN_APP}" -gt "${PGB_MAX_CLIENTES}" ]; then
         echo "FATAL: clientes projetados (${CONN_APP}) excedem PGBOUNCER_MAX_CLIENT_CONN (${PGB_MAX_CLIENTES})."
@@ -350,9 +388,28 @@ else
     echo "Conexoes PG projetadas: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
 fi
 
+if [ "$LOG_CONN_PROJECTED" -gt 0 ]; then
+    CONN_SEM_LOG="${CONN_PROJECTED}"
+    CONN_PROJECTED=$((CONN_PROJECTED + LOG_CONN_PROJECTED))
+    echo "Split no Postgres: ${CONN_SEM_LOG} sdc + ${LOG_CONN_PROJECTED} log (${LOG_CONN_NAME}) = ${CONN_PROJECTED}"
+fi
+
 if [ "$READ_CONN_PROJECTED" -gt 0 ]; then
     CONN_PROJECTED=$((CONN_PROJECTED + READ_CONN_PROJECTED))
     echo "Reserva de leitores por membro: ${READ_CONN_PROJECTED}; teto combinado: ${CONN_PROJECTED}"
+fi
+
+# Sob hooks ON, conexao pgsql fora de database.coroutine_pools cai no manager
+# padrao: UM PDO por worker compartilhado entre coroutines (o protocolo do
+# Postgres corrompe com duas queries simultaneas) e fora da conta acima. Le o
+# config ja cacheado (config:cache acima): array puro, sem subir a aplicacao.
+if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ] && [ -f bootstrap/cache/config.php ]; then
+    PG_SEM_POOL=$(php -r '$c = require "bootstrap/cache/config.php"; $d = $c["database"] ?? []; $p = $d["coroutine_pools"] ?? []; $f = []; foreach (($d["connections"] ?? []) as $n => $x) { if (($x["driver"] ?? "") === "pgsql" && ! isset($p[$n])) { $f[] = $n; } } echo implode(",", $f);' 2>/dev/null || true)
+    if [ -n "${PG_SEM_POOL}" ]; then
+        echo "AVISO: hooks ON com conexoes pgsql fora de database.coroutine_pools: ${PG_SEM_POOL}."
+        echo "       Usadas dentro de coroutine, dividem 1 PDO por worker entre coroutines e nao"
+        echo "       entram na conta acima. Liste-as em coroutine_pools ou use so fora de coroutine."
+    fi
 fi
 
 if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
@@ -371,6 +428,16 @@ if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
                 echo "       o orcamento e pool_size x workers <= ${PG_MAX_CONNECTIONS} - ${EXTERNAL_DB_CONSUMERS} - ${PG_ADMIN_RESERVE} - ${TASK_WORKERS}."
                 echo "       Alternativa: OCTANE_HOOK_FLAGS_ENABLED=false volta a 1 conexao/worker."
             fi
+        fi
+        if [ "${LOG_CONN_PROJECTED}" -gt 0 ]; then
+            echo "       A conexao de log soma ${LOG_CONN_PROJECTED} sessoes diretas no Postgres."
+            if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+                echo "       Sob hooks ON reduza SWOOLE_PG_LOG_POOL_SIZE (hoje ${LOG_CONN_POR_WORKER}) -- cada"
+                echo "       unidade a menos libera ${WORKERS} x ${APP_INSTANCES} conexoes."
+            fi
+            echo "       Ou volte o log para a sessao da pgsql tirando DB_LOG_CONNECTION."
+        fi
+        if [ -z "${POOLER_MODE}" ]; then
             echo "       Alternativa estrutural: DB_POOLER_MODE=transaction com PgBouncer, que"
             echo "       desacopla numero de workers de numero de conexoes no banco."
         fi

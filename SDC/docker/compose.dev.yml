@@ -181,12 +181,19 @@ services:
       # A conta que ele faz:
       #   (WORKERS + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
       #       + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE <= PG_MAX_CONNECTIONS
-      #   (40 + 16 + 0) * 1 + 16 + 5 = 77 <= 100
+      #   (40 + 16 + 0) * 1 + 16 + 5 = 77
+      #
+      # Com DB_LOG_CONNECTION=pgsql_log o log ganha sessao propria no mesmo
+      # Postgres e a conta soma a mesma forma mais uma vez (sem reserva):
+      #   77 + ((40 + 16 + 0) * 1 + 16) = 149 <= 200
+      # Por isso o db sobe com max_connections=200 (ver servico db); sem a
+      # conexao de log a projecao continua 77.
       #
       # Com isso um OCTANE_WORKERS excessivo aborta o boot com mensagem clara em
       # vez de degradar em producao. Foi o que faltou para 80 workers: a projecao
-      # daria 118 e o gate barraria.
-      PG_MAX_CONNECTIONS: 100
+      # daria 118 e, com o teto antigo de 100, o gate barraria (com o log ligado
+      # daria 214, acima ate do teto de 200).
+      PG_MAX_CONNECTIONS: 200
       # Seis consumidores, scheduler e folga para conexoes nomeadas de jobs.
       # Somados uma vez, nao por replica HTTP.
       EXTERNAL_DB_CONSUMERS: 16
@@ -787,8 +794,13 @@ services:
     # existe resposta para "qual consulta esta segurando o worker" -- e a primeira
     # coisa que se olha quando a aplicacao trava. Nao se diagnostica o que nao se
     # mede, e ligar depois exige restart do cluster (shared_preload_libraries).
+    #
+    # max_connections=200 (default 100): com a conexao de log ligada a projecao
+    # do guardrail do app chega a 149 (ver PG_MAX_CONNECTIONS no servico app).
+    # Os dois numeros andam juntos; mudar um exige mudar o outro.
     command: >
       postgres
+      -c max_connections=200
       -c shared_preload_libraries=pg_stat_statements
       -c pg_stat_statements.track=all
       -c pg_stat_statements.max=10000

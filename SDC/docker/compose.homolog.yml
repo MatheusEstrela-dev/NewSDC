@@ -69,6 +69,16 @@ x-ranking-env: &ranking-env
   RESGATE_PERMITIR_DEMONSTRACAO: "true"
   RANKING_SOURCE_SSLMODE: disable
 
+# Conexao de log (pgsql_log), UMA vez so, herdada por app, filas, scheduler e
+# reverb. Direto no db e nunca pelo PgBouncer: o pooler so conhece o `sdc` da
+# conexao critica, e a sessao de log tem orcamento proprio no guardrail do
+# entrypoint (que, com LOG_DB_HOST definido, conta essas sessoes no Postgres).
+# So define o destino: o log continua na pgsql ate DB_LOG_CONNECTION=pgsql_log
+# ser ligado de proposito (virada por ambiente, ver config/database.php).
+x-log-db-env: &log-db-env
+  LOG_DB_HOST: ${LOG_DB_TARGET_HOST:-db}
+  LOG_DB_PORT: ${LOG_DB_TARGET_PORT:-5432}
+
 # E-mail real pelo SMTP da Prodemge, com credenciais do docker/.env. Ate
 # 2026-10-09 o homolog usava MAIL_MAILER=log e o mailer de log escreve em
 # nivel debug, abaixo do minimo info dos canais: a redefinicao de senha
@@ -245,7 +255,7 @@ services:
       DB_SSLMODE: disable
 
       # Ranking: ver a ancora x-ranking-env no topo do arquivo.
-      <<: [*ranking-env, *diretorio-env, *mail-env]
+      <<: [*ranking-env, *diretorio-env, *mail-env, *log-db-env]
       DB_POOLER_MODE: ${DB_POOLER_MODE:-}
 
       # Lidos pelo guardrail do entrypoint quando DB_POOLER_MODE esta setado.
@@ -381,7 +391,7 @@ services:
       REVERB_HOST: reverb
       REVERB_PORT: "8080"
       REVERB_SCHEME: http
-      <<: *mail-env
+      <<: [*mail-env, *log-db-env]
 
     # A imagem traz um HEALTHCHECK que bate em localhost:8000/health -- correto
     # para o app, errado aqui: este container nao serve HTTP. Sem sobrescrever,
@@ -463,7 +473,7 @@ services:
       REVERB_HOST: reverb
       REVERB_PORT: "8080"
       REVERB_SCHEME: http
-      <<: *mail-env
+      <<: [*mail-env, *log-db-env]
       # Sem o token, config/medalhao.php:53 fica nulo e o InmetApiClient falha
       # em toda coleta. E o unico servico do homolog que precisa dele -- o app
       # nao chama a API do INMET, quem chama sao os jobs desta fila.
@@ -836,6 +846,7 @@ services:
       REVERB_APP_ID: ${REVERB_APP_ID:-}
       REVERB_APP_KEY: ${REVERB_APP_KEY:-}
       REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      <<: *log-db-env
       REVERB_SERVER_HOST: 0.0.0.0
       REVERB_SERVER_PORT: "8080"
       REDIS_CLIENT: phpredis

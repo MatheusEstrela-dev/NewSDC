@@ -28,6 +28,10 @@ x-ha-client-environment: &ha-client-environment
   RANKING_DB_PORT: 6434
   RANKING_SOURCE_HOST: db,db_replica_1,db_replica_2
   RANKING_SOURCE_PORT: 6434
+  # Conexao de log segue o primario pelo mesmo multi-host do Patroni; sem isto
+  # herdaria LOG_DB_HOST=db da homolog e quebraria no failover.
+  LOG_DB_HOST: db,db_replica_1,db_replica_2
+  LOG_DB_PORT: 6434
 
 x-patroni-environment: &patroni-environment
   PATRONI_SCOPE: ${PATRONI_SCOPE:-sdc-homolog}
