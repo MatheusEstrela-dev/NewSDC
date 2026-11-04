@@ -155,9 +155,9 @@ class NotificacaoInboxController extends Controller
     /**
      * Esvazia o sino de quem pediu.
      *
-     * ARQUIVA, nao apaga: as linhas vao para notifications_archive, mesma
-     * tratativa do notificacoes:arquivar e do padrao do projeto de preservar
-     * para auditoria. O sino fica limpo, o historico continua consultavel.
+     * ARQUIVA, nao apaga: as linhas vao para notifications_archive e ficam
+     * consultaveis por 90 dias, quando o log:podar as remove
+     * (config/retencao.php). O sino fica limpo na hora.
      *
      * Escopo pelo `base($request)`, que ja recorta pelo destinatario -- nao ha
      * caminho aqui para limpar a caixa de outra pessoa.

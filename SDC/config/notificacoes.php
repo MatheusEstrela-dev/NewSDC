@@ -290,21 +290,7 @@ return [
         'backoff_segundos' => [10, 30, 60],
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Retencao
-    |--------------------------------------------------------------------------
-    |
-    | Nada e apagado: passados os dias abaixo, a notificacao sai de notifications
-    | e vai para notifications_archive (comando notificacoes:arquivar, agendado em
-    | app/Console/Kernel.php). Mesma tratativa do webhooks:archive.
-    |
-    | A tabela operacional fica pequena, o que mantem o badge e o inbox rapidos, e
-    | o historico continua auditavel no arquivo.
-    |
-    */
-    'retencao' => [
-        'dias_para_arquivar' => 90,
-    ],
+    // Retencao: fica em config/retencao.php (log:podar). A lida e apagada
+    // depois de 90 dias; a nao lida nunca.
 
 ];
