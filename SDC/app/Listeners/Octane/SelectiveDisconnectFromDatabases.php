@@ -12,6 +12,11 @@ class SelectiveDisconnectFromDatabases
      * Conexoes que mudam por request (tenancy dinamica, ETL ad-hoc).
      * Devem ser desconectadas ao fim de cada operacao para evitar
      * vazamento de estado entre requests no mesmo worker Octane.
+     *
+     * pgsql_log fica de fora de proposito: e uma conexao fixa (mesmo banco,
+     * sessao propria) e deve manter um PDO quente por worker. Desconectar a
+     * cada request recolocaria handshake/TLS no caminho de toda gravacao de
+     * log e multiplicaria conexoes curtas contra o teto da role de log.
      */
     private const CONEXOES_VOLATEIS = ['tenancy', 'legacy', 'carga'];
 

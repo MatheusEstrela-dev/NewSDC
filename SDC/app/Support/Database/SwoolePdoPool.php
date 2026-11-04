@@ -26,7 +26,7 @@ use Swoole\Coroutine\Channel;
  *  - hooking de pdo_pgsql sob coroutine depende da versao do Swoole; medir.
  *  - TLS da Azure no PDO do pool deve ser confirmado por load-test.
  */
-final class SwoolePdoPool
+final class SwoolePdoPool implements PdoPool
 {
     private Channel $channel;
 
@@ -39,12 +39,14 @@ final class SwoolePdoPool
         private readonly array $config,
         private readonly int $size,
         private readonly float $timeout,
+        private readonly string $label,
     ) {
         $this->channel = new Channel($size);
     }
 
     /**
      * Constroi o pool a partir de uma conexao pgsql definida em config/database.
+     * O nome da conexao vira o label do pool.
      */
     public static function fromConnection(string $connection = 'pgsql', int $size = 16, float $timeout = 3.0): self
     {
@@ -54,10 +56,10 @@ final class SwoolePdoPool
             throw new RuntimeException("SwoolePdoPool suporta apenas conexoes pgsql; '{$connection}' invalida.");
         }
 
-        return self::fromConfig($config, $size, $timeout);
+        return self::fromConfig($config, $size, $timeout, $connection);
     }
 
-    public static function fromConfig(array $config, int $size = 16, float $timeout = 3.0): self
+    public static function fromConfig(array $config, int $size = 16, float $timeout = 3.0, string $label = 'pgsql'): self
     {
         if (($config['driver'] ?? null) !== 'pgsql') {
             throw new RuntimeException('SwoolePdoPool suporta apenas conexoes pgsql.');
@@ -75,7 +77,13 @@ final class SwoolePdoPool
             $config,
             max(1, $size),
             max(0.001, $timeout),
+            $label,
         );
+    }
+
+    public function label(): string
+    {
+        return $this->label;
     }
 
     public function capacity(): int
@@ -171,7 +179,7 @@ final class SwoolePdoPool
 
         $pdo = $this->channel->pop($this->timeout);
         if ($pdo === false) {
-            throw new \App\Exceptions\PoolEsgotado('pgsql', 'SwoolePdoPool esgotado (timeout no acquire).');
+            throw new \App\Exceptions\PoolEsgotado($this->label, "SwoolePdoPool '{$this->label}' esgotado (timeout no acquire).");
         }
 
         return $pdo;

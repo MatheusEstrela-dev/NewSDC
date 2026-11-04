@@ -32,7 +32,9 @@ return [
         // Excedido, novas requests entram em fila no semáforo até acquire_wait_ms.
         'max_concurrent' => (int) env('DB_MAX_CONCURRENT', 100),
 
-        // Limite separado para jobs de webhook (conexão pgsql_webhook).
+        // Limite separado para jobs de webhook. Ainda nao ligado a nenhum
+        // semaforo; webhook e demais logs usam a conexao de log (pgsql_log,
+        // ver database.log_connection), que substituiu a antiga pgsql_webhook.
         'max_concurrent_webhook' => (int) env('DB_MAX_CONCURRENT_WEBHOOK', 20),
 
         // Tempo máximo (ms) que o semáforo espera por slot livre antes de retornar 503.
@@ -65,6 +67,15 @@ return [
 
             // Após abrir, tempo (segundos) até tentar half-open.
             'reset_timeout_seconds' => (int) env('DB_CB_RESET_S', 30),
+
+            // Conexoes cujas queries contam para o breaker. So a critica: a de
+            // log (pgsql_log) tem pool e sessao proprios, e uma query lenta de
+            // log nao deve derrubar o trafego dos modulos. Lista separada por
+            // virgula em DB_CB_CONNECTIONS.
+            'connections' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('DB_CB_CONNECTIONS', 'pgsql'))
+            ))),
         ],
     ],
 
