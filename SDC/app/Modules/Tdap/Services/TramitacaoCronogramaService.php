@@ -89,7 +89,9 @@ class TramitacaoCronogramaService
      * Acoes que esta pessoa pode tomar agora, com o motivo quando bloqueada.
      * O front so desenha o que vem daqui, para a regra nao morar em dois lugares.
      *
-     * @return list<array{value: string, label: string, exige_observacao: bool, bloqueio: ?string}>
+     * `aviso` (so em Aprovar): o que a ativacao vai recusar, informativo.
+     *
+     * @return list<array{value: string, label: string, exige_observacao: bool, bloqueio: ?string, aviso: ?string}>
      */
     public function acoesDisponiveis(Cronograma $cronograma, ?User $user): array
     {
@@ -113,11 +115,19 @@ class TramitacaoCronogramaService
                 [, $bloqueio] = $this->cronogramas->podeAtivar($cronograma);
             }
 
+            // Aprovar nao exige o que a ativacao exige, mas aprovar um
+            // cronograma que a ativacao vai recusar so empurra o problema para
+            // o gestor. O aviso mostra a pendencia sem impedir a aprovacao.
+            $aviso = $acao === AcaoTramite::Aprovar
+                ? $this->cronogramas->pendenciaParaAtivar($cronograma)
+                : null;
+
             $acoes[] = [
                 'value'            => $acao->value,
                 'label'            => $acao->label(),
                 'exige_observacao' => $acao->exigeObservacao(),
                 'bloqueio'         => $bloqueio,
+                'aviso'            => $aviso,
             ];
         }
 

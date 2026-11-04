@@ -44,14 +44,17 @@ class CronogramaRelatorioService
             ->orderBy('data_registro')
             ->orderBy('id')
             ->get()
-            ->map(function (CronoViagem $v): array {
+            ->map(function (CronoViagem $v) use ($valorM3): array {
                 $caminhao = $v->cronoCaminhao?->caminhao;
+                // Aprovada usa o que foi gravado na aprovacao; as demais, o cadastro.
+                $m3 = (float) ($v->capacidade_m3 ?? $caminhao?->capacidade_m3 ?? 0);
 
                 return [
                     'id'                 => $v->id,
                     'data'               => $v->data_registro?->toDateString(),
                     'placa'              => $caminhao?->placa,
-                    'm3'                 => (float) ($caminhao?->capacidade_m3 ?? 0),
+                    'm3'                 => $m3,
+                    'valor'              => round($m3 * (float) ($v->valor_m3 ?? $valorM3), 2),
                     'status'             => $v->status,
                     'status_confirmacao' => $v->status_confirmacao,
                     'validador'          => $v->validador?->name,
@@ -77,7 +80,7 @@ class CronogramaRelatorioService
 
         if ($perspectiva === 'cedec') {
             $resumo['valor_m3'] = $valorM3;
-            $resumo['valor_aprovado'] = round($m3Aprovado * $valorM3, 2);
+            $resumo['valor_aprovado'] = round((float) $aprovadas->sum('valor'), 2);
         }
 
         $diario = $viagens->groupBy('data')->map(fn ($doDia, $data) => [
@@ -93,7 +96,10 @@ class CronogramaRelatorioService
             'resumo'      => $resumo,
             'diario'      => $diario,
             // A Copasa olha captacao, nao o atesto de cada viagem.
-            'viagens'     => $perspectiva === 'copasa' ? [] : $viagens->values()->all(),
+            // O valor por viagem e so da CEDEC, como o valor_aprovado do resumo.
+            'viagens'     => $perspectiva === 'copasa' ? [] : $viagens
+                ->map(fn (array $v) => $perspectiva === 'cedec' ? $v : array_diff_key($v, ['valor' => true]))
+                ->values()->all(),
         ];
     }
 }

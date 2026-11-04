@@ -47,7 +47,8 @@ class TdapExportBiService
                 'a.numero as ata_numero',
                 'l.id as lote_id',
                 'l.numero as lote_numero',
-                'l.valor_m3',
+                // Valor e capacidade gravados na aprovacao; sem eles, o cadastro.
+                DB::raw('COALESCE(v.valor_m3, l.valor_m3) AS valor_m3'),
                 'm.id as municipio_id',
                 'm.nome as municipio_nome',
                 'm.uf as municipio_uf',
@@ -56,7 +57,7 @@ class TdapExportBiService
                 'p.cnpj as prestador_cnpj',
                 'cam.id as caminhao_id',
                 'cam.placa as caminhao_placa',
-                'cam.capacidade_m3',
+                DB::raw('COALESCE(v.capacidade_m3, cam.capacidade_m3) AS capacidade_m3'),
             ]);
 
         if ($de = $filtros['de'] ?? null) {

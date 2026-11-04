@@ -108,7 +108,6 @@ class RecalcularEntregasTdapCommand extends Command
     {
         return CronoCaminhao::query()
             ->with([...CronoCaminhaoService::relacoesDaEntrega(), 'cronograma:id,numero,lote_id'])
-            ->withCount('viagensValidadas')
             // Cronograma excluido fica como esta: sem ele o lote some e o R$ zeraria.
             ->whereHas('cronograma')
             ->when($this->option('cronograma'), fn ($q, $id) => $q->where('cronograma_id', (int) $id))

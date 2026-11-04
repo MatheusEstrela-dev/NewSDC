@@ -15,6 +15,7 @@ use App\Modules\Tdap\Requests\UpdateLoteRequest;
 use App\Modules\Tdap\Resources\LoteIndexResource;
 use App\Modules\Tdap\Resources\LoteResource;
 use App\Modules\Tdap\Services\LoteService;
+use App\Modules\Tdap\Support\ExportadorCsv;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -52,28 +53,8 @@ class LoteController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $filtros = $request->only(['ativo', 'ata_id', 'municipio_id', 'prestador_id', 'search']);
-        $data = $this->service->exportar($filtros);
-
-        $filename = 'lotes_'.now()->format('Y-m-d_H-i-s').'.csv';
-
-        return response()->streamDownload(function () use ($data): void {
-            $handle = fopen('php://output', 'w');
-
-            // BOM UTF-8 para Excel reconhecer acentuacao.
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            if (! empty($data)) {
-                fputcsv($handle, array_keys($data[0]), ';');
-            }
-
-            foreach ($data as $row) {
-                fputcsv($handle, array_values($row), ';');
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        // ExportadorCsv neutraliza celula que o Excel leria como formula.
+        return ExportadorCsv::baixar($this->service->exportar($filtros), 'lotes');
     }
 
     public function create(Request $request): Response

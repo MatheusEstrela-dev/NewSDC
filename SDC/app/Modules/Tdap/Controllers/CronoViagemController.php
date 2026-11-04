@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Municipio;
 use App\Modules\Tdap\Domain\Exceptions\ViagemForaDoLimiteException;
 use App\Modules\Tdap\DTOs\CronoViagemDTO;
+use App\Modules\Tdap\Models\CronoCaminhao;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Requests\ConfirmarViagensRequest;
 use App\Modules\Tdap\Requests\ReprovarViagensRequest;
@@ -129,6 +130,12 @@ class CronoViagemController extends Controller
 
     public function store(StoreCronoViagemRequest $request): RedirectResponse
     {
+        // O municipio vem da alocacao escolhida, nao do corpo: quem e lotado
+        // num municipio nao lanca viagem no cronograma de outro.
+        $alocacao = CronoCaminhao::query()->with('cronograma:id,municipio_id')
+            ->find((int) $request->validated('crono_caminhao_id'));
+        EscopoDeLeitura::garantir($request->user(), $alocacao?->cronograma?->municipio_id);
+
         try {
             $viagem = $this->service->registrar(CronoViagemDTO::fromRequest($request->validated()));
             $cronogramaId = $viagem->cronoCaminhao?->cronograma_id;
