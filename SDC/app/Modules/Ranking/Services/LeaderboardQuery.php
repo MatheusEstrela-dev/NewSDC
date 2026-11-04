@@ -6,8 +6,8 @@ namespace App\Modules\Ranking\Services;
 
 use App\Modules\Ranking\DTOs\FiltroPlacar;
 use App\Modules\Ranking\Enums\FaixaRanking;
+use App\Modules\Ranking\Support\ResolveConexaoPorUso;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
-use Illuminate\Database\ConnectionInterface;
 
 /**
  * Consulta paginada do placar. CAMINHO DE LEITURA, somente leitura.
@@ -66,10 +66,12 @@ use Illuminate\Database\ConnectionInterface;
  */
 class LeaderboardQuery
 {
+    use ResolveConexaoPorUso;
+
     private const PREFIXO_CACHE = 'ranking:placar';
 
     public function __construct(
-        private readonly ConnectionInterface $conexao,
+        private readonly string $nomeConexao,
         private readonly ?CacheRepository $cache = null,
         private readonly int $cacheSegundos = 0,
     ) {}
@@ -114,7 +116,7 @@ class LeaderboardQuery
              WHERE entidade_id = :entidade_id
             SQL;
 
-        $linha = $this->conexao->selectOne(
+        $linha = $this->conexao()->selectOne(
             $sql,
             $this->bindingsBase($filtro) + ['entidade_id' => $entidadeId],
         );
@@ -161,7 +163,7 @@ class LeaderboardQuery
              LIMIT :limite OFFSET :deslocamento
             SQL;
 
-        $registros = $this->conexao->select(
+        $registros = $this->conexao()->select(
             $sql,
             $this->bindingsBase($filtro) + [
                 'limite' => $filtro->porPagina,

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Ranking\Services;
 
 use App\Modules\Ranking\Enums\EscopoPlacar;
-use Illuminate\Database\ConnectionInterface;
+use App\Modules\Ranking\Support\ResolveConexaoPorUso;
 use RuntimeException;
 
 /**
@@ -44,6 +44,8 @@ use RuntimeException;
  */
 final class CompararSnapshots
 {
+    use ResolveConexaoPorUso;
+
     public const SITUACAO_SUBIU = 'subiu';
 
     public const SITUACAO_DESCEU = 'desceu';
@@ -63,7 +65,7 @@ final class CompararSnapshots
     public const MOTIVO_MESMO_SNAPSHOT = 'mesmo_snapshot';
 
     public function __construct(
-        private readonly ConnectionInterface $conexao,
+        private readonly string $nomeConexao,
     ) {}
 
     /**
@@ -232,7 +234,7 @@ final class CompararSnapshots
      */
     private function itens(int $snapshotId): array
     {
-        $registros = $this->conexao->select(
+        $registros = $this->conexao()->select(
             <<<'SQL'
                 SELECT i.entidade_id, i.pontos, i.posicao, i.faixa
                   FROM ranking.snapshot_itens i
@@ -261,7 +263,7 @@ final class CompararSnapshots
      */
     private function cabecalho(int $snapshotId): ?array
     {
-        $linha = $this->conexao->selectOne(
+        $linha = $this->conexao()->selectOne(
             <<<'SQL'
                 SELECT s.id, s.periodo_id, s.escopo, s.revisao, s.geracao,
                        s.ledger_watermark, p.chave, p.tipo
@@ -293,7 +295,7 @@ final class CompararSnapshots
             throw new RuntimeException('A revisao do snapshot comeca em 1.');
         }
 
-        $linha = $this->conexao->selectOne(
+        $linha = $this->conexao()->selectOne(
             <<<'SQL'
                 SELECT s.id
                   FROM ranking.snapshots s
@@ -311,7 +313,7 @@ final class CompararSnapshots
 
     private function idDaUltimaRevisao(string $periodoChave, EscopoPlacar $escopo): ?int
     {
-        $linha = $this->conexao->selectOne(
+        $linha = $this->conexao()->selectOne(
             <<<'SQL'
                 SELECT s.id
                   FROM ranking.snapshots s

@@ -6,8 +6,7 @@ namespace App\Modules\Ranking\Services;
 
 use App\Modules\Ranking\Enums\EscopoPlacar;
 use App\Modules\Ranking\Support\LivroAgregado;
-use Illuminate\Database\ConnectionInterface;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Ranking\Support\ResolveConexaoPorUso;
 
 /**
  * CONCILIACAO: livro contra projecao. So compara - corrigir e ato explicito.
@@ -39,6 +38,8 @@ use Illuminate\Support\Facades\DB;
  */
 class ReconcileLeaderboard
 {
+    use ResolveConexaoPorUso;
+
     /** Conexao dedicada. Nunca herda a conexao default. */
     public const CONEXAO = RecordScoreTransaction::CONEXAO;
 
@@ -49,7 +50,7 @@ class ReconcileLeaderboard
     public const LOCK_PUBLICACAO = 1919247470;
 
     public function __construct(
-        private readonly ?ConnectionInterface $conexao = null,
+        private readonly string $nomeConexao = self::CONEXAO,
     ) {}
 
     /**
@@ -255,8 +256,4 @@ class ReconcileLeaderboard
         return max(1, min($limite, 10000));
     }
 
-    private function conexao(): ConnectionInterface
-    {
-        return $this->conexao ?? DB::connection(self::CONEXAO);
-    }
 }
