@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Medalhao;
 
+use App\Modules\Medalhao\Console\CopiarParaBancoGeoCommand;
 use App\Modules\Medalhao\Console\IngerirCommand;
 use App\Modules\Medalhao\Console\RollupCommand;
+use App\Modules\Medalhao\Console\SincronizarReferenciaCommand;
 use App\Modules\Medalhao\Contracts\ArquivadorBronze;
 use App\Modules\Medalhao\Infrastructure\FlowParquetArquivador;
 use App\Modules\Medalhao\Registry\IngestorRegistry;
@@ -29,6 +31,8 @@ class MedalhaoServiceProvider extends ServiceProvider
             $this->commands([
                 IngerirCommand::class,
                 RollupCommand::class,
+                CopiarParaBancoGeoCommand::class,
+                SincronizarReferenciaCommand::class,
             ]);
         }
     }

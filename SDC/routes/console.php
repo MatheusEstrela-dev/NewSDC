@@ -154,6 +154,13 @@ Schedule::command('geoespacial:arquivar-vencidas')
     ->onOneServer()
     ->runInBackground();
 
+// Copia diaria dos municipios do sdc para referencia.municipios do geoespacial.
+// Antes do rollup e do arquivamento de camadas, que leem essa copia.
+Schedule::command('geoespacial:sincronizar-referencia')
+    ->dailyAt('03:30')
+    ->onOneServer()
+    ->runInBackground();
+
 // Arquiva o Bronze vencido em Parquet e poda o Postgres. A poda so ocorre apos a
 // escrita ser verificada — ver RolloverParquetJob.
 Schedule::command('medalhao:rollup')
