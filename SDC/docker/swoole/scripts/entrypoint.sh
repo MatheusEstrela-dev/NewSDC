@@ -154,6 +154,17 @@ fi
 echo "Executando migrations..."
 php artisan migrate --force --isolated || echo "Aviso: Erro ao executar migrations"
 
+# Bancos dedicados ATIVOS: criar o banco/extensoes e migrar no proprio caminho.
+# Nao fatal: se um banco dedicado falhar, os modulos criticos sobem do mesmo
+# jeito e so o modulo dedicado fica sem schema. Roda depois do migrate do sdc
+# porque nenhum banco dedicado e pre-requisito dele.
+php artisan db:bancos-dedicados --ativos --formato=linhas 2>/dev/null | while IFS='|' read -r BANCO_CONEXAO BANCO_MIGRATIONS; do
+    [ -n "${BANCO_CONEXAO}" ] || continue
+    echo "Banco dedicado ${BANCO_CONEXAO}: provisionando e migrando..."
+    php artisan db:provisionar "${BANCO_CONEXAO}" --isolated < /dev/null || echo "Aviso: Erro ao provisionar ${BANCO_CONEXAO}"
+    php artisan migrate --database="${BANCO_CONEXAO}" --path="${BANCO_MIGRATIONS}" --force --isolated < /dev/null || echo "Aviso: Erro ao migrar ${BANCO_CONEXAO}"
+done
+
 # Seeders de dados mock apenas quando SEED_MOCK_DATA=true. Sao idempotentes
 # (updateOrCreate): rodar em todo restart de producao RESETARIA as senhas dos
 # usuarios mock para o default, reabrindo credenciais conhecidas. Em ambiente
@@ -254,10 +265,11 @@ echo "vCores=$(nproc 2>/dev/null || echo '?'); workers=${WORKERS}; task-workers=
 # instancia. O teto e o max_connections do Postgres, COMPARTILHADO por todos.
 # Conta:
 #   (WORKERS * CONN_POR_WORKER + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
-#       + LOG_CONN_PROJECTED + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE
+#       + <BANCO>_CONN_PROJECTED + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE
 #       <= PG_MAX_CONNECTIONS
-# LOG_CONN_PROJECTED e a conexao de log (DB_LOG_CONNECTION=pgsql_log), com
-# sessao e pool proprios no MESMO servidor; zero enquanto o log segue na pgsql.
+# <BANCO>_CONN_PROJECTED soma as conexoes dedicadas (log, geo, treinamento,
+# ranking), com sessao e pool proprios no MESMO servidor; zero enquanto o
+# modulo segue na pgsql.
 # Descubra o real: psql -c 'SHOW max_connections;'  (dev = 100)
 #   az postgres flexible-server parameter show -g <rg> -s <srv> -n max_connections
 TASK_WORKERS="${OCTANE_TASK_WORKERS:-4}"
@@ -329,33 +341,71 @@ echo "Modo de conexao: ${MODO_CONN}"
 # se aplica mais -- e a descoberta disso acontece com a janela de deploy aberta.
 POOLER_MODE="${DB_POOLER_MODE:-}"
 
-# Conexao de log: so abre sessao propria quando DB_LOG_CONNECTION aponta para
-# outra conexao (pgsql_log). Do contrario o log usa a mesma sessao da pgsql e ja
-# esta na conta acima. Mesma forma da conta principal: 1 PDO por worker com
-# hooks OFF, o pool de log inteiro por worker com hooks ON, + tasks e filas.
-# Os consumidores externos (filas dedicadas, scheduler) tambem gravam log, entao
-# EXTERNAL_DB_CONSUMERS entra de novo aqui, uma vez, como nos leitores.
-# Pelo pooler so passa quando LOG_DB_HOST nao foi definido (herda DB_HOST); com
-# LOG_DB_HOST (homolog: direto no db) as sessoes caem direto no Postgres.
-LOG_CONN_NAME="${DB_LOG_CONNECTION:-}"
-LOG_CONN_PER_INSTANCE=0
-LOG_CONN_PROJECTED=0
-LOG_VIA_POOLER=false
-if [ -n "${LOG_CONN_NAME}" ]    && [ "${LOG_CONN_NAME}" != "${DB_CONNECTION:-pgsql}" ]    && [ "${LOG_CONN_NAME}" != "pgsql" ]; then
-    LOG_CONN_POR_WORKER=1
-    MODO_LOG="hooks OFF: 1 conexao/worker"
+# Conexoes dedicadas (log, geo, treinamento, ranking): so abrem sessao propria
+# quando a chave de ativacao aponta para outra conexao que nao a pgsql. Do
+# contrario o modulo usa a sessao da pgsql e ja esta na conta acima. Mesma forma
+# da conta principal: 1 PDO por worker com hooks OFF, o pool inteiro por worker
+# com hooks ON, + tasks e filas. Os consumidores externos (filas dedicadas,
+# scheduler) tambem usam cada banco, entao EXTERNAL_DB_CONSUMERS entra de novo,
+# uma vez por banco, como nos leitores.
+#
+# Cada banco gera ${ROTULO}_CONN_PROJECTED, _CONN_NAME, _CONN_POR_WORKER e
+# _VIA_POOLER. Pelo pooler so passa quando o host esta vazio ou igual a DB_HOST;
+# com host proprio (homolog: direto no db) as sessoes caem direto no Postgres.
+# Com ${ROTULO}_PG_MAX_CONNECTIONS definido o banco e tratado como SERVIDOR
+# SEPARADO: tem teto proprio e nao soma no do sdc. Sem ele a soma e
+# conservadora (assume o mesmo servidor), que e o que o log sempre fez.
+valor_de() {
+    eval "printf '%s' \"\${$1:-}\""
+}
+
+projetar_conexao_dedicada() {
+    _rotulo="$1"
+    _conexao="$2"
+    _var_pool="$3"
+    _var_host="$4"
+    _pool_padrao="$5"
+
+    eval "${_rotulo}_CONN_NAME=''; ${_rotulo}_CONN_PROJECTED=0; ${_rotulo}_CONN_POR_WORKER=1; ${_rotulo}_VIA_POOLER=false; ${_rotulo}_CONN_SEPARADO=false"
+
+    if [ -z "${_conexao}" ] || [ "${_conexao}" = "${DB_CONNECTION:-pgsql}" ] || [ "${_conexao}" = "pgsql" ]; then
+        return 0
+    fi
+
+    _por_worker=1
+    _modo="hooks OFF: 1 conexao/worker"
     if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
-        LOG_CONN_POR_WORKER="${SWOOLE_PG_LOG_POOL_SIZE:-4}"
-        require_uint SWOOLE_PG_LOG_POOL_SIZE "$LOG_CONN_POR_WORKER"
-        MODO_LOG="hooks ON: ${LOG_CONN_POR_WORKER} conexoes/worker"
+        _por_worker="$(valor_de "${_var_pool}")"
+        _por_worker="${_por_worker:-${_pool_padrao}}"
+        require_uint "${_var_pool}" "${_por_worker}"
+        _modo="hooks ON: ${_por_worker} conexoes/worker"
     fi
-    LOG_CONN_PER_INSTANCE=$(((WORKERS * LOG_CONN_POR_WORKER) + TASK_WORKERS + QUEUE_WORKERS))
-    LOG_CONN_PROJECTED=$((LOG_CONN_PER_INSTANCE * APP_INSTANCES + EXTERNAL_DB_CONSUMERS))
-    if [ -n "${POOLER_MODE}" ] && [ -z "${LOG_DB_HOST:-}" ]; then
-        LOG_VIA_POOLER=true
+    _por_instancia=$(((WORKERS * _por_worker) + TASK_WORKERS + QUEUE_WORKERS))
+    _projetado=$((_por_instancia * APP_INSTANCES + EXTERNAL_DB_CONSUMERS))
+
+    _host="$(valor_de "${_var_host}")"
+    _via_pooler=false
+    if [ -n "${POOLER_MODE}" ] && { [ -z "${_host}" ] || [ "${_host}" = "${DB_HOST:-}" ]; }; then
+        _via_pooler=true
     fi
-    echo "Conexao de log ${LOG_CONN_NAME} (${MODO_LOG}): ${LOG_CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas = ${LOG_CONN_PROJECTED}"
+
+    eval "${_rotulo}_CONN_NAME='${_conexao}'; ${_rotulo}_CONN_PROJECTED=${_projetado}; ${_rotulo}_CONN_POR_WORKER=${_por_worker}; ${_rotulo}_VIA_POOLER=${_via_pooler}"
+    _nome="$(printf '%s' "${_rotulo}" | tr '[:upper:]' '[:lower:]')"
+    echo "Conexao de ${_nome} ${_conexao} (${_modo}): ${_por_instancia}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas = ${_projetado}"
+}
+
+# Ranking e sempre um banco separado: so entra na conta quando o modulo esta
+# habilitado (config/ranking.php, RANKING_HABILITADO).
+RANKING_CONN_ALVO=""
+if [ "$(printf '%s' "${RANKING_HABILITADO:-false}" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
+    RANKING_CONN_ALVO="ranking"
 fi
+
+BANCOS_DEDICADOS="LOG GEO TREINAMENTO RANKING"
+projetar_conexao_dedicada LOG "${DB_LOG_CONNECTION:-}" SWOOLE_PG_LOG_POOL_SIZE LOG_DB_HOST 4
+projetar_conexao_dedicada GEO "${DB_GEO_CONNECTION:-}" SWOOLE_PG_GEO_POOL_SIZE GEO_DB_HOST 4
+projetar_conexao_dedicada TREINAMENTO "${DB_TREINAMENTO_CONNECTION:-}" SWOOLE_PG_TREINAMENTO_POOL_SIZE TREINAMENTO_DB_HOST 4
+projetar_conexao_dedicada RANKING "${RANKING_CONN_ALVO}" SWOOLE_PG_RANKING_POOL_SIZE RANKING_DB_HOST 4
 
 if [ -n "${POOLER_MODE}" ]; then
     PGB_MAX_CLIENTES="${PGBOUNCER_MAX_CLIENT_CONN:-1000}"
@@ -365,12 +415,15 @@ if [ -n "${POOLER_MODE}" ]; then
 
     CONN_APP=$((CONN_PER_INSTANCE * APP_INSTANCES))
     CLIENTES_LOG=""
-    if [ "${LOG_VIA_POOLER}" = "true" ]; then
-        # Log pelo pooler: sao clientes dele, e o pool_size abaixo ja os cobre.
-        CONN_APP=$((CONN_APP + LOG_CONN_PROJECTED))
-        CLIENTES_LOG=" + ${LOG_CONN_PROJECTED} log"
-        LOG_CONN_PROJECTED=0
-    fi
+    for ROTULO in ${BANCOS_DEDICADOS}; do
+        if [ "$(valor_de "${ROTULO}_VIA_POOLER")" = "true" ]; then
+            # Banco pelo pooler: sao clientes dele, e o pool_size abaixo ja os cobre.
+            PROJETADO_BANCO="$(valor_de "${ROTULO}_CONN_PROJECTED")"
+            CONN_APP=$((CONN_APP + PROJETADO_BANCO))
+            CLIENTES_LOG="${CLIENTES_LOG} + ${PROJETADO_BANCO} $(printf '%s' "${ROTULO}" | tr '[:upper:]' '[:lower:]')"
+            eval "${ROTULO}_CONN_PROJECTED=0"
+        fi
+    done
     echo "Pooler: DB_POOLER_MODE=${POOLER_MODE} -- o app conecta no PgBouncer, nao no Postgres."
     echo "Clientes no pooler: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES}${CLIENTES_LOG} = ${CONN_APP} (teto ${PGB_MAX_CLIENTES})"
 
@@ -388,11 +441,29 @@ else
     echo "Conexoes PG projetadas: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
 fi
 
-if [ "$LOG_CONN_PROJECTED" -gt 0 ]; then
-    CONN_SEM_LOG="${CONN_PROJECTED}"
-    CONN_PROJECTED=$((CONN_PROJECTED + LOG_CONN_PROJECTED))
-    echo "Split no Postgres: ${CONN_SEM_LOG} sdc + ${LOG_CONN_PROJECTED} log (${LOG_CONN_NAME}) = ${CONN_PROJECTED}"
-fi
+# Banco com teto proprio (servidor separado) nao soma no do sdc: e checado
+# contra o ${ROTULO}_PG_MAX_CONNECTIONS dele. Sem teto, soma (mesmo servidor).
+for ROTULO in ${BANCOS_DEDICADOS}; do
+    PROJETADO_BANCO="$(valor_de "${ROTULO}_CONN_PROJECTED")"
+    [ "${PROJETADO_BANCO}" -gt 0 ] || continue
+    NOME_BANCO="$(valor_de "${ROTULO}_CONN_NAME")"
+    ROTULO_MIN="$(printf '%s' "${ROTULO}" | tr '[:upper:]' '[:lower:]')"
+    TETO_BANCO="$(valor_de "${ROTULO}_PG_MAX_CONNECTIONS")"
+    if [ -n "${TETO_BANCO}" ]; then
+        require_uint "${ROTULO}_PG_MAX_CONNECTIONS" "${TETO_BANCO}"
+        if [ "${PROJETADO_BANCO}" -gt "${TETO_BANCO}" ]; then
+            echo "FATAL: conexoes projetadas de ${ROTULO_MIN} (${PROJETADO_BANCO}) excedem ${ROTULO}_PG_MAX_CONNECTIONS (${TETO_BANCO})."
+            echo "       Reduza SWOOLE_PG_${ROTULO}_POOL_SIZE ou o numero de workers/replicas. Abortando boot."
+            exit 1
+        fi
+        echo "Servidor separado de ${ROTULO_MIN} (${NOME_BANCO}): ${PROJETADO_BANCO} de ${TETO_BANCO}."
+        eval "${ROTULO}_CONN_SEPARADO=true"
+        continue
+    fi
+    CONN_SEM_BANCO="${CONN_PROJECTED}"
+    CONN_PROJECTED=$((CONN_PROJECTED + PROJETADO_BANCO))
+    echo "Split no Postgres: ${CONN_SEM_BANCO} sdc + ${PROJETADO_BANCO} ${ROTULO_MIN} (${NOME_BANCO}) = ${CONN_PROJECTED}"
+done
 
 if [ "$READ_CONN_PROJECTED" -gt 0 ]; then
     CONN_PROJECTED=$((CONN_PROJECTED + READ_CONN_PROJECTED))
@@ -429,14 +500,18 @@ if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
                 echo "       Alternativa: OCTANE_HOOK_FLAGS_ENABLED=false volta a 1 conexao/worker."
             fi
         fi
-        if [ "${LOG_CONN_PROJECTED}" -gt 0 ]; then
-            echo "       A conexao de log soma ${LOG_CONN_PROJECTED} sessoes diretas no Postgres."
-            if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
-                echo "       Sob hooks ON reduza SWOOLE_PG_LOG_POOL_SIZE (hoje ${LOG_CONN_POR_WORKER}) -- cada"
-                echo "       unidade a menos libera ${WORKERS} x ${APP_INSTANCES} conexoes."
+        for ROTULO in ${BANCOS_DEDICADOS}; do
+            PROJETADO_BANCO="$(valor_de "${ROTULO}_CONN_PROJECTED")"
+            if [ "${PROJETADO_BANCO}" -gt 0 ] && [ "$(valor_de "${ROTULO}_CONN_SEPARADO")" != "true" ]; then
+                ROTULO_MIN="$(printf '%s' "${ROTULO}" | tr '[:upper:]' '[:lower:]')"
+                echo "       A conexao de ${ROTULO_MIN} soma ${PROJETADO_BANCO} sessoes diretas no Postgres."
+                if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+                    echo "       Sob hooks ON reduza SWOOLE_PG_${ROTULO}_POOL_SIZE (hoje $(valor_de "${ROTULO}_CONN_POR_WORKER")) -- cada"
+                    echo "       unidade a menos libera ${WORKERS} x ${APP_INSTANCES} conexoes."
+                fi
+                echo "       Ou volte o ${ROTULO_MIN} para a sessao da pgsql desligando a conexao dedicada."
             fi
-            echo "       Ou volte o log para a sessao da pgsql tirando DB_LOG_CONNECTION."
-        fi
+        done
         if [ -z "${POOLER_MODE}" ]; then
             echo "       Alternativa estrutural: DB_POOLER_MODE=transaction com PgBouncer, que"
             echo "       desacopla numero de workers de numero de conexoes no banco."
