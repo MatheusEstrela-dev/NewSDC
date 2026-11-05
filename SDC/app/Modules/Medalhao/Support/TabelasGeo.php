@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Medalhao\Support;
 
 use App\Support\Database\Geo\DominioGeo;
-use InvalidArgumentException;
 
 /**
  * Nomes qualificados das tabelas do geoespacial, montados a partir do
@@ -14,30 +13,15 @@ use InvalidArgumentException;
  */
 final class TabelasGeo
 {
-    /** Grupo da fonte (IngestorRegistry) -> dominio onde ela guarda os dados. */
-    private const DOMINIO_DO_GRUPO = [
-        'inmet' => DominioGeo::Meteorologia,
-        'cemaden' => DominioGeo::Meteorologia,
-        'sismos' => DominioGeo::Sismo,
-        'geoespacial' => DominioGeo::Camadas,
-    ];
-
     public static function dominioDoGrupo(string $grupo): DominioGeo
     {
-        return self::DOMINIO_DO_GRUPO[$grupo]
-            ?? throw new InvalidArgumentException("Grupo sem dominio geo: {$grupo}");
+        return DominioGeo::doGrupo($grupo);
     }
 
     /** @return list<DominioGeo> dominios que de fato recebem ingestao */
     public static function dominiosComIngestao(): array
     {
-        $porNome = [];
-
-        foreach (self::DOMINIO_DO_GRUPO as $dominio) {
-            $porNome[$dominio->value] = $dominio;
-        }
-
-        return array_values($porNome);
+        return DominioGeo::comIngestao();
     }
 
     public static function ingestaoBruta(DominioGeo $dominio): string

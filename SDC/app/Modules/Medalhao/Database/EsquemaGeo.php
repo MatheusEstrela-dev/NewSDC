@@ -18,15 +18,6 @@ final class EsquemaGeo
     /** Janela do mapa: so leitura recente interessa, o historico fica na silver. */
     public const JANELA_MAPA_HORAS = 48;
 
-    /** Fonte do bronze -> dominio dono do payload. */
-    public const FONTES = [
-        'inmet-api' => DominioGeo::Meteorologia,
-        'cemaden-pluviometria' => DominioGeo::Meteorologia,
-        'usp-fdsn' => DominioGeo::Sismo,
-        'unb-obsis' => DominioGeo::Sismo,
-        'geo-upload' => DominioGeo::Camadas,
-    ];
-
     /**
      * @return list<string> todos os schemas do geoespacial
      */
@@ -46,7 +37,7 @@ final class EsquemaGeo
      */
     public static function fontesDe(DominioGeo $dominio): array
     {
-        return array_keys(array_filter(self::FONTES, static fn (DominioGeo $d): bool => $d === $dominio));
+        return $dominio->fontesDoDominio();
     }
 
     /**

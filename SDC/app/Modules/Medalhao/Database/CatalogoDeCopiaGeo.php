@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Medalhao\Database;
 
+use App\Modules\Medalhao\Support\TabelasGeo;
 use App\Support\Database\Geo\DominioGeo;
 
 /**
@@ -15,7 +16,7 @@ use App\Support\Database\Geo\DominioGeo;
  * - alteracao: expressao SQL do instante da ultima mudanca da linha, para --desde.
  * - particionada: leituras que no destino sao particionadas por mes em medido_em.
  */
-final class TabelasGeo
+final class CatalogoDeCopiaGeo
 {
     /**
      * @return list<array{tabela: string, chave: list<string>, alteracao: string, particionada: bool}>
@@ -23,24 +24,23 @@ final class TabelasGeo
     public static function todas(): array
     {
         $bronzeAlteracao = 'GREATEST(coletado_em, COALESCE(processado_em, coletado_em), COALESCE(verificado_em, coletado_em))';
-        $met = DominioGeo::Meteorologia;
 
         // Ordem importa: bronze antes das silver que o referenciam, camadas antes das feicoes.
         $tabelas = [];
 
         foreach (DominioGeo::cases() as $dominio) {
-            $tabelas[] = self::spec($dominio->tabela('bronze', 'ingestao_bruta'), ['id'], $bronzeAlteracao);
+            $tabelas[] = self::spec(TabelasGeo::ingestaoBruta($dominio), ['id'], $bronzeAlteracao);
         }
 
         return [
             ...$tabelas,
-            self::spec($met->tabela('silver', 'estacoes_inmet'), ['codigo']),
-            self::spec($met->tabela('silver', 'estacoes_cemaden'), ['codigo']),
-            self::spec(DominioGeo::Sismo->tabela('silver', 'sismos'), ['id']),
-            self::spec($met->tabela('silver', 'leituras_inmet'), ['codigo_estacao', 'medido_em'], particionada: true),
-            self::spec($met->tabela('silver', 'leituras_cemaden'), ['codigo_estacao', 'medido_em'], particionada: true),
-            self::spec(DominioGeo::Camadas->tabela('silver', 'geo_camadas'), ['id']),
-            self::spec(DominioGeo::Camadas->tabela('silver', 'geo_feicoes'), ['id']),
+            self::spec(TabelasGeo::estacoesInmet(), ['codigo']),
+            self::spec(TabelasGeo::estacoesCemaden(), ['codigo']),
+            self::spec(TabelasGeo::sismos(), ['id']),
+            self::spec(TabelasGeo::leiturasInmet(), ['codigo_estacao', 'medido_em'], particionada: true),
+            self::spec(TabelasGeo::leiturasCemaden(), ['codigo_estacao', 'medido_em'], particionada: true),
+            self::spec(TabelasGeo::camadas(), ['id']),
+            self::spec(TabelasGeo::feicoes(), ['id']),
         ];
     }
 

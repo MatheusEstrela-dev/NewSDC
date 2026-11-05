@@ -255,12 +255,12 @@ return new class extends Migration
             return;
         }
 
-        $fontes = array_map(static fn (string $f): string => "'{$f}'", array_keys(EsquemaGeo::FONTES));
+        $fontes = array_map(static fn (string $f): string => "'{$f}'", DominioGeo::fontes());
         $orfas = DB::selectOne('SELECT count(*) AS n FROM bronze.ingestao_bruta WHERE fonte NOT IN ('.implode(',', $fontes).')')->n;
 
         if ((int) $orfas > 0) {
             // Falha alto: dividir sem dono apagaria payload no DROP final.
-            throw new RuntimeException("bronze.ingestao_bruta tem {$orfas} linha(s) de fonte sem dominio em EsquemaGeo::FONTES.");
+            throw new RuntimeException("bronze.ingestao_bruta tem {$orfas} linha(s) de fonte sem dominio em DominioGeo::FONTES.");
         }
 
         $colunas = 'id, fonte, conteudo_bruto, formato, hash_conteudo, meta, coletado_em, processado_em, verificado_em';

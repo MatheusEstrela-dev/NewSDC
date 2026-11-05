@@ -17,6 +17,9 @@ use Illuminate\Database\Connection;
  */
 final class CopiadorGeo
 {
+    /** Limite do protocolo do Postgres: 65535 parametros por statement. */
+    private const MAX_PARAMETROS = 65535;
+
     public function __construct(
         private readonly Connection $origem,
         private readonly Connection $destino,
@@ -148,6 +151,21 @@ final class CopiadorGeo
      * @param list<object> $linhas
      */
     private function gravarLote(array $spec, array $colunas, array $linhas): void
+    {
+        // lote x colunas nunca passa de MAX_PARAMETROS, qualquer que seja o tamanho do lote.
+        $porStatement = max(1, intdiv(self::MAX_PARAMETROS, max(1, count($colunas))));
+
+        foreach (array_chunk($linhas, $porStatement) as $parte) {
+            $this->gravarStatement($spec, $colunas, $parte);
+        }
+    }
+
+    /**
+     * @param array{tabela: string, chave: list<string>, alteracao: string, particionada: bool} $spec
+     * @param list<string> $colunas
+     * @param list<object> $linhas
+     */
+    private function gravarStatement(array $spec, array $colunas, array $linhas): void
     {
         $linhaPlaceholder = '('.implode(', ', array_fill(0, count($colunas), '?')).')';
         $valores = implode(', ', array_fill(0, count($linhas), $linhaPlaceholder));

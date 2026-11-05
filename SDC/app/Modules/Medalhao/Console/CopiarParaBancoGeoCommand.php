@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Medalhao\Console;
 
+use App\Modules\Medalhao\Database\CatalogoDeCopiaGeo;
 use App\Modules\Medalhao\Database\CopiadorGeo;
 use App\Modules\Medalhao\Database\SincronizadorReferencia;
-use App\Modules\Medalhao\Database\TabelasGeo;
 use Illuminate\Console\Command;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +40,7 @@ class CopiarParaBancoGeoCommand extends Command
         $dryRun = (bool) $this->option('dry-run');
         $verificar = (bool) $this->option('verificar');
 
-        $tabelas = TabelasGeo::filtrar((array) $this->option('tabela'));
+        $tabelas = CatalogoDeCopiaGeo::filtrar((array) $this->option('tabela'));
         if ($tabelas === []) {
             $this->error('Nenhuma tabela do catalogo combina com --tabela.');
 
