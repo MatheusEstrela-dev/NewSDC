@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Rat;
 
+use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
 use App\Modules\Rat\Services\RatHistoricoService;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,7 @@ use Illuminate\Http\Request;
  */
 class HistoricoController extends Controller
 {
-    use AppHttpControllersApiConcernsimitaporpagina;
+    use LimitaPorPagina;
 
     public function __construct(
         private readonly RatHistoricoService $historicoService,

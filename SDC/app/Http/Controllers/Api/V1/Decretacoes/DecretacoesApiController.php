@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Decretacoes;
 
+use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\AsynchronousResponse;
 use App\Http\Traits\ApiResponseTrait;
@@ -34,7 +35,7 @@ use Symfony\Component\HttpFoundation\Response;
 class DecretacoesApiController extends Controller
 {
     use ApiResponseTrait;
-    use AppHttpControllersApiConcernsimitaporpagina;
+    use LimitaPorPagina;
     use AsynchronousResponse;
 
     public function __construct(

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Rat;
 
+use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
 use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\Http\Resources\RatResource;
@@ -12,7 +13,7 @@ use Illuminate\Http\Request;
 
 class OcorrenciaController extends Controller
 {
-    use AppHttpControllersApiConcernsimitaporpagina;
+    use LimitaPorPagina;
 
     public function __construct(
         private readonly RatWriteService $writeService,

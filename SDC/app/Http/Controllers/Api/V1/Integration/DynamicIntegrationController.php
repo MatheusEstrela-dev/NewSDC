@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Integration;
 
 use App\Http\Controllers\Controller;
 use App\Services\Integration\IntegrationHubService;
+use App\Services\Integration\UrlSaidaNaoPermitidaException;
 use App\Enums\RequestPriority;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;

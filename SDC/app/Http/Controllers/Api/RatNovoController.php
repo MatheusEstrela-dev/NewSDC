@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
 use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Services\Rat\RatNovoService;
@@ -61,7 +62,7 @@ use Illuminate\Http\Request;
  */
 class RatNovoController extends Controller
 {
-    use AppHttpControllersApiConcernsimitaporpagina;
+    use LimitaPorPagina;
 
     public function __construct(
         private readonly RatNovoService $service
