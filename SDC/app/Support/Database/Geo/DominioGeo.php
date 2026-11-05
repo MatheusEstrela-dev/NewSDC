@@ -49,7 +49,17 @@ enum DominioGeo: string
      */
     public function tabela(string $camada, string $tabela): string
     {
-        return $this->{$camada}().'.'.$tabela;
+        // match fechado, e nao chamada dinamica: camada errada falha claro em
+        // vez de cair em outro metodo do enum (schemas, tabela).
+        $schema = match ($camada) {
+            'ingestao' => $this->ingestao(),
+            'bronze' => $this->bronze(),
+            'silver' => $this->silver(),
+            'gold' => $this->gold(),
+            default => throw new \InvalidArgumentException("Camada geo desconhecida: {$camada}"),
+        };
+
+        return $schema.'.'.$tabela;
     }
 
     /**
