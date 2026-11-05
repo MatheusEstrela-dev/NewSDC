@@ -87,9 +87,13 @@ $bancoDedicado = static fn (string $prefixo, string $database, string $sufixoApp
 // Leitura do geo nas replicas: so quando o banco geo esta no mesmo cluster do
 // sdc (as replicas fisicas carregam todos os bancos). Servidor proprio liga
 // com GEO_DB_READ_HOSTS.
+// Mesmo cluster = host do geo igual ao do sdc (ou ausente). Nao basta checar
+// GEO_DB_HOST vazio: os composes de homolog/HA o definem apontando para o
+// mesmo cluster, e o geo perderia as replicas.
+$geoMesmoCluster = (string) env('GEO_DB_HOST', env('DB_HOST', '127.0.0.1')) === (string) env('DB_HOST', '127.0.0.1');
 $geoReadHosts = array_values(array_filter(array_map('trim', explode(',', (string) env(
     'GEO_DB_READ_HOSTS',
-    env('GEO_DB_HOST') === null ? env('DB_READ_HOSTS', '') : '',
+    $geoMesmoCluster ? env('DB_READ_HOSTS', '') : '',
 )))));
 $geoReplicaRouting = filter_var(env('GEO_DB_READ_ENABLED', env('DB_READ_ENABLED', false)), FILTER_VALIDATE_BOOLEAN)
     && $geoReadHosts !== [];
