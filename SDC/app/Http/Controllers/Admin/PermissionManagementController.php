@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
+use App\Support\Database\OperadorLike;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,7 +24,7 @@ class PermissionManagementController extends Controller
 
             // ILIKE no Postgres: LIKE diferencia maiuscula, e "notas tecn" nao
             // achava "Notas Tecnicas" na descricao.
-            $like = DB::getDriverName() === 'pgsql' ? 'ilike' : 'like';
+            $like = OperadorLike::insensivel();
 
             if ($request->filled('search')) {
                 $search = (string) $request->search;
@@ -34,7 +34,10 @@ class PermissionManagementController extends Controller
                 });
             }
 
-            if ($request->has('module') && $request->module !== '') {
+            // filled e nao has: a busca envia module= vazio, que o middleware
+            // ConvertEmptyStringsToNull vira null; com has() o filtro virava
+            // `name like '.%'` e toda busca em "Todos os Modulos" vinha vazia.
+            if ($request->filled('module')) {
                 $query->where('name', 'like', $request->module . '.%');
             }
 

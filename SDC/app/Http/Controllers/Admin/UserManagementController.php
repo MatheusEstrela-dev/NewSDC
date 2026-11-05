@@ -14,6 +14,7 @@ use App\Modules\Compdec\Models\Orgao;
 use App\Services\Auth\EmailChangeService;
 use App\Services\Auth\OnboardingService;
 use App\Services\Auth\SessionVersionService;
+use App\Support\Database\OperadorLike;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -42,10 +43,11 @@ class UserManagementController extends Controller
             ->select(['id', 'name', 'email', 'cpf', 'active', 'status', 'email_verified_at', 'created_at']);
 
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+            $search = (string) $request->search;
+            $like = OperadorLike::insensivel();
+            $query->where(function ($q) use ($search, $like) {
+                $q->where('name', $like, "%{$search}%")
+                    ->orWhere('email', $like, "%{$search}%");
             });
         }
 

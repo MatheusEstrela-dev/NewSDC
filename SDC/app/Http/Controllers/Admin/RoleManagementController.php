@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\Permission;
 use App\Services\Auth\SessionVersionService;
+use App\Support\Database\OperadorLike;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -28,12 +29,14 @@ class RoleManagementController extends Controller
             $query = Role::withCount(['users', 'permissions'])
                 ->orderBy('hierarchy_level');
 
-            if ($request->has('search')) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('slug', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
+            // filled e nao has: busca vazia chega como null (ConvertEmptyStringsToNull).
+            if ($request->filled('search')) {
+                $search = (string) $request->search;
+                $like = OperadorLike::insensivel();
+                $query->where(function ($q) use ($search, $like) {
+                    $q->where('name', $like, "%{$search}%")
+                        ->orWhere('slug', $like, "%{$search}%")
+                        ->orWhere('description', $like, "%{$search}%");
                 });
             }
 
