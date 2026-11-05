@@ -6,8 +6,10 @@ namespace App\Modules\Geoespacial\Repositories;
 
 use App\Modules\Geoespacial\DTOs\CamadaGeoDTO;
 use App\Modules\Geoespacial\DTOs\FeicaoKmlDTO;
+use App\Modules\Geoespacial\Support\NomesDeUsuario;
+use App\Modules\Medalhao\Support\TabelasGeo;
+use App\Support\Database\ConexaoGeo;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 final class GeoCamadaRepository
 {
@@ -32,8 +34,8 @@ final class GeoCamadaRepository
         // DO NOTHING e nao DO UPDATE: camada e imutavel. O mesmo arquivo
         // reenviado nao deve reescrever nem reimportar feicao -- e por isso que
         // hash_arquivo e unico.
-        $id = DB::scalar(
-            'INSERT INTO silver.geo_camadas
+        $id = ConexaoGeo::conexao()->scalar(
+            'INSERT INTO '.TabelasGeo::camadas().'
                 (dominio, nome, arquivo_nome, emitido_em, valido_ate, nivel, hash_arquivo, ingestao_id,
                  origem, municipio_id, orgao_id, enviado_por, status, arquivo_caminho, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())
@@ -98,8 +100,8 @@ final class GeoCamadaRepository
             // KML sempre carrega altitude, ainda que zerada -- e a coluna e 2D.
             // Sem isto o INSERT morre com "Geometry has Z dimension but column
             // does not".
-            DB::statement(
-                'INSERT INTO silver.geo_feicoes (camada_id, nome, propriedades, geom, created_at, updated_at)
+            ConexaoGeo::conexao()->statement(
+                'INSERT INTO '.TabelasGeo::feicoes().' (camada_id, nome, propriedades, geom, created_at, updated_at)
                  VALUES (?, ?, ?::jsonb, ST_MakeValid(ST_Force2D(ST_GeomFromKML(?))), now(), now())',
                 [$camadaId, $nome, '{}', $feicao->kmlGeometria]
             );
@@ -126,12 +128,12 @@ final class GeoCamadaRepository
      */
     public function substituirFeicoes(int $camadaId, iterable $feicoes): int
     {
-        return DB::transaction(function () use ($camadaId, $feicoes): int {
-            DB::table('silver.geo_feicoes')->where('camada_id', $camadaId)->delete();
+        return ConexaoGeo::conexao()->transaction(function () use ($camadaId, $feicoes): int {
+            ConexaoGeo::conexao()->table(TabelasGeo::feicoes())->where('camada_id', $camadaId)->delete();
 
             $total = $this->inserirFeicoes($camadaId, $feicoes);
 
-            DB::table('silver.geo_camadas')->where('id', $camadaId)->update(['updated_at' => now()]);
+            ConexaoGeo::conexao()->table(TabelasGeo::camadas())->where('id', $camadaId)->update(['updated_at' => now()]);
 
             return $total;
         });
@@ -145,7 +147,7 @@ final class GeoCamadaRepository
      */
     public function camadaDoHash(string $hashArquivo): ?object
     {
-        return DB::table('silver.geo_camadas')
+        return ConexaoGeo::conexao()->table(TabelasGeo::camadas())
             ->select(['id', 'nome', 'emitido_em', 'status'])
             ->where('hash_arquivo', $hashArquivo)
             ->first();
@@ -163,7 +165,7 @@ final class GeoCamadaRepository
      */
     public function minhasCamadas(?int $municipioId, int $enviadoPor): Collection
     {
-        return DB::table('silver.geo_camadas')
+        return ConexaoGeo::leitura()->table(TabelasGeo::camadas())
             ->select([
                 'id', 'nome', 'dominio', 'nivel', 'emitido_em', 'valido_ate',
                 'arquivo_nome', 'arquivo_caminho', 'origem', 'status', 'motivo_recusa',
@@ -195,7 +197,7 @@ final class GeoCamadaRepository
      */
     public function camadas(?int $municipioId = null, bool $veTudo = false): Collection
     {
-        $query = DB::table('silver.geo_camadas');
+        $query = ConexaoGeo::leitura()->table(TabelasGeo::camadas());
 
         if (! $veTudo) {
             $query->where(function ($q) use ($municipioId): void {
@@ -226,7 +228,7 @@ final class GeoCamadaRepository
      */
     public function mapa(?int $camadaId = null): Collection
     {
-        $query = DB::table('gold.geo_feicao_mapa')
+        $query = ConexaoGeo::leitura()->table(TabelasGeo::feicaoMapa())
             ->select(['id', 'camada_id', 'dominio', 'camada_nome', 'nivel', 'emitido_em', 'feicao_nome', 'tipo_geometria', 'area_km2', 'geojson']);
 
         if ($camadaId !== null) {
@@ -247,50 +249,54 @@ final class GeoCamadaRepository
      */
     public function cruzamento(int $camadaId): array
     {
-        $municipios = (int) DB::scalar(
-            'SELECT count(*) FROM gold.geo_camada_municipios WHERE camada_id = ?',
+        $leitura = ConexaoGeo::leitura();
+        $feicoes = TabelasGeo::feicoes();
+        $inmetMapa = TabelasGeo::inmetMapa();
+        $cemadenMapa = TabelasGeo::cemadenMapa();
+
+        $municipios = (int) $leitura->scalar(
+            'SELECT count(*) FROM '.TabelasGeo::camadaMunicipios().' WHERE camada_id = ?',
             [$camadaId]
         );
 
-        // As DUAS redes, e nao so o CEMADEN: as 61 do INMET vivem em
-        // estacoes_meteorologicas e ficavam de fora da conta. Hoje nenhuma cai
-        // nas areas carregadas, entao o numero nao mudava -- mas isso era
-        // coincidencia da geometria, nao correcao do codigo.
+        // As DUAS redes, e nao so o CEMADEN. Conta pelo gold das duas redes
+        // (um dominio so consome o gold do outro): estacao sem leitura recente
+        // nao entra, o que e o certo para "estacoes na area" de um alerta.
         //
         // ST_Intersects e nao ST_Contains: estacao exatamente sobre a divisa
         // entra. Errar incluindo e melhor que errar excluindo num alerta.
-        $estacoes = (int) DB::scalar(
-            'SELECT
-                (SELECT count(*) FROM silver.estacoes_cemaden e
-                  WHERE EXISTS (SELECT 1 FROM silver.geo_feicoes f
+        $estacoes = (int) $leitura->scalar(
+            "SELECT
+                (SELECT count(*) FROM {$cemadenMapa} e
+                  WHERE EXISTS (SELECT 1 FROM {$feicoes} f
                                  WHERE f.camada_id = ? AND ST_Intersects(f.geom, e.geom)))
-              + (SELECT count(*) FROM estacoes_meteorologicas m
+              + (SELECT count(*) FROM {$inmetMapa} m
                   WHERE m.geom IS NOT NULL
-                    AND EXISTS (SELECT 1 FROM silver.geo_feicoes f
-                                 WHERE f.camada_id = ? AND ST_Intersects(f.geom, m.geom)))',
+                    AND EXISTS (SELECT 1 FROM {$feicoes} f
+                                 WHERE f.camada_id = ? AND ST_Intersects(f.geom, m.geom)))",
             [$camadaId, $camadaId]
         );
 
         // Chuva das duas redes numa serie so: as duas medem acumulado de 24h
         // com as mesmas faixas, entao separa-las na estatistica diria que
         // choveu duas coisas diferentes na mesma area.
-        $chuva = DB::selectOne(
-            'SELECT round(avg(mm)::numeric, 2) AS media,
+        $chuva = $leitura->selectOne(
+            "SELECT round(avg(mm)::numeric, 2) AS media,
                     max(mm)                    AS maxima,
                     count(*)                   AS com_leitura
                FROM (
                  SELECT g.acumulado_24h::float8 AS mm
-                   FROM gold.cemaden_mapa g
+                   FROM {$cemadenMapa} g
                   WHERE g.acumulado_24h IS NOT NULL
-                    AND EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                    AND EXISTS (SELECT 1 FROM {$feicoes} f
                                  WHERE f.camada_id = ? AND ST_Intersects(f.geom, g.geom))
                  UNION ALL
                  SELECT i.precipitacao::float8
-                   FROM gold.inmet_mapa i
+                   FROM {$inmetMapa} i
                   WHERE i.precipitacao IS NOT NULL
-                    AND EXISTS (SELECT 1 FROM silver.geo_feicoes f
+                    AND EXISTS (SELECT 1 FROM {$feicoes} f
                                  WHERE f.camada_id = ? AND ST_Intersects(f.geom, i.geom))
-               ) AS leituras',
+               ) AS leituras",
             [$camadaId, $camadaId]
         );
 
@@ -305,15 +311,15 @@ final class GeoCamadaRepository
         // passa a dizer de qual delas o numero veio.
         //
         // So o INMET publica cota (61 de 61); o feed do CEMADEN nao traz.
-        $relevo = DB::selectOne(
-            'SELECT min(i.altitude)               AS minima,
+        $relevo = $leitura->selectOne(
+            "SELECT min(i.altitude)               AS minima,
                     max(i.altitude)               AS maxima,
                     round(avg(i.altitude), 0)     AS media,
                     count(*)                      AS com_cota
-               FROM gold.inmet_mapa i
+               FROM {$inmetMapa} i
               WHERE i.altitude IS NOT NULL
-                AND EXISTS (SELECT 1 FROM silver.geo_feicoes f
-                             WHERE f.camada_id = ? AND ST_Intersects(f.geom, i.geom))',
+                AND EXISTS (SELECT 1 FROM {$feicoes} f
+                             WHERE f.camada_id = ? AND ST_Intersects(f.geom, i.geom))",
             [$camadaId]
         );
 
@@ -344,23 +350,20 @@ final class GeoCamadaRepository
      */
     public function camada(int $camadaId): ?object
     {
-        return DB::table('silver.geo_camadas as c')
-            ->leftJoin('municipios as m', 'm.id', '=', 'c.municipio_id')
-            ->leftJoin('users as remetente', 'remetente.id', '=', 'c.enviado_por')
-            ->leftJoin('users as revisor', 'revisor.id', '=', 'c.revisado_por')
-            ->leftJoin('users as arquivista', 'arquivista.id', '=', 'c.arquivado_por')
+        $feicoes = TabelasGeo::feicoes();
+
+        $camada = ConexaoGeo::leitura()->table(TabelasGeo::camadas().' as c')
+            ->leftJoin(TabelasGeo::municipios().' as m', 'm.id', '=', 'c.municipio_id')
             ->selectRaw("
                 c.id, c.dominio, c.nome, c.nivel, c.arquivo_nome, c.arquivo_caminho,
                 c.emitido_em, c.valido_ate, c.origem, c.status, c.motivo_recusa,
                 c.motivo_arquivamento, c.municipio_id, c.enviado_por, c.ingestao_id,
+                c.revisado_por, c.arquivado_por,
                 c.revisado_em, c.arquivado_em, c.created_at, c.updated_at,
                 m.nome AS municipio_nome, m.codigo_ibge,
-                remetente.name AS enviado_por_nome,
-                revisor.name    AS revisado_por_nome,
-                arquivista.name AS arquivado_por_nome,
-                (SELECT count(*) FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS feicoes,
+                (SELECT count(*) FROM {$feicoes} f WHERE f.camada_id = c.id) AS feicoes,
                 (SELECT round(sum(ST_Area(f.geom::geography) / 1000000)::numeric, 2)
-                   FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS area_km2,
+                   FROM {$feicoes} f WHERE f.camada_id = c.id) AS area_km2,
                 -- Validade vencida e derivada, e nao coluna: guardar um
                 -- booleano exigiria mante-lo em dia, e a data ja diz a verdade.
                 --
@@ -374,6 +377,17 @@ final class GeoCamadaRepository
             ", [now()->toDateString()])
             ->where('c.id', $camadaId)
             ->first();
+
+        // users vive no sdc: nomes numa segunda consulta, nao por join.
+        if ($camada !== null) {
+            NomesDeUsuario::anexar([$camada], [
+                'enviado_por' => 'enviado_por_nome',
+                'revisado_por' => 'revisado_por_nome',
+                'arquivado_por' => 'arquivado_por_nome',
+            ]);
+        }
+
+        return $camada;
     }
 
     /**
@@ -383,7 +397,7 @@ final class GeoCamadaRepository
      */
     public function feicoesDaCamada(int $camadaId): Collection
     {
-        return DB::table('silver.geo_feicoes')
+        return ConexaoGeo::leitura()->table(TabelasGeo::feicoes())
             ->selectRaw("
                 id, camada_id, nome AS feicao_nome, propriedades,
                 ST_GeometryType(geom)                                  AS tipo_geometria,
@@ -399,25 +413,25 @@ final class GeoCamadaRepository
     /**
      * Municipios cujo centroide cai dentro da camada, nomeados.
      *
-     * Le do Silver pelo mesmo motivo de feicoesDaCamada: gold.geo_camada_municipios
+     * Le do Silver pelo mesmo motivo de feicoesDaCamada: camadas_gold.geo_camada_municipios
      * so contem camada aprovada, e a tela de detalhe precisa mostrar o alcance
      * de uma camada AINDA pendente -- que e exatamente o que o revisor quer
      * saber antes de aprovar.
      *
-     * ATENCAO: e centroide, nao intersecao de area. A tabela municipios guarda
+     * ATENCAO: e centroide, nao intersecao de area. referencia.municipios guarda
      * latitude/longitude, nao geometria de territorio. E piso, nao total.
      *
      * @return Collection<int, object>
      */
     public function municipiosDaCamada(int $camadaId): Collection
     {
-        return DB::table('municipios as m')
+        return ConexaoGeo::leitura()->table(TabelasGeo::municipios().' as m')
             ->selectRaw('DISTINCT m.id, m.nome, m.uf, m.codigo_ibge')
             ->whereNotNull('m.latitude')
             ->whereNotNull('m.longitude')
             ->whereExists(fn ($q) => $q
                 ->selectRaw('1')
-                ->from('silver.geo_feicoes as f')
+                ->from(TabelasGeo::feicoes().' as f')
                 ->where('f.camada_id', $camadaId)
                 ->whereRaw('ST_Contains(f.geom, ST_SetSRID(ST_MakePoint(m.longitude::float8, m.latitude::float8), 4326))'))
             ->orderBy('m.nome')

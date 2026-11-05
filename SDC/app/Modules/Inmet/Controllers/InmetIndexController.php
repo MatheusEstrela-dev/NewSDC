@@ -11,6 +11,7 @@ use App\Modules\Inmet\Repositories\InmetRepository;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Medalhao\Registry\IngestorRegistry;
 use App\Modules\Shared\Geo\CaixaEnvolvente;
+use App\Support\Database\Geo\DominioGeo;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -49,8 +50,8 @@ class InmetIndexController extends Controller
             // idade do DADO; este campo diz se o coletor esta vivo. Sao
             // perguntas diferentes, e antes nenhuma das duas era respondida.
             'verificado_em' => [
-                'inmet' => IngestaoBruta::verificadoEm($this->registry->chavesDoGrupo('inmet')),
-                'cemaden' => IngestaoBruta::verificadoEm($this->registry->chavesDoGrupo('cemaden')),
+                'inmet' => IngestaoBruta::verificadoEm(DominioGeo::Meteorologia, $this->registry->chavesDoGrupo('inmet')),
+                'cemaden' => IngestaoBruta::verificadoEm(DominioGeo::Meteorologia, $this->registry->chavesDoGrupo('cemaden')),
             ],
             'bbox' => CaixaEnvolvente::deConfig(config('medalhao.inmet.bbox'))->paraArray(),
             // Lista enxuta: so o que o seletor precisa. As feicoes da camada

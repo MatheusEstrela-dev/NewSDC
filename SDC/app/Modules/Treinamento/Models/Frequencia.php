@@ -6,12 +6,15 @@ namespace App\Modules\Treinamento\Models;
 
 use App\Models\User;
 use App\Modules\Treinamento\Enums\StatusFrequencia;
+use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Frequencia extends Model
 {
-    protected $table = 'frequencias';
+    use UsaConexaoDeTreinamento;
+
+    protected $table = 'treinamento.frequencias';
 
     protected $fillable = [
         'modulo_id',

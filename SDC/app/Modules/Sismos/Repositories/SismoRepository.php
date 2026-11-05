@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Sismos\Repositories;
 
+use App\Modules\Medalhao\Support\TabelasGeo;
 use App\Modules\Sismos\DTOs\SismoDTO;
+use App\Support\Database\ConexaoGeo;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 final class SismoRepository
 {
@@ -20,7 +21,7 @@ final class SismoRepository
      */
     public function mapa(?array $bbox = null): Collection
     {
-        $query = DB::table('gold.sismos_mapa')
+        $query = ConexaoGeo::leitura()->table(TabelasGeo::sismosMapa())
             ->select([
                 'id', 'fonte', 'evento_id', 'origem_utc', 'latitude', 'longitude',
                 'magnitude', 'escala_magnitude', 'classe_magnitude',
@@ -43,7 +44,7 @@ final class SismoRepository
      */
     public function estatisticas(): array
     {
-        $linha = DB::table('gold.sismos_estatisticas')->first();
+        $linha = ConexaoGeo::leitura()->table(TabelasGeo::sismosEstatisticas())->first();
 
         return [
             'total_eventos' => (int) ($linha->total_eventos ?? 0),
@@ -61,7 +62,7 @@ final class SismoRepository
     /** Origem do evento mais recente na janela do mapa. */
     private function ultimoEvento(): ?string
     {
-        return DB::scalar('SELECT max(origem_utc) FROM gold.sismos_mapa');
+        return ConexaoGeo::leitura()->scalar('SELECT max(origem_utc) FROM '.TabelasGeo::sismosMapa());
     }
 
     /**
@@ -93,7 +94,7 @@ final class SismoRepository
 
     public function totalPorFonte(string $fonte): int
     {
-        return (int) DB::scalar('SELECT count(*) FROM silver.sismos WHERE fonte = ?', [$fonte]);
+        return (int) ConexaoGeo::conexao()->scalar('SELECT count(*) FROM '.TabelasGeo::sismos().' WHERE fonte = ?', [$fonte]);
     }
 
     /**
@@ -128,7 +129,7 @@ final class SismoRepository
             );
         }
 
-        $sql = 'INSERT INTO silver.sismos
+        $sql = 'INSERT INTO '.TabelasGeo::sismos().'
                     (fonte, evento_id, origem_utc, geom, profundidade_km, magnitude,
                      escala_magnitude, modo, regiao, tipo_evento, autor, ingestao_id,
                      created_at, updated_at)
@@ -146,7 +147,7 @@ final class SismoRepository
                     ingestao_id      = EXCLUDED.ingestao_id,
                     updated_at       = now()';
 
-        DB::statement($sql, $bindings);
+        ConexaoGeo::conexao()->statement($sql, $bindings);
 
         return count($lote);
     }

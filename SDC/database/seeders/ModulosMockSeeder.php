@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use Carbon\Carbon;
 
 class ModulosMockSeeder extends Seeder
@@ -236,7 +236,7 @@ class ModulosMockSeeder extends Seeder
             ],
         ];
 
-        DB::table('modulos')->insert($modulos);
+        ConexaoTreinamento::conexao()->table('treinamento.modulos')->insert($modulos);
 
         $this->command->info('✓ ' . count($modulos) . ' módulos criados para os treinamentos!');
     }

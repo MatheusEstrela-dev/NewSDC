@@ -6,6 +6,10 @@ return [
     // Dias que o payload bruto permanece no Postgres antes de virar Parquet.
     'retencao_dias' => (int) env('MEDALHAO_RETENCAO_DIAS', 30),
 
+    // Meses que as leituras silver (INMET e Cemaden) ficam no Postgres. A particao
+    // mensal mais velha vira Parquet no disco abaixo e e descartada.
+    'retencao_silver_meses' => (int) env('MEDALHAO_RETENCAO_SILVER_MESES', 12),
+
     // Disco Flysystem onde o rollup Parquet e gravado.
     'disco' => env('MEDALHAO_DISCO', 'medalhao'),
 

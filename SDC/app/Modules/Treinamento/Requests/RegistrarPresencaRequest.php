@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Requests;
 
+use App\Modules\Treinamento\Models\Modulo;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class RegistrarPresencaRequest extends FormRequest
 {
@@ -17,7 +19,7 @@ class RegistrarPresencaRequest extends FormRequest
     {
         return [
             'qr_code_token' => ['required', 'uuid'],
-            'modulo_id' => ['required', 'integer', 'exists:modulos,id'],
+            'modulo_id' => ['required', 'integer', Rule::exists(Modulo::class, 'id')],
         ];
     }
 }

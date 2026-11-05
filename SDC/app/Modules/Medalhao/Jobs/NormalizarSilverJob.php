@@ -7,12 +7,15 @@ namespace App\Modules\Medalhao\Jobs;
 use App\Modules\Medalhao\DTOs\PayloadBruto;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Medalhao\Registry\IngestorRegistry;
+use App\Modules\Medalhao\Support\ExecucaoDeColeta;
+use App\Modules\Medalhao\Support\TabelasGeo;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 class NormalizarSilverJob implements ShouldQueue
 {
@@ -27,18 +30,21 @@ class NormalizarSilverJob implements ShouldQueue
     public function __construct(
         public readonly int $ingestaoId,
         public readonly string $chave,
+        // Upload de KML nao passa por coleta agendada, entao nao tem execucao.
+        public readonly ?int $execucaoId = null,
     ) {
         $this->onQueue('medalhao');
     }
 
-    public function handle(IngestorRegistry $registry): void
+    public function handle(IngestorRegistry $registry, ExecucaoDeColeta $execucoes): void
     {
-        $bronze = IngestaoBruta::findOrFail($this->ingestaoId);
-
         // Pelo registry, e nao por ingestor()->grupo(): fonte recebida por
         // upload nao tem ingestor, e perguntar o grupo ao coletor quebrava a
         // normalizacao inteira dela.
         $grupo = $registry->grupo($this->chave);
+        $dominio = TabelasGeo::dominioDoGrupo($grupo);
+
+        $bronze = IngestaoBruta::doDominio($dominio)->newQuery()->findOrFail($this->ingestaoId);
 
         $dtos = $registry->normalizador($this->chave)->normalizar(
             new PayloadBruto($bronze->conteudo_bruto, $bronze->formato, $bronze->meta ?? [])
@@ -47,6 +53,8 @@ class NormalizarSilverJob implements ShouldQueue
         $total = $this->persistidor($grupo)->upsertLote($dtos, $this->ingestaoId);
 
         $bronze->update(['processado_em' => now()]);
+
+        $execucoes->encerrar($dominio, $this->execucaoId, ExecucaoDeColeta::SUCESSO, $total, $bronze->hash_conteudo);
 
         Log::info('medalhao: silver atualizado', [
             'fonte' => $this->chave,
@@ -60,6 +68,23 @@ class NormalizarSilverJob implements ShouldQueue
         if ($jobGold !== null) {
             $jobGold::dispatch();
         }
+    }
+
+    /** Esgotadas as tentativas, a execucao registra o erro em vez de ficar aberta. */
+    public function failed(Throwable $e): void
+    {
+        if ($this->execucaoId === null) {
+            return;
+        }
+
+        $dominio = TabelasGeo::dominioDoGrupo(app(IngestorRegistry::class)->grupo($this->chave));
+
+        app(ExecucaoDeColeta::class)->encerrar(
+            $dominio,
+            $this->execucaoId,
+            ExecucaoDeColeta::FALHA,
+            erro: $e,
+        );
     }
 
     /**

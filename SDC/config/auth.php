@@ -113,7 +113,11 @@ return [
 
         'cidadaos' => [
             'provider' => 'cidadaos',
-            'table' => 'cidadao_password_reset_tokens',
+            // Mesma conexao dos models do Treinamento (database.treinamento_connection):
+            // config/auth.php carrega antes de database.php, entao le a env direto,
+            // com o mesmo fallback, em vez de config(). Env vazia cai no fallback.
+            'connection' => env('DB_TREINAMENTO_CONNECTION') ?: env('DB_CONNECTION', 'pgsql'),
+            'table' => 'cadastro.cidadao_password_reset_tokens',
             'expire' => 15,
             'throttle' => 60,
         ],

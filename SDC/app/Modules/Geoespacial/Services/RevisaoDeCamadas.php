@@ -7,8 +7,10 @@ namespace App\Modules\Geoespacial\Services;
 use App\Modules\Geoespacial\Jobs\AtualizarGoldGeoJob;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
 use App\Modules\Notificacoes\Jobs\EntregarNotificacaoJob;
+use App\Modules\Geoespacial\Support\NomesDeUsuario;
+use App\Modules\Medalhao\Support\TabelasGeo;
+use App\Support\Database\ConexaoGeo;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
@@ -29,22 +31,23 @@ final class RevisaoDeCamadas
      */
     public function pendentes(): Collection
     {
-        return DB::table('silver.geo_camadas as c')
-            ->leftJoin('municipios as m', 'm.id', '=', 'c.municipio_id')
-            ->leftJoin('users as u', 'u.id', '=', 'c.enviado_por')
+        $feicoes = TabelasGeo::feicoes();
+
+        $pendentes = ConexaoGeo::conexao()->table(TabelasGeo::camadas().' as c')
+            ->leftJoin(TabelasGeo::municipios().' as m', 'm.id', '=', 'c.municipio_id')
             ->selectRaw("
                 c.id, c.nome, c.dominio, c.nivel, c.emitido_em, c.valido_ate,
                 c.arquivo_nome, c.created_at,
                 m.nome AS municipio_nome, m.codigo_ibge,
-                u.name AS enviado_por_nome,
-                (SELECT count(*) FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS feicoes,
+                c.enviado_por,
+                (SELECT count(*) FROM {$feicoes} f WHERE f.camada_id = c.id) AS feicoes,
                 (SELECT round(sum(ST_Area(f.geom::geography) / 1000000)::numeric, 0)
-                   FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS area_km2,
+                   FROM {$feicoes} f WHERE f.camada_id = c.id) AS area_km2,
                 -- Geometria do SILVER, e nao do gold: pendente nao esta na
                 -- matview, e sem isto o revisor aprovaria sem ver a area que
                 -- esta publicando.
                 (SELECT jsonb_agg(ST_AsGeoJSON(f.geom)::jsonb)
-                   FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS geojson,
+                   FROM {$feicoes} f WHERE f.camada_id = c.id) AS geojson,
                 -- Plausibilidade territorial: distancia entre o centroide da
                 -- geometria enviada e o centroide do municipio do remetente.
                 -- E AVISO, nao bloqueio: nao existe poligono municipal no
@@ -55,11 +58,15 @@ final class RevisaoDeCamadas
                           ST_Centroid(ST_Collect(f.geom))::geography,
                           ST_SetSRID(ST_MakePoint(m.longitude::float8, m.latitude::float8), 4326)::geography
                         ) / 1000)::numeric, 1)
-                   FROM silver.geo_feicoes f WHERE f.camada_id = c.id) AS distancia_km
+                   FROM {$feicoes} f WHERE f.camada_id = c.id) AS distancia_km
             ")
             ->where('c.status', 'pendente')
             ->orderBy('c.created_at')
             ->get();
+
+        NomesDeUsuario::anexar($pendentes, ['enviado_por' => 'enviado_por_nome']);
+
+        return $pendentes;
     }
 
     /** Aprova e publica: e o refresh do Gold que torna a geometria visivel. */
@@ -70,7 +77,7 @@ final class RevisaoDeCamadas
         // O predicado de status vai no UPDATE, e nao so na leitura anterior:
         // ler-depois-escrever sem trava deixa duas decisoes concorrentes
         // passarem as duas. Aqui o banco decide quem chegou primeiro.
-        $aplicou = DB::table('silver.geo_camadas')
+        $aplicou = ConexaoGeo::conexao()->table(TabelasGeo::camadas())
             ->where('id', $camadaId)
             ->where('status', 'pendente')
             ->update([
@@ -114,7 +121,7 @@ final class RevisaoDeCamadas
 
         $camada = $this->pendenteOuFalha($camadaId);
 
-        $aplicou = DB::table('silver.geo_camadas')
+        $aplicou = ConexaoGeo::conexao()->table(TabelasGeo::camadas())
             ->where('id', $camadaId)
             ->where('status', 'pendente')
             ->update([
@@ -145,8 +152,8 @@ final class RevisaoDeCamadas
     /** Avisa a CEDEC de que ha camada nova esperando revisao. */
     public function avisarRevisores(int $camadaId): void
     {
-        $camada = DB::table('silver.geo_camadas as c')
-            ->leftJoin('municipios as m', 'm.id', '=', 'c.municipio_id')
+        $camada = ConexaoGeo::conexao()->table(TabelasGeo::camadas().' as c')
+            ->leftJoin(TabelasGeo::municipios().' as m', 'm.id', '=', 'c.municipio_id')
             ->selectRaw('c.id, c.nome, m.nome AS municipio_nome')
             ->where('c.id', $camadaId)
             ->first();
@@ -190,7 +197,7 @@ final class RevisaoDeCamadas
 
     private function pendenteOuFalha(int $camadaId): object
     {
-        $camada = DB::table('silver.geo_camadas')->where('id', $camadaId)->first();
+        $camada = ConexaoGeo::conexao()->table(TabelasGeo::camadas())->where('id', $camadaId)->first();
 
         if ($camada === null) {
             throw new RuntimeException("Camada {$camadaId} nao existe.");

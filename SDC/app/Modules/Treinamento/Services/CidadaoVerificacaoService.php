@@ -13,8 +13,8 @@ use App\Models\AuditLog;
 use App\Modules\Treinamento\Mail\CidadaoVerificacaoCodigoMail;
 use App\Modules\Treinamento\Models\Cidadao;
 use App\Modules\Treinamento\Models\CidadaoEmailVerificacao;
+use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
@@ -36,7 +36,7 @@ class CidadaoVerificacaoService
      */
     public function emitir(Cidadao $cidadao, Request $request): CidadaoEmailVerificacao
     {
-        return DB::transaction(function () use ($cidadao, $request) {
+        return ConexaoTreinamento::transacao(function () use ($cidadao, $request) {
             CidadaoEmailVerificacao::activeFor($cidadao->id)
                 ->update(['cancelled_at' => now()]);
 
@@ -62,7 +62,7 @@ class CidadaoVerificacaoService
                 )->afterCommit()
             );
 
-            $this->auditar($verificacao, 'emitido', ['email' => $cidadao->email]);
+            $this->auditar($verificacao, 'emitido');
 
             return $verificacao;
         });
@@ -79,7 +79,7 @@ class CidadaoVerificacaoService
 
         // Fetch com lock em transacao propria: o increment da tentativa nao pode
         // ser desfeito junto com o rollback da InvalidCodeException.
-        $verificacao = DB::transaction(function () use ($cidadao) {
+        $verificacao = ConexaoTreinamento::transacao(function () use ($cidadao) {
             return CidadaoEmailVerificacao::activeFor($cidadao->id)
                 ->lockForUpdate()
                 ->latest()
@@ -95,7 +95,7 @@ class CidadaoVerificacaoService
         }
 
         if (! Hash::check($codigoInformado, $verificacao->code_hash)) {
-            DB::transaction(function () use ($verificacao) {
+            ConexaoTreinamento::transacao(function () use ($verificacao) {
                 $verificacao->increment('code_attempts');
                 $verificacao->refresh();
 
@@ -111,11 +111,11 @@ class CidadaoVerificacaoService
             );
         }
 
-        return DB::transaction(function () use ($cidadao, $verificacao) {
+        return ConexaoTreinamento::transacao(function () use ($cidadao, $verificacao) {
             $cidadao->marcarEmailVerificado();
             $verificacao->forceFill(['used_at' => now()])->save();
 
-            $this->auditar($verificacao, 'confirmado', ['email' => $verificacao->email]);
+            $this->auditar($verificacao, 'confirmado');
 
             return $verificacao;
         });
@@ -128,7 +128,7 @@ class CidadaoVerificacaoService
      */
     public function reenviar(Cidadao $cidadao): CidadaoEmailVerificacao
     {
-        return DB::transaction(function () use ($cidadao) {
+        return ConexaoTreinamento::transacao(function () use ($cidadao) {
             $verificacao = CidadaoEmailVerificacao::activeFor($cidadao->id)
                 ->lockForUpdate()
                 ->latest()
@@ -185,7 +185,8 @@ class CidadaoVerificacaoService
 
     /**
      * user_id fica null de proposito: cidadao nao e App\Models\User e a coluna
-     * de audit_logs e FK nullable para users.
+     * de audit_logs e FK nullable para users. So o id do cidadao vai no payload:
+     * e-mail e demais dados pessoais ficam apenas no banco do Treinamento (LGPD).
      *
      * @param  array<string, mixed>  $dados
      */

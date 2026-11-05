@@ -10,7 +10,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Medalhao\Support\RefreshGold;
+use App\Modules\Medalhao\Support\TabelasGeo;
 
 class AtualizarGoldGeoJob implements ShouldQueue
 {
@@ -40,8 +41,7 @@ class AtualizarGoldGeoJob implements ShouldQueue
         //
         // A ordem importa: geo_camada_municipios cruza a geometria das feicoes,
         // e o mapa vem primeiro para as duas refletirem o mesmo estado.
-        DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY gold.geo_feicao_mapa');
-        DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY gold.geo_camada_municipios');
+        RefreshGold::executar(TabelasGeo::feicaoMapa(), TabelasGeo::camadaMunicipios());
 
         GoldAtualizado::dispatch('geoespacial');
     }

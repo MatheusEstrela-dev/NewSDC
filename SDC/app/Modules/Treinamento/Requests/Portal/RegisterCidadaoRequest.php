@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Requests\Portal;
 
+use App\Modules\Treinamento\Models\Cidadao;
 use App\Rules\CpfValido;
 use App\Rules\StrongPassword;
 use Illuminate\Foundation\Http\FormRequest;
@@ -70,11 +71,11 @@ class RegisterCidadaoRequest extends FormRequest
                 // o endereco. Ele e descartado no RegisterController - senao
                 // bastaria cadastrar o e-mail de alguem para tranca-lo fora do
                 // portal para sempre.
-                Rule::unique('cidadaos', 'email')->whereNotNull('email_verified_at'),
+                Rule::unique(Cidadao::class, 'email')->whereNotNull('email_verified_at'),
                 // Mesmo motivo do CPF logo abaixo, mas por outro caminho: o
                 // NewPasswordController escolhe o broker de reset por
                 // "!User::where('email')->exists()". Um cidadao com e-mail de
-                // servidor teria o token gravado em cidadao_password_reset_tokens
+                // servidor teria o token gravado em cadastro.cidadao_password_reset_tokens
                 // e validado contra password_reset_tokens - nunca bate, e a conta
                 // fica permanentemente sem "esqueci minha senha".
                 Rule::unique('users', 'email'),
@@ -86,7 +87,7 @@ class RegisterCidadaoRequest extends FormRequest
                 'size:11',
                 new CpfValido(),
                 // Mesma regra do e-mail acima: so cadastro confirmado reserva CPF.
-                Rule::unique('cidadaos', 'cpf')->whereNotNull('email_verified_at'),
+                Rule::unique(Cidadao::class, 'cpf')->whereNotNull('email_verified_at'),
                 // O login unificado resolve primeiro por "users": um cidadao
                 // cadastrado com CPF de servidor ja existente nunca conseguiria
                 // entrar por essa conta, sem nenhum erro visivel no cadastro.

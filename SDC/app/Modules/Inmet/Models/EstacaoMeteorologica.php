@@ -6,14 +6,22 @@ namespace App\Modules\Inmet\Models;
 
 use App\Modules\Inmet\Enums\TipoEstacao;
 use App\Modules\Inmet\Enums\StatusEstacao;
+use App\Modules\Medalhao\Support\TabelasGeo;
+use App\Support\Database\UsaConexaoGeo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EstacaoMeteorologica extends Model
 {
     use SoftDeletes;
+    use UsaConexaoGeo;
 
-    protected $table = 'estacoes_meteorologicas';
+    // Inventario INMET no silver da meteorologia (era public.estacoes_meteorologicas).
+    // getTable() e nao $table porque o nome qualificado vem do DominioGeo.
+    public function getTable(): string
+    {
+        return TabelasGeo::estacoesInmet();
+    }
 
     protected $fillable = [
         'codigo',
