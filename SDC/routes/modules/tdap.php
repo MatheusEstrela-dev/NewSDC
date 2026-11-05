@@ -16,6 +16,7 @@ use App\Modules\Tdap\Controllers\LoteController;
 use App\Modules\Tdap\Controllers\HistoricoController;
 use App\Modules\Tdap\Controllers\PrestadorController;
 use App\Modules\Tdap\Controllers\TdapDashboardController;
+use App\Modules\Tdap\Http\Middleware\SomenteEstadualAltera;
 use App\Modules\Tdap\Models\Ata;
 use App\Modules\Tdap\Models\Caminhao;
 use App\Modules\Tdap\Models\Cronograma;
@@ -75,7 +76,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
         ->middleware('can:tdap.dashboard.view');
 
     /* Prestadores (Fase 1) */
-    Route::prefix('prestadores')->name('prestadores.')->group(function () {
+    Route::prefix('prestadores')->name('prestadores.')->middleware(SomenteEstadualAltera::class)->group(function () {
         Route::middleware('can:tdap.prestadores.view')->group(function () {
             Route::get('/', [PrestadorController::class, 'index'])->name('index');
             Route::get('/export', [PrestadorController::class, 'export'])->name('export');
@@ -123,7 +124,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     | exigiria migrar as atribuicoes ja gravadas em banco (Spatie) sem ganho
     | funcional. Os nomes precedem a fusao.
     */
-    Route::prefix('frota')->name('frota.')->group(function () {
+    Route::prefix('frota')->name('frota.')->middleware(SomenteEstadualAltera::class)->group(function () {
 
         /* -- Cadastro do veiculo -- */
         Route::middleware('can:tdap.caminhoes.view')->group(function () {
@@ -266,7 +267,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     })->where('resto', '.*');
 
     /* Atas (Fase 2) */
-    Route::prefix('atas')->name('atas.')->group(function () {
+    Route::prefix('atas')->name('atas.')->middleware(SomenteEstadualAltera::class)->group(function () {
         Route::middleware('can:tdap.atas.view')->group(function () {
             Route::get('/', [AtaController::class, 'index'])->name('index');
             Route::get('/export', [AtaController::class, 'export'])->name('export');
@@ -293,7 +294,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     });
 
     /* Lotes (Fase 2) */
-    Route::prefix('lotes')->name('lotes.')->group(function () {
+    Route::prefix('lotes')->name('lotes.')->middleware(SomenteEstadualAltera::class)->group(function () {
         Route::middleware('can:tdap.lotes.view')->group(function () {
             Route::get('/', [LoteController::class, 'index'])->name('index');
             Route::get('/export', [LoteController::class, 'export'])->name('export');

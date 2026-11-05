@@ -14,21 +14,57 @@ use App\Support\Perfil\OrgaoDeLotacao;
  * Regra: quem administra o modulo (`tdap.admin`) le o estado inteiro mesmo
  * lotado num COMPDEC -- o Admin Geral do dev e lotado no COMPDEC Porteirinha
  * para testar o fluxo do municipio, e com o recorte puro de lotacao o
- * dashboard dele zerava. Os demais seguem OrgaoDeLotacao: lotado em municipio
- * le so o municipio; sem municipio (CEDEC) le tudo.
+ * dashboard dele zerava. Os demais seguem OrgaoDeLotacao:
+ *  - lotado em orgao de municipio   -> le so o municipio;
+ *  - lotado em orgao sem municipio  -> estadual (CEDEC), le tudo;
+ *  - SEM lotacao resolvida          -> nao le nada (SEM_ESCOPO).
+ *
+ * Antes "sem lotacao" caia no mesmo caso do estadual: usuario municipal com
+ * cadastro incompleto via e alterava cronograma de qualquer municipio
+ * (auditoria de 2026-11-05). Estadual agora e quem esta lotado num orgao
+ * estadual, nao quem nao tem orgao.
  *
  * NAO vale para a decisao do COMPDEC (confirmar/reprovar): ali o municipio e
  * de quem decide, e o fluxo continua lendo OrgaoDeLotacao direto.
  */
 final class EscopoDeLeitura
 {
+    /**
+     * Municipio inexistente: todo chamador filtra `municipio_id = escopo`
+     * quando o escopo nao e null, entao este valor devolve listas vazias e
+     * 403 em garantir() sem cada tela precisar tratar o caso.
+     */
+    public const SEM_ESCOPO = 0;
+
     public static function municipioId(?User $user): ?int
     {
         if ($user === null || $user->can('tdap.admin')) {
             return null;
         }
 
-        return OrgaoDeLotacao::municipioId($user);
+        $orgao = OrgaoDeLotacao::resolver($user);
+
+        if ($orgao === null) {
+            return self::SEM_ESCOPO;
+        }
+
+        return $orgao->municipio_id !== null ? (int) $orgao->municipio_id : null;
+    }
+
+    /** Estadual (CEDEC) ou administrador do modulo: le e escreve o estado inteiro. */
+    public static function ehEstadual(?User $user): bool
+    {
+        return $user !== null && self::municipioId($user) === null;
+    }
+
+    /**
+     * 403 para quem nao e estadual. Cadastros compartilhados entre municipios
+     * (frota, vistorias, prestadores, atas, lotes) nao tem municipio unico:
+     * so o estado altera.
+     */
+    public static function garantirEstadual(?User $user): void
+    {
+        abort_unless(self::ehEstadual($user), 403, 'Somente usuarios estaduais podem alterar este cadastro.');
     }
 
     /**

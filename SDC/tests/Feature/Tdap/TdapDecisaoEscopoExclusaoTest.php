@@ -162,6 +162,40 @@ class TdapDecisaoEscopoExclusaoTest extends TestCase
         app(CronoViagemService::class)->validar($viagem->id, true, null, $gestorDeFora);
     }
 
+    /**
+     * A1 (auditoria 2026-11-05): viagem feita dentro do prazo e atestada pelo
+     * municipio depois do fim da vigencia. Antes ficava recusada ("Fora do
+     * limite") e a CEDEC tambem nao aprovava sem a confirmacao -- impasse.
+     */
+    public function test_municipio_confirma_viagem_do_prazo_depois_do_fim_e_cedec_aprova(): void
+    {
+        config(['tdap.viagens.exige_confirmacao_municipio' => true]);
+        DB::table('tdap_cronogramas')->where('id', $this->cronogramaId)->update(['dt_final' => now()->subDay()->toDateString()]);
+        $viagem = $this->viagem(); // data_registro = ontem, o ultimo dia
+        $compdec = $this->lotadoEm($this->municipioId, 'compdec');
+
+        $resultado = app(CronoViagemService::class)->confirmarEmLote($compdec, [$viagem->id]);
+
+        $this->assertSame(1, $resultado['confirmadas']);
+        $this->assertSame([], $resultado['recusadas']);
+        $aprovada = app(CronoViagemService::class)->validar($viagem->id, true, null, $this->cedec);
+        $this->assertSame(CronoViagem::STATUS_APROVADA, $aprovada->validado);
+    }
+
+    public function test_municipio_nao_confirma_viagem_com_data_depois_do_fim(): void
+    {
+        config(['tdap.viagens.exige_confirmacao_municipio' => true]);
+        DB::table('tdap_cronogramas')->where('id', $this->cronogramaId)->update(['dt_final' => now()->subDays(3)->toDateString()]);
+        $viagem = $this->viagem(); // ontem: dois dias depois do fim
+        $compdec = $this->lotadoEm($this->municipioId, 'compdec');
+
+        $resultado = app(CronoViagemService::class)->confirmarEmLote($compdec, [$viagem->id]);
+
+        $this->assertSame(0, $resultado['confirmadas']);
+        $this->assertSame($viagem->id, $resultado['recusadas'][0]['id']);
+        $this->assertStringContainsString('Fora do limite', $resultado['recusadas'][0]['motivo']);
+    }
+
     public function test_cronograma_encerrado_nao_pode_ser_excluido(): void
     {
         DB::table('tdap_cronogramas')->where('id', $this->cronogramaId)->update(['ativo' => false, 'encerrado_em' => now()]);

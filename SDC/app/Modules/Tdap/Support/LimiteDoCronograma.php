@@ -39,13 +39,16 @@ final class LimiteDoCronograma
     }
 
     /**
-     * O municipio so decide (confirma ou reprova) enquanto o cronograma vale,
-     * e so sobre viagem que caiba nele: hoje e a data da viagem, ambos ate o
-     * limite.
+     * O municipio decide (confirma ou reprova) toda viagem que caiba no
+     * cronograma: o que conta e a DATA DA VIAGEM, nao o dia da decisao.
+     *
+     * Antes tambem se exigia "hoje ate o limite". Com a confirmacao do
+     * municipio obrigatoria para a CEDEC aprovar, isso travava para sempre a
+     * viagem feita no prazo e atestada depois do fim -- e a agua entregue nao
+     * era paga (achado A1 da auditoria de 2026-11-05).
      */
-    public static function permiteDecisao(?Cronograma $cronograma, CarbonInterface|string|null $dataDaViagem, ?CarbonInterface $hoje = null): bool
+    public static function permiteDecisao(?Cronograma $cronograma, CarbonInterface|string|null $dataDaViagem): bool
     {
-        return ! self::ultrapassa($cronograma, $hoje ?? now())
-            && ! self::ultrapassa($cronograma, $dataDaViagem);
+        return ! self::ultrapassa($cronograma, $dataDaViagem);
     }
 }

@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\DB;
  */
 class TdapExportBiService
 {
+    /** Linhas por pagina; para mais, paginar com `apos_id`. */
+    public const LIMITE_MAXIMO = 10000;
+
     /**
      * @param  array<string, mixed>  $filtros
      * @return array<int, array<string, mixed>>

@@ -18,6 +18,7 @@ use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -106,9 +107,13 @@ class CronogramaService
      * Linhas planas para exportacao CSV (respeita os filtros da listagem).
      *
      * @param  array<string, mixed>  $filtros
-     * @return array<int, array<string, mixed>>
+     * Preguicosa: le em lotes de 500 (cada lote com os mesmos eager loads e
+     * agregados) e entrega linha a linha ao ExportadorCsv. Antes era um get()
+     * da base inteira em memoria, que crescia com o acervo no worker Swoole.
+     *
+     * @return LazyCollection<int, array<string, mixed>>
      */
-    public function exportar(array $filtros = [], ?int $municipioEscopo = null): array
+    public function exportar(array $filtros = [], ?int $municipioEscopo = null): LazyCollection
     {
         $rows = Cronograma::query()
             ->when($municipioEscopo !== null, fn ($q) => $q->doMunicipio($municipioEscopo))
@@ -138,7 +143,10 @@ class CronogramaService
             ->when($filtros['data_inicio'] ?? null, fn ($q, $d) => $q->whereDate('dt_inicio', '>=', (string) $d))
             ->when($filtros['data_fim'] ?? null, fn ($q, $d) => $q->whereDate('dt_inicio', '<=', (string) $d))
             ->orderByDesc('dt_inicio')
-            ->get();
+            // Desempate pelo id: lazy() pagina por OFFSET, e com dt_inicio
+            // repetido a ordem entre lotes nao e estavel (linha some ou repete).
+            ->orderByDesc('id')
+            ->lazy(500);
 
         return $rows->map(fn (Cronograma $c) => [
             'Numero'                 => $c->numero,
@@ -166,7 +174,7 @@ class CronogramaService
             'Dias'                   => (int) $c->dias,
             'Fator'                  => number_format((float) $c->fator, 2, ',', '.'),
             'Arquivado'              => $c->arquivado_em ? 'Sim' : 'Nao',
-        ])->all();
+        ]);
     }
 
     public function obter(int $id): Cronograma
@@ -366,6 +374,14 @@ class CronogramaService
             return [false, 'Cronograma arquivado nao pode ser ativado. Desarquive antes.'];
         }
 
+        // B2 (auditoria 2026-11-05): ativar com a vigencia ja vencida gerava
+        // um cronograma que nao aceita nenhuma viagem atual e ainda bloqueava
+        // outro do municipio (regra de 1 ativo por municipio). Prorrogue antes.
+        if ($cronograma->dt_final_efetiva !== null && $cronograma->dt_final_efetiva->copy()->startOfDay()->lt(today())) {
+            return [false, 'Cronograma com vigencia encerrada em '.$cronograma->dt_final_efetiva->format('d/m/Y')
+                .' nao pode ser ativado. Prorrogue ou ajuste as datas antes.'];
+        }
+
         // Acompanhamento: a ativacao e o ultimo passo da tramitacao. Sem esta
         // guarda o botao "Ativar" da ficha pularia a analise da CEDEC.
         if (config('tdap.cronogramas.exige_tramite', true) && $cronograma->fase_tramite !== FaseCronograma::Aprovado) {
@@ -414,8 +430,11 @@ class CronogramaService
         // -- todo caminhao parecia de outra empresa e a ativacao travava.
         if ($cronograma->prestador_id !== null) {
             $deOutraEmpresa = $cronograma->caminhoes()
-                ->whereHas('caminhao', fn ($q) => $q->where('prestador_id', '<>', $cronograma->prestador_id))
-                ->with('caminhao:id,placa')
+                // withTrashed: caminhao excluido da frota tambem conta (B1) --
+                // sem isso ele passava aqui e caia adiante com a mensagem
+                // enganosa de "sem vistoria".
+                ->whereHas('caminhao', fn ($q) => $q->withTrashed()->where('prestador_id', '<>', $cronograma->prestador_id))
+                ->with(['caminhao' => fn ($q) => $q->withTrashed()->select('id', 'placa')])
                 ->first();
 
             if ($deOutraEmpresa !== null) {

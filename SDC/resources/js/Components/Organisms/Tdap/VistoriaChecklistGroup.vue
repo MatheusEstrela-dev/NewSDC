@@ -14,12 +14,22 @@
         OK: {{ checadosCount }}/{{ itens.length }}
       </span>
       <button
-        v-if="!readonly"
+        v-if="!readonly && itens.length"
         type="button"
-        class="text-xs text-blue-600 hover:text-blue-800"
-        @click="marcarTodos"
+        class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+        :class="todosMarcados
+          ? 'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'
+          : 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 dark:border-blue-500/40 dark:text-blue-300 dark:bg-blue-900/20 dark:hover:bg-blue-900/40'"
+        :aria-pressed="todosMarcados"
+        @click="alternarTodos"
       >
-        Marcar todos
+        <svg v-if="todosMarcados" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L8.94 10l-4.72 4.72a.75.75 0 1 0 1.06 1.06L10 11.06l4.72 4.72a.75.75 0 1 0 1.06-1.06L11.06 10l4.72-4.72a.75.75 0 0 0-1.06-1.06L10 8.94 5.28 4.22Z" />
+        </svg>
+        <svg v-else class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0Z" clip-rule="evenodd" />
+        </svg>
+        {{ todosMarcados ? 'Desmarcar todos' : 'Marcar todos' }}
       </button>
     </div>
 
@@ -85,7 +95,15 @@ function rotulo(item) {
     .replace(/\b\w/g, l => l.toUpperCase());
 }
 
-function marcarTodos() {
-  props.itens.forEach(i => emit('update', i, true));
+const todosMarcados = computed(
+  () => props.itens.length > 0 && checadosCount.value === props.itens.length,
+);
+
+/** Alterna: se tudo ja esta marcado, desmarca; senao marca so os pendentes. */
+function alternarTodos() {
+  const novoValor = !todosMarcados.value;
+  props.itens.forEach(i => {
+    if (!!props.form[i] !== novoValor) emit('update', i, novoValor);
+  });
 }
 </script>
