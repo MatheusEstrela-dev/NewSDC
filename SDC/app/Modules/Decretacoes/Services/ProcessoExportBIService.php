@@ -6,6 +6,8 @@ namespace App\Modules\Decretacoes\Services;
 
 use App\Modules\Decretacoes\Constants\DesastreConstants;
 use App\Modules\Decretacoes\Models\Processo;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -37,13 +39,44 @@ class ProcessoExportBIService
             $query->withTrashed();
         }
 
-        $entradas = $query->with(['municipios', 'desastres'])->get();
+        return $this->normalizarLote($query->with(['municipios', 'desastres'])->get());
+    }
 
-        if ($entradas->isEmpty()) {
+    /**
+     * Keyset por (updated_at, id) ascendente, incluindo soft-deleted (a
+     * linha traz `deletado`). Nao filtra por perfil: uso interno da F2.
+     */
+    public function consultaIncremental(?Carbon $desde, ?int $aposId, int $lote): Builder
+    {
+        $query = Processo::query()->withTrashed()->with(['municipios', 'desastres']);
+
+        if ($desde !== null) {
+            $query->where(function (Builder $q) use ($desde, $aposId): void {
+                $q->where('updated_at', '>', $desde);
+                if ($aposId !== null) {
+                    $q->orWhere(fn (Builder $e) => $e->where('updated_at', $desde)->where('id', '>', $aposId));
+                }
+            });
+        }
+
+        return $query->orderBy('updated_at')->orderBy('id')->limit($lote);
+    }
+
+    /**
+     * Normaliza um lote de processos (uma linha por municipio) calculando
+     * os totais em queries batch para todos os ids do lote.
+     *
+     * @param  Collection<int, Processo>  $processos
+     */
+    public function normalizarLote(Collection $processos): array
+    {
+        if ($processos->isEmpty()) {
             return [];
         }
 
-        $allIds = $entradas->pluck('id');
+        $processos->loadMissing(['municipios', 'desastres']);
+
+        $allIds = $processos->pluck('id');
 
         $desastreTotalsBatch = $this->calculateDesastreTotalsBatch($allIds);
         $danosHumanosBatch   = $this->calculateDanosHumanosBatch($allIds);
@@ -51,7 +84,7 @@ class ProcessoExportBIService
 
         $normalizedData = [];
 
-        foreach ($entradas as $entrada) {
+        foreach ($processos as $entrada) {
             $pid = $entrada->id;
 
             if ($entrada->municipios->isEmpty()) {

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Services;
 
 use App\Modules\Rat\Models\RatOcorrencia;
+use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 
 /**
@@ -29,17 +32,64 @@ class RatExportBIService
      */
     public function getNormalizedDataForPowerBI(Request $request): array
     {
-        $ocorrencias = $this->queryService->applyFilters($request)->get();
+        return $this->normalizarOcorrencias($this->queryService->applyFilters($request));
+    }
 
-        if ($ocorrencias->isEmpty()) {
-            return [];
+    /**
+     * Normaliza RATs ja carregadas ou uma consulta (carrega com eager load).
+     *
+     * @param  iterable<RatOcorrencia>|Builder  $ocorrencias
+     */
+    public function normalizarOcorrencias(iterable|Builder $ocorrencias): array
+    {
+        if ($ocorrencias instanceof Builder) {
+            $ocorrencias = $ocorrencias->with($this->relacionamentosEager())->get();
         }
 
-        return $ocorrencias
-            ->map(fn (RatOcorrencia $o) => $this->buildRow($o))
-            ->filter()
-            ->values()
-            ->toArray();
+        $linhas = [];
+        foreach ($ocorrencias as $ocorrencia) {
+            $linhas[] = $this->buildRow($ocorrencia);
+        }
+
+        return array_values(array_filter($linhas));
+    }
+
+    /**
+     * Keyset por (updated_at, id), ordem ascendente, ja com eager load.
+     * O id da RAT e uuid (string), por isso $aposId e string e nao int.
+     * Limite: o updated_at da RAT nao acompanha edicoes feitas so nos
+     * relatos; a F2 cobre isso com reconciliacao.
+     */
+    public function consultaIncremental(?Carbon $desde, ?string $aposId, int $lote): Builder
+    {
+        $query = RatOcorrencia::query()->with($this->relacionamentosEager());
+
+        if ($desde !== null) {
+            $query->where(function (Builder $q) use ($desde, $aposId): void {
+                $q->where('updated_at', '>', $desde);
+                if ($aposId !== null) {
+                    $q->orWhere(fn (Builder $e) => $e->where('updated_at', $desde)->where('id', '>', $aposId));
+                }
+            });
+        }
+
+        return $query->orderBy('updated_at')->orderBy('id')->limit($lote);
+    }
+
+    /**
+     * Elimina o N+1 dos accessors (relatosMorph/conteudo/agentes/creator).
+     * Os accessors ja respeitam relatosMorph carregado.
+     *
+     * @return array<int|string, mixed>
+     */
+    private function relacionamentosEager(): array
+    {
+        return [
+            'creator',
+            'relatosMorph.conteudo' => fn (MorphTo $q) => $q->morphWith([
+                RatRelatoRecurso::class => ['agentes'],
+            ]),
+        ];
     }
 
     // =========================================================================

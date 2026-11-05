@@ -8,6 +8,7 @@ use App\Database\QueryBudgetGuard;
 use App\Modules\Cisterna\Enums\ResponsavelPipa;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Support\PerfilCisterna;
+use Illuminate\Database\Eloquent\Builder;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -107,24 +108,40 @@ class BeneficiarioExportService
     }
 
     /**
+     * Consulta de beneficiarios com eager load e ordem por cpf, sem terminal
+     * (get/lazy/chunk ficam com quem chama). Perfil nulo = sem escopo nem
+     * filtros (uso interno do materializador); com perfil, aplica o mesmo
+     * escopo e filtros da listagem.
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return Builder<CisternaBeneficiario>
+     */
+    public function consultarTodos(?PerfilCisterna $perfil = null, array $filtros = []): Builder
+    {
+        $query = $perfil === null
+            ? CisternaBeneficiario::query()
+            : $this->beneficiarios->consultaParaExport($perfil, $filtros);
+
+        return $query
+            ->with(['municipio:id,nome', 'comunidade:id,nome', 'atendimentosPipa'])
+            ->orderBy('cpf');
+    }
+
+    /**
      * @param  array<string, mixed>  $filtros
      * @return \Illuminate\Support\LazyCollection<int, CisternaBeneficiario>
      */
     private function consultar(PerfilCisterna $perfil, array $filtros): \Illuminate\Support\LazyCollection
     {
-        // Reaproveita o escopo por perfil e os filtros da listagem: o export
-        // do legado tambem passava pelo mesmo aplicarFiltros().
-        return $this->beneficiarios
-            ->consultaParaExport($perfil, $filtros)
-            ->with(['municipio:id,nome', 'comunidade:id,nome', 'atendimentosPipa'])
-            ->orderBy('cpf')
-            ->lazy(self::TAMANHO_DO_LOTE);
+        return $this->consultarTodos($perfil, $filtros)->lazy(self::TAMANHO_DO_LOTE);
     }
 
     /**
+     * Linha do export (39 colunas na ordem de COLUNAS).
+     *
      * @return array<int, string|int|float|null>
      */
-    private function mapear(CisternaBeneficiario $b): array
+    public function mapear(CisternaBeneficiario $b): array
     {
         $responsaveis = $b->atendimentosPipa->keyBy(fn ($a): string => $a->responsavel->value);
 
