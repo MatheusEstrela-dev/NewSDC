@@ -298,6 +298,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     Route::prefix('bi')->name('api.v1.bi.')->group(function () {
         Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index')->middleware('can:bi.dashboards.view');
         Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show')->middleware('can:bi.dashboards.view');
+        // Tabelas materializadas do sdc_powerbi (keyset); depois de entrada/{id} para nao capturar as rotas acima.
+        Route::get('{modulo}/{tabela}', \App\Modules\PowerBi\Http\Controllers\BiTabelaController::class)
+            ->where(['modulo' => '[a-z_]+', 'tabela' => '[a-z_]+'])
+            ->name('tabela')->middleware(['can:bi.dashboards.view', 'throttle:bi-leitura']);
     });
 
     // Webhooks - Sistema de alta performance para 100k+ usuários
