@@ -176,6 +176,10 @@ return [
         // lido por ferramental de dados (pandas/Power BI), nunca servido via web.
         'medalhao' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_MEDALHAO', 'sdc-medalhao'), 'MEDALHAO', 'app/medalhao'),
 
+        // Parquet noturno do sdc_powerbi (powerbi:publicar-arquivos), lido por
+        // Power BI/pandas. Nunca servido via web (sem $localUrl).
+        'powerbi' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_POWERBI', 'sdc-powerbi'), 'POWERBI', 'app/powerbi'),
+
         // Arquivo COMO O MUNICIPIO ENVIOU -- inclusive o KMZ compactado. E o
         // artefato auditavel: sem ele nao ha como provar depois o que o
         // municipio mandou, porque o Bronze guarda o KML ja extraido do ZIP.
