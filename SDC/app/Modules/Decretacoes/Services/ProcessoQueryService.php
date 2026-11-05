@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
+use App\Modules\AjudaHumanitaria\Services\PedidosAhPorDecretoService;
 use App\Modules\Decretacoes\Constants\DesastreConstants;
 use App\Modules\Decretacoes\Resources\ProcessoFlatResource;
 use App\Modules\Decretacoes\Resources\ProcessoResource;
@@ -41,7 +42,8 @@ use Illuminate\Support\Str;
 class ProcessoQueryService
 {
     public function __construct(
-        private readonly DanosAmbientaisService $danosAmbientais = new DanosAmbientaisService()
+        private readonly DanosAmbientaisService $danosAmbientais = new DanosAmbientaisService(),
+        private readonly PedidosAhPorDecretoService $pedidosAhPorDecreto = new PedidosAhPorDecretoService()
     ) {
     }
 
@@ -513,31 +515,7 @@ class ProcessoQueryService
             return collect();
         }
 
-        $tpItemCase = "CASE WHEN LOWER(aju_h_pedido_pedid.tramit) = 'atendido' THEN 'RECEBIDO' ELSE aju_h_pedido_itens.tp_item END";
-
-        $registros = DB::table('aju_h_pedido_pedid')
-            ->join('aju_h_pedido_itens', 'aju_h_pedido_pedid.id', '=', 'aju_h_pedido_itens.id_pedido')
-            ->select(
-                'aju_h_pedido_itens.codigo',
-                'aju_h_pedido_pedid.tramit as status',
-                'aju_h_pedido_itens.descricao_item',
-                DB::raw("$tpItemCase AS tp_item"),
-                DB::raw('SUM(aju_h_pedido_itens.qtd) AS total_qtd')
-            )
-            ->where('aju_h_pedido_pedid.num_decreto', $numeroDecreto)
-            ->groupBy('aju_h_pedido_itens.codigo', 'aju_h_pedido_itens.descricao_item', DB::raw($tpItemCase), 'aju_h_pedido_pedid.tramit')
-            ->orderBy('aju_h_pedido_itens.descricao_item')
-            ->get();
-
-        return $registros->groupBy('codigo')->map(function ($items) {
-            return $items->map(fn ($item) => [
-                'codigo'         => $item->codigo,
-                'status'         => $item->status,
-                'descricao_item' => $item->descricao_item,
-                'tp_item'        => $item->tp_item,
-                'total_qtd'      => $item->total_qtd,
-            ]);
-        });
+        return collect($this->pedidosAhPorDecreto->porDecretos([$numeroDecreto])[$numeroDecreto] ?? []);
     }
 
     // =========================================================================

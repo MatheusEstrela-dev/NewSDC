@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\AjudaHumanitaria\Services\PedidosAhPorDecretoService;
 use App\Modules\Decretacoes\Requests\DesastreDataRequest;
 use App\Modules\Decretacoes\Requests\StoreProcessoRequest;
 use App\Modules\Decretacoes\Requests\UpdateProcessoRequest;
@@ -41,7 +42,8 @@ class DecretacoesController extends Controller
 {
     public function __construct(
         private readonly EntradaProcessoService $processoService,
-        private readonly DesastreDataService $desastreService
+        private readonly DesastreDataService $desastreService,
+        private readonly PedidosAhPorDecretoService $pedidosAhPorDecreto
     ) {
     }
 
@@ -249,51 +251,7 @@ class DecretacoesController extends Controller
             return [];
         }
 
-        try {
-            $tpItemCase = "CASE WHEN LOWER(aju_h_pedido_pedid.tramit) = 'atendido' THEN 'RECEBIDO' ELSE aju_h_pedido_itens.tp_item END";
-
-            $registros = DB::table('aju_h_pedido_pedid')
-                ->join('aju_h_pedido_itens', 'aju_h_pedido_pedid.id', '=', 'aju_h_pedido_itens.id_pedido')
-                ->select(
-                    'aju_h_pedido_pedid.num_decreto',
-                    'aju_h_pedido_itens.codigo',
-                    'aju_h_pedido_pedid.tramit as status',
-                    'aju_h_pedido_itens.descricao_item',
-                    DB::raw("$tpItemCase AS tp_item"),
-                    DB::raw('SUM(aju_h_pedido_itens.qtd) AS total_qtd')
-                )
-                ->whereIn('aju_h_pedido_pedid.num_decreto', $decretos)
-                ->groupBy(
-                    'aju_h_pedido_pedid.num_decreto',
-                    'aju_h_pedido_itens.codigo',
-                    'aju_h_pedido_itens.descricao_item',
-                    DB::raw($tpItemCase),
-                    'aju_h_pedido_pedid.tramit'
-                )
-                ->orderBy('aju_h_pedido_itens.descricao_item')
-                ->get();
-
-            $result = [];
-            foreach ($registros as $row) {
-                $decreto = $row->num_decreto;
-                $codigo  = $row->codigo;
-                if (!isset($result[$decreto][$codigo])) {
-                    $result[$decreto][$codigo] = [];
-                }
-                $result[$decreto][$codigo][] = [
-                    'codigo'         => $codigo,
-                    'status'         => $row->status,
-                    'descricao_item' => $row->descricao_item,
-                    'tp_item'        => $row->tp_item,
-                    'total_qtd'      => $row->total_qtd,
-                ];
-            }
-
-            return $result;
-        } catch (\Throwable $e) {
-            // Conexao sdc pode nao estar disponivel neste ambiente (silencia graciosamente)
-            return [];
-        }
+        return $this->pedidosAhPorDecreto->porDecretos($decretos);
     }
 
     /**
