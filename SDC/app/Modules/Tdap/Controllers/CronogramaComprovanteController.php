@@ -52,7 +52,11 @@ class CronogramaComprovanteController extends Controller
         abort_unless($comprovante->cronograma_id === $cronograma->id, 404);
         EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
 
-        $this->service->destroy($comprovante);
+        try {
+            $this->service->destroy($comprovante);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Comprovante removido.');
     }

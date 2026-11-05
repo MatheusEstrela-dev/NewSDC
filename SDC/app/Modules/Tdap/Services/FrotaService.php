@@ -7,11 +7,13 @@ namespace App\Modules\Tdap\Services;
 use App\Modules\Tdap\DTOs\CaminhaoDTO;
 use App\Modules\Tdap\Enums\ParecerVistoria;
 use App\Modules\Tdap\Models\Caminhao;
+use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Support\VigenciaVistoria;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class FrotaService
 {
@@ -206,10 +208,64 @@ class FrotaService
     {
         return DB::transaction(function () use ($id, $dto): Caminhao {
             $caminhao = Caminhao::findOrFail($id);
+
+            $mudaCapacidade = round((float) $caminhao->capacidade_m3, 2) !== round($dto->capacidade_m3, 2);
+            $mudaPrestador = (int) $caminhao->prestador_id !== $dto->prestador_id;
+            $mudaAtivo = $dto->ativo !== null && $dto->ativo !== (bool) $caminhao->ativo;
+
+            if ($mudaCapacidade || $mudaPrestador || $mudaAtivo) {
+                $this->garantirForaDeCronogramaTravado($caminhao, $mudaCapacidade, $mudaPrestador, $mudaAtivo);
+            }
+
+            // Capacidade pode mudar mesmo com viagem aprovada: cada viagem grava
+            // a capacidade na aprovacao, entao a mudanca vale so para as proximas.
             $caminhao->update($dto->toArray());
 
             return $caminhao->fresh(['prestador']);
         });
+    }
+
+    /**
+     * Caminhao alocado em cronograma em analise/aprovado e parte da frota que
+     * a CEDEC esta analisando (Cronograma::tramitacao_travada): capacidade,
+     * empresa e situacao nao mudam por fora da alocacao.
+     *
+     * Trava os cronogramas envolvidos (ordem de id), como a tramitacao faz,
+     * para a fase lida aqui nao ficar velha ate o COMMIT.
+     */
+    private function garantirForaDeCronogramaTravado(Caminhao $caminhao, bool $capacidade, bool $prestador, bool $ativo): void
+    {
+        $ids = DB::table('tdap_crono_caminhoes')
+            ->where('caminhao_id', $caminhao->id)
+            ->whereNull('deleted_at')
+            ->distinct()
+            ->pluck('cronograma_id');
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $travados = Cronograma::query()
+            ->whereKey($ids->all())
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get()
+            ->filter(fn (Cronograma $c) => $c->tramitacao_travada);
+
+        if ($travados->isEmpty()) {
+            return;
+        }
+
+        $mensagem = sprintf(
+            'Caminhao %s esta no(s) cronograma(s) %s, em analise ou aprovado: capacidade, prestador e situacao nao podem mudar. '
+            .'Devolva o cronograma para a elaboracao no Acompanhamento antes.',
+            $caminhao->placa,
+            $travados->pluck('numero')->implode(', '),
+        );
+
+        $campo = $capacidade ? 'capacidade_m3' : ($prestador ? 'prestador_id' : 'ativo');
+
+        throw ValidationException::withMessages([$campo => $mensagem]);
     }
 
     /**

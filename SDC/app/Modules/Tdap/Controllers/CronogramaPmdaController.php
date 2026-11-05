@@ -6,12 +6,14 @@ namespace App\Modules\Tdap\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Municipio;
+use App\Modules\Pmda\Enums\PmdaStatus;
 use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Tdap\Contracts\PontosCaptacaoDoPmda;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Services\CronogramaService;
 use App\Modules\Tdap\Support\EscopoDeLeitura;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,6 +41,10 @@ class CronogramaPmdaController extends Controller
 
         $pmdaPlanoId = $request->filled('pmda_plano_id') ? (int) $request->integer('pmda_plano_id') : null;
         abort_if($pmdaPlanoId !== null && $pmdaPlanoId < 1, 404);
+
+        if ($pmdaPlanoId !== null) {
+            $this->garantirPlanoVisivel($request, $pmdaPlanoId, $municipioId);
+        }
 
         $resumo = $this->pmda->resumoParaCronograma($municipioId, $pmdaPlanoId);
 
@@ -68,6 +74,33 @@ class CronogramaPmdaController extends Controller
                 'origem'     => in_array($origem, ['create', 'edit', 'show'], true) ? $origem : null,
             ],
         ]);
+    }
+
+    /**
+     * Plano pedido por id: a rota so exige `tdap.cronogramas.view`, que nao e
+     * permissao de ler PMDA. Por aqui o TDAP mostra apenas o plano que ja
+     * passou pela CEDEC (aprovado/atendido) ou que algum cronograma do
+     * municipio usa. Rascunho, em analise, devolvido etc. so para quem pode ver
+     * o plano no proprio PMDA (PmdaPlanoPolicy::view). Fora disso, 404 -- nem
+     * confirma que o id existe.
+     */
+    private function garantirPlanoVisivel(Request $request, int $pmdaPlanoId, int $municipioId): void
+    {
+        $plano = PmdaPlano::withTrashed()->find($pmdaPlanoId);
+        abort_if($plano === null || (int) $plano->municipio_id !== $municipioId, 404);
+
+        $aprovado = in_array($plano->status, [PmdaStatus::APROVADO, PmdaStatus::ATENDIDO], true);
+
+        $ligadoACronograma = DB::table('tdap_cronograma_ponto as cp')
+            ->join('tdap_cronogramas as c', 'c.id', '=', 'cp.cronograma_id')
+            ->where('cp.pmda_plano_id', $plano->id)
+            ->where('c.municipio_id', $municipioId)
+            ->whereNull('c.deleted_at')
+            ->exists();
+
+        $podeVerNoPmda = $request->user()?->can('view', $plano) ?? false;
+
+        abort_unless($aprovado || $ligadoACronograma || $podeVerNoPmda, 404);
     }
 
     /**

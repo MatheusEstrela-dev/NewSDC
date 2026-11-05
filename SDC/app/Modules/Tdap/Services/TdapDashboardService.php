@@ -14,6 +14,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Indicadores do dashboard do TDAP.
@@ -232,16 +233,17 @@ class TdapDashboardService
     }
 
     /**
-     * m3 das viagens: capacidade do caminhao por viagem, a mesma conta de
-     * CronoCaminhaoService::recalcularEntregas. Caminhao excluido depois NAO
-     * zera a agua que ele ja levou -- por isso o join nao filtra deleted_at.
+     * m3 das viagens: a capacidade gravada na aprovacao, a mesma conta de
+     * CronoCaminhaoService::entregaCalculada (sem valor gravado, a do cadastro).
+     * Caminhao excluido depois NAO zera a agua que ele ja levou -- por isso o
+     * join nao filtra deleted_at.
      */
     private function somarM3(Builder $viagens): float
     {
         return round((float) $viagens
             ->join('tdap_crono_caminhoes as cc_m3', 'cc_m3.id', '=', 'tdap_crono_viagens.crono_caminhao_id')
             ->join('tdap_caminhoes as caminhao_m3', 'caminhao_m3.id', '=', 'cc_m3.caminhao_id')
-            ->sum('caminhao_m3.capacidade_m3'), 2);
+            ->sum(DB::raw('COALESCE(tdap_crono_viagens.capacidade_m3, caminhao_m3.capacidade_m3)')), 2);
     }
 
     /** Municipios com cronograma ativo que receberam ao menos uma viagem neste mes. */

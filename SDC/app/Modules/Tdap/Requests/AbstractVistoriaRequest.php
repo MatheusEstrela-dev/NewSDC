@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Requests;
 
+use App\Models\User;
 use App\Modules\Tdap\Enums\ParecerVistoria;
 use App\Modules\Tdap\Models\Vistoria;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Validator;
 
 abstract class AbstractVistoriaRequest extends FormRequest
 {
+    public const PERMISSAO_APROVAR = 'tdap.vistorias.aprovar';
+
     /**
      * @return array<string, mixed>
      */
@@ -46,6 +50,47 @@ abstract class AbstractVistoriaRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /**
+     * Parecer "Aprovada" exige `tdap.vistorias.aprovar`.
+     *
+     * Na edicao, manter o parecer que ja estava gravado nao conta como aprovar:
+     * so a MUDANCA para Aprovada cobra a permissao.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $vistoria = $this->route('vistoria');
+
+        self::exigirPermissaoParaAprovar(
+            $validator,
+            $this->user(),
+            $vistoria instanceof Vistoria ? $vistoria->parecer : null,
+        );
+    }
+
+    /**
+     * Regra compartilhada com StoreVistoriaComCaminhaoRequest, que nao herda
+     * desta classe.
+     */
+    public static function exigirPermissaoParaAprovar(Validator $validator, ?User $user, ?ParecerVistoria $parecerAtual): void
+    {
+        $validator->after(function (Validator $validator) use ($user, $parecerAtual): void {
+            if ($validator->errors()->has('parecer')) {
+                return;
+            }
+
+            $valor = $validator->getData()['parecer'] ?? null;
+            $novo = is_string($valor) ? ParecerVistoria::tryFrom($valor) : null;
+
+            if ($novo !== ParecerVistoria::Aprovada || $parecerAtual === ParecerVistoria::Aprovada) {
+                return;
+            }
+
+            if (! ($user?->can(self::PERMISSAO_APROVAR) ?? false)) {
+                $validator->errors()->add('parecer', 'Você não tem permissão para aprovar a vistoria.');
+            }
+        });
     }
 
     /**

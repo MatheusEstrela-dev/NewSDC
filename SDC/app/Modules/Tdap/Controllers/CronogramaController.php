@@ -21,6 +21,7 @@ use App\Modules\Tdap\Enums\AcaoTramite;
 use App\Modules\Tdap\Services\CronogramaService;
 use App\Modules\Tdap\Services\TramitacaoCronogramaService;
 use App\Modules\Tdap\Support\EscopoDeLeitura;
+use App\Modules\Tdap\Support\ExportadorCsv;
 use App\Modules\Tdap\Support\PoliticaPontoCaptacao;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
@@ -65,26 +66,7 @@ class CronogramaController extends Controller
         $filtros = $request->only(['estado', 'ata_id', 'prestador_id', 'municipio_id', 'search', 'data_inicio', 'data_fim']);
         $data = $this->service->exportar($filtros, EscopoDeLeitura::municipioId($request->user()));
 
-        $filename = 'cronogramas_'.now()->format('Y-m-d_H-i-s').'.csv';
-
-        return response()->streamDownload(function () use ($data): void {
-            $handle = fopen('php://output', 'w');
-
-            // BOM UTF-8 para Excel reconhecer acentuacao.
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            if (! empty($data)) {
-                fputcsv($handle, array_keys($data[0]), ';');
-            }
-
-            foreach ($data as $row) {
-                fputcsv($handle, array_values($row), ';');
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return ExportadorCsv::baixar($data, 'cronogramas');
     }
 
     public function create(): Response
@@ -126,6 +108,9 @@ class CronogramaController extends Controller
 
     public function store(StoreCronogramaRequest $request): RedirectResponse
     {
+        // Quem e lotado num municipio so cria cronograma para ele.
+        EscopoDeLeitura::garantir($request->user(), (int) $request->validated('municipio_id'));
+
         $cronograma = $this->service->criar(CronogramaDTO::fromRequest($request->validated()));
 
         return redirect()
@@ -233,6 +218,9 @@ class CronogramaController extends Controller
     public function update(UpdateCronogramaRequest $request, Cronograma $cronograma): RedirectResponse
     {
         EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
+        // E o municipio de destino: sem isto o cronograma proprio podia ser
+        // "mudado" para outro municipio.
+        EscopoDeLeitura::garantir($request->user(), (int) $request->validated('municipio_id'));
 
         try {
             $atualizado = $this->service->atualizar($cronograma->id, CronogramaDTO::fromRequest($request->validated()));
@@ -313,7 +301,11 @@ class CronogramaController extends Controller
     {
         EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
 
-        $this->service->arquivar($cronograma->id);
+        try {
+            $this->service->arquivar($cronograma->id);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', "Cronograma {$cronograma->numero} arquivado.");
     }
@@ -322,7 +314,11 @@ class CronogramaController extends Controller
     {
         EscopoDeLeitura::garantir($request->user(), $cronograma->municipio_id);
 
-        $this->service->desarquivar($cronograma->id);
+        try {
+            $this->service->desarquivar($cronograma->id);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', "Cronograma {$cronograma->numero} desarquivado.");
     }

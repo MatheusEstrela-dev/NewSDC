@@ -10,6 +10,7 @@ use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
 use App\Modules\Tdap\Enums\AcaoTramite;
 use App\Modules\Tdap\Enums\FaseCronograma;
+use App\Modules\Tdap\Models\Caminhao;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\CronogramaTramite;
 use App\Modules\Tdap\Models\CronoViagem;
@@ -209,13 +210,29 @@ class CronogramaService
     public function atualizar(int $id, CronogramaDTO $dto): Cronograma
     {
         return DB::transaction(function () use ($id, $dto): Cronograma {
-            $cronograma = Cronograma::findOrFail($id);
+            // Trava a linha antes de olhar a fase: sem ela a edicao corria com
+            // `tramitar` e gravava cabecalho/pontos num cronograma que acabara
+            // de entrar em analise (a CEDEC aprovaria uma versao que nao viu).
+            // Os pontos (sincronizarPontos) gravam nesta mesma transacao.
+            $cronograma = Cronograma::query()->lockForUpdate()->findOrFail($id);
             if ($cronograma->ativo) {
                 throw new \DomainException('Cronograma ativo nao pode ter cabecalho editado. Encerre ou crie novo.');
             }
             if ($cronograma->tramitacao_travada) {
                 throw new \DomainException('Cronograma em analise ou aprovado nao pode ser editado. Devolva-o para a elaboracao no Acompanhamento.');
             }
+
+            // Trocar a empresa (ou o lote, que traz a empresa e o preco do m3)
+            // com caminhao alocado deixava no cronograma caminhoes de outra
+            // empresa -- a regra de alocar() so vale na hora de alocar.
+            // Coluna nula (acervo legado) nao conta como troca: preencher o que
+            // faltava nao muda a empresa de ninguem.
+            $trocaContrato = ($cronograma->prestador_id !== null && (int) $cronograma->prestador_id !== $dto->prestador_id)
+                || ($cronograma->lote_id !== null && (int) $cronograma->lote_id !== $dto->lote_id);
+            if ($trocaContrato && $cronograma->caminhoes()->exists()) {
+                throw new \DomainException('Cronograma com caminhao alocado nao pode trocar de prestador ou de lote. Remova os caminhoes antes.');
+            }
+
             $cronograma->update($dto->toArray());
 
             $mudancas = $this->sincronizarPontos($cronograma, $dto->ponto_captacao_ids);
@@ -259,23 +276,31 @@ class CronogramaService
 
     public function deletar(int $id): bool
     {
-        $cronograma = Cronograma::findOrFail($id);
-        if ($cronograma->ativo) {
-            throw new \DomainException('Cronograma ativo nao pode ser excluido. Encerre antes.');
-        }
+        // Trava a linha: sem ela, `deletar` corre com `ativar`/`tramitar` e
+        // apaga um cronograma que acabou de ser ativado ou enviado.
+        return DB::transaction(function () use ($id): bool {
+            $cronograma = Cronograma::query()->lockForUpdate()->findOrFail($id);
+            if ($cronograma->ativo) {
+                throw new \DomainException('Cronograma ativo nao pode ser excluido. Encerre antes.');
+            }
 
-        // Excluir tirava a agua ja aprovada dos totais: as viagens ficam na
-        // tabela, mas toda contagem passa pelo cronograma (CronoViagem::vinculada).
-        // Arquivar esconde sem apagar a execucao.
-        if ($cronograma->encerrado_em) {
-            throw new \DomainException('Cronograma encerrado e registro historico. Arquive em vez de excluir.');
-        }
+            if ($cronograma->tramitacao_travada) {
+                throw new \DomainException('Cronograma em analise ou aprovado nao pode ser excluido. Devolva-o para a elaboracao no Acompanhamento.');
+            }
 
-        if ($cronograma->viagens()->where('validado', CronoViagem::STATUS_APROVADA)->exists()) {
-            throw new \DomainException('Cronograma com viagem aprovada nao pode ser excluido. Arquive em vez de excluir.');
-        }
+            // Excluir tirava a agua ja aprovada dos totais: as viagens ficam na
+            // tabela, mas toda contagem passa pelo cronograma (CronoViagem::vinculada).
+            // Arquivar esconde sem apagar a execucao.
+            if ($cronograma->encerrado_em) {
+                throw new \DomainException('Cronograma encerrado e registro historico. Arquive em vez de excluir.');
+            }
 
-        return (bool) $cronograma->delete();
+            if ($cronograma->viagens()->where('validado', CronoViagem::STATUS_APROVADA)->exists()) {
+                throw new \DomainException('Cronograma com viagem aprovada nao pode ser excluido. Arquive em vez de excluir.');
+            }
+
+            return (bool) $cronograma->delete();
+        });
     }
 
     /**
@@ -285,7 +310,16 @@ class CronogramaService
     public function arquivar(int $id): Cronograma
     {
         return DB::transaction(function () use ($id): Cronograma {
-            $cronograma = Cronograma::findOrFail($id);
+            // Com lock, como ativar/encerrar: arquivar nao pode correr com a
+            // ativacao e esconder um cronograma que acabou de entrar em execucao.
+            $cronograma = Cronograma::query()->lockForUpdate()->findOrFail($id);
+
+            // Ativo em execucao some da listagem e do painel quando arquivado,
+            // mas segue recebendo viagens. Encerre antes.
+            if ($cronograma->ativo && $cronograma->encerrado_em === null) {
+                throw new \DomainException('Cronograma ativo nao pode ser arquivado. Encerre-o antes.');
+            }
+
             if (! $cronograma->arquivado_em) {
                 $cronograma->arquivado_em = now();
                 $cronograma->save();
@@ -299,7 +333,7 @@ class CronogramaService
     public function desarquivar(int $id): Cronograma
     {
         return DB::transaction(function () use ($id): Cronograma {
-            $cronograma = Cronograma::findOrFail($id);
+            $cronograma = Cronograma::query()->lockForUpdate()->findOrFail($id);
             if ($cronograma->arquivado_em) {
                 $cronograma->arquivado_em = null;
                 $cronograma->save();
@@ -339,6 +373,21 @@ class CronogramaService
                 .$cronograma->fase_tramite->label().').'];
         }
 
+        $pendencia = $this->pendenciaParaAtivar($cronograma);
+
+        return $pendencia === null ? [true, null] : [false, $pendencia];
+    }
+
+    /**
+     * O que impede a ativacao alem do estado e da fase: frota, empresa,
+     * vistoria, pontos e o "1 cronograma ativo por municipio".
+     *
+     * Separado de podeAtivar() para a tramitacao avisar ja na aprovacao o que a
+     * ativacao vai recusar (TramitacaoCronogramaService::acoesDisponiveis) --
+     * la a fase ainda e "em analise" e a regra de fase recusaria sempre.
+     */
+    public function pendenciaParaAtivar(Cronograma $cronograma): ?string
+    {
         // 1 TDAP por municipio (#56): um cronograma em execucao por vez. A
         // demanda maior se resolve com mais caminhoes no mesmo cronograma
         // (locacao de frota), nao com um segundo cronograma em paralelo.
@@ -349,19 +398,80 @@ class CronogramaService
             ->whereNull('encerrado_em')
             ->value('numero');
         if ($outroAtivo !== null) {
-            return [false, "O municipio ja tem o cronograma {$outroAtivo} em execucao. Encerre-o antes de ativar outro."];
+            return "O municipio ja tem o cronograma {$outroAtivo} em execucao. Encerre-o antes de ativar outro.";
         }
 
         $cronograma->loadCount('caminhoes');
         if ((int) $cronograma->caminhoes_count === 0) {
-            return [false, 'Cronograma exige ao menos 1 caminhao alocado.'];
+            return 'Cronograma exige ao menos 1 caminhao alocado.';
+        }
+
+        // Mesma regra de CronoCaminhaoService::alocar, conferida de novo aqui:
+        // alocacao antiga (ou feita antes de uma troca de empresa) nao passava
+        // por ela, e a viagem seria paga pelo lote do cronograma.
+        // Por consulta, nao pela relacao carregada: a ficha (obter()) carrega
+        // `caminhoes.caminhao` sem `prestador_id`, e loadMissing nao recarrega
+        // -- todo caminhao parecia de outra empresa e a ativacao travava.
+        if ($cronograma->prestador_id !== null) {
+            $deOutraEmpresa = $cronograma->caminhoes()
+                ->whereHas('caminhao', fn ($q) => $q->where('prestador_id', '<>', $cronograma->prestador_id))
+                ->with('caminhao:id,placa')
+                ->first();
+
+            if ($deOutraEmpresa !== null) {
+                return "Caminhao {$deOutraEmpresa->caminhao->placa} nao pertence a empresa contratada no cronograma. Remova-o antes de ativar.";
+            }
         }
 
         foreach ($this->caminhoesSemVistoriaAte($cronograma, $cronograma->dt_final_efetiva) as $erro) {
-            return [false, $erro];
+            return $erro;
         }
 
-        return [true, null];
+        // Ponto aceito no rascunho pode ter saido do PMDA (ou ser do acervo
+        // legado): a ativacao confere de novo contra o PMDA vigente, sem a
+        // excecao de "ja vinculado" que o formulario aplica.
+        if ($this->politicaPontos->exigePmda()) {
+            $pontoIds = $cronograma->pontosCaptacao()->pluck('pip_pmda_ponto.id')->map(fn ($id) => (int) $id)->all();
+            foreach ($this->politicaPontos->recusas((int) $cronograma->municipio_id, $pontoIds) as $recusa) {
+                return $recusa.' Ajuste os pontos de captacao antes de ativar.';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Por que a vistoria do caminhao nao cobre $dataLimite; null = cobre.
+     *
+     * Regra unica de ativacao, prorrogacao e alocacao em cronograma ativo
+     * (CronoCaminhaoService::alocar).
+     */
+    public function motivoVistoriaNaoCobre(?Caminhao $caminhao, string $placa, ?Carbon $dataLimite): ?string
+    {
+        $vistoria = $caminhao?->ultimaVistoriaAprovada;
+
+        if ($vistoria === null) {
+            return "Caminhao {$placa} nao tem vistoria aprovada. Registre/aprove vistoria antes.";
+        }
+
+        // Cronograma sem data final: nao ha periodo a cobrir, vigente hoje basta.
+        if ($dataLimite === null) {
+            return $vistoria->esta_vigente
+                ? null
+                : "Caminhao {$placa} nao tem vistoria aprovada vigente ("
+                    .Vistoria::VIGENCIA_MESES.' meses). Registre/aprove vistoria antes.';
+        }
+
+        if (! $vistoria->cobre($dataLimite)) {
+            return sprintf(
+                'Caminhao %s tem vistoria valida ate %s, mas o periodo vai ate %s. Renove a vistoria antes.',
+                $placa,
+                $vistoria->valido_ate?->format('d/m/Y') ?? 'data desconhecida',
+                $dataLimite->format('d/m/Y'),
+            );
+        }
+
+        return null;
     }
 
     /**
@@ -390,33 +500,9 @@ class CronogramaService
         $cronograma->load(['caminhoes.caminhao.ultimaVistoriaAprovada']);
 
         foreach ($cronograma->caminhoes as $cc) {
-            $caminhao = $cc->caminhao;
-            $placa = $caminhao?->placa ?? "id={$cc->caminhao_id}";
-            $vistoria = $caminhao?->ultimaVistoriaAprovada;
-
-            if ($vistoria === null) {
-                yield "Caminhao {$placa} nao tem vistoria aprovada. Registre/aprove vistoria antes.";
-
-                continue;
-            }
-
-            // Cronograma sem data final: nao ha periodo a cobrir, vigente hoje basta.
-            if ($dataLimite === null) {
-                if (! $vistoria->esta_vigente) {
-                    yield "Caminhao {$placa} nao tem vistoria aprovada vigente ("
-                        .Vistoria::VIGENCIA_MESES.' meses). Registre/aprove vistoria antes.';
-                }
-
-                continue;
-            }
-
-            if (! $vistoria->cobre($dataLimite)) {
-                yield sprintf(
-                    'Caminhao %s tem vistoria valida ate %s, mas o periodo vai ate %s. Renove a vistoria antes.',
-                    $placa,
-                    $vistoria->valido_ate?->format('d/m/Y') ?? 'data desconhecida',
-                    $dataLimite->format('d/m/Y'),
-                );
+            $erro = $this->motivoVistoriaNaoCobre($cc->caminhao, $cc->caminhao?->placa ?? "id={$cc->caminhao_id}", $dataLimite);
+            if ($erro !== null) {
+                yield $erro;
             }
         }
     }
@@ -553,7 +639,9 @@ class CronogramaService
     public function prorrogar(int $id, string $dtInicio, string $dtFinal, ?string $justificativa = null): Cronograma
     {
         return DB::transaction(function () use ($id, $dtInicio, $dtFinal, $justificativa): Cronograma {
-            $cronograma = Cronograma::findOrFail($id);
+            // Com lock, como encerrar: prorrogar e encerrar juntos gravavam
+            // prorrogacao num cronograma ja encerrado.
+            $cronograma = Cronograma::query()->lockForUpdate()->findOrFail($id);
             if (! $cronograma->ativo) {
                 throw new \DomainException('Apenas cronogramas ativos podem ser prorrogados.');
             }
@@ -568,11 +656,32 @@ class CronogramaService
                 throw new \DomainException('A data final da prorrogacao nao pode ser anterior a inicial.');
             }
 
-            if ($cronograma->dt_final !== null && $inicioProrrogacao->lt($cronograma->dt_final->copy()->startOfDay())) {
-                throw new \DomainException(
-                    'A prorrogacao deve comecar em ou depois do fim da vigencia atual ('
-                    .$cronograma->dt_final->format('d/m/Y').').'
-                );
+            /*
+             * A janela nova emenda no fim EFETIVO (ja com prorrogacao anterior):
+             * comeca no dia seguinte a ele, sem sobrepor e sem lacuna.
+             *
+             * Comparar com `dt_final` deixava uma segunda prorrogacao comecar
+             * dentro da primeira e terminar antes dela -- as datas efetivas dao
+             * precedencia a prorrogacao, entao isso ENCURTAVA o prazo. E um
+             * inicio solto depois do fim deixava dias sem contrato no meio.
+             */
+            $fimAtual = $cronograma->dt_final_efetiva?->copy()->startOfDay();
+            if ($fimAtual !== null) {
+                $diaSeguinte = $fimAtual->copy()->addDay();
+
+                if (! $inicioProrrogacao->equalTo($diaSeguinte)) {
+                    throw new \DomainException(sprintf(
+                        'A prorrogacao deve comecar no dia seguinte ao fim da vigencia atual (%s), ou seja, em %s.',
+                        $fimAtual->format('d/m/Y'),
+                        $diaSeguinte->format('d/m/Y'),
+                    ));
+                }
+
+                if (! $finalProrrogacao->gt($fimAtual)) {
+                    throw new \DomainException(
+                        'A data final da prorrogacao deve ser posterior ao fim da vigencia atual ('.$fimAtual->format('d/m/Y').').'
+                    );
+                }
             }
 
             /*
@@ -586,8 +695,12 @@ class CronogramaService
                 throw new \DomainException($erro);
             }
 
+            // Segunda prorrogacao ESTENDE a primeira: o inicio gravado continua
+            // o da primeira janela. Sobrescrever com o inicio novo fazia
+            // dt_inicio_efetiva pular e as viagens da 1a prorrogacao apareciam
+            // como fora da vigencia.
             $cronograma->update([
-                'dt_inicio_prorrogacao' => $dtInicio,
+                'dt_inicio_prorrogacao' => $cronograma->dt_inicio_prorrogacao ?? $dtInicio,
                 'dt_final_prorrogacao'  => $dtFinal,
                 'justificativa'         => $justificativa
                     ? trim(($cronograma->justificativa ?? '') . "\n[PRORROGACAO] " . $justificativa)

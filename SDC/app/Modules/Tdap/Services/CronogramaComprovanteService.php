@@ -37,8 +37,18 @@ class CronogramaComprovanteService
         ]);
     }
 
+    /**
+     * @throws \DomainException quando o cronograma esta encerrado
+     */
     public function destroy(CronogramaComprovante $comprovante): void
     {
+        // Encerrado e registro historico (mesma regra de CronogramaService::deletar):
+        // o comprovante e a prova do que foi executado e pago.
+        $encerrado = Cronograma::query()->whereKey($comprovante->cronograma_id)->whereNotNull('encerrado_em')->exists();
+        if ($encerrado) {
+            throw new \DomainException('Cronograma encerrado e registro historico: seus comprovantes nao podem ser removidos.');
+        }
+
         Storage::disk($comprovante->disk)->delete($comprovante->path);
         $comprovante->delete();
     }

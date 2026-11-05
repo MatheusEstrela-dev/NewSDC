@@ -172,23 +172,31 @@ class FrotaVistoriaController extends Controller
      */
     public function storeComCaminhao(StoreVistoriaComCaminhaoRequest $request): RedirectResponse
     {
-        $vistoria = DB::transaction(function () use ($request): Vistoria {
-            $caminhao = $this->frota->criar(
-                CaminhaoDTO::fromRequest($request->dadosDoCaminhao()),
-            );
+        $gravadas = [];
+        try {
+            $vistoria = DB::transaction(function () use ($request, &$gravadas): Vistoria {
+                $caminhao = $this->frota->criar(
+                    CaminhaoDTO::fromRequest($request->dadosDoCaminhao()),
+                );
 
-            $vistoria = $this->service->criar(
-                VistoriaDTO::fromRequest($request->dadosDaVistoria($caminhao->id)),
-            );
+                $vistoria = $this->service->criar(
+                    VistoriaDTO::fromRequest($request->dadosDaVistoria($caminhao->id)),
+                );
 
-            foreach ($request->file('fotos') ?? [] as $arquivo) {
-                $this->fotoService->store($vistoria, $arquivo, $request->validated('descricao'));
-            }
+                foreach ($request->file('fotos') ?? [] as $arquivo) {
+                    $gravadas[] = $this->fotoService->store($vistoria, $arquivo, $request->validated('descricao'));
+                }
 
-            $vistoria->setRelation('caminhao', $caminhao);
+                $vistoria->setRelation('caminhao', $caminhao);
 
-            return $vistoria;
-        });
+                return $vistoria;
+            });
+        } catch (\Throwable $e) {
+            // O rollback desfaz as linhas, nao os arquivos ja gravados no disco.
+            $this->fotoService->descartarArquivos($gravadas);
+
+            throw $e;
+        }
 
         return redirect()
             ->route('tdap.frota.vistorias.show', $vistoria->id)
@@ -225,17 +233,25 @@ class FrotaVistoriaController extends Controller
         // `except('fotos')`: o DTO descreve a ficha, nao os anexos. Deixar os
         // arquivos entrarem ali faria o payload carregar UploadedFile ate o
         // Eloquent.
-        $vistoria = DB::transaction(function () use ($request): Vistoria {
-            $vistoria = $this->service->criar(
-                VistoriaDTO::fromRequest($request->safe()->except('fotos')),
-            );
+        $gravadas = [];
+        try {
+            $vistoria = DB::transaction(function () use ($request, &$gravadas): Vistoria {
+                $vistoria = $this->service->criar(
+                    VistoriaDTO::fromRequest($request->safe()->except('fotos')),
+                );
 
-            foreach ($request->file('fotos') ?? [] as $arquivo) {
-                $this->fotoService->store($vistoria, $arquivo, $request->input('descricao'));
-            }
+                foreach ($request->file('fotos') ?? [] as $arquivo) {
+                    $gravadas[] = $this->fotoService->store($vistoria, $arquivo, $request->input('descricao'));
+                }
 
-            return $vistoria;
-        });
+                return $vistoria;
+            });
+        } catch (\Throwable $e) {
+            // Mesmo motivo de storeComCaminhao: o rollback nao apaga arquivo.
+            $this->fotoService->descartarArquivos($gravadas);
+
+            throw $e;
+        }
 
         return redirect()
             ->route('tdap.frota.vistorias.show', $vistoria->id)
@@ -309,7 +325,13 @@ class FrotaVistoriaController extends Controller
 
     public function update(UpdateVistoriaRequest $request, Vistoria $vistoria): RedirectResponse
     {
-        $atualizada = $this->service->atualizar($vistoria->id, VistoriaDTO::fromRequest($request->validated()));
+        try {
+            $atualizada = $this->service->atualizar($vistoria->id, VistoriaDTO::fromRequest($request->validated()));
+        } catch (\DomainException $e) {
+            // Vistoria que sustenta cronograma em execucao: mesma resposta da
+            // exclusao, mensagem de negocio em vez de 500.
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()
             ->route('tdap.frota.vistorias.show', $atualizada->id)

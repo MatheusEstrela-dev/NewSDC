@@ -8,6 +8,7 @@ use App\Modules\Tdap\DTOs\VistoriaDTO;
 use App\Modules\Tdap\Enums\ParecerVistoria;
 use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Support\VigenciaVistoria;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -98,7 +99,31 @@ class VistoriaService
     public function atualizar(int $id, VistoriaDTO $dto): Vistoria
     {
         return DB::transaction(function () use ($id, $dto): Vistoria {
-            $vistoria = Vistoria::findOrFail($id);
+            $vistoria = Vistoria::query()->with('caminhao:id,placa')->lockForUpdate()->findOrFail($id);
+
+            /*
+             * Mesmo guard de deletar(): reprovar, recuar a data ou mover para
+             * outro caminhao a vistoria que sustenta cronograma em execucao tira
+             * a cobertura do veiculo do mesmo jeito que exclui-la -- e era o
+             * atalho para contornar o guard da exclusao.
+             */
+            $perdeCobertura = $dto->parecer !== $vistoria->parecer
+                || $dto->placa_id !== (int) $vistoria->placa_id
+                || ($vistoria->data !== null && Carbon::parse($dto->data)->startOfDay()->lt($vistoria->data->copy()->startOfDay()));
+
+            if ($perdeCobertura) {
+                $cronogramas = $this->cronogramasAtivosQueDependemDe($vistoria);
+
+                if ($cronogramas->isNotEmpty()) {
+                    throw new \DomainException(sprintf(
+                        'Esta e a vistoria aprovada mais recente do caminhao %s, que esta em execucao no(s) cronograma(s) %s. '
+                        .'Parecer, data e caminhao nao podem mudar de forma a reduzir a cobertura. Registre uma vistoria nova.',
+                        $vistoria->caminhao?->placa ?? "id={$vistoria->placa_id}",
+                        $cronogramas->implode(', '),
+                    ));
+                }
+            }
+
             $vistoria->update($dto->toArray());
 
             return $vistoria->fresh();
