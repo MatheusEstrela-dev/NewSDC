@@ -38,6 +38,21 @@ x-ha-client-environment: &ha-client-environment
   TREINAMENTO_DB_HOST: db,db_replica_1,db_replica_2
   TREINAMENTO_DB_PORT: 6434
 
+# sdc_powerbi e membro de BI, so para api_integracao, queue_integracao e
+# queue_powerbi. Escrita (sdc_powerbi) no lider pelo multi-host 6434, igual ao
+# resto; leitura e fonte de BI pelo HAProxy 6436 de qualquer membro Patroni,
+# que so encaminha ao db_bi (check /health, nao /replica).
+x-ha-bi-environment: &ha-bi-environment
+  POWERBI_DB_HOST: db,db_replica_1,db_replica_2
+  POWERBI_DB_PORT: 6434
+  POWERBI_DB_READ_HOST: db,db_replica_1,db_replica_2
+  POWERBI_DB_READ_PORT: 6436
+  FONTE_BI_DB_HOST: db,db_replica_1,db_replica_2
+  FONTE_BI_DB_PORT: 6436
+  # Teto do lider com max_connections 400 no Patroni (clientes do site seguem
+  # no PG_MAX_CONNECTIONS 200 da ancora acima).
+  PG_MAX_CONNECTIONS: 400
+
 x-patroni-environment: &patroni-environment
   PATRONI_SCOPE: ${PATRONI_SCOPE:-sdc-homolog}
   PATRONI_SUPERUSER_USERNAME: ${DB_USERNAME:-sdc}
@@ -80,6 +95,33 @@ services:
   queue_ranking:
     image: *ha-app-image
     environment: *ha-client-environment
+    depends_on: !override
+      <<: *ha-client-dependencies
+  api_integracao:
+    image: *ha-app-image
+    environment:
+      <<: [*ha-bi-environment, *ha-client-environment]
+      # Nao usa replicas do site (mesmo valor da base, depois do merge acima).
+      DB_READ_ENABLED: "false"
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue_integracao:
+    image: *ha-app-image
+    environment:
+      <<: [*ha-bi-environment, *ha-client-environment]
+      DB_READ_ENABLED: "false"
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue_powerbi:
+    image: *ha-app-image
+    environment:
+      # Escrita e log no lider (6434); a conexao default pgsql le o membro de
+      # BI (6436) e a fonte tem de ser standby.
+      <<: [*ha-bi-environment, *ha-client-environment]
+      DB_HOST: db,db_replica_1,db_replica_2
+      DB_PORT: 6436
+      DB_READ_ENABLED: "false"
+      POWERBI_FONTE_EXIGE_STANDBY: "true"
     depends_on: !override
       <<: *ha-client-dependencies
   scheduler:
