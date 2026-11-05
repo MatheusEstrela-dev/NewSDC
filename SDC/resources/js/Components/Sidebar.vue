@@ -129,7 +129,7 @@
           v-if="canSeeDemandasGroup"
           @click="openSubmenu('demandas')"
           class="nav-group-toggle nav-drilldown"
-          :class="{ 'is-active-route': isRouteActive('demandas.*') || isRouteActive('admin.demandas.catalogo.*') }"
+          :class="{ 'is-active-route': isRouteActive('demandas.*') || isRouteActive('admin.demandas.catalogo.*') || isRouteActive('admin.demandas.index') }"
           :title="isCollapsed ? 'Demandas' : ''"
         >
           <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,7 +327,7 @@
         <NavItem
           v-if="page.props.rankingDisponivel && _routes.hasRanking"
           :href="route('ranking.index')"
-          :active="isRouteActive('ranking.*')"
+          :active="isRouteActive('ranking.*') || isRouteActive('resgate.*')"
           icon="trophy"
           :collapsed="isCollapsed"
         >
@@ -360,7 +360,7 @@
         <NavItem
           v-if="canSeeMeteorologia && _routes.hasGeoespacial"
           :href="route('geoespacial.index', undefined, false)"
-          :active="isRouteActive('geoespacial.index')"
+          :active="isRouteActive('geoespacial.index') || isRouteActive('geoespacial.show')"
           icon="map"
           :collapsed="isCollapsed"
         >
@@ -842,7 +842,7 @@
         <NavItem
           v-if="canSeeDemandasIndex"
           :href="route('demandas.index')"
-          :active="isRouteActive('demandas.index') || isRouteActive('demandas.show') || isRouteActive('demandas.create')"
+          :active="isRouteActive('demandas.index') || isRouteActive('demandas.show') || isRouteActive('demandas.create') || isRouteActive('admin.demandas.index')"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
@@ -1048,6 +1048,9 @@ const _activeRoutes = computed(() => {
     'demandas.show': route().current('demandas.show'),
     'demandas.create': route().current('demandas.create'),
     'admin.demandas.catalogo.*': route().current('admin.demandas.catalogo.*'),
+    // Lista administrativa de demandas vive em admin/demandas, fora do prefixo
+    // demandas.; pertence ao item "Listar demandas".
+    'admin.demandas.index': route().current('admin.demandas.index'),
     'pae.*': route().current('pae.*'),
     'plantao.*': route().current('plantao.*'),
     'decretacoes.*': route().current('decretacoes.*'),
@@ -1066,6 +1069,10 @@ const _activeRoutes = computed(() => {
     'ajuda-humanitaria.liberacoes.*': route().current('ajuda-humanitaria.liberacoes.*'),
     'ajuda-humanitaria.transferencias.*': route().current('ajuda-humanitaria.transferencias.*'),
     'compdec.*': route().current('compdec.*'),
+    // isRouteActive so consulta ESTE mapa: sem as linhas abaixo Prefeituras e
+    // Notas Tecnicas nasciam permanentemente apagados, mesmo na propria pagina.
+    'cedec.*': route().current('cedec.*'),
+    'notas-tecnicas.*': route().current('notas-tecnicas.*'),
     'tdap.*': route().current('tdap.*'),
     'tdap.dashboard': route().current('tdap.dashboard'),
     'tdap.prestadores.*': route().current('tdap.prestadores.*'),
@@ -1103,6 +1110,9 @@ const _activeRoutes = computed(() => {
     // isRouteActive so consulta ESTE mapa: sem a linha abaixo o item de
     // Ranking nasceria permanentemente apagado, mesmo dentro do modulo.
     'ranking.*': route().current('ranking.*'),
+    // Carteira, catalogo e pedidos de resgate abrem a partir do Ranking, mas
+    // tem prefixo proprio (resgate.); sem esta linha a sidebar apagava ali.
+    'resgate.*': route().current('resgate.*'),
     'inmet.*': route().current('inmet.*'),
     'sismos.*': route().current('sismos.*'),
     // isRouteActive so acende o item quando o padrao e chave DESTE mapa: sem a
@@ -1111,6 +1121,8 @@ const _activeRoutes = computed(() => {
     // menu acendiam juntos na tela de revisao.
     'geoespacial.index': route().current('geoespacial.index'),
     'geoespacial.revisao': route().current('geoespacial.revisao'),
+    // Detalhe de uma camada (aberto a partir da lista) acende Camadas de Risco.
+    'geoespacial.show': route().current('geoespacial.show'),
     'geoespacial.enviar': route().current('geoespacial.enviar'),
     'admin.permissions.*': route().current('admin.permissions.*'),
     'log-viewer.*': route().current('log-viewer.*'),

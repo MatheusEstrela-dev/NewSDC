@@ -28,7 +28,8 @@ class NotificacaoFiscalizacaoController extends Controller
 
         $filtros = $request->only(['notificavel_type', 'notificavel_id']);
 
-        if ($request->has('apenas_pendentes')) {
+        // filled: valor vazio chega como null e boolean() o viraria false.
+        if ($request->filled('apenas_pendentes')) {
             $filtros['apenas_pendentes'] = $request->boolean('apenas_pendentes');
         }
 

@@ -287,7 +287,8 @@ class BeneficiarioController extends Controller
 
         // Booleanos precisam de tratamento explicito: 'false' em query string
         // e uma string verdadeira.
-        if ($request->has('atendido_por_pipa')) {
+        // filled: select vazio chega como null e boolean() o viraria false.
+        if ($request->filled('atendido_por_pipa')) {
             $filtros['atendido_por_pipa'] = $request->boolean('atendido_por_pipa');
         }
 
