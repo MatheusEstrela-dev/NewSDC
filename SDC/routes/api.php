@@ -298,6 +298,14 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     Route::prefix('bi')->name('api.v1.bi.')->group(function () {
         Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index')->middleware('can:bi.dashboards.view');
         Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show')->middleware('can:bi.dashboards.view');
+        // Arquivos do BI: Parquet publicado (listagem/download) e pedido assincrono csv|parquet.
+        Route::get('arquivos', [\App\Modules\PowerBi\Http\Controllers\BiArquivoController::class, 'index'])
+            ->name('arquivos.index')->middleware(['can:bi.dashboards.view', 'throttle:bi-leitura']);
+        Route::get('arquivos/{id}/download', [\App\Modules\PowerBi\Http\Controllers\BiArquivoController::class, 'baixar'])
+            ->whereNumber('id')->name('arquivos.baixar')->middleware(['can:bi.dashboards.view', 'throttle:bi-leitura']);
+        Route::post('{modulo}/{tabela}/arquivos', [\App\Modules\PowerBi\Http\Controllers\BiArquivoController::class, 'gerar'])
+            ->where(['modulo' => '[a-z_]+', 'tabela' => '[a-z_]+'])
+            ->name('arquivos.gerar')->middleware(['can:bi.dashboards.view', 'throttle:bi-leitura']);
         // Tabelas materializadas do sdc_powerbi (keyset); depois de entrada/{id} para nao capturar as rotas acima.
         Route::get('{modulo}/{tabela}', \App\Modules\PowerBi\Http\Controllers\BiTabelaController::class)
             ->where(['modulo' => '[a-z_]+', 'tabela' => '[a-z_]+'])

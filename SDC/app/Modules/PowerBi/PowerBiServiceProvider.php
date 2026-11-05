@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\PowerBi;
 
 use App\Modules\PowerBi\Console\MaterializarCommand;
+use App\Modules\PowerBi\Console\PublicarArquivosCommand;
 use App\Modules\PowerBi\Console\ReconciliarCommand;
 use App\Modules\PowerBi\Jobs\MaterializarModuloJob;
 use App\Modules\PowerBi\Support\CatalogoBi;
@@ -47,7 +48,7 @@ class PowerBiServiceProvider extends ServiceProvider
         });
 
         if ($this->app->runningInConsole()) {
-            $this->commands([MaterializarCommand::class, ReconciliarCommand::class]);
+            $this->commands([MaterializarCommand::class, ReconciliarCommand::class, PublicarArquivosCommand::class]);
         }
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
@@ -63,6 +64,9 @@ class PowerBiServiceProvider extends ServiceProvider
             })->name('powerbi:materializar')->everyTenMinutes()->onOneServer()->withoutOverlapping(9);
 
             $schedule->command('powerbi:reconciliar')->dailyAt('02:30')
+                ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(120);
+
+            $schedule->command('powerbi:publicar-arquivos')->dailyAt((string) config('powerbi.arquivos.horario', '03:15'))
                 ->timezone('America/Sao_Paulo')->onOneServer()->withoutOverlapping(120);
         });
     }
