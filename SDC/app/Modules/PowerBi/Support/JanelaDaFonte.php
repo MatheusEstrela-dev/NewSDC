@@ -12,6 +12,10 @@ use Illuminate\Support\Carbon;
  * Janela segura de leitura da fonte: limite superior = min(agora, replay da
  * fonte) - margem; limite inferior = cursor - margem. A margem cobre commits
  * tardios; reler e inofensivo porque a gravacao compara hash.
+ *
+ * Os limites saem no fuso do app: as colunas updated_at da fonte sao
+ * timestamp sem fuso gravadas nesse fuso, e o binding formata o Carbon no
+ * fuso dele. Em UTC (como o PG devolve) o limite andaria 3h e pularia linhas.
  */
 final class JanelaDaFonte
 {
@@ -38,8 +42,11 @@ final class JanelaDaFonte
             throw FonteNaoEhStandbyException::nova();
         }
 
-        $agora = Carbon::parse($linha->agora);
-        $dadosAte = ($recovery && $linha->replay !== null) ? Carbon::parse($linha->replay)->min($agora) : $agora;
+        $fuso = (string) config('app.timezone');
+        $agora = Carbon::parse($linha->agora)->setTimezone($fuso);
+        $dadosAte = ($recovery && $linha->replay !== null)
+            ? Carbon::parse($linha->replay)->setTimezone($fuso)->min($agora)
+            : $agora;
 
         return new self($dadosAte->copy()->subSeconds($margem), $dadosAte, $recovery, $margem);
     }

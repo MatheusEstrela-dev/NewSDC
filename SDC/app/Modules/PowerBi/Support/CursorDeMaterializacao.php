@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 /**
  * Cursores de um modulo em controle.cursores. Escreve na mesma conexao do
  * GravadorBi: chamado dentro de emTransacao(), o cursor so avanca se a
- * gravacao for confirmada.
+ * gravacao for confirmada. O estado volta no fuso do app (ver JanelaDaFonte).
  */
 final class CursorDeMaterializacao
 {
@@ -24,15 +24,17 @@ final class CursorDeMaterializacao
     /** Estado salvo; com --desde, o cursor e forcado para essa data (sem id). */
     public function estado(string $tabela): EstadoCursor
     {
+        $fuso = (string) config('app.timezone');
+
         if ($this->desde !== null) {
-            return new EstadoCursor($this->desde, null);
+            return new EstadoCursor($this->desde->copy()->setTimezone($fuso), null);
         }
 
         $linha = ConexaoPowerBi::escrita()->table('controle.cursores')
             ->where('modulo', $this->modulo)->where('tabela', $tabela)->first();
 
         return new EstadoCursor(
-            $linha?->ultimo_atualizado_em !== null ? Carbon::parse($linha->ultimo_atualizado_em) : null,
+            $linha?->ultimo_atualizado_em !== null ? Carbon::parse($linha->ultimo_atualizado_em)->setTimezone($fuso) : null,
             $linha?->ultimo_id !== null ? (string) $linha->ultimo_id : null,
         );
     }
