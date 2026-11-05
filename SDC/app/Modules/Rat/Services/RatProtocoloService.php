@@ -14,6 +14,9 @@ class RatProtocoloService
     {
         return DB::transaction(function () {
             if (DB::getDriverName() === 'pgsql') {
+                // lock_timeout padrao do banco (3s) estoura em rajada de cadastros: quem espera
+                // a vez na fila nao pode falhar. SET LOCAL morre com a transacao (seguro no pool).
+                DB::statement("SET LOCAL lock_timeout = '20s'");
                 DB::statement("SELECT pg_advisory_xact_lock(hashtext('rat_protocolo_seq'))");
             }
 

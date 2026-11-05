@@ -6,22 +6,32 @@ namespace App\Modules\Rat\Infrastructure\Persistence;
 
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
+use App\Modules\Rat\Services\RatProtocoloService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class EloquentRatRepository
 {
+    public function __construct(private readonly RatProtocoloService $protocoloService) {}
+
+    /**
+     * Numero e INSERT na mesma transacao: o advisory lock do RatProtocoloService
+     * (pg_advisory_xact_lock) so serializa se vivo ate o commit do INSERT.
+     * Sem Connection guardada: tudo via facade DB, seguro no pool por coroutine.
+     */
     public function create(array $data): RatOcorrencia
     {
         $userId = Auth::id();
 
-        return RatOcorrencia::create([
-            'numero_bos' => $data['numero_bos'] ?? $this->generateProtocolo(),
-            'status'     => 0,
-            'created_by' => $userId,
-            'updated_by' => $userId,
-        ]);
+        return DB::transaction(fn () => RatOcorrencia::create([
+            'numero_bos'     => $data['numero_bos'] ?? $this->protocoloService->generate(),
+            'sequencial_ano' => now()->year,
+            'status'         => 0,
+            'created_by'     => $userId,
+            'updated_by'     => $userId,
+        ]));
     }
 
     public function findById(string $id): ?RatOcorrencia
@@ -87,35 +97,4 @@ class EloquentRatRepository
             ->limit($limit)
             ->get();
     }
-
-    public function getLatestSequence(int $year): int
-    {
-        $seq = 0;
-
-        // O sufixo pode ser 000 (placeholder) ou o código real da unidade (ex: 123).
-        // Busca por qualquer sufixo de 3 dígitos para não perder o sequencial
-        // após o protocolo ser atualizado por saveDadosGerais.
-        $latestOld = RatOcorrencia::withTrashed()
-            ->where('numero_bos', 'like', "{$year}-%-%")
-            ->where('numero_bos', 'not like', 'RAT-%')
-            ->lockForUpdate()
-            ->orderByDesc('numero_bos')
-            ->value('numero_bos');
-
-         if ($latestOld) {
-            $seq = max($seq, (int) substr($latestOld, strrpos($latestOld, '-') + 1));
-        }
-
-        return $seq;
-    }
-
-    private function generateProtocolo(): string
-    {
-        $year = (int) date('Y');
-        $nextSequence = $this->getLatestSequence($year) + 1;
-
-        return sprintf('%s-%03d-000', $year, $nextSequence);
-    }
 }
-
-

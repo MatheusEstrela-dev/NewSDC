@@ -15,6 +15,9 @@ return [
 
     'default' => env('QUEUE_CONNECTION', 'redis'),
 
+    // Segundos de ociosidade para o worker descartar o PDO (menor que o timeout do HAProxy, 30m).
+    'idle_disconnect_seconds' => (int) env('QUEUE_IDLE_DISCONNECT_SECONDS', 240),
+
     /*
     |--------------------------------------------------------------------------
     | Queue Connections
