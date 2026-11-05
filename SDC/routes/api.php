@@ -286,18 +286,18 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
 
     // Módulo RAT — Nova Estrutura (RatOcorrencia + relatos polimórficos)
     Route::prefix('rat-novo')->name('api.v1.rat-novo.')->group(function () {
-        Route::get('/', [RatNovoController::class, 'index'])->name('index');
-        Route::post('/', [RatNovoController::class, 'store'])->name('store');
-        Route::get('/{id}', [RatNovoController::class, 'show'])->name('show');
-        Route::put('/{id}', [RatNovoController::class, 'update'])->name('update');
-        Route::delete('/{id}', [RatNovoController::class, 'destroy'])->name('destroy');
-        Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi');
+        Route::get('/', [RatNovoController::class, 'index'])->name('index')->middleware('can:rat.protocolos.view');
+        Route::post('/', [RatNovoController::class, 'store'])->name('store')->middleware('can:rat.protocolos.create');
+        Route::get('/{id}', [RatNovoController::class, 'show'])->name('show')->middleware('can:rat.protocolos.view');
+        Route::put('/{id}', [RatNovoController::class, 'update'])->name('update')->middleware('can:rat.protocolos.edit');
+        Route::delete('/{id}', [RatNovoController::class, 'destroy'])->name('destroy')->middleware('can:rat.protocolos.delete');
+        Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi')->middleware('can:rat.protocolos.export');
     });
 
     // BI - Dados de Entrada (autenticacao Sanctum padrao)
     Route::prefix('bi')->name('api.v1.bi.')->group(function () {
-        Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index');
-        Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show');
+        Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index')->middleware('can:bi.dashboards.view');
+        Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show')->middleware('can:bi.dashboards.view');
     });
 
     // Webhooks - Sistema de alta performance para 100k+ usuários
@@ -440,12 +440,13 @@ Route::prefix('v1/decretacoes')
         \App\Http\Middleware\Backpressure::class,
         \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
+        'token.abilities',
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('/', [DecretacoesApiController::class, 'index'])->name('index');
-        Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
-        Route::get('/export/power-bi/async', [DecretacoesApiController::class, 'exportPowerBIAsync'])->name('export.power-bi.async');
+        Route::get('/', [DecretacoesApiController::class, 'index'])->name('index')->middleware('can:decretacoes.processos.view');
+        Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi')->middleware('can:decretacoes.processos.export');
+        Route::get('/export/power-bi/async', [DecretacoesApiController::class, 'exportPowerBIAsync'])->name('export.power-bi.async')->middleware('can:decretacoes.processos.export');
 
         // Polling de trace assincrono no mesmo grupo (suporta triple auth via
         // DecretacoesApiAuth: session/Sanctum/PowerBI token). Permite que o
@@ -457,7 +458,7 @@ Route::prefix('v1/decretacoes')
             ->name('traces.download')
             ->whereUuid('traceId');
 
-        Route::get('/{id}', [DecretacoesApiController::class, 'show'])->name('show');
+        Route::get('/{id}', [DecretacoesApiController::class, 'show'])->name('show')->middleware('can:decretacoes.processos.view');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min, protege contra abuso)
@@ -469,10 +470,11 @@ Route::prefix('v1/decretacoes')
         \App\Http\Middleware\Backpressure::class,
         \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
+        'token.abilities',
         'api-rate-limiter:default',
     ])
     ->group(function () {
-        Route::post('/receive', [DecretacoesApiController::class, 'receive'])->name('api.v1.decretacoes.receive');
+        Route::post('/receive', [DecretacoesApiController::class, 'receive'])->name('api.v1.decretacoes.receive')->middleware('can:decretacoes.processos.create');
     });
 
 // ============================================================================
@@ -489,12 +491,13 @@ Route::prefix('v1/rat')
         \App\Http\Middleware\Backpressure::class,
         \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
+        'token.abilities',
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
-        Route::get('protocolos/export/power-bi', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'exportPowerBI'])->name('protocolos.export.powerbi');
-        Route::get('protocolos/{id}', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
+        Route::get('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index')->middleware('can:rat.protocolos.view');
+        Route::get('protocolos/export/power-bi', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'exportPowerBI'])->name('protocolos.export.powerbi')->middleware('can:rat.protocolos.export');
+        Route::get('protocolos/{id}', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show')->middleware('can:rat.protocolos.view');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min)
@@ -507,10 +510,11 @@ Route::prefix('v1/rat')
         \App\Http\Middleware\Backpressure::class,
         \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
+        'token.abilities',
         'api-rate-limiter:default',
     ])
     ->group(function () {
-        Route::post('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'receive'])->name('protocolos.receive');
+        Route::post('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'receive'])->name('protocolos.receive')->middleware('can:rat.protocolos.create');
     });
 
 // ============================================================================
@@ -525,11 +529,13 @@ Route::prefix('v1/tdap')
         \App\Http\Middleware\Backpressure::class,
         \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
+        'token.abilities',
         'api-rate-limiter:pro',
     ])
     ->group(function () {
         Route::get('cronogramas', [\App\Http\Controllers\Api\V1\Tdap\TdapApiController::class, 'cronogramas'])
-            ->name('cronogramas');
+            ->name('cronogramas')
+            ->middleware('can:tdap.cronogramas.view');
     });
 
 // ============================================================================
