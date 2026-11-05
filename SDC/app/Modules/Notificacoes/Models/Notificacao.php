@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Notificacoes\Models;
 
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\DatabaseNotification;
@@ -14,10 +15,13 @@ use Illuminate\Notifications\DatabaseNotification;
  * Estende o DatabaseNotification do Laravel (mesma tabela, mesmo contrato de
  * leitura: markAsRead, read(), unread()) e acrescenta o agrupamento por janela.
  *
- * Nao usa Prunable de proposito: a retencao aqui ARQUIVA em vez de apagar, via
- * notificacoes:arquivar, que move as linhas antigas para notifications_archive.
- * Deixar Prunable junto abriria a porta para um model:prune apagar o que deveria
- * ter sido preservado.
+ * Vive na conexao de log (UsaConexaoDeLog), com sessao e pool proprios quando
+ * DB_LOG_CONNECTION esta ligada.
+ *
+ * Retencao: o log:podar (config/retencao.php) apaga a lida com mais de 90 dias;
+ * a nao lida nunca e apagada, por mais antiga que seja. O botao Limpar do sino
+ * move para notifications_archive, que tambem sai depois de 90 dias. Nao usa
+ * Prunable de proposito: um model:prune paralelo apagaria fora dessa regra.
  *
  * @property string|null $group_key
  * @property int|null $group_bucket
@@ -26,6 +30,8 @@ use Illuminate\Notifications\DatabaseNotification;
  */
 class Notificacao extends DatabaseNotification
 {
+    use UsaConexaoDeLog;
+
     protected $casts = [
         'data' => 'array',
         'read_at' => 'datetime',

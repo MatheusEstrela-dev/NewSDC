@@ -86,9 +86,8 @@ Schedule::command('demandas:verificar-slas')
     ->withoutOverlapping()
     ->onOneServer();
 
-// A retencao do inbox de notificacoes NAO fica aqui: ela arquiva em vez de
-// apagar, e esta agendada em app/Console/Kernel.php como notificacoes:arquivar,
-// ao lado do webhooks:archive que segue a mesma tratativa.
+// A retencao das notificacoes e dos logs tecnicos NAO fica aqui: e o log:podar,
+// agendado em app/Console/Kernel.php e configurado em config/retencao.php.
 
 // Pipeline medalhao. Os jobs vao para a fila "medalhao", consumida por processo
 // proprio (docker/supervisor/medalhao-worker.conf) — o ETL nao disputa worker
@@ -152,6 +151,13 @@ Schedule::command('medalhao:ingerir cemaden')
  */
 Schedule::command('geoespacial:arquivar-vencidas')
     ->dailyAt('05:00')
+    ->onOneServer()
+    ->runInBackground();
+
+// Copia diaria dos municipios do sdc para referencia.municipios do geoespacial.
+// Antes do rollup e do arquivamento de camadas, que leem essa copia.
+Schedule::command('geoespacial:sincronizar-referencia')
+    ->dailyAt('03:30')
     ->onOneServer()
     ->runInBackground();
 

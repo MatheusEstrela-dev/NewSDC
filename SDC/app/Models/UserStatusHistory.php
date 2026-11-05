@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
@@ -9,6 +10,8 @@ use Illuminate\Support\Facades\Request;
 
 class UserStatusHistory extends Model
 {
+    use UsaConexaoDeLog;
+
     protected $fillable = [
         'user_id',
         'old_status',

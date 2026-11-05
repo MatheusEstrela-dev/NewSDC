@@ -16,6 +16,8 @@ LABEL environment="production"
 LABEL server="swoole"
 
 # Dependencias de runtime + build (build-deps removido ao final)
+# poppler-utils: pdftotext, extracao do texto dos PDFs de Notas Tecnicas (a fila
+# `low` deste mesmo container roda o job de indexacao).
 RUN apk add --no-cache \
     bash \
     curl \
@@ -32,6 +34,7 @@ RUN apk add --no-cache \
     icu-libs \
     jemalloc \
     openssl \
+    poppler-utils \
     && apk add --no-cache --virtual .build-deps \
     libpng-dev \
     libjpeg-turbo-dev \

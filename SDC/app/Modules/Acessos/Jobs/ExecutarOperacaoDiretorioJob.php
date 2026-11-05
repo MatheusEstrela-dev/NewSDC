@@ -35,7 +35,8 @@ use Throwable;
  * Executa uma operacao no AD no worker on-prem (spec 6.2): trava e marca
  * `enviado`, resolve a conta por GUID (ou login), recusa a propria conta do
  * ator, aplica a guarda de escopo nas escritas, chama o handler da acao e grava
- * espelho, resultado e auditoria numa transacao.
+ * espelho e resultado numa transacao; a auditoria vai logo apos o commit, pela
+ * conexao de log (ConexaoDeLog), com retentativa pela fila.
  *
  * Repete: falha transitoria do AD; falha do banco antes da escrita no AD;
  * qualquer falha depois de a escrita comecar (a acao e convergente, spec 6.3
@@ -245,8 +246,9 @@ final class ExecutarOperacaoDiretorioJob implements ShouldQueue
     }
 
     /**
-     * Espelho, `confirmado` e auditoria juntos. Se o banco falhar depois do AD
-     * aplicar, o job repete: toda acao e convergente (spec 6.3 item 4).
+     * Espelho e `confirmado` juntos; a auditoria grava apos o commit (rollback
+     * a descarta). Se o banco falhar depois do AD aplicar, o job repete: toda
+     * acao e convergente (spec 6.3 item 4).
      */
     private function concluir(OperacaoAd $operacao, ResultadoOperacao $resultado, GuardaDeAlvo $guarda, AplicaEspelhoAd $espelho): void
     {

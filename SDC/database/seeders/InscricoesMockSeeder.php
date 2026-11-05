@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Treinamento\Support\ConexaoTreinamento;
+use App\Models\User;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class InscricoesMockSeeder extends Seeder
@@ -22,7 +24,9 @@ class InscricoesMockSeeder extends Seeder
             // Inscrições APROVADAS para treinamentos concluídos
             [
                 'treinamento_id' => 1, // Primeiros Socorros
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'APROVADA',
                 'data_inscricao' => $now->copy()->subMonths(4),
                 'data_aprovacao' => $now->copy()->subMonths(4)->addDay(),
@@ -33,7 +37,9 @@ class InscricoesMockSeeder extends Seeder
             ],
             [
                 'treinamento_id' => 2, // Gestão de Abrigos
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'APROVADA',
                 'data_inscricao' => $now->copy()->subMonths(3),
                 'data_aprovacao' => $now->copy()->subMonths(3)->addHours(2),
@@ -44,7 +50,9 @@ class InscricoesMockSeeder extends Seeder
             ],
             [
                 'treinamento_id' => 10, // Introdução à Defesa Civil (EAD)
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'APROVADA',
                 'data_inscricao' => $now->copy()->subMonths(5),
                 'data_aprovacao' => $now->copy()->subMonths(5)->addMinutes(30),
@@ -57,7 +65,9 @@ class InscricoesMockSeeder extends Seeder
             // Inscrições APROVADAS para treinamentos em andamento
             [
                 'treinamento_id' => 3, // Sistema de Comando de Incidentes
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'APROVADA',
                 'data_inscricao' => $now->copy()->subMonths(2),
                 'data_aprovacao' => $now->copy()->subMonths(2)->addDays(3),
@@ -68,7 +78,9 @@ class InscricoesMockSeeder extends Seeder
             ],
             [
                 'treinamento_id' => 4, // Análise de Risco (EAD)
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'APROVADA',
                 'data_inscricao' => $now->copy()->subMonth(),
                 'data_aprovacao' => $now->copy()->subMonth()->addHours(6),
@@ -81,7 +93,9 @@ class InscricoesMockSeeder extends Seeder
             // Inscrições PENDENTES (aguardando aprovação)
             [
                 'treinamento_id' => 5, // Operação de Drones
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'PENDENTE',
                 'data_inscricao' => $now->copy()->subWeek(),
                 'data_aprovacao' => null,
@@ -92,7 +106,9 @@ class InscricoesMockSeeder extends Seeder
             ],
             [
                 'treinamento_id' => 6, // Coordenação de Voluntários
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'PENDENTE',
                 'data_inscricao' => $now->copy()->subDays(4),
                 'data_aprovacao' => null,
@@ -105,7 +121,9 @@ class InscricoesMockSeeder extends Seeder
             // Inscrição CANCELADA
             [
                 'treinamento_id' => 9, // Resgate em Áreas Alagadas
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'CANCELADA',
                 'data_inscricao' => $now->copy()->subWeeks(2),
                 'data_aprovacao' => null,
@@ -118,7 +136,9 @@ class InscricoesMockSeeder extends Seeder
             // Mais inscrições aprovadas para outros treinamentos
             [
                 'treinamento_id' => 7, // Comunicação de Risco (EAD)
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'APROVADA',
                 'data_inscricao' => $now->copy()->subDays(5),
                 'data_aprovacao' => $now->copy()->subDays(5)->addHours(3),
@@ -129,7 +149,9 @@ class InscricoesMockSeeder extends Seeder
             ],
             [
                 'treinamento_id' => 8, // Elaboração de PLANCON
-                'user_id' => $userId,
+                'inscrito_type' => User::class,
+                'inscrito_id' => $userId,
+                'qr_code_token' => (string) Str::uuid(),
                 'status' => 'PENDENTE',
                 'data_inscricao' => $now->copy()->subDays(2),
                 'data_aprovacao' => null,
@@ -140,7 +162,15 @@ class InscricoesMockSeeder extends Seeder
             ],
         ];
 
-        DB::table('inscricoes')->insert($inscricoes);
+        // O mock de treinamentos cria menos treinamentos que os ids usados acima;
+        // sem filtrar, a FK interna do banco recusa a carga inteira.
+        $existentes = ConexaoTreinamento::conexao()->table('treinamento.treinamentos')->pluck('id')->all();
+        $inscricoes = array_values(array_filter(
+            $inscricoes,
+            static fn (array $i): bool => in_array($i['treinamento_id'], $existentes, true),
+        ));
+
+        ConexaoTreinamento::conexao()->table('treinamento.inscricoes')->insert($inscricoes);
 
         $this->command->info('✓ ' . count($inscricoes) . ' inscrições criadas para o usuário!');
     }

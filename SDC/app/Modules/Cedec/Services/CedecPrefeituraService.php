@@ -9,6 +9,7 @@ use App\Modules\Cedec\DTOs\PrefeituraFiltroDTO;
 use App\Modules\Compdec\DTOs\PrefeituraDTO;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Models\Prefeitura;
+use App\Support\Database\ConexaoDeLog;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
@@ -162,7 +163,7 @@ final class CedecPrefeituraService
         // compdec_etl_log e compartilhada por todos os ETLs do Compdec: filtrar por
         // recurso e obrigatorio, senao pega a linha de outro modulo com o mesmo
         // legacy_id -- ja aconteceu com o recurso 'equipes'.
-        $ultimo = $prefeitura->legacy_id === null ? null : DB::table('compdec_etl_log')
+        $ultimo = $prefeitura->legacy_id === null ? null : ConexaoDeLog::tabela('compdec_etl_log')
             ->where('recurso', 'prefeituras')
             ->where('legacy_id', $prefeitura->legacy_id)
             ->orderByDesc('id')

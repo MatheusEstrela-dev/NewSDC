@@ -670,6 +670,12 @@ class EntradaDesastre extends Model
 
 /**
  * ProcessoLog model.
+ *
+ * Fica na conexao default, e nao na de log (UsaConexaoDeLog), de proposito:
+ * EntradaProcessoService::updateProcesso grava este log (evento updated) e, na
+ * MESMA transacao, o HexagonDecretoResource le logs->first()->uuid como versao
+ * do decreto enviada ao Hexagon. Com a escrita adiada para depois do commit, o
+ * Hexagon receberia o uuid da versao anterior.
  */
 class ProcessoLog extends Model
 {

@@ -24,6 +24,12 @@ final class ConsistentPostgresConnection extends PostgresConnection
 
     private ?Closure $replicaDiscarder = null;
 
+    private ?Closure $replicaReleaser = null;
+
+    private ?Closure $writerReleaser = null;
+
+    private ?HostsPrimariosConhecidos $knownPrimaries = null;
+
     private ?string $selectedReplica = null;
 
     private ?int $nextReplica = null;
@@ -45,10 +51,30 @@ final class ConsistentPostgresConnection extends PostgresConnection
         return $this;
     }
 
-    public function setReplicaPdoResolver(Closure $resolver, Closure $discarder): self
+    public function setReplicaPdoResolver(Closure $resolver, Closure $discarder, ?Closure $releaser = null): self
     {
         $this->replicaResolver = $resolver;
         $this->replicaDiscarder = $discarder;
+        $this->replicaReleaser = $releaser;
+
+        return $this;
+    }
+
+    public function setKnownPrimaries(?HostsPrimariosConhecidos $known): self
+    {
+        $this->knownPrimaries = $known;
+
+        return $this;
+    }
+
+    /**
+     * Devolve o PDO de escrita ao pool quando so o marco foi lido: sem isso o
+     * teto de leituras concorrentes seria o tamanho do pool de escrita.
+     * Recebe o PDO e retorna a Closure que o emprestara de novo sob demanda.
+     */
+    public function setWriterReleaser(?Closure $releaser): self
+    {
+        $this->writerReleaser = $releaser;
 
         return $this;
     }
@@ -85,6 +111,9 @@ final class ConsistentPostgresConnection extends PostgresConnection
         $start = $this->nextReplica++ % count($hosts);
         foreach (range(0, count($hosts) - 1) as $offset) {
             $host = $hosts[($start + $offset) % count($hosts)];
+            if ($this->knownPrimaries?->conhece($host)) {
+                continue;
+            }
             try {
                 $pdo = $this->replicaResolver
                     ? ($this->replicaResolver)($host)
@@ -92,15 +121,8 @@ final class ConsistentPostgresConnection extends PostgresConnection
                         array_replace($this->readPdoConfig, ['host' => $host])
                     ));
                 $this->applyOperationTimeout($pdo, $host);
-                $check = $pdo->prepare(
-                    'SELECT pg_is_in_recovery() AND pg_last_wal_replay_lsn() >= CAST(? AS pg_lsn) '
-                    .'AND system_identifier::text = ? AND timeline_id = ? '
-                    .'AND current_setting(\'transaction_read_only\')::boolean '
-                    .'FROM pg_control_system(), pg_control_checkpoint()'
-                );
-                $check->execute([$fence['lsn'], $fence['system_id'], $fence['timeline_id']]);
-                $ready = $check->fetchColumn();
-                if ($ready === true || $ready === 't' || $ready === 1) {
+                [$recovery, $ready] = $this->probeReplica($pdo, $fence);
+                if ($ready) {
                     $this->selectedReplica = $host;
                     $this->readPdo = $pdo;
                     $this->replicaChecked = true;
@@ -108,6 +130,11 @@ final class ConsistentPostgresConnection extends PostgresConnection
 
                     return $pdo;
                 }
+                // Host rejeitado nao pode segurar o slot ate o fim da coroutine.
+                if (! $recovery) {
+                    $this->knownPrimaries?->marcar($host);
+                }
+                $this->releaseReplica($host);
             } catch (PDOException|PoolEsgotado) {
                 $this->discardReplica($host);
             }
@@ -184,14 +211,65 @@ final class ConsistentPostgresConnection extends PostgresConnection
         parent::disconnect();
     }
 
-    private function discardReplica(string $host): void
+    /**
+     * @return array{0: bool, 1: bool} [em recovery, apto a servir a leitura]
+     */
+    private function probeReplica(PDO $pdo, array $fence): array
     {
-        unset($this->replicaPdos[$host]);
+        $check = $pdo->prepare(
+            'SELECT pg_is_in_recovery() AS recovery, '
+            .'(pg_is_in_recovery() AND pg_last_wal_replay_lsn() >= CAST(? AS pg_lsn) '
+            .'AND system_identifier::text = ? AND timeline_id = ? '
+            .'AND current_setting(\'transaction_read_only\')::boolean) AS ready '
+            .'FROM pg_control_system(), pg_control_checkpoint()'
+        );
+        $check->execute([$fence['lsn'], $fence['system_id'], $fence['timeline_id']]);
+        $row = (array) $check->fetch(PDO::FETCH_ASSOC);
+
+        return [self::isTrue($row['recovery'] ?? false), self::isTrue($row['ready'] ?? false)];
+    }
+
+    private static function isTrue(mixed $value): bool
+    {
+        return $value === true || $value === 't' || $value === 1 || $value === '1';
+    }
+
+    private function releaseReplica(string $host): void
+    {
+        $this->forgetTimeoutPdos(fn (?string $timeoutHost): bool => $timeoutHost === $host);
+        if ($this->replicaReleaser !== null) {
+            ($this->replicaReleaser)($host);
+        }
+    }
+
+    private function releaseWriterIfIdle(): void
+    {
+        $pdo = $this->pdo;
+        // Com escrita ou transacao a sessao do primario precisa continuar com a coroutine.
+        if ($this->writerReleaser === null || ! $pdo instanceof PDO
+            || $this->transactions > 0 || $this->recordsModified) {
+            return;
+        }
+
+        $this->forgetTimeoutPdos(fn (?string $timeoutHost): bool => $timeoutHost === null);
+        // Closure preguicosa: leituras seguintes nao readquirem o escritor;
+        // so escrita ou fallback ao primario o emprestam de novo.
+        $this->pdo = ($this->writerReleaser)($pdo);
+    }
+
+    private function forgetTimeoutPdos(Closure $matchesHost): void
+    {
         foreach ($this->timeoutPdos as $id => [, $timeoutHost]) {
-            if ($timeoutHost === $host) {
+            if ($matchesHost($timeoutHost)) {
                 unset($this->timeoutPdos[$id]);
             }
         }
+    }
+
+    private function discardReplica(string $host): void
+    {
+        unset($this->replicaPdos[$host]);
+        $this->forgetTimeoutPdos(fn (?string $timeoutHost): bool => $timeoutHost === $host);
         if ($this->replicaDiscarder !== null) {
             ($this->replicaDiscarder)($host);
         }
@@ -299,6 +377,7 @@ final class ConsistentPostgresConnection extends PostgresConnection
                     'SELECT pg_current_wal_lsn() AS lsn, system_identifier::text AS system_id, timeline_id '
                     .'FROM pg_control_system(), pg_control_checkpoint()'
                 )->fetch(PDO::FETCH_ASSOC);
+                $this->releaseWriterIfIdle();
 
                 return true;
             } catch (PDOException $exception) {

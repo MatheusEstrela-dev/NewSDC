@@ -54,6 +54,7 @@ export const MODULE_ICONS = {
   permissionamento: user,
   inventario,
   acessos: inventario,
+  'notas-tecnicas': bookshelf,
 };
 
 /** Retorna a URL do icone do modulo (ou null se nao mapeado). */

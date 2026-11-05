@@ -7,9 +7,9 @@ namespace App\Modules\Notificacoes\Channels;
 use App\Modules\Notificacoes\Contracts\Agrupavel;
 use App\Modules\Notificacoes\Models\Notificacao;
 use App\Modules\Notificacoes\Support\JanelaAgrupamento;
+use App\Support\Database\ConexaoDeLog;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -66,7 +66,7 @@ class AgrupavelDatabaseChannel
     ): ?Notificacao {
         $bucket = $this->janela->bucket($modulo);
 
-        if (DB::connection()->getDriverName() === 'pgsql') {
+        if ((new Notificacao)->getConnection()->getDriverName() === 'pgsql') {
             return $this->upsertPostgres($notifiable, $notification, $dados, $groupKey, $bucket);
         }
 
@@ -80,6 +80,13 @@ class AgrupavelDatabaseChannel
      * (WHERE read_at IS NULL). Linhas ja lidas ficam fora do indice, o que faz o
      * mesmo assunto voltar a agrupar do zero depois que o usuario limpa o inbox.
      *
+     * Vai pela conexao do model (a de log), resolvida na hora da escrita, e por
+     * ConexaoDeLog::gravar: no worker nao ha transacao aberta e a escrita e
+     * imediata, com o RETURNING devolvendo a linha agrupada. Se um chamador
+     * sincrono estiver dentro de transacao critica, a escrita e adiada para o
+     * commit e o retorno e null -- o broadcast sai sem id e sem contagem, mas
+     * a notificacao nao vira fantasma de um rollback.
+     *
      * @param  array<string, mixed>  $dados
      */
     private function upsertPostgres(
@@ -90,35 +97,47 @@ class AgrupavelDatabaseChannel
         ?int $bucket
     ): ?Notificacao {
         $tabela = (new Notificacao)->getTable();
+        $agora = now();
 
-        $linha = DB::selectOne(
-            "INSERT INTO {$tabela}
-                (id, type, notifiable_type, notifiable_id, data, group_key, group_bucket,
-                 group_count, last_event_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
-             ON CONFLICT (notifiable_type, notifiable_id, group_key, group_bucket)
-                WHERE read_at IS NULL
-             DO UPDATE SET
-                group_count   = {$tabela}.group_count + 1,
-                data          = EXCLUDED.data,
-                last_event_at = EXCLUDED.last_event_at,
-                updated_at    = EXCLUDED.updated_at
-             RETURNING *",
-            [
-                // O id vem da propria notificacao (o Laravel gera antes de chamar
-                // os canais). Usar um uuid novo aqui faria a linha do banco ter id
-                // diferente do que os outros canais reportam para o mesmo evento.
-                (string) ($notification->id ?? Str::uuid7()),
-                $this->tipo($notification),
-                $notifiable->getMorphClass(),
-                $notifiable->getKey(),
-                json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-                $groupKey,
-                $bucket,
-                now(),
-                now(),
-                now(),
-            ]
+        $registro = [
+            // O id vem da propria notificacao (o Laravel gera antes de chamar
+            // os canais). Usar um uuid novo aqui faria a linha do banco ter id
+            // diferente do que os outros canais reportam para o mesmo evento.
+            'id' => (string) ($notification->id ?? Str::uuid7()),
+            'type' => $this->tipo($notification),
+            'notifiable_type' => $notifiable->getMorphClass(),
+            'notifiable_id' => $notifiable->getKey(),
+            'data' => json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'group_key' => $groupKey,
+            'group_bucket' => $bucket,
+            'group_count' => 1,
+            'last_event_at' => $agora,
+            'created_at' => $agora,
+            'updated_at' => $agora,
+        ];
+
+        $colunas = implode(', ', array_keys($registro));
+        $marcadores = implode(', ', array_fill(0, count($registro), '?'));
+
+        $linha = ConexaoDeLog::gravar(
+            fn () => (new Notificacao)->getConnection()->selectOne(
+                "INSERT INTO {$tabela} ({$colunas})
+                 VALUES ({$marcadores})
+                 ON CONFLICT (notifiable_type, notifiable_id, group_key, group_bucket)
+                    WHERE read_at IS NULL
+                 DO UPDATE SET
+                    group_count   = {$tabela}.group_count + 1,
+                    data          = EXCLUDED.data,
+                    last_event_at = EXCLUDED.last_event_at,
+                    updated_at    = EXCLUDED.updated_at
+                 RETURNING *",
+                array_values($registro),
+                false
+            ),
+            // Na retentativa pela fila a linha entra so se nao houver grupo
+            // aberto (insertOrIgnore): o evento conta como novo assunto ou se
+            // perde no contador, nunca duplica o card.
+            fn (): array => [$tabela, [$registro]],
         );
 
         return $linha === null ? null : (new Notificacao)->newFromBuilder((array) $linha);

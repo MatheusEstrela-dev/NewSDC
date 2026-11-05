@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Support\Database\SwoolePdoPool;
+use App\Support\Database\PdoPoolRegistry;
 use App\Support\Redis\CoroutineRedisManager;
 use App\Support\Redis\SwooleRedisPool;
 use Illuminate\Support\ServiceProvider;
@@ -42,9 +42,10 @@ class OctaneServiceProvider extends ServiceProvider
             });
             $this->forgetRedisBackedSingletons();
 
-            // Sob hooks, troca o DatabaseManager por um coroutine-aware: a conexao
-            // 'pgsql' passa a ser resolvida por-coroutine (PDO do SwoolePdoPool),
-            // isolando socket e estado de transacao entre coroutines.
+            // Sob hooks, troca o DatabaseManager por um coroutine-aware: cada
+            // conexao de database.coroutine_pools passa a ser resolvida
+            // por-coroutine (PDO do pool dela), isolando socket e estado de
+            // transacao entre coroutines.
             $this->app->extend('db', function ($manager, $app) {
                 return new \App\Support\Database\CoroutineDatabaseManager($app, $app['db.factory']);
             });
@@ -210,10 +211,11 @@ class OctaneServiceProvider extends ServiceProvider
     }
 
     /**
-     * Sob Swoole, cria um pool de conexoes pgsql por worker (uma conexao por
-     * coroutine). Inerte em FrankenPHP/RoadRunner: o codigo de aplicacao usa o
-     * pool quando ligado (App\Support\Concurrency) ou cai no Eloquent normal.
-     * Guardado para nao instanciar pool fora do Swoole.
+     * Sob Swoole, registra os pools de PDO por worker (uma conexao por
+     * coroutine), um pool PROPRIO por conexao de database.coroutine_pools.
+     * Inerte em FrankenPHP/RoadRunner: o codigo de aplicacao usa o pool quando
+     * ligado (App\Support\Concurrency) ou cai no Eloquent normal. Guardado
+     * para nao instanciar pool fora do Swoole.
      */
     protected function bootSwoolePdoPool(): void
     {
@@ -222,30 +224,18 @@ class OctaneServiceProvider extends ServiceProvider
         }
 
         try {
-            $size = (int) env('SWOOLE_PG_POOL_SIZE', 16);
-            $timeout = (float) env('SWOOLE_PG_POOL_TIMEOUT', 3.0);
+            $this->app->singleton(PdoPoolRegistry::class, fn ($app) => PdoPoolRegistry::fromConfig($app['config']));
+            $registry = $this->app->make(PdoPoolRegistry::class);
 
-            $this->app->singleton('swoole.pgsql.pool', fn () => SwoolePdoPool::fromConnection('pgsql', $size, $timeout));
-            $this->app->singleton('swoole.pgsql.read.pools', function () use ($timeout): array {
-                $config = $this->app['config']['database.connections.pgsql'];
-                $pools = [];
-                if (! ($config['replica_routing'] ?? false)) {
-                    return $pools;
-                }
+            // Aliases do pool critico: App\Support\Concurrency e o diagnostico
+            // resolvem o pgsql por estes nomes.
+            if ($registry->gerencia('pgsql')) {
+                $this->app->singleton('swoole.pgsql.pool', fn ($app) => $app->make(PdoPoolRegistry::class)->pool('pgsql'));
+                $this->app->singleton('swoole.pgsql.read.pools', fn ($app) => $app->make(PdoPoolRegistry::class)->poolsDeLeitura('pgsql'));
+            }
 
-                $read = array_replace($config, $config['read']);
-                foreach ((array) $read['host'] as $host) {
-                    $pools[$host] = SwoolePdoPool::fromConfig(
-                        array_replace($read, ['host' => $host]),
-                        (int) env('SWOOLE_PG_READ_POOL_SIZE', 2),
-                        $timeout,
-                    );
-                }
-
-                return $pools;
-            });
             if ($this->hooksEnabled()) {
-                $this->app->make('swoole.pgsql.pool')->warm();
+                $registry->aquecer();
             }
         } catch (\Throwable $e) {
             // Pool e otimizacao opcional; nunca derruba o worker se falhar.
@@ -305,7 +295,7 @@ class OctaneServiceProvider extends ServiceProvider
     }
 
     /**
-     * Devolve ao pool a conexao pgsql emprestada pela coroutine do request
+     * Devolve aos pools as conexoes emprestadas pela coroutine do request
      * (rollback de transacao aberta antes de devolver). Inerte fora de hooks.
      */
     protected function releasePgsqlCoroutine(): void

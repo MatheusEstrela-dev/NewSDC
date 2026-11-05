@@ -120,6 +120,10 @@ return [
         // autenticada rat.ocorrencias.attachments.show, que streama do disk.
         'rat' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_RAT', 'sdc-rat'), 'RAT', 'app/rat'),
 
+        // PDFs do modulo Notas Tecnicas, um arquivo por versao. Privados: servidos
+        // inline pela rota autenticada notas-tecnicas.versoes.pdf, que streama do disk.
+        'notas_tecnicas' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_NOTAS_TECNICAS', 'sdc-notas-tecnicas'), 'NOTAS_TECNICAS', 'app/notas_tecnicas'),
+
         // Anexos do RAT LEGADO (arquivo morto). Arquivos fisicos herdados do
         // sistema antigo, organizados por id do protocolo: {root}/{id}/{arquivo}
         // (mesma convencao do legado `rat_uploads/{id}/`). Disco LOCAL puro (nao

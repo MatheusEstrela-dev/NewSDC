@@ -8,13 +8,17 @@ use App\Core\Events\DomainEvent;
 use App\Core\Events\IdempotentListener;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
-use Illuminate\Support\Facades\DB;
+use App\Support\Database\ConexaoDeLog;
 
 /**
  * Registra eventos de dominio em tdap_historicos.
  *
  * Idempotente: cada evento gera no maximo um registro de historico
  * (chave evento_id deduplicada via processed_events).
+ *
+ * O historico vai pela conexao de log: o insert roda depois do commit da
+ * transacao do processed_events (rollback descarta os dois) e, se falhar,
+ * vira GravarLogPendenteJob, com entrega pelo menos uma vez.
  *
  * O nome fala em "Processo" por heranca: ele nasceu para o modulo de Processos,
  * que saiu, mas continua sendo o unico registrador do historico de CRONOGRAMA
@@ -47,7 +51,7 @@ class RegistrarHistoricoProcessoListener extends IdempotentListener
             default => $event->eventName(),
         };
 
-        DB::table('tdap_historicos')->insert([
+        ConexaoDeLog::inserir('tdap_historicos', [
             'data_evento' => $event->occurredAt->format('Y-m-d H:i:sP'),
             'tipo_evento' => $event->eventName(),
             'entity_type' => $entityType,

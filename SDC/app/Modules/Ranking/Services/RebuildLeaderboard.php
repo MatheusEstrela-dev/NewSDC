@@ -7,10 +7,9 @@ namespace App\Modules\Ranking\Services;
 use App\Modules\Ranking\Enums\EscopoPlacar;
 use App\Modules\Ranking\Enums\TipoPeriodo;
 use App\Modules\Ranking\Support\LivroAgregado;
+use App\Modules\Ranking\Support\ResolveConexaoPorUso;
 use DateTimeImmutable;
 use DateTimeZone;
-use Illuminate\Database\ConnectionInterface;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
@@ -69,6 +68,8 @@ use RuntimeException;
  */
 class RebuildLeaderboard
 {
+    use ResolveConexaoPorUso;
+
     /** Conexao dedicada. Nunca herda a conexao default. */
     public const CONEXAO = RecordScoreTransaction::CONEXAO;
 
@@ -79,7 +80,7 @@ class RebuildLeaderboard
     public function __construct(
         private readonly ReconcileLeaderboard $conciliacao = new ReconcileLeaderboard,
         private readonly RecordScoreTransaction $livro = new RecordScoreTransaction,
-        private readonly ?ConnectionInterface $conexao = null,
+        private readonly string $nomeConexao = self::CONEXAO,
 
         // Falha rapido em vez de ficar pendurado esperando a fase travada: um
         // rebuild travado indefinidamente prende worker e mascara contencao.
@@ -682,8 +683,4 @@ class RebuildLeaderboard
         return $linha === null || $linha->geracao === null ? null : (int) $linha->geracao;
     }
 
-    private function conexao(): ConnectionInterface
-    {
-        return $this->conexao ?? DB::connection(self::CONEXAO);
-    }
 }

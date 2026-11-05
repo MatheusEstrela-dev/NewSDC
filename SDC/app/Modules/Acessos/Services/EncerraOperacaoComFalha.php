@@ -12,9 +12,10 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Encerramento unico de uma operacao em `falhou`, usado pelo failed() do job e
- * pela reconciliacao das operacoes presas: trava a linha, transiciona (podeIrPara),
- * grava a auditoria `diretorio_<acao>_falhou` com o codigo e, depois do commit,
- * emite OperacaoDiretorioConcluida. Idempotente: operacao final nao muda.
+ * pela reconciliacao das operacoes presas: trava a linha, transiciona (podeIrPara)
+ * e, depois do commit, grava a auditoria `diretorio_<acao>_falhou` com o codigo
+ * (conexao de log) e emite OperacaoDiretorioConcluida. Idempotente: operacao
+ * final nao muda.
  */
 final class EncerraOperacaoComFalha
 {

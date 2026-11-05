@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Notificacoes\Services;
 
+use App\Models\User;
 use App\Modules\Notificacoes\Contracts\Rastreavel;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
@@ -136,6 +137,13 @@ class RegistroDeAcao
 
         if ($usuario === null) {
             return null;
+        }
+
+        // LGPD: dado pessoal do cidadao vive so no banco de treinamento. A
+        // notificacao vai para o schema log do sdc, entao autor externo (guard
+        // cidadao) aparece sem nome.
+        if (! $usuario instanceof User) {
+            return 'um cidadao';
         }
 
         $nome = trim((string) ($usuario->name ?? ''));

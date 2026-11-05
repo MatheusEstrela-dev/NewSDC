@@ -6,28 +6,22 @@ namespace App\Modules\Notificacoes\Services;
 
 use App\Modules\Notificacoes\Models\Notificacao;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Move notificacoes da tabela quente para notifications_archive.
  *
- * Nada e apagado, apenas segregado: o inbox e o badge continuam rapidos e o
- * historico permanece consultavel. Mesma tratativa do webhooks:archive.
+ * Usado pelo botao "Limpar" do sino: o inbox e o badge ficam limpos e o
+ * historico continua consultavel no arquivo, que o log:podar apaga depois de
+ * 90 dias (config/retencao.php). A poda por idade nao passa mais por aqui: ela
+ * apaga direto a lida antiga e nunca toca na nao lida.
  *
- * Extraido do ArquivarNotificacoesCommand quando o botao "Limpar" do sino
- * passou a precisar do mesmo comportamento. Duas copias da rotina de
- * insert-e-delete-na-mesma-transacao sairiam de sincronia na primeira coluna
- * nova da tabela -- e uma copia errada aqui significa notificacao existindo nas
- * duas tabelas, ou em nenhuma.
+ * A rotina de insert-e-delete-na-mesma-transacao fica num lugar so: uma copia
+ * errada significa notificacao existindo nas duas tabelas, ou em nenhuma.
  *
  * Arquivar MUDA o que o painel do sino mostra, entao o servico avisa quem
- * guarda estado derivado disso: o contador do badge e a versao do inbox. O
- * aviso fica aqui, e nao em quem chama, porque sao dois chamadores com escopos
- * diferentes (a poda diaria por idade e o botao Limpar por destinatario) e o
- * que ambos tem em comum e exatamente esta rotina. A poda agendada, em
- * particular, nao invalidava nada: o badge podia ficar velho, e com o ETag
- * servido a partir da versao o painel continuaria mostrando um card ja
- * arquivado ate a chave expirar.
+ * guarda estado derivado disso: o contador do badge e a versao do inbox. Sem
+ * isso, com o ETag servido a partir da versao, o painel continuaria mostrando
+ * um card ja arquivado ate a chave expirar.
  */
 class ArquivadorDeNotificacoes
 {
@@ -39,9 +33,9 @@ class ArquivadorDeNotificacoes
     /**
      * Arquiva tudo que o builder selecionar. Devolve quantas foram movidas.
      *
-     * O builder e responsabilidade de quem chama: o comando agendado recorta
-     * por idade, o botao do sino recorta pelo destinatario. Este servico nao
-     * decide escopo -- so garante que a movimentacao e atomica.
+     * O builder e responsabilidade de quem chama: o botao do sino recorta pelo
+     * destinatario. Este servico nao decide escopo -- so garante que a
+     * movimentacao e atomica.
      */
     public function arquivar(Builder $alvos, int $lote = 500): int
     {
@@ -72,9 +66,13 @@ class ArquivadorDeNotificacoes
             ])->all();
 
             // Inserir e remover na mesma transacao: ou a linha esta no arquivo,
-            // ou segue no inbox. Nunca nos dois, nunca em nenhum.
-            DB::transaction(function () use ($batch, $linhas, &$movidas): void {
-                DB::table('notifications_archive')->insertOrIgnore($linhas);
+            // ou segue no inbox. Nunca nos dois, nunca em nenhum. A transacao e
+            // aberta na conexao do model (a de log), e o arquivo vai pela mesma:
+            // numa conexao diferente as duas escritas deixariam de ser atomicas.
+            $conexao = (new Notificacao)->getConnection();
+
+            $conexao->transaction(function () use ($conexao, $batch, $linhas, &$movidas): void {
+                $conexao->table('notifications_archive')->insertOrIgnore($linhas);
                 Notificacao::query()->whereIn('id', $batch->pluck('id'))->delete();
                 $movidas += count($linhas);
             });

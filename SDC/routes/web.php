@@ -166,6 +166,9 @@ Route::middleware('auth')->group(function () {
     // Módulo: CEDEC (cadastro estadual de prefeituras)
     require __DIR__ . '/modules/cedec.php';
 
+    // Módulo: Notas Técnicas (repositório de notas técnicas e POPs em PDF)
+    require __DIR__ . '/modules/notas-tecnicas.php';
+
     // Módulo: Demandas
     require __DIR__ . '/modules/demandas.php';
 

@@ -2,24 +2,37 @@
 
 namespace App\Models;
 
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 /**
  * Model para eventos de webhook com suporte a idempotencia
  * Garante que o mesmo evento nao seja processado duas vezes
+ *
+ * Isolamento de conexao pela conexao de log (UsaConexaoDeLog), que substituiu a
+ * antiga pgsql_webhook. O log:podar apaga, depois de 90 dias, so o evento
+ * encerrado (completed ou dead_letter); pendente e falho seguem retentaveis.
  */
 class WebhookEvent extends Model
 {
     use HasUuids;
+    use UsaConexaoDeLog;
 
     /**
-     * Isolamento de conexao: webhook events sempre vao pelo pool pgsql_webhook,
-     * separado do pool da web. Substitui o padrao anterior de
-     * DB::setDefaultConnection nos jobs, que alterava estado global e podia
-     * vazar para outros code paths em Octane.
+     * Insercao direta, sem o adiamento e a fila de retentativa da trait.
+     *
+     * Aqui a linha e estado de idempotencia, e nao so registro: o
+     * firstOrCreate do ProcessInboundWebhook precisa da chave na volta para o
+     * claimForProcessing, e precisa ver a violacao de unicidade para resolver a
+     * corrida entre entregas. Engolir a falha e mandar para a fila perderia o
+     * evento em silencio. O evento nasce no worker, fora de transacao critica,
+     * entao nao ha o que adiar.
      */
-    protected $connection = 'pgsql_webhook';
+    public function save(array $options = []): bool
+    {
+        return parent::save($options);
+    }
 
     protected $fillable = [
         'external_event_id',

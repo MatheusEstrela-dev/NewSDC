@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
- * Escritas do cadastro de acesso, com a trilha em acessos_auditoria.
+ * Escritas do cadastro de acesso, com a trilha em acessos_auditoria (conexao
+ * de log: gravada logo apos o commit de cada transacao daqui, descartada no
+ * rollback).
  *
  * Saiu do CadastroAcessoController (que gravava validated() direto no Model)
  * para seguir Request -> DTO -> Controller -> Service -> Model. As travas de

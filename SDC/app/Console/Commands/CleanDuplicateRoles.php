@@ -92,7 +92,7 @@ class CleanDuplicateRoles extends Command
             DB::commit();
             $this->info('Limpeza concluida com sucesso!');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             $this->error("Erro: {$e->getMessage()}");
             return Command::FAILURE;

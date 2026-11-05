@@ -53,8 +53,8 @@ class ProcessWebhook implements ShouldQueue
      */
     public function handle(CircuitBreakerService $circuitBreaker): void
     {
-        // Isolamento de conexao agora vive no model WebhookLog
-        // (protected $connection = 'pgsql_webhook'). Removido o wrapper
+        // Isolamento de conexao agora vive no model WebhookLog (conexao de
+        // log, via UsaConexaoDeLog). Removido o wrapper
         // DB::setDefaultConnection que alterava estado global em Octane.
         $serviceKey = $this->getServiceKey();
         $startTime = microtime(true);

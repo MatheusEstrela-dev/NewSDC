@@ -10,7 +10,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Medalhao\Support\RefreshGold;
+use App\Modules\Medalhao\Support\TabelasGeo;
 
 class AtualizarGoldCemadenJob implements ShouldQueue
 {
@@ -44,8 +45,7 @@ class AtualizarGoldCemadenJob implements ShouldQueue
         //
         // A ordem importa: cemaden_estatisticas le cemaden_mapa, entao o mapa
         // vem primeiro, senao as estatisticas ficam um ciclo atrasadas.
-        DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY gold.cemaden_mapa');
-        DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY gold.cemaden_estatisticas');
+        RefreshGold::executar(TabelasGeo::cemadenMapa(), TabelasGeo::cemadenEstatisticas());
 
         // Avisa DEPOIS do refresh, nao na ingestao: e o refresh que torna o dado
         // visivel.

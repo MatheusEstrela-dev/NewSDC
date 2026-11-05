@@ -8,8 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Cidadao;
 use App\Modules\Treinamento\Requests\Portal\RegisterCidadaoRequest;
 use App\Modules\Treinamento\Services\CidadaoVerificacaoService;
+use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,7 +43,7 @@ class RegisterController extends Controller
         // Mail::queue(...->afterCommit()) de dentro do service so dispara no
         // commit desta transacao externa, entao nao ha e-mail de cadastro que
         // acabou revertido.
-        $cidadao = DB::transaction(function () use ($request) {
+        $cidadao = ConexaoTreinamento::transacao(function () use ($request) {
             $this->descartarCadastrosPendentes(
                 $request->validated('cpf'),
                 $request->validated('email'),

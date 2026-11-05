@@ -276,6 +276,7 @@ const navigationIndex = computed(() => [
     // Módulos de Gestão
     { id: 'nav_dec', title: 'Decretações', subtitle: 'Gestão de Decretos (SEAD)', url: safeRoute('decretacoes.index'), icon: 'scale', category: 'navigation', keywords: ['decreto', 'legal', 'calamidade'] },
     { id: 'nav_hum', title: 'Ajuda Humanitária', subtitle: 'Pedidos de material ao CEDEC', url: safeRoute('ajuda-humanitaria.pedidos.index'), icon: 'heart', category: 'navigation', keywords: ['donativo', 'cesta', 'social'] },
+    can('notas_tecnicas.notas.view') && { id: 'nav_notas_tecnicas', title: 'Notas Técnicas', subtitle: 'Notas técnicas e POPs em PDF', url: safeRoute('notas-tecnicas.index'), icon: 'document', category: 'navigation', keywords: ['nota', 'tecnica', 'pop', 'procedimento', 'fluxo', 'processo', 'pdf'] },
     { id: 'nav_org', title: 'Órgãos', subtitle: 'Cadastro de COMPDEC e Parceiros', url: safeRoute('compdec.index'), icon: 'building', category: 'navigation', keywords: ['municipio', 'prefeitura', 'contato'] },
 
     // TDAP - Transporte e Distribuicao de Agua Potavel

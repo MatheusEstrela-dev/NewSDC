@@ -15,7 +15,9 @@ use App\Modules\Medalhao\Jobs\NormalizarSilverJob;
 use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Shared\Geo\CaixaEnvolvente;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Medalhao\Support\TabelasGeo;
+use App\Support\Database\ConexaoGeo;
+use App\Support\Database\Geo\DominioGeo;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -155,7 +157,7 @@ class GeoUploadController extends Controller
             'kml' => $kml,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        $bronze = IngestaoBruta::create([
+        $bronze = IngestaoBruta::doDominio(DominioGeo::Camadas)->newQuery()->create([
             'fonte' => 'geo-upload',
             'conteudo_bruto' => $envelope,
             'formato' => 'geo-kml',
@@ -280,7 +282,7 @@ class GeoUploadController extends Controller
      */
     private function guardarOriginal(\Illuminate\Http\UploadedFile $arquivo, int $municipioId): string
     {
-        $ibge = DB::table('municipios')->where('id', $municipioId)->value('codigo_ibge') ?? $municipioId;
+        $ibge = ConexaoGeo::conexao()->table(TabelasGeo::municipios())->where('id', $municipioId)->value('codigo_ibge') ?? $municipioId;
 
         $conteudo = (string) file_get_contents($arquivo->getRealPath());
         $extensao = str_starts_with($conteudo, 'PK') ? 'kmz' : 'kml';

@@ -10,6 +10,7 @@ use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Models\Prefeitura;
 use App\Modules\Compdec\Support\LegacyParser;
 use App\Modules\Compdec\Support\MigracaoReport;
+use App\Support\Database\ConexaoDeLog;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -582,7 +583,7 @@ class PrefeituraService
             return;
         }
 
-        DB::table('compdec_etl_log')->insert($this->logsPendentes);
+        ConexaoDeLog::inserir('compdec_etl_log', $this->logsPendentes);
 
         $this->logsPendentes = [];
     }

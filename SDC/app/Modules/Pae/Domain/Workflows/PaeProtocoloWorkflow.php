@@ -22,9 +22,10 @@ use Illuminate\Support\Facades\DB;
 /**
  * Maquina de estados do protocolo PAE (padrao Demandas\Domain\Workflows).
  *
- * Unico ponto que grava status: valida pelo enum, roda os guards e registra
- * tramitacao e timeline na mesma transacao. Sem estado proprio (os guards sao
- * stateless e a origem viaja em ContextoTransicao), seguro como singleton no Octane.
+ * Unico ponto que grava status: valida pelo enum, roda os guards e registra a
+ * tramitacao na mesma transacao; a timeline (conexao de log) grava logo apos o
+ * commit. Sem estado proprio (os guards sao stateless e a origem viaja em
+ * ContextoTransicao), seguro como singleton no Octane.
  */
 final class PaeProtocoloWorkflow
 {

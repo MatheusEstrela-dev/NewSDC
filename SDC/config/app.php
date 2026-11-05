@@ -192,6 +192,7 @@ return [
     'providers' => ServiceProvider::defaultProviders()->merge([
         App\Providers\AppServiceProvider::class,
         App\Providers\ReplicaRoutingServiceProvider::class,
+        App\Providers\FilaConexaoServiceProvider::class,
         App\Providers\FilesystemServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         // Necessario para tempo real: registra /broadcasting/auth e carrega
@@ -248,6 +249,7 @@ return [
         App\Modules\Pae\PaeServiceProvider::class,
         App\Modules\Ranking\RankingServiceProvider::class,
         App\Modules\Resgate\ResgateServiceProvider::class,
+        App\Modules\NotasTecnicas\NotasTecnicasServiceProvider::class,
     ])->toArray(),
 
     /*

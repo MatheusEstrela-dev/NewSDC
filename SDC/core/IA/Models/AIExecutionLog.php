@@ -2,12 +2,18 @@
 
 namespace App\Core\IA\Models;
 
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
+/**
+ * Log tecnico de execucao de plugin de IA: vive na conexao de log e o
+ * log:podar apaga o que passou de 90 dias.
+ */
 class AIExecutionLog extends Model
 {
     use HasUuids;
+    use UsaConexaoDeLog;
 
     protected $table = 'ai_execution_logs';
 

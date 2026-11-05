@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Domain\Etl;
 
-use Illuminate\Support\Facades\DB;
+use App\Support\Database\ConexaoDeLog;
 
 /**
  * Escrita no cisterna_etl_log. Registra as quatro acoes, nao apenas as
  * falhas: `skipped` por idempotencia e `updated` por reprocesso sao o que
  * permite auditar uma carga de milhares de linhas.
+ *
+ * Vai pela conexao de log. O refino de beneficiarios registra de dentro do
+ * proprio DB::transaction: ConexaoDeLog::inserir adia a linha para o commit,
+ * entao rollback descarta o "inserted" que nao aconteceu, e o erro e gravado
+ * pelo catch, ja fora da transacao.
  */
 final class RegistroEtl
 {
@@ -54,7 +59,7 @@ final class RegistroEtl
         ?string $motivo,
         ?array $payload,
     ): void {
-        DB::table('cisterna_etl_log')->insert([
+        ConexaoDeLog::inserir('cisterna_etl_log', [
             'recurso' => $recurso,
             'tabela' => $tabela,
             'pk_legado' => (string) $legacyId,
@@ -71,7 +76,7 @@ final class RegistroEtl
      */
     public static function resumo(?string $recurso = null): array
     {
-        return DB::table('cisterna_etl_log')
+        return ConexaoDeLog::tabela('cisterna_etl_log')
             ->when($recurso !== null, fn ($q) => $q->where('recurso', $recurso))
             ->selectRaw('acao, COUNT(*) AS total')
             ->groupBy('acao')

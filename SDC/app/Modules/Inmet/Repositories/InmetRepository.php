@@ -6,20 +6,15 @@ namespace App\Modules\Inmet\Repositories;
 
 use App\Modules\Inmet\DTOs\EstacaoDTO;
 use App\Modules\Inmet\DTOs\LeituraMeteorologicaDTO;
+use App\Modules\Medalhao\Support\RecortePorCamada;
+use App\Modules\Medalhao\Support\TabelasGeo;
+use App\Support\Database\ConexaoGeo;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 final class InmetRepository
 {
     private const CHUNK = 500;
 
-    /**
-     * Le a camada Gold para o mapa. Nenhuma agregacao aqui: a matview ja
-     * entrega lat/lon extraidos da geometria e a classe de precipitacao
-     * calculada no banco.
-     *
-     * @return Collection<int, object>
-     */
     /**
      * Le a camada Gold para o mapa.
      *
@@ -36,36 +31,16 @@ final class InmetRepository
      */
     public function mapa(?int $camadaGeoId = null): Collection
     {
-        $query = DB::table('gold.inmet_mapa')
+        $query = ConexaoGeo::leitura()->table(TabelasGeo::inmetMapa())
             ->select([
                 'id', 'codigo_estacao', 'nome_estacao', 'municipio', 'uf', 'altitude',
                 'medido_em', 'latitude', 'longitude', 'temperatura', 'umidade',
                 'precipitacao', 'velocidade_vento', 'pressao', 'classe_precipitacao',
             ]);
 
-        $this->recortarPorCamada($query, $camadaGeoId, 'gold.inmet_mapa');
+        RecortePorCamada::aplicar($query, $camadaGeoId, TabelasGeo::inmetMapa());
 
         return $query->orderByDesc('precipitacao')->get();
-    }
-
-    /**
-     * Recorte espacial compartilhado pelas duas redes.
-     *
-     * EXISTS e nao JOIN: estacao dentro de duas feicoes da mesma camada
-     * apareceria duplicada no JOIN, e o mapa desenharia dois marcadores no
-     * mesmo ponto.
-     */
-    private function recortarPorCamada(object $query, ?int $camadaGeoId, string $tabela): void
-    {
-        if ($camadaGeoId === null) {
-            return;
-        }
-
-        $query->whereRaw(
-            "EXISTS (SELECT 1 FROM silver.geo_feicoes f
-                      WHERE f.camada_id = ? AND ST_Intersects(f.geom, {$tabela}.geom))",
-            [$camadaGeoId]
-        );
     }
 
     /**
@@ -73,7 +48,7 @@ final class InmetRepository
      */
     public function estatisticas(): array
     {
-        $linha = DB::table('gold.inmet_estatisticas')->first();
+        $linha = ConexaoGeo::leitura()->table(TabelasGeo::inmetEstatisticas())->first();
 
         return [
             'total_estacoes' => (int) ($linha->total_estacoes ?? 0),
@@ -130,7 +105,7 @@ final class InmetRepository
 
     public function totalLeituras(): int
     {
-        return (int) DB::scalar('SELECT count(*) FROM silver.leituras_inmet');
+        return (int) ConexaoGeo::conexao()->scalar('SELECT count(*) FROM '.TabelasGeo::leiturasInmet());
     }
 
     /**
@@ -165,8 +140,8 @@ final class InmetRepository
             );
         }
 
-        DB::statement(
-            'INSERT INTO estacoes_meteorologicas
+        ConexaoGeo::conexao()->statement(
+            'INSERT INTO '.TabelasGeo::estacoesInmet().'
                 (codigo, nome, municipio, uf, latitude, longitude, altitude, tipo, situacao, geom, created_at, updated_at)
              VALUES ' . implode(', ', $placeholders) . '
              ON CONFLICT (codigo) DO UPDATE SET
@@ -192,16 +167,16 @@ final class InmetRepository
      * municipio e NOT NULL, resolve-se pelo centroide mais proximo entre os 853
      * municipios de MG ja semeados.
      *
-     * ATENCAO: e centroide, nao contencao por poligono — a tabela municipios
+     * ATENCAO: e centroide, nao contencao por poligono — a tabela referencia.municipios
      * tem latitude/longitude, nao geometria de area. Estacao perto de divisa
      * pode resolver para o municipio vizinho. Verificado para A521: resolve
      * Belo Horizonte a 5,3 km, contra Contagem a 10,3 km.
      */
     private function municipioMaisProximo(float $latitude, float $longitude, string $uf): ?string
     {
-        return DB::scalar(
+        return ConexaoGeo::conexao()->scalar(
             'SELECT m.nome
-               FROM municipios m
+               FROM '.TabelasGeo::municipios().' m
               WHERE m.uf = ?
                 AND m.latitude IS NOT NULL
                 AND m.longitude IS NOT NULL
@@ -266,8 +241,8 @@ final class InmetRepository
             );
         }
 
-        DB::statement(
-            'INSERT INTO silver.leituras_inmet
+        ConexaoGeo::conexao()->statement(
+            'INSERT INTO '.TabelasGeo::leiturasInmet().'
                 (codigo_estacao, medido_em, temperatura, umidade, precipitacao,
                  velocidade_vento, pressao, ingestao_id, created_at, updated_at)
              VALUES ' . implode(', ', $placeholders) . '

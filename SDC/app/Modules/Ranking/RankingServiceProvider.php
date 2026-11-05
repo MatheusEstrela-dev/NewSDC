@@ -105,29 +105,22 @@ class RankingServiceProvider extends ServiceProvider
             (string) config('ranking.conexao', 'ranking'),
             (string) config('ranking.conexao_origem', 'ranking_source_ro'),
         ));
-        // A conexao TEM de ser passada explicitamente. Registrados como
-        // singleton nu, o autowiring resolvia ConnectionInterface pelo alias de
-        // core do Laravel (Application.php: ConnectionInterface -> db.connection),
-        // que devolve a conexao DEFAULT - ou seja, a base operacional `sdc`. O
-        // fallback `?? DB::connection('ranking')` dentro dos services nunca
-        // chegava a executar, porque o parametro vinha preenchido com a conexao
-        // errada. `ranking:rebuild` sem --dry-run chegaria a ESCREVER placar
-        // dentro de `sdc`, que e exatamente o vazamento que a separacao existe
-        // para impedir.
-        $this->app->singleton(ReconcileLeaderboard::class, fn () => new ReconcileLeaderboard(
-            DB::connection((string) config('ranking.conexao', 'ranking')),
-        ));
+        // Pool por coroutine: os services recebem o NOME da conexao e a
+        // resolvem a cada uso (ResolveConexaoPorUso); a Connection so vale para
+        // a coroutine que a obteve. O nome TEM de ser passado explicitamente:
+        // com autowiring, ConnectionInterface resolveria para a conexao default
+        // (a base operacional `sdc`) e o ranking:rebuild escreveria placar la.
+        $escrita = (string) config('ranking.conexao', 'ranking');
+        $leitura = (string) config('ranking.conexao_leitura', 'ranking_read');
+
+        $this->app->singleton(ReconcileLeaderboard::class, fn () => new ReconcileLeaderboard($escrita));
         $this->app->singleton(RebuildLeaderboard::class, fn ($app) => new RebuildLeaderboard(
             $app->make(ReconcileLeaderboard::class),
             $app->make(RecordScoreTransaction::class),
-            DB::connection((string) config('ranking.conexao', 'ranking')),
+            $escrita,
         ));
-        $this->app->singleton(SnapshotPlacar::class, fn () => new SnapshotPlacar(
-            DB::connection((string) config('ranking.conexao', 'ranking')),
-        ));
-        $this->app->singleton(CompararSnapshots::class, fn () => new CompararSnapshots(
-            DB::connection((string) config('ranking.conexao_leitura', 'ranking_read')),
-        ));
+        $this->app->singleton(SnapshotPlacar::class, fn () => new SnapshotPlacar($escrita));
+        $this->app->singleton(CompararSnapshots::class, fn () => new CompararSnapshots($leitura));
 
         // Um adaptador por dominio, resolvidos por tag: adicionar modulo novo
         // ao ranking passa a ser registrar o adaptador aqui, sem tocar no
@@ -161,7 +154,7 @@ class RankingServiceProvider extends ServiceProvider
 
         // Leitura do placar usa a conexao de SELECT, separada da de escrita.
         $this->app->singleton(LeaderboardQuery::class, fn ($app) => new LeaderboardQuery(
-            DB::connection((string) config('ranking.conexao_leitura', 'ranking_read')),
+            $leitura,
             $app->make(CacheRepository::class),
             (int) config('ranking.placar.cache_segundos', 60),
         ));

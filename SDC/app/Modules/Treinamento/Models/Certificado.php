@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Models;
 
 use App\Models\User;
 use App\Modules\Treinamento\Enums\StatusCertificado;
+use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,8 +14,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Certificado extends Model
 {
     use SoftDeletes;
+    use UsaConexaoDeTreinamento;
 
-    protected $table = 'certificados';
+    protected $table = 'treinamento.certificados';
 
     protected $fillable = [
         'inscricao_id',

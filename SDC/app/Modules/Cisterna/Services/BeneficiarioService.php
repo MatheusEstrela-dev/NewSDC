@@ -11,6 +11,7 @@ use App\Modules\Cisterna\Enums\SituacaoObra;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Support\EscopoPerfil;
 use App\Modules\Cisterna\Support\PerfilCisterna;
+use App\Support\Database\ConexaoDeLog;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -299,7 +300,8 @@ class BeneficiarioService
             }
 
             if ($registros !== []) {
-                DB::table('audit_logs')->insert($registros);
+                // Conexao de log: grava depois do commit desta transacao.
+                ConexaoDeLog::inserir('audit_logs', $registros);
             }
 
             return $afetados;

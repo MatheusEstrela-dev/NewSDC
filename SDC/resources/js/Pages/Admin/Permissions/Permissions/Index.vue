@@ -349,6 +349,7 @@ const CORES_POR_MODULO = {
   decretacoes: 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700',
   demandas: 'bg-neutral-100 dark:bg-neutral-800/40 text-neutral-500 border-neutral-200 dark:border-neutral-700',
   plantao: 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700',
+  notas_tecnicas: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800',
 };
 
 const COR_PADRAO = 'bg-gray-100 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700';

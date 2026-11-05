@@ -6,8 +6,10 @@ namespace App\Modules\Cemaden\Repositories;
 
 use App\Modules\Cemaden\DTOs\EstacaoCemadenDTO;
 use App\Modules\Cemaden\DTOs\LeituraCemadenDTO;
+use App\Modules\Medalhao\Support\RecortePorCamada;
+use App\Modules\Medalhao\Support\TabelasGeo;
+use App\Support\Database\ConexaoGeo;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 final class CemadenRepository
 {
@@ -36,23 +38,14 @@ final class CemadenRepository
      */
     public function mapa(?int $camadaGeoId = null): Collection
     {
-        $query = DB::table('gold.cemaden_mapa')
+        $query = ConexaoGeo::leitura()->table(TabelasGeo::cemadenMapa())
             ->select([
                 'id', 'codigo_estacao', 'nome_estacao', 'municipio', 'codigo_ibge',
                 'uf', 'tipo', 'medido_em', 'latitude', 'longitude',
                 'acumulado_24h', 'classe_precipitacao',
             ]);
 
-        if ($camadaGeoId !== null) {
-            // EXISTS e nao JOIN: estacao dentro de duas feicoes da mesma camada
-            // apareceria duplicada, e o mapa desenharia dois marcadores no
-            // mesmo ponto.
-            $query->whereRaw(
-                'EXISTS (SELECT 1 FROM silver.geo_feicoes f
-                          WHERE f.camada_id = ? AND ST_Intersects(f.geom, gold.cemaden_mapa.geom))',
-                [$camadaGeoId]
-            );
-        }
+        RecortePorCamada::aplicar($query, $camadaGeoId, TabelasGeo::cemadenMapa());
 
         // NULLS LAST para que estacao sem telemetria nao ocupe o topo da
         // tabela: com 476 das 830 sem transmitir, o default do Postgres
@@ -65,7 +58,7 @@ final class CemadenRepository
      */
     public function estatisticas(): array
     {
-        $linha = DB::table('gold.cemaden_estatisticas')->first();
+        $linha = ConexaoGeo::leitura()->table(TabelasGeo::cemadenEstatisticas())->first();
 
         return [
             'total_estacoes' => (int) ($linha->total_estacoes ?? 0),
@@ -122,7 +115,7 @@ final class CemadenRepository
 
     public function totalLeituras(): int
     {
-        return (int) DB::scalar('SELECT count(*) FROM silver.leituras_cemaden');
+        return (int) ConexaoGeo::conexao()->scalar('SELECT count(*) FROM '.TabelasGeo::leiturasCemaden());
     }
 
     /**
@@ -156,8 +149,8 @@ final class CemadenRepository
             );
         }
 
-        DB::statement(
-            'INSERT INTO silver.estacoes_cemaden
+        ConexaoGeo::conexao()->statement(
+            'INSERT INTO '.TabelasGeo::estacoesCemaden().'
                 (codigo, id_externo, nome, municipio, codigo_ibge, uf, tipo, rede, geom, created_at, updated_at)
              VALUES ' . implode(', ', $placeholders) . '
              ON CONFLICT (codigo) DO UPDATE SET
@@ -223,8 +216,8 @@ final class CemadenRepository
             );
         }
 
-        DB::statement(
-            'INSERT INTO silver.leituras_cemaden
+        ConexaoGeo::conexao()->statement(
+            'INSERT INTO '.TabelasGeo::leiturasCemaden().'
                 (codigo_estacao, medido_em, acumulado_24h, ingestao_id, created_at, updated_at)
              VALUES ' . implode(', ', $placeholders) . '
              ON CONFLICT (codigo_estacao, medido_em) DO UPDATE SET

@@ -8,7 +8,9 @@ use App\Modules\Geoespacial\DTOs\MetadadoCamadaDTO;
 use App\Modules\Geoespacial\Enums\StatusCamada;
 use App\Modules\Geoespacial\Jobs\AtualizarGoldGeoJob;
 use App\Modules\Geoespacial\Repositories\GeoCamadaRepository;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Medalhao\Support\TabelasGeo;
+use App\Support\Database\ConexaoGeo;
+use App\Support\Database\Geo\DominioGeo;
 use RuntimeException;
 
 /**
@@ -54,7 +56,7 @@ final class CicloDeVidaDaCamada
             );
         }
 
-        DB::table('silver.geo_camadas')->where('id', $camadaId)->update([
+        ConexaoGeo::conexao()->table(TabelasGeo::camadas())->where('id', $camadaId)->update([
             'nome' => $dto->nome,
             'dominio' => $dto->dominio,
             'nivel' => $dto->nivel,
@@ -98,7 +100,7 @@ final class CicloDeVidaDaCamada
         // O predicado de status vai no UPDATE, e nao so na leitura acima:
         // ler-depois-escrever sem trava deixa duas acoes concorrentes passarem
         // as duas. E o banco que decide quem chegou primeiro.
-        $aplicou = DB::table('silver.geo_camadas')
+        $aplicou = ConexaoGeo::conexao()->table(TabelasGeo::camadas())
             ->where('id', $camadaId)
             ->where('status', StatusCamada::APROVADA->value)
             ->update([
@@ -147,7 +149,7 @@ final class CicloDeVidaDaCamada
             ));
         }
 
-        $aplicou = DB::table('silver.geo_camadas')
+        $aplicou = ConexaoGeo::conexao()->table(TabelasGeo::camadas())
             ->where('id', $camadaId)
             ->where('status', StatusCamada::ARQUIVADA->value)
             ->update([
@@ -193,7 +195,7 @@ final class CicloDeVidaDaCamada
             );
         }
 
-        $envelope = DB::table('bronze.ingestao_bruta')
+        $envelope = ConexaoGeo::conexao()->table(TabelasGeo::ingestaoBruta(DominioGeo::Camadas))
             ->where('id', $camada->ingestao_id)
             ->value('conteudo_bruto');
 
@@ -256,7 +258,7 @@ final class CicloDeVidaDaCamada
      */
     public function arquivarVencidas(): int
     {
-        $vencidas = DB::table('silver.geo_camadas')
+        $vencidas = ConexaoGeo::conexao()->table(TabelasGeo::camadas())
             ->where('status', StatusCamada::APROVADA->value)
             ->whereNotNull('valido_ate')
             // A data de hoje vem do PHP, e nao do current_date do Postgres: o
@@ -271,7 +273,7 @@ final class CicloDeVidaDaCamada
             return 0;
         }
 
-        $total = DB::table('silver.geo_camadas')
+        $total = ConexaoGeo::conexao()->table(TabelasGeo::camadas())
             ->whereIn('id', $vencidas)
             ->update([
                 'status' => StatusCamada::ARQUIVADA->value,
@@ -292,7 +294,7 @@ final class CicloDeVidaDaCamada
 
     private function existeOuFalha(int $camadaId): object
     {
-        $camada = DB::table('silver.geo_camadas')
+        $camada = ConexaoGeo::conexao()->table(TabelasGeo::camadas())
             ->select(['id', 'nome', 'status', 'origem', 'ingestao_id', 'valido_ate'])
             ->where('id', $camadaId)
             ->first();

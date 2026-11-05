@@ -286,16 +286,22 @@ class AppServiceProvider extends ServiceProvider
         // Slow query detection - threshold em ms
         $slowQueryThreshold = config('app.env') === 'production' ? 1000 : 2000;
         $circuitBreaker = $this->app->make(DatabaseCircuitBreaker::class);
+        // Lido uma vez no boot, e nao por query: o listener roda em toda query.
+        $conexoesDoBreaker = array_flip((array) config('resilience.db.circuit_breaker.connections', ['pgsql']));
 
-        DB::listen(function ($query) use ($slowQueryThreshold, $circuitBreaker) {
+        DB::listen(function ($query) use ($slowQueryThreshold, $circuitBreaker, $conexoesDoBreaker) {
             // Circuit breaker: timeout suspeito (>30s) abre. O estado agora e
             // local em memoria por worker no caminho comum; Redis so e usado
             // best-effort em transicoes. Evita Cache::get() por query sob
             // Swoole, que pode compartilhar socket Redis entre coroutines.
-            if ($query->time > 30000) {
-                $circuitBreaker->recordTimeout();
-            } elseif ($circuitBreaker->state() === 'half-open') {
-                $circuitBreaker->recordSuccess();
+            // So as conexoes criticas contam: uma query lenta de log (poda,
+            // pico de notificacao) nao pode abrir o breaker dos modulos.
+            if (isset($conexoesDoBreaker[$query->connectionName])) {
+                if ($query->time > 30000) {
+                    $circuitBreaker->recordTimeout();
+                } elseif ($circuitBreaker->state() === 'half-open') {
+                    $circuitBreaker->recordSuccess();
+                }
             }
 
             if ($query->time <= $slowQueryThreshold) {
@@ -308,7 +314,7 @@ class AppServiceProvider extends ServiceProvider
                 Log::channel('queries')->warning('Slow Query Detected', [
                     'sql'          => $query->sql,
                     'time_ms'      => $query->time,
-                    'connection'   => $query->connection->getName(),
+                    'connection'   => $query->connectionName,
                     'url'          => app()->bound('request') ? request()->fullUrl() : null,
                     'class'        => $caller['class'] ?? null,
                     'method'       => $caller['method'] ?? null,
@@ -318,9 +324,10 @@ class AppServiceProvider extends ServiceProvider
 
                 if ($query->time > ($slowQueryThreshold * 2)) {
                     Log::channel('critical')->error('Critical Slow Query', [
-                        'sql'     => $query->sql,
-                        'time_ms' => $query->time,
-                        'url'     => request()?->fullUrl(),
+                        'sql'        => $query->sql,
+                        'time_ms'    => $query->time,
+                        'connection' => $query->connectionName,
+                        'url'        => request()?->fullUrl(),
                     ]);
                 }
             } catch (\Throwable $logError) {

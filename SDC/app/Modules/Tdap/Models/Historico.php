@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Models;
 
 use App\Models\User;
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Historico extends Model
 {
+    use UsaConexaoDeLog;
+
     protected $table = 'tdap_historicos';
 
     protected $fillable = [

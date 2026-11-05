@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
+use App\Support\Database\OperadorLike;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,21 +22,31 @@ class PermissionManagementController extends Controller
             $query = Permission::withCount(['roles'])
                 ->orderBy('name');
 
-            if ($request->has('search')) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
+            // ILIKE no Postgres: LIKE diferencia maiuscula, e "notas tecn" nao
+            // achava "Notas Tecnicas" na descricao.
+            $like = OperadorLike::insensivel();
+
+            if ($request->filled('search')) {
+                $search = (string) $request->search;
+                $query->where(function ($q) use ($search, $like) {
+                    $q->where('name', $like, "%{$search}%")
+                        ->orWhere('description', $like, "%{$search}%");
                 });
             }
 
-            if ($request->has('module') && $request->module !== '') {
+            // filled e nao has: a busca envia module= vazio, que o middleware
+            // ConvertEmptyStringsToNull vira null; com has() o filtro virava
+            // `name like '.%'` e toda busca em "Todos os Modulos" vinha vazia.
+            if ($request->filled('module')) {
                 $query->where('name', 'like', $request->module . '.%');
             }
 
             $permissions = $query->get();
 
-            if ($permissions->isEmpty()) {
+            // Mock so quando a tabela inteira esta vazia (ambiente sem seed). Busca
+            // sem resultado e resposta legitima: antes caia aqui e a tela mostrava
+            // as 30 permissoes falsas no lugar de "nenhum resultado".
+            if ($permissions->isEmpty() && ! Permission::query()->exists()) {
                 throw new \Exception("No permissions found, using mocks.");
             }
 

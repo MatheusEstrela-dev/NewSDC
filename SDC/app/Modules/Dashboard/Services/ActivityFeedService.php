@@ -74,6 +74,9 @@ class ActivityFeedService
      * Uma unica query com subqueries no lugar de pluck + whereIn por modulo:
      * antes eram ate 4 queries sequenciais (2 plucks carregando listas de IDs
      * no PHP + 2 selects de AuditLog); agora o banco resolve tudo de uma vez.
+     *
+     * Roda pela conexao de log (AuditLog) com subquery em pae_protocolos e
+     * tasks: mesmo banco, e a role de log tem SELECT nas tabelas de modulo.
      */
     private function queryAssignedActions(int $userId, array $tables): Collection
     {

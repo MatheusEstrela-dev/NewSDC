@@ -9,6 +9,7 @@ use App\Modules\Medalhao\Models\IngestaoBruta;
 use App\Modules\Medalhao\Registry\IngestorRegistry;
 use App\Modules\Shared\Geo\CaixaEnvolvente;
 use App\Modules\Sismos\Repositories\SismoRepository;
+use App\Support\Database\Geo\DominioGeo;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,7 +39,7 @@ class SismosIndexController extends Controller
             //
             // A lista de fontes vem do registry, e nao de constante: fonte nova
             // do grupo passa a contar sozinha.
-            'verificado_em' => IngestaoBruta::verificadoEm($this->registry->chavesDoGrupo('sismos')),
+            'verificado_em' => IngestaoBruta::verificadoEm(DominioGeo::Sismo, $this->registry->chavesDoGrupo('sismos')),
             'bbox' => CaixaEnvolvente::deConfig(config('medalhao.sismos.bbox'))->paraArray(),
         ]);
     }

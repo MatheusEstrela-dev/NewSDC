@@ -2,21 +2,20 @@
 
 namespace App\Models;
 
+use App\Support\Database\UsaConexaoDeLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Model para logs de webhooks
  * Armazena histórico de envios e recebimentos para auditoria
+ *
+ * Isolamento de conexao pela conexao de log (UsaConexaoDeLog), que substituiu a
+ * antiga pgsql_webhook. O log:podar apaga o que passou de 90 dias.
  */
 class WebhookLog extends Model
 {
-    /**
-     * Isolamento de conexao: webhook logs sempre vao pelo pool pgsql_webhook,
-     * separado do pool da web. Substitui o padrao anterior de
-     * DB::setDefaultConnection nos jobs.
-     */
-    protected $connection = 'pgsql_webhook';
+    use UsaConexaoDeLog;
 
     protected $fillable = [
         'url',
