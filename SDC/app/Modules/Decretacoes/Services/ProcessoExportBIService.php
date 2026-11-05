@@ -7,6 +7,7 @@ namespace App\Modules\Decretacoes\Services;
 use App\Modules\Decretacoes\Constants\DesastreConstants;
 use App\Modules\Decretacoes\Models\Processo;
 use Carbon\Carbon;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\DB;
 class ProcessoExportBIService
 {
     private const TIPOS_DECRETO_VALIDOS = ['SE', 'ECP'];
+
+    /** Conexao de leitura (null = default). Ver naConexao(). */
+    private ?string $conexao = null;
 
     public function __construct(
         private readonly ProcessoQueryService $queryService,
@@ -43,12 +47,28 @@ class ProcessoExportBIService
     }
 
     /**
+     * Copia do service que le da conexao informada (a materializacao le do
+     * membro de BI, nunca do lider). O endpoint ao vivo segue na default.
+     */
+    public function naConexao(string $conexao): static
+    {
+        $copia = clone $this;
+        $copia->conexao = $conexao;
+
+        return $copia;
+    }
+
+    /**
      * Keyset por (updated_at, id) ascendente, incluindo soft-deleted (a
      * linha traz `deletado`). Nao filtra por perfil: uso interno da F2.
      */
     public function consultaIncremental(?Carbon $desde, ?int $aposId, int $lote): Builder
     {
-        $query = Processo::query()->withTrashed()->with(['municipios', 'desastres']);
+        $modelo = new Processo();
+        if ($this->conexao !== null) {
+            $modelo->setConnection($this->conexao);
+        }
+        $query = $modelo->newQuery()->withTrashed()->with(['municipios', 'desastres']);
 
         if ($desde !== null) {
             $query->where(function (Builder $q) use ($desde, $aposId): void {
@@ -66,9 +86,12 @@ class ProcessoExportBIService
      * Normaliza um lote de processos (uma linha por municipio) calculando
      * os totais em queries batch para todos os ids do lote.
      *
+     * Com $comChave, cada linha traz tambem `municipio_id` (0 = sem municipio),
+     * necessario a PK da tabela materializada; o export ao vivo nao o pede.
+     *
      * @param  Collection<int, Processo>  $processos
      */
-    public function normalizarLote(Collection $processos): array
+    public function normalizarLote(Collection $processos, bool $comChave = false): array
     {
         if ($processos->isEmpty()) {
             return [];
@@ -80,7 +103,7 @@ class ProcessoExportBIService
 
         $desastreTotalsBatch = $this->calculateDesastreTotalsBatch($allIds);
         $danosHumanosBatch   = $this->calculateDanosHumanosBatch($allIds);
-        $ambientaisBatch     = $this->danosAmbientais->porProcessoMunicipio($allIds);
+        $ambientaisBatch     = $this->danosAmbientais->porProcessoMunicipio($allIds, $this->conexao);
 
         $normalizedData = [];
 
@@ -88,7 +111,7 @@ class ProcessoExportBIService
             $pid = $entrada->id;
 
             if ($entrada->municipios->isEmpty()) {
-                $normalizedData[] = $this->buildExportRow($entrada, null, [], [], []);
+                $normalizedData[] = $this->buildExportRow($entrada, null, [], [], [], $comChave);
                 continue;
             }
 
@@ -96,11 +119,16 @@ class ProcessoExportBIService
                 $municipioTotals  = $desastreTotalsBatch[$pid][$municipio->id] ?? [];
                 $danosHumanos     = $danosHumanosBatch[$pid][$municipio->id] ?? [];
                 $danosAmbientais  = $ambientaisBatch[$pid][$municipio->id] ?? [];
-                $normalizedData[] = $this->buildExportRow($entrada, $municipio, $municipioTotals, $danosHumanos, $danosAmbientais);
+                $normalizedData[] = $this->buildExportRow($entrada, $municipio, $municipioTotals, $danosHumanos, $danosAmbientais, $comChave);
             }
         }
 
         return $normalizedData;
+    }
+
+    private function db(): ConnectionInterface
+    {
+        return DB::connection($this->conexao);
     }
 
     /**
@@ -110,7 +138,7 @@ class ProcessoExportBIService
      */
     private function calculateDesastreTotalsBatch(Collection $processoIds): array
     {
-        $rows = DB::table('dec_entrada_categoria_desastres as ecd')
+        $rows = $this->db()->table('dec_entrada_categoria_desastres as ecd')
             ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
@@ -122,7 +150,7 @@ class ProcessoExportBIService
                 'dc.titulo as categoria_titulo',
                 'dic.titulo as desastre_campo_titulo',
                 'dic.tipo',
-                DB::raw("SUM(CAST(COALESCE(ed.valor, '0') AS NUMERIC)) as total_valor")
+                DB::raw("SUM(CAST(COALESCE(NULLIF(TRIM(ed.valor), ''), '0') AS NUMERIC)) as total_valor")
             )
             ->groupBy('ecd.entrada_processo_id', 'ed.municipio_id', 'dc.titulo', 'dic.titulo', 'dic.tipo')
             ->get();
@@ -149,7 +177,7 @@ class ProcessoExportBIService
      */
     private function calculateDanosHumanosBatch(Collection $processoIds): array
     {
-        $rows = DB::table('dec_entrada_desastres as ed')
+        $rows = $this->db()->table('dec_entrada_desastres as ed')
             ->join('dec_entrada_categoria_desastres as ecd', 'ed.entrada_categoria_desastre_id', '=', 'ecd.id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_items as di', 'dic.desastre_item_id', '=', 'di.id')
@@ -195,9 +223,13 @@ class ProcessoExportBIService
         ?object $municipio,
         array $municipioTotals,
         array $danosHumanos,
-        array $danosAmbientais = []
+        array $danosAmbientais = [],
+        bool $comChave = false
     ): array {
         $row = $this->buildBaseExportRow($entrada, $municipio);
+        if ($comChave) {
+            $row['municipio_id'] = $municipio?->id ?? 0;
+        }
         $row = array_merge($row, $this->buildDanosHumanosRow($danosHumanos));
         $row['danos_humanos_quantidade'] = $this->sumDanosHumanos($row);
         $row = array_merge($row, $this->buildDanosMateriaisRow($municipioTotals));

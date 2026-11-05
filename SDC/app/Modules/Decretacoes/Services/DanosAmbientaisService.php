@@ -97,7 +97,7 @@ class DanosAmbientaisService
      * @return array<int, array<int, array{marcados: int, itens: array<string, array{resposta: ?string, faixa: ?string}>}>>
      *         [processo_id][municipio_id] => estrutura agregada
      */
-    public function porProcessoMunicipio(Collection|array $processoIds): array
+    public function porProcessoMunicipio(Collection|array $processoIds, ?string $conexao = null): array
     {
         $ids = $processoIds instanceof Collection ? $processoIds->all() : $processoIds;
 
@@ -108,7 +108,7 @@ class DanosAmbientaisService
         // A categoria vem por `di.categoria_id` (definicao do item) e nao por
         // `ecd.categoria_id`: o vinculo de entrada e gravado por categoria, mas
         // a definicao e a fonte confiavel do que o item realmente e.
-        $rows = DB::table('dec_entrada_desastres as ed')
+        $rows = DB::connection($conexao)->table('dec_entrada_desastres as ed')
             ->join('dec_entrada_categoria_desastres as ecd', 'ed.entrada_categoria_desastre_id', '=', 'ecd.id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_items as di', 'dic.desastre_item_id', '=', 'di.id')
