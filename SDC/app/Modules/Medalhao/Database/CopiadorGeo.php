@@ -111,6 +111,25 @@ final class CopiadorGeo
         ];
     }
 
+    /**
+     * Tabelas cujo conteudo difere entre origem e destino (contagem, faixa de id ou hash).
+     *
+     * @param list<array{tabela: string, chave: list<string>, alteracao: string, particionada: bool}> $specs
+     * @return list<string>
+     */
+    public function divergentes(array $specs): array
+    {
+        $divergentes = [];
+
+        foreach ($specs as $spec) {
+            if (! $this->verificar($spec)['ok']) {
+                $divergentes[] = $spec['tabela'];
+            }
+        }
+
+        return $divergentes;
+    }
+
     /** Matviews gold dependem das tabelas copiadas; sem isso o mapa nasce vazio. */
     public function atualizarMatviews(): void
     {

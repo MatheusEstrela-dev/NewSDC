@@ -27,6 +27,50 @@ final class CopiaDeTabela
         private readonly string $pk,
     ) {}
 
+    /**
+     * Uma copia por tabela de cada schema, com a PK lida do catalogo: quem
+     * apaga o schema precisa conferir todas, nao so as que a copia lista.
+     *
+     * @param  list<string>  $schemas
+     * @return list<self>
+     *
+     * @throws \RuntimeException tabela sem PK (nao da para ordenar o hash)
+     */
+    public static function dosSchemas(Connection $conexao, array $schemas): array
+    {
+        $copias = [];
+
+        foreach ($schemas as $schema) {
+            $tabelas = $conexao->select(
+                "SELECT c.relname AS tabela,
+                        (SELECT a.attname FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[0]
+                          WHERE i.indrelid = c.oid AND i.indisprimary) AS pk
+                 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                 WHERE n.nspname = ? AND c.relkind IN ('r', 'p') AND NOT c.relispartition
+                 ORDER BY c.relname",
+                [$schema],
+            );
+
+            foreach ($tabelas as $t) {
+                if ($t->pk === null) {
+                    throw new \RuntimeException("{$schema}.{$t->tabela} nao tem chave primaria");
+                }
+
+                $copias[] = new self($schema.'.'.$t->tabela, (string) $t->pk);
+            }
+        }
+
+        return $copias;
+    }
+
+    /** Contagem e hash do conteudo diferem entre origem e destino. */
+    public function divergente(Connection $origem, Connection $destino): bool
+    {
+        $colunas = $this->colunas($origem);
+
+        return $this->resumo($origem, $colunas) !== $this->resumo($destino, $colunas);
+    }
+
     public function tabela(): string
     {
         return $this->tabela;
