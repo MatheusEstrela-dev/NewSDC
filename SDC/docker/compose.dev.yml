@@ -30,9 +30,9 @@ x-diretorio-env: &diretorio-env
   DIRETORIO_FAKE_ARQUIVO: /var/www/storage/app/diretorio-fake.json
 
 # Bancos dedicados (geoespacial e treinamento), UMA vez so, herdados por app e
-# por todos os servicos de fila. Em dev ficam no mesmo Postgres (host db). So
-# define o destino: o modulo continua na pgsql ate DB_GEO_CONNECTION /
-# DB_TREINAMENTO_CONNECTION serem ligados de proposito.
+# por todos os servicos de fila. Em dev ficam no mesmo Postgres (host db). Estas
+# duas ancoras so definem o destino (host/porta); quem liga a conexao dedicada
+# e a ancora x-chaves-bancos-dedicados logo abaixo.
 x-geo-db-env: &geo-db-env
   GEO_DB_HOST: db
   GEO_DB_PORT: 5432
@@ -40,6 +40,15 @@ x-geo-db-env: &geo-db-env
 x-treinamento-db-env: &treinamento-db-env
   TREINAMENTO_DB_HOST: db
   TREINAMENTO_DB_PORT: 5432
+
+# Chaves de ativacao dos bancos dedicados (log, geo, treinamento), UMA vez so,
+# herdadas por app, filas, scheduler e reverb. Todos precisam apontar para o
+# mesmo banco, senao um escreve onde o outro nao le. O ranking nao entra aqui:
+# e ligado por RANKING_HABILITADO no servico app.
+x-chaves-bancos-dedicados: &chaves-bancos-dedicados
+  DB_LOG_CONNECTION: pgsql_log
+  DB_GEO_CONNECTION: pgsql_geo
+  DB_TREINAMENTO_CONNECTION: pgsql_treinamento
 
 services:
   app:
@@ -86,7 +95,7 @@ services:
       WORKDIR: /var/www
       APP_NAME: "SDC Dev"
       # Acessos/AD: ver a ancora x-diretorio-env no topo do arquivo.
-      <<: [*diretorio-env, *geo-db-env, *treinamento-db-env]
+      <<: [*diretorio-env, *geo-db-env, *treinamento-db-env, *chaves-bancos-dedicados]
       APP_ENV: local
       APP_DEBUG: "true"
       # Broadcast. O app tambem PUBLICA eventos, entao precisa das mesmas
@@ -162,7 +171,7 @@ services:
       # Logo, a capacidade vem de processos e CPU, nao de corrotinas: requests
       # em voo == numero de workers, e o teto e workers/latencia media.
       OCTANE_HOOK_FLAGS_ENABLED: "false"
-      OCTANE_WORKERS: 40
+      OCTANE_WORKERS: 16
       # Task workers escalam COM os workers HTTP, nao independentes deles.
       # Concurrency::tasks() e sincrono do lado de quem chama: o worker HTTP fica
       # bloqueado ate wait_ms (5s) esperando resposta. O indice do PMDA e a
@@ -170,7 +179,7 @@ services:
       # workers o pool de task saturava ANTES dos workers HTTP e o sintoma
       # aparecia como latencia, nao como fila de request.
       #
-      # 16 nao cobre o pior caso (40 x 3 = 120 tasks); cobre a concorrencia real
+      # 16 nao cobre o pior caso (16 x 3 = 48 tasks); cobre a concorrencia real
       # esperada no indice. A metrica para mexer neste numero e o tempo gasto
       # DENTRO do Concurrency, nao o CPU.
       OCTANE_TASK_WORKERS: 16
@@ -193,19 +202,20 @@ services:
       # A conta que ele faz:
       #   (WORKERS + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
       #       + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE <= PG_MAX_CONNECTIONS
-      #   (40 + 16 + 0) * 1 + 16 + 5 = 77
+      #   (16 + 16 + 0) * 1 + 16 + 5 = 53
       #
-      # Com DB_LOG_CONNECTION=pgsql_log o log ganha sessao propria no mesmo
-      # Postgres e a conta soma a mesma forma mais uma vez (sem reserva):
-      #   77 + ((40 + 16 + 0) * 1 + 16) = 149 <= 200
-      # Por isso o db sobe com max_connections=200 (ver servico db); sem a
-      # conexao de log a projecao continua 77.
+      # Com os bancos dedicados ligados (log, geo, treinamento e o ranking) cada
+      # conexao ganha sessao propria no MESMO Postgres e a conta soma a mesma
+      # forma mais uma vez por banco, sem reserva: (16 + 16 + 0) * 1 + 16 = 48.
+      # Sao 7 contribuicoes: log, geo, geo_read, treinamento, ranking,
+      # ranking_read e ranking_source_ro (hooks OFF, 1 conexao/worker):
+      #   53 + 7 * 48 = 389
+      # 389 com ~25% de folga = 486, arredondado para 500. O db sobe com
+      # max_connections=500 (ver servico db); os dois numeros andam juntos.
       #
       # Com isso um OCTANE_WORKERS excessivo aborta o boot com mensagem clara em
-      # vez de degradar em producao. Foi o que faltou para 80 workers: a projecao
-      # daria 118 e, com o teto antigo de 100, o gate barraria (com o log ligado
-      # daria 214, acima ate do teto de 200).
-      PG_MAX_CONNECTIONS: 200
+      # vez de degradar em producao.
+      PG_MAX_CONNECTIONS: 500
       # Seis consumidores, scheduler e folga para conexoes nomeadas de jobs.
       # Somados uma vez, nao por replica HTTP.
       EXTERNAL_DB_CONSUMERS: 16
@@ -458,7 +468,7 @@ services:
       - "host.docker.internal:host-gateway"
 
     environment: &queue-env
-      <<: [*geo-db-env, *treinamento-db-env]
+      <<: [*geo-db-env, *treinamento-db-env, *chaves-bancos-dedicados]
       WORKDIR: /var/www
       APP_NAME: "SDC Dev Queue"
       # Mesmo racional do servico app: APP_KEY via env, nao via .env montado.
@@ -808,12 +818,12 @@ services:
     # coisa que se olha quando a aplicacao trava. Nao se diagnostica o que nao se
     # mede, e ligar depois exige restart do cluster (shared_preload_libraries).
     #
-    # max_connections=200 (default 100): com a conexao de log ligada a projecao
-    # do guardrail do app chega a 149 (ver PG_MAX_CONNECTIONS no servico app).
+    # max_connections=500 (default 100): com os bancos dedicados ligados a
+    # projecao do guardrail do app chega a 389 (ver PG_MAX_CONNECTIONS no app).
     # Os dois numeros andam juntos; mudar um exige mudar o outro.
     command: >
       postgres
-      -c max_connections=200
+      -c max_connections=500
       -c shared_preload_libraries=pg_stat_statements
       -c pg_stat_statements.track=all
       -c pg_stat_statements.max=10000
