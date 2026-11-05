@@ -61,6 +61,8 @@ use Illuminate\Http\Request;
  */
 class RatNovoController extends Controller
 {
+    use AppHttpControllersApiConcernsimitaporpagina;
+
     public function __construct(
         private readonly RatNovoService $service
     ) {}
@@ -138,10 +140,10 @@ class RatNovoController extends Controller
      *     )
      * )
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
         $ocorrencias = \App\Modules\Rat\Models\RatOcorrencia::latest()
-            ->paginate(request()->integer('per_page', 15));
+            ->paginate($this->porPagina($request));
 
         return RatResource::collection($ocorrencias);
     }

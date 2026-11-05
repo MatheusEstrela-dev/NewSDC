@@ -24,6 +24,8 @@ use Illuminate\Http\Request;
  */
 class HistoricoController extends Controller
 {
+    use AppHttpControllersApiConcernsimitaporpagina;
+
     public function __construct(
         private readonly RatHistoricoService $historicoService,
     ) {}
@@ -58,7 +60,7 @@ class HistoricoController extends Controller
     {
         $timeline = $this->historicoService->timeline(
             $id,
-            $request->integer('per_page', 20)
+            $this->porPagina($request, 20)
         );
 
         return response()->json([

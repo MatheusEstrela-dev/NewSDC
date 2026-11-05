@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 
 class OcorrenciaController extends Controller
 {
+    use AppHttpControllersApiConcernsimitaporpagina;
+
     public function __construct(
         private readonly RatWriteService $writeService,
     ) {}
@@ -25,7 +27,7 @@ class OcorrenciaController extends Controller
             $query->where('status', $request->integer('status'));
         }
 
-        $paginated = $query->paginate($request->integer('per_page', 15));
+        $paginated = $query->paginate($this->porPagina($request));
 
         return response()->json([
             'data' => RatResource::collection($paginated)->resolve(),
