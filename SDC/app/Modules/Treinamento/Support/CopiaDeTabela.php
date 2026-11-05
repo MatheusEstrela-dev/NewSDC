@@ -147,10 +147,18 @@ final class CopiaDeTabela
         $consulta = $conexao->table($this->tabela);
 
         if ($desde !== null) {
-            $consulta->where(static function ($q) use ($desde): void {
-                $q->whereRaw('COALESCE(updated_at, created_at) >= ?', [$desde])
-                    ->orWhereRaw('COALESCE(updated_at, created_at) IS NULL');
-            });
+            // So as colunas de data que a tabela tem (cidadao_password_reset_tokens
+            // so tem created_at).
+            $datas = array_values(array_intersect(['updated_at', 'created_at'], $this->colunas($conexao)));
+
+            if ($datas !== []) {
+                $expressao = count($datas) > 1 ? 'COALESCE(' . implode(', ', $datas) . ')' : $datas[0];
+
+                $consulta->where(static function ($q) use ($desde, $expressao): void {
+                    $q->whereRaw($expressao . ' >= ?', [$desde])
+                        ->orWhereRaw($expressao . ' IS NULL');
+                });
+            }
         }
 
         return $consulta;
