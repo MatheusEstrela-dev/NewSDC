@@ -189,7 +189,50 @@ services:
         aliases: [etcd_3]
     ports: !override []
 
+  # Replica de BI: sem voto no etcd e sem HAProxy embutido (ETCD_EMBEDDED=false
+  # faz o entrypoint dar exec direto no patroni). Fora do depends_on do site.
+  # Tags/params entram por env no patch do entrypoint. Cluster existente:
+  # patronictl edit-config (max_connections 400, max_slot_wal_keep_size,
+  # member_slots_ttl) e rolling restart dos membros atuais.
+  db_bi:
+    <<: *patroni-node
+    container_name: newsdc_homolog_db_bi
+    restart: unless-stopped
+    mem_limit: 1536m
+    cpus: 1.0
+    environment:
+      <<: *patroni-environment
+      ETCD_EMBEDDED: "false"
+      PATRONI_NAME: db_bi
+      PATRONI_RESTAPI_CONNECT_ADDRESS: db_bi:8008
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: db_bi:5432
+      PATRONI_POSTGRESQL_DATA_DIR: /var/lib/postgresql/pgdata
+      PATRONI_TAG_NOFAILOVER: "true"
+      PATRONI_TAG_NOLOADBALANCE: "true"
+      PATRONI_TAG_NOSYNC: "true"
+      PATRONI_TAG_REPLICATEFROM: db_replica_2
+      PATRONI_LOCAL_PARAM_hot_standby_feedback: "off"
+      PATRONI_LOCAL_PARAM_max_standby_streaming_delay: 300s
+      PATRONI_LOCAL_PARAM_work_mem: 64MB
+      # Memoria compativel com o teto de 1,5g (homolog na VM de 7,6g).
+      PATRONI_MEMORY_SHARED_BUFFERS: 384MB
+      PATRONI_MEMORY_EFFECTIVE_CACHE_SIZE: 768MB
+      PATRONI_MEMORY_MAINTENANCE_WORK_MEM: 64MB
+    volumes: !override
+      - homolog_pgdata_bi:/var/lib/postgresql
+    networks: !override
+      - homolog
+    ports: !override []
+    depends_on: !reset {}
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8008/readiness >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 60s
+
 volumes:
+  homolog_pgdata_bi:
   homolog_etcd_1:
   homolog_etcd_2:
   homolog_etcd_3:
