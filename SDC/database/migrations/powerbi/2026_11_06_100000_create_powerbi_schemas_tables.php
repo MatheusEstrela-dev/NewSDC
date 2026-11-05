@@ -332,7 +332,7 @@ return new class extends Migration
     {
         return [
             ['bi_rat', 'ocorrencias', ['id'], <<<'SQL'
-                id                      bigint      NOT NULL,
+                id                      uuid        NOT NULL,
                 numero_bos              text        NULL,
                 status                  smallint    NOT NULL DEFAULT 0,
                 status_descricao        text        NULL,
@@ -366,7 +366,7 @@ return new class extends Migration
                 SQL,
                 'RAT (dados_gerais achatados). LGPD: sem logradouro, numero, complemento, CEP, criador (nome/e-mail) nem envolvidos; documento jsonb e o dados_gerais sem campo pessoal e sem texto livre.'],
             ['bi_rat', 'recursos', ['ocorrencia_id', 'seq'], <<<'SQL'
-                ocorrencia_id       bigint   NOT NULL,
+                ocorrencia_id       uuid     NOT NULL,
                 seq                 integer  NOT NULL,
                 tipo_recurso        text     NULL,
                 categoria           text     NULL,
@@ -377,7 +377,7 @@ return new class extends Migration
                 SQL,
                 'Recursos empregados no RAT (viaturas e pessoal por tipo). Sem dado de pessoa.'],
             ['bi_rat', 'vistorias', ['ocorrencia_id'], <<<'SQL'
-                ocorrencia_id               bigint   NOT NULL,
+                ocorrencia_id               uuid     NOT NULL,
                 tipo_area                   text     NULL,
                 tipo_imovel                 text     NULL,
                 tipo_construcao             text     NULL,
@@ -416,7 +416,7 @@ return new class extends Migration
                 SQL,
                 'Vistoria do RAT. LGPD: sem solicitante, proprietario/morador, telefone, endereco, CEP e coordenadas do imovel.'],
             ['bi_rat', 'envolvidos_agregado', ['ocorrencia_id', 'tipo_pessoa', 'sexo', 'condicao_fisica', 'lesao_grau'], <<<'SQL'
-                ocorrencia_id    bigint  NOT NULL,
+                ocorrencia_id    uuid    NOT NULL,
                 tipo_pessoa      text    NOT NULL DEFAULT '',
                 sexo             text    NOT NULL DEFAULT '',
                 condicao_fisica  text    NOT NULL DEFAULT '',

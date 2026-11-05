@@ -114,12 +114,13 @@ class BeneficiarioExportService
      * escopo e filtros da listagem.
      *
      * @param  array<string, mixed>  $filtros
+     * @param  ?string  $conexao  conexao de leitura do uso interno (null = default); as relacoes herdam
      * @return Builder<CisternaBeneficiario>
      */
-    public function consultarTodos(?PerfilCisterna $perfil = null, array $filtros = []): Builder
+    public function consultarTodos(?PerfilCisterna $perfil = null, array $filtros = [], ?string $conexao = null): Builder
     {
         $query = $perfil === null
-            ? CisternaBeneficiario::query()
+            ? CisternaBeneficiario::on($conexao)
             : $this->beneficiarios->consultaParaExport($perfil, $filtros);
 
         return $query

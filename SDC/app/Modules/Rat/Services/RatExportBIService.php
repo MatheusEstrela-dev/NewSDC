@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Services;
 
 use App\Modules\Rat\Models\RatOcorrencia;
+use App\Modules\Rat\Models\RatOcorrenciaRelato;
+use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
+use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
 use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
+use App\Modules\Rat\Models\Relatos\RatRelatoVistoria;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -23,6 +27,14 @@ use Illuminate\Http\Request;
  */
 class RatExportBIService
 {
+    /** Tabelas de conteudo dos relatos (conteudo_type do ponteiro). */
+    private const RELATOS_DE_CONTEUDO = [
+        RatRelatoDadosGerais::class,
+        RatRelatoEnvolvidos::class,
+        RatRelatoRecurso::class,
+        RatRelatoVistoria::class,
+    ];
+
     public function __construct(
         private readonly RatQueryService $queryService,
     ) {}
@@ -55,25 +67,69 @@ class RatExportBIService
     }
 
     /**
-     * Keyset por (updated_at, id), ordem ascendente, ja com eager load.
+     * Keyset por (atividade_em, id), ordem ascendente, ja com eager load.
      * O id da RAT e uuid (string), por isso $aposId e string e nao int.
-     * Limite: o updated_at da RAT nao acompanha edicoes feitas so nos
-     * relatos; a F2 cobre isso com reconciliacao.
+     *
+     * atividade_em = maior data entre a RAT e seus relatos (ponteiro e conteudo,
+     * inclusive exclusao logica): o updated_at da RAT nao acompanha edicoes
+     * feitas so nos relatos, entao filtrar so por ele perderia essas mudancas.
+     * O valor chega em cada modelo como atributo atividade_em.
+     *
+     * @param  ?string  $conexao  conexao de leitura (null = default); os relatos herdam
      */
-    public function consultaIncremental(?Carbon $desde, ?string $aposId, int $lote): Builder
-    {
-        $query = RatOcorrencia::query()->with($this->relacionamentosEager());
+    public function consultaIncremental(
+        ?Carbon $desde,
+        ?string $aposId,
+        int $lote,
+        ?Carbon $ate = null,
+        ?string $conexao = null,
+    ): Builder {
+        $modelo = new RatOcorrencia();
+        $modelo->setConnection($conexao);
+        $tabela = $modelo->getTable();
 
+        [$sql, $binds] = $this->expressaoAtividade($tabela);
+        $interna = $modelo->newQuery()->selectRaw("{$tabela}.*, {$sql} AS atividade_em", $binds);
+
+        $query = $modelo->newQuery()->withoutGlobalScopes()->fromSub($interna, $tabela)
+            ->with($this->relacionamentosEager());
+
+        $fuso = (string) config('app.timezone');
+        if ($ate !== null) {
+            $query->where('atividade_em', '<=', $ate->copy()->setTimezone($fuso)->format('Y-m-d H:i:s.u'));
+        }
         if ($desde !== null) {
+            $desde = $desde->copy()->setTimezone($fuso)->format('Y-m-d H:i:s.u');
             $query->where(function (Builder $q) use ($desde, $aposId): void {
-                $q->where('updated_at', '>', $desde);
+                $q->where('atividade_em', '>', $desde);
                 if ($aposId !== null) {
-                    $q->orWhere(fn (Builder $e) => $e->where('updated_at', $desde)->where('id', '>', $aposId));
+                    $q->orWhere(fn (Builder $e) => $e->where('atividade_em', $desde)->where('id', '>', $aposId));
                 }
             });
         }
 
-        return $query->orderBy('updated_at')->orderBy('id')->limit($lote);
+        return $query->orderBy('atividade_em')->orderBy('id')->limit($lote);
+    }
+
+    /**
+     * SQL da maior data de alteracao da RAT e dos relatos (ponteiro e conteudo).
+     *
+     * @return array{0: string, 1: list<string>}
+     */
+    private function expressaoAtividade(string $tabela): array
+    {
+        $ponteiro = (new RatOcorrenciaRelato())->getTable();
+        $partes = ["SELECT GREATEST(r.updated_at, r.deleted_at) AS t FROM {$ponteiro} r WHERE r.ocorrencia_id = {$tabela}.id"];
+        $binds = [];
+
+        foreach (self::RELATOS_DE_CONTEUDO as $classe) {
+            $conteudo = (new $classe())->getTable();
+            $partes[] = "SELECT GREATEST(c.updated_at, c.deleted_at) FROM {$ponteiro} r JOIN {$conteudo} c ON c.id = r.conteudo_id"
+                ." AND r.conteudo_type = ? WHERE r.ocorrencia_id = {$tabela}.id";
+            $binds[] = $classe;
+        }
+
+        return ["GREATEST({$tabela}.updated_at, (SELECT MAX(x.t) FROM (".implode(' UNION ALL ', $partes).') x))', $binds];
     }
 
     /**

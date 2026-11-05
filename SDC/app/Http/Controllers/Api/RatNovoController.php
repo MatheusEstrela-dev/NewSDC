@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
+use App\Modules\PowerBi\Materializadores\RatLeituraMaterializada;
+use App\Modules\PowerBi\Support\SaidaBi;
 use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Services\Rat\RatNovoService;
 use App\Modules\Rat\Http\Resources\RatResource;
@@ -114,6 +116,13 @@ class RatNovoController extends Controller
      */
     public function powerBiData(string $id): JsonResponse
     {
+        if (SaidaBi::materializada('rat')) {
+            $materializado = app(RatLeituraMaterializada::class)->porId($id);
+            abort_if($materializado === null, 404);
+
+            return response()->json($materializado);
+        }
+
         $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::with('relatosMorph')->findOrFail($id);
 
         return response()->json([
