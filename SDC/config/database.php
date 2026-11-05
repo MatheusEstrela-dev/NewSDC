@@ -133,6 +133,12 @@ return [
     'geo_connection' => env('DB_GEO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
     'treinamento_connection' => env('DB_TREINAMENTO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
 
+    // Banco sdc_powerbi (entrada assincrona + tabelas bi_*). DIFERENTE das
+    // chaves acima: SEM fallback para a conexao default. Sem a env o recurso
+    // fica DESLIGADO (entrada sincrona, saida ao vivo, como hoje) e nada deste
+    // dominio pode cair no sdc (ver App\Support\Database\ConexaoPowerBi).
+    'powerbi_connection' => env('DB_POWERBI_CONNECTION'),
+
     /*
     |--------------------------------------------------------------------------
     | Pools por coroutine (Octane/Swoole com hooks)
@@ -180,6 +186,24 @@ return [
             'timeout' => (float) env('SWOOLE_PG_TREINAMENTO_POOL_TIMEOUT', 2.0),
             'warm' => false,
         ],
+        // Entrada assincrona e materializacao: carga fora do site, falha rapida.
+        'pgsql_powerbi' => [
+            'size' => (int) env('SWOOLE_PG_POWERBI_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_POWERBI_POOL_TIMEOUT', 1.0),
+            'warm' => false,
+        ],
+        // Leitura da API de BI no membro de BI: pode esperar um pouco mais.
+        'pgsql_powerbi_read' => [
+            'size' => (int) env('SWOOLE_PG_POWERBI_READ_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_POWERBI_READ_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        // Origem do materializador (sdc no membro de BI): poucas sessoes, longas.
+        'pgsql_fonte_bi' => [
+            'size' => (int) env('SWOOLE_PG_FONTE_BI_POOL_SIZE', 2),
+            'timeout' => (float) env('SWOOLE_PG_FONTE_BI_POOL_TIMEOUT', 5.0),
+            'warm' => false,
+        ],
         'ranking' => [
             'size' => (int) env('SWOOLE_PG_RANKING_POOL_SIZE', 4),
             'timeout' => (float) env('SWOOLE_PG_RANKING_POOL_TIMEOUT', 2.0),
@@ -219,6 +243,11 @@ return [
             'chave' => 'treinamento_connection',
             'extensoes' => [],
             'migrations' => 'database/migrations/treinamento',
+        ],
+        'pgsql_powerbi' => [
+            'chave' => 'powerbi_connection',
+            'extensoes' => [],
+            'migrations' => 'database/migrations/powerbi',
         ],
         'ranking' => [
             'chave' => null,
@@ -590,6 +619,49 @@ return [
         // de cidadao (LGPD). Em producao role propria sdc_treinamento_app, sem
         // acesso ao sdc. So usado com DB_TREINAMENTO_CONNECTION.
         'pgsql_treinamento' => $bancoDedicado('TREINAMENTO', 'sdc_treinamento', 'treinamento'),
+
+        // Banco sdc_powerbi: entrada assincrona e tabelas bi_*. Escrita no lider
+        // (porta padrao). So usado com DB_POWERBI_CONNECTION=pgsql_powerbi.
+        'pgsql_powerbi' => $bancoDedicado('POWERBI', 'sdc_powerbi', 'powerbi'),
+
+        // Leitura do sdc_powerbi no membro de BI (HAProxy 6436 no HA; sem HA, o
+        // mesmo servidor/porta do powerbi). De proposito SEM replica_routing e
+        // sem read/write: o fallback do ConsistentPostgresConnection mandaria
+        // a leitura de BI para o lider, que e justamente o que se evita.
+        'pgsql_powerbi_read' => $bancoDedicado('POWERBI', 'sdc_powerbi', 'powerbi-read', [
+            'host' => env('POWERBI_DB_READ_HOST', env('POWERBI_DB_HOST', env('DB_HOST', '127.0.0.1'))),
+            'port' => env('POWERBI_DB_READ_PORT', env('POWERBI_DB_READ_HOST')
+                ? '6436'
+                : env('POWERBI_DB_PORT', env('DB_PORT', '5432'))),
+            'username' => env('POWERBI_DB_READ_USERNAME', env('POWERBI_DB_USERNAME', env('DB_USERNAME', 'sdc'))),
+            'password' => env('POWERBI_DB_READ_PASSWORD', env('POWERBI_DB_PASSWORD', env('DB_PASSWORD', ''))),
+        ]),
+
+        // Leitura do SDC (database = DB_DATABASE) no membro de BI, usada so pelo
+        // materializador. Somente leitura por role; sem replica_routing pelo
+        // mesmo motivo da conexao acima. Sem 'url': DATABASE_URL aponta para o
+        // lider e venceria o host.
+        'pgsql_fonte_bi' => [
+            'driver' => 'pgsql',
+            'host' => env('FONTE_BI_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('FONTE_BI_DB_PORT', env('FONTE_BI_DB_HOST') ? '6436' : env('DB_PORT', '5432')),
+            'database' => env('DB_DATABASE', 'sdc'),
+            'username' => env('FONTE_BI_DB_USERNAME', env('DB_USERNAME', 'sdc')),
+            'password' => env('FONTE_BI_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => $searchPathComLog,
+            'sslmode' => env('FONTE_BI_DB_SSLMODE', env('DB_SSLMODE', 'prefer')),
+            'sslrootcert' => env('DB_SSL_CA') ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel').'-fonte-bi',
+            'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
+                PDO::ATTR_PERSISTENT => false,
+                PDO::ATTR_TIMEOUT => $pgConnectTimeout,
+            ],
+        ],
 
         'pgsql_ai' => [
             'driver' => 'pgsql',
