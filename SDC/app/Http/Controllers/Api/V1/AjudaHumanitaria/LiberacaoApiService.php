@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\AjudaHumanitaria;
 
+use App\Modules\PowerBi\Materializadores\AjudaLeituraMaterializada;
+use App\Modules\PowerBi\Support\SaidaBi;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -54,6 +56,19 @@ final class LiberacaoApiService
      */
     public function planaParaCedec(): array
     {
+        if (SaidaBi::materializada('ajuda')) {
+            return (new AjudaLeituraMaterializada())->cedec();
+        }
+
+        return $this->consultaCedec()
+            ->get()
+            ->map(fn (object $l): array => $this->formatarCedec($l))
+            ->all();
+    }
+
+    /** Consulta dos itens liberados (pubajudahCedec); base do endpoint e do BI. */
+    public function consultaCedec(): Builder
+    {
         return DB::table('ajuda_h_liberacoes as l')
             ->join('municipios as mun', 'l.municipio_id', '=', 'mun.id')
             ->join('ajuda_h_depositos as d', 'l.deposito_id', '=', 'd.id')
@@ -62,6 +77,8 @@ final class LiberacaoApiService
             ->whereIn('i.status', [0, 1])
             ->whereNull('l.deleted_at')
             ->select([
+                'i.id as item_id',
+                'l.id as liberacao_id',
                 'l.municipio_id as id_municipio',
                 'mun.codigo_ibge as codmundv',
                 'mun.nome as municipio',
@@ -72,21 +89,84 @@ final class LiberacaoApiService
                 'l.evento',
                 'd.nome as deposito',
                 'i.status',
-            ])
-            ->get()
-            ->map(static fn (object $l): array => [
-                'id_municipio' => (int) $l->id_municipio,
-                'Codmundv'     => $l->codmundv === null ? null : (string) $l->codmundv,
-                'municipio'    => (string) $l->municipio,
-                'dataLibera'   => (string) $l->data_libera,
-                'quantidade'   => (string) $l->quantidade,
-                'id_material'  => $l->id_material === null ? null : (string) $l->id_material,
-                'material'     => (string) $l->material,
-                'evento'       => $l->evento === null ? null : (string) $l->evento,
-                'deposito'     => (string) $l->deposito,
-                'status'       => (int) $l->status,
-            ])
-            ->all();
+            ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function formatarCedec(object $l): array
+    {
+        return [
+            'id_municipio' => (int) $l->id_municipio,
+            'Codmundv'     => $l->codmundv === null ? null : (string) $l->codmundv,
+            'municipio'    => (string) $l->municipio,
+            'dataLibera'   => (string) $l->data_libera,
+            'quantidade'   => (string) $l->quantidade,
+            'id_material'  => $l->id_material === null ? null : (string) $l->id_material,
+            'material'     => (string) $l->material,
+            'evento'       => $l->evento === null ? null : (string) $l->evento,
+            'deposito'     => (string) $l->deposito,
+            'status'       => (int) $l->status,
+        ];
+    }
+
+    /** Consulta de uma linha por liberacao (com deposito); base de bi_ajuda.liberacoes. */
+    public function consultaParaBi(): Builder
+    {
+        return $this->consultaBase(null)
+            ->join('ajuda_h_depositos as d', 'l.deposito_id', '=', 'd.id')
+            ->groupBy('d.id', 'd.nome')
+            ->addSelect(['l.id as liberacao_id', 'd.id as deposito_id', 'd.nome as deposito_nome']);
+    }
+
+    /**
+     * Linha de bi_ajuda.liberacoes a partir de consultaParaBi().
+     *
+     * @return array<string, mixed>
+     */
+    public function linhaParaBi(object $linha): array
+    {
+        $f = $this->formatar($linha);
+
+        return [
+            'id'             => (int) $linha->liberacao_id,
+            'codigo_legado'  => $f['id_liberacao'],
+            'data_liberacao' => $f['data_liberacao'],
+            'hora_liberacao' => $f['hora_liberacao'],
+            'evento'         => $f['evento'],
+            'status'         => (int) $linha->status,
+            'situacao'       => $f['situacao'],
+            'municipio_id'   => $f['unidade']['id_municipio'],
+            'codmundv'       => $f['unidade']['codmundv'],
+            'municipio'      => $f['unidade']['nome'],
+            'deposito_id'    => (int) $linha->deposito_id,
+            'deposito'       => (string) $linha->deposito_nome,
+            'items_quant'    => $f['items_quant'],
+        ];
+    }
+
+    /**
+     * Linha de bi_ajuda.liberacao_itens a partir de consultaCedec().
+     *
+     * @return array<string, mixed>
+     */
+    public function linhaItemParaBi(object $linha): array
+    {
+        $c = $this->formatarCedec($linha);
+
+        return [
+            'id'           => (int) $linha->item_id,
+            'liberacao_id' => (int) $linha->liberacao_id,
+            'municipio_id' => $c['id_municipio'],
+            'codmundv'     => $c['Codmundv'],
+            'municipio'    => $c['municipio'],
+            'data_libera'  => $c['dataLibera'],
+            'quantidade'   => $c['quantidade'],
+            'id_material'  => $c['id_material'],
+            'material'     => $c['material'],
+            'evento'       => $c['evento'],
+            'deposito'     => $c['deposito'],
+            'status'       => $c['status'],
+        ];
     }
 
     private function consultaBase(?string $evento): Builder

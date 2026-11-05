@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\AjudaHumanitaria;
 
 use App\Modules\AjudaHumanitaria\Enums\StatusPedidoAh;
+use App\Modules\PowerBi\Materializadores\AjudaLeituraMaterializada;
+use App\Modules\PowerBi\Support\SaidaBi;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +39,10 @@ final class PedidoConsolidadoApiService
      */
     public function porDecreto(string $numeroDecreto): array
     {
+        if (SaidaBi::materializada('ajuda')) {
+            return (new AjudaLeituraMaterializada())->consolidadoPorDecreto($numeroDecreto, self::STATUS_CONCLUIDOS);
+        }
+
         return $this->consultaBase()
             ->where('p.numero_decreto', $numeroDecreto)
             ->whereIn('p.status', self::STATUS_CONCLUIDOS)
@@ -56,6 +62,10 @@ final class PedidoConsolidadoApiService
      */
     public function paraBi(): array
     {
+        if (SaidaBi::materializada('ajuda')) {
+            return (new AjudaLeituraMaterializada())->consolidadoBi();
+        }
+
         return $this->consultaBase()
             ->groupBy('p.status', 'i.descricao_item', 'i.tipo', 'mun.nome', 'p.numero_decreto')
             ->get()
@@ -63,12 +73,56 @@ final class PedidoConsolidadoApiService
             ->all();
     }
 
-    private function consultaBase(): Builder
+    /** Uma linha por item de pedido (sem agregar); base de bi_ajuda.pedidos_itens. */
+    public function consultaItensParaBi(): Builder
+    {
+        return $this->juncao()->select([
+            'i.id',
+            'p.id as pedido_id',
+            'p.status',
+            'i.descricao_item',
+            'i.tipo as tp_item',
+            'mun.id as municipio_id',
+            'mun.nome as municipio',
+            'p.numero_decreto',
+            'i.qtd',
+        ]);
+    }
+
+    /**
+     * Linha de bi_ajuda.pedidos_itens a partir de consultaItensParaBi().
+     *
+     * @return array<string, mixed>
+     */
+    public function linhaItemParaBi(object $linha): array
+    {
+        $f = $this->formatar((object) ((array) $linha + ['total_qtd' => $linha->qtd]));
+
+        return [
+            'id'             => (int) $linha->id,
+            'pedido_id'      => (int) $linha->pedido_id,
+            'status'         => $linha->status === null ? null : (int) $linha->status,
+            'status_nome'    => $f['status'],
+            'descricao_item' => $f['descricao_item'],
+            'tp_item'        => $f['tp_item'],
+            'municipio_id'   => (int) $linha->municipio_id,
+            'municipio'      => $f['municipio'],
+            'num_decreto'    => $f['num_decreto'],
+            'qtd'            => (int) $linha->qtd,
+        ];
+    }
+
+    private function juncao(): Builder
     {
         return DB::table('pedidos_ah as p')
             ->join('pedido_ah_itens as i', 'i.pedido_ah_id', '=', 'p.id')
             ->join('municipios as mun', 'p.municipio_id', '=', 'mun.id')
-            ->whereNull('p.deleted_at')
+            ->whereNull('p.deleted_at');
+    }
+
+    private function consultaBase(): Builder
+    {
+        return $this->juncao()
             ->select([
                 'p.status',
                 // Coluna propria do item, como no legado. Nao vem de materiais_ah:

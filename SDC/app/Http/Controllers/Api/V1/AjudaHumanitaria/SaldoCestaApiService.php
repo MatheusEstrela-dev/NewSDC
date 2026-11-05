@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\AjudaHumanitaria;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,6 +23,43 @@ use Illuminate\Support\Facades\DB;
 final class SaldoCestaApiService
 {
     public const CATEGORIA = 'CESTA BASICA';
+
+    /** Mesmo recorte do consultar(), sem agrupar por nome: uma linha por deposito e material. */
+    public function consultaPorMaterial(): Builder
+    {
+        return DB::table('ajuda_h_estoque_saldos as s')
+            ->join('ajuda_h_depositos as d', 's.deposito_id', '=', 'd.id')
+            ->join('materiais_ah as m', 's.material_ah_id', '=', 'm.id')
+            ->where('m.categoria', self::CATEGORIA)
+            ->where('s.saldo', '<>', 0)
+            ->select([
+                's.deposito_id',
+                's.material_ah_id',
+                'd.nome as deposito',
+                DB::raw('coalesce(m.singular, m.nome) AS material'),
+                's.saldo',
+                'm.valor',
+                DB::raw('FLOOR(m.peso) AS peso'),
+            ]);
+    }
+
+    /**
+     * Linha de bi_ajuda.saldos_cesta a partir de consultaPorMaterial().
+     *
+     * @return array<string, mixed>
+     */
+    public function linhaParaBi(object $linha): array
+    {
+        return [
+            'deposito_id'    => (int) $linha->deposito_id,
+            'material_ah_id' => (int) $linha->material_ah_id,
+            'deposito'       => (string) $linha->deposito,
+            'material'       => (string) $linha->material,
+            'saldo'          => (string) $linha->saldo,
+            'valor'          => $linha->valor === null ? null : (string) $linha->valor,
+            'peso'           => $linha->peso === null ? null : (int) $linha->peso,
+        ];
+    }
 
     /**
      * @return list<array{id_deposito: int, nome: string, total_saldo: string, singular: string, valor: string|null, peso: int|null}>
