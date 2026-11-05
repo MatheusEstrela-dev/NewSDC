@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Rat;
 
+use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
 use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\Http\Resources\RatResource;
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
 
 class OcorrenciaController extends Controller
 {
+    use LimitaPorPagina;
+
     public function __construct(
         private readonly RatWriteService $writeService,
     ) {}
@@ -25,7 +28,7 @@ class OcorrenciaController extends Controller
             $query->where('status', $request->integer('status'));
         }
 
-        $paginated = $query->paginate($request->integer('per_page', 15));
+        $paginated = $query->paginate($this->porPagina($request));
 
         return response()->json([
             'data' => RatResource::collection($paginated)->resolve(),

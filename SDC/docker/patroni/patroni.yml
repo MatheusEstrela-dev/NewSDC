@@ -18,15 +18,20 @@ bootstrap:
     synchronous_mode_strict: true
     synchronous_node_count: 1
     failsafe_mode: false
+    # Slot de membro ausente (ex.: db_bi parado) so e mantido por este tempo.
+    member_slots_ttl: 1h
     postgresql:
       use_slots: true
       use_pg_rewind: true
       remove_data_directory_on_rewind_failure: false
       remove_data_directory_on_diverged_timelines: false
       parameters:
-        max_connections: 200
+        # Standby exige max_connections >= primario; vale para todos os membros.
+        max_connections: 400
         max_wal_senders: 10
         max_replication_slots: 10
+        # Teto de WAL retido por slot parado: protege o disco do primario.
+        max_slot_wal_keep_size: 8GB
         wal_level: replica
         wal_log_hints: 'on'
         full_page_writes: 'on'

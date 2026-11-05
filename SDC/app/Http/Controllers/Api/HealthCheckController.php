@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\Cache;
  */
 class HealthCheckController extends Controller
 {
+    private const SCAN_MAX_ITERACOES = 50;
+    private const SCAN_MAX_CHAVES = 10000;
+
     /**
      * @OA\Get(
      *     path="/api/health",
@@ -456,15 +459,26 @@ class HealthCheckController extends Controller
                     ->count();
             }
 
-            // Se usar Redis para sessões, tenta contar chaves
+            // Se usar Redis para sessoes, conta chaves via SCAN (nao bloqueia o
+            // Redis como o KEYS) com teto de iteracoes e de chaves contadas.
             if (config('session.driver') === 'redis') {
                 try {
-                    // Tenta usar KEYS (pode ser lento em produção, mas funciona)
                     $pattern = config('cache.prefix', 'laravel') . '*laravel_session*';
-                    $keys = Redis::keys($pattern);
-                    return count($keys);
+                    $cursor = 0;
+                    $total = 0;
+                    for ($i = 0; $i < self::SCAN_MAX_ITERACOES; $i++) {
+                        $res = Redis::scan($cursor, ['match' => $pattern, 'count' => 500]);
+                        if ($res === false) {
+                            break;
+                        }
+                        [$cursor, $chaves] = $res;
+                        $total += count($chaves);
+                        if ((int) $cursor === 0 || $total >= self::SCAN_MAX_CHAVES) {
+                            break;
+                        }
+                    }
+                    return min($total, self::SCAN_MAX_CHAVES);
                 } catch (\Exception $e) {
-                    // Se KEYS não funcionar, retorna 0
                     return 0;
                 }
             }

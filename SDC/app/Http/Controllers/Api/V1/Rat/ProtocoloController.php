@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Rat;
 
 use App\Http\Controllers\Controller;
+use App\Modules\PowerBi\Materializadores\RatLeituraMaterializada;
+use App\Modules\PowerBi\Support\SaidaBi;
 use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\Http\Requests\ReceiveRatBIRequest;
 use App\Modules\Rat\Http\Resources\RatListResource;
@@ -180,7 +182,10 @@ class ProtocoloController extends Controller
      */
     public function exportPowerBI(Request $request): JsonResponse
     {
-        $dados = $this->exportService->getNormalizedDataForPowerBI($request);
+        // Flag materializado: le do sdc_powerbi (anonimizado, sem PII); ao vivo: como sempre.
+        $dados = SaidaBi::materializada('rat')
+            ? app(RatLeituraMaterializada::class)->exportar($request)
+            : $this->exportService->getNormalizedDataForPowerBI($request);
 
         return response()->json([
             'sucesso' => true,

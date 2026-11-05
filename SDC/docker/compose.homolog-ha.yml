@@ -38,6 +38,21 @@ x-ha-client-environment: &ha-client-environment
   TREINAMENTO_DB_HOST: db,db_replica_1,db_replica_2
   TREINAMENTO_DB_PORT: 6434
 
+# sdc_powerbi e membro de BI, so para api_integracao, queue_integracao e
+# queue_powerbi. Escrita (sdc_powerbi) no lider pelo multi-host 6434, igual ao
+# resto; leitura e fonte de BI pelo HAProxy 6436 de qualquer membro Patroni,
+# que so encaminha ao db_bi (check /health, nao /replica).
+x-ha-bi-environment: &ha-bi-environment
+  POWERBI_DB_HOST: db,db_replica_1,db_replica_2
+  POWERBI_DB_PORT: 6434
+  POWERBI_DB_READ_HOST: db,db_replica_1,db_replica_2
+  POWERBI_DB_READ_PORT: 6436
+  FONTE_BI_DB_HOST: db,db_replica_1,db_replica_2
+  FONTE_BI_DB_PORT: 6436
+  # Teto do lider com max_connections 400 no Patroni (clientes do site seguem
+  # no PG_MAX_CONNECTIONS 200 da ancora acima).
+  PG_MAX_CONNECTIONS: 400
+
 x-patroni-environment: &patroni-environment
   PATRONI_SCOPE: ${PATRONI_SCOPE:-sdc-homolog}
   PATRONI_SUPERUSER_USERNAME: ${DB_USERNAME:-sdc}
@@ -82,9 +97,39 @@ services:
     environment: *ha-client-environment
     depends_on: !override
       <<: *ha-client-dependencies
+  api_integracao:
+    image: *ha-app-image
+    environment:
+      <<: [*ha-bi-environment, *ha-client-environment]
+      # Nao usa replicas do site (mesmo valor da base, depois do merge acima).
+      DB_READ_ENABLED: "false"
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue_integracao:
+    image: *ha-app-image
+    environment:
+      <<: [*ha-bi-environment, *ha-client-environment]
+      DB_READ_ENABLED: "false"
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue_powerbi:
+    image: *ha-app-image
+    environment:
+      # Escrita e log no lider (6434); a conexao default pgsql le o membro de
+      # BI (6436) e a fonte tem de ser standby.
+      <<: [*ha-bi-environment, *ha-client-environment]
+      DB_HOST: db,db_replica_1,db_replica_2
+      DB_PORT: 6436
+      DB_READ_ENABLED: "false"
+      POWERBI_FONTE_EXIGE_STANDBY: "true"
+    depends_on: !override
+      <<: *ha-client-dependencies
   scheduler:
     image: *ha-app-image
-    environment: *ha-client-environment
+    # Hosts de BI tambem: reconciliar/publicar-arquivos podem rodar no proprio
+    # scheduler e precisam ler a fonte no db_bi (6436), nunca no lider.
+    environment:
+      <<: [*ha-bi-environment, *ha-client-environment]
     depends_on: !override
       <<: *ha-client-dependencies
   reverb:
@@ -189,7 +234,50 @@ services:
         aliases: [etcd_3]
     ports: !override []
 
+  # Replica de BI: sem voto no etcd e sem HAProxy embutido (ETCD_EMBEDDED=false
+  # faz o entrypoint dar exec direto no patroni). Fora do depends_on do site.
+  # Tags/params entram por env no patch do entrypoint. Cluster existente:
+  # patronictl edit-config (max_connections 400, max_slot_wal_keep_size,
+  # member_slots_ttl) e rolling restart dos membros atuais.
+  db_bi:
+    <<: *patroni-node
+    container_name: newsdc_homolog_db_bi
+    restart: unless-stopped
+    mem_limit: 1536m
+    cpus: 1.0
+    environment:
+      <<: *patroni-environment
+      ETCD_EMBEDDED: "false"
+      PATRONI_NAME: db_bi
+      PATRONI_RESTAPI_CONNECT_ADDRESS: db_bi:8008
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: db_bi:5432
+      PATRONI_POSTGRESQL_DATA_DIR: /var/lib/postgresql/pgdata
+      PATRONI_TAG_NOFAILOVER: "true"
+      PATRONI_TAG_NOLOADBALANCE: "true"
+      PATRONI_TAG_NOSYNC: "true"
+      PATRONI_TAG_REPLICATEFROM: db_replica_2
+      PATRONI_LOCAL_PARAM_hot_standby_feedback: "off"
+      PATRONI_LOCAL_PARAM_max_standby_streaming_delay: 300s
+      PATRONI_LOCAL_PARAM_work_mem: 64MB
+      # Memoria compativel com o teto de 1,5g (homolog na VM de 7,6g).
+      PATRONI_MEMORY_SHARED_BUFFERS: 384MB
+      PATRONI_MEMORY_EFFECTIVE_CACHE_SIZE: 768MB
+      PATRONI_MEMORY_MAINTENANCE_WORK_MEM: 64MB
+    volumes: !override
+      - homolog_pgdata_bi:/var/lib/postgresql
+    networks: !override
+      - homolog
+    ports: !override []
+    depends_on: !reset {}
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8008/readiness >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 60s
+
 volumes:
+  homolog_pgdata_bi:
   homolog_etcd_1:
   homolog_etcd_2:
   homolog_etcd_3:

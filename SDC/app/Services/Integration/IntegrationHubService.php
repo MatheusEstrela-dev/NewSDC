@@ -15,6 +15,24 @@ use Illuminate\Support\Str;
  */
 class IntegrationHubService
 {
+    public function __construct(
+        private readonly OutboundUrlGuard $urlGuard = new OutboundUrlGuard(),
+    ) {}
+
+    /**
+     * Valida endpoint e callback_url contra a politica anti-SSRF.
+     *
+     * @throws UrlSaidaNaoPermitidaException
+     */
+    public function assertDestinos(array $config): void
+    {
+        foreach (['endpoint', 'callback_url'] as $campo) {
+            if (! empty($config[$campo])) {
+                $this->urlGuard->assertPermitida((string) $config[$campo]);
+            }
+        }
+    }
+
     /**
      * Enfileira integração para execução assíncrona
      */
@@ -45,6 +63,8 @@ class IntegrationHubService
         $integrationId = 'int_' . Str::random(16);
 
         try {
+            $this->assertDestinos($config);
+
             // Processa conforme tipo
             $result = match($config['integration_type']) {
                 'rest_api' => $this->executeRestApi($config),
@@ -87,7 +107,7 @@ class IntegrationHubService
      */
     private function executeRestApi(array $config): array
     {
-        $http = Http::timeout($config['timeout'] ?? 30);
+        $http = Http::withoutRedirecting()->timeout((int) min($config['timeout'] ?? 30, 30));
 
         // Aplica autenticação
         if (isset($config['auth'])) {
@@ -117,7 +137,7 @@ class IntegrationHubService
         $query = $config['payload']['query'] ?? '';
         $variables = $config['payload']['variables'] ?? [];
 
-        $response = Http::post($config['endpoint'], [
+        $response = Http::withoutRedirecting()->timeout(30)->post($config['endpoint'], [
             'query' => $query,
             'variables' => $variables,
         ]);
@@ -158,13 +178,13 @@ class IntegrationHubService
      */
     private function executeWebhook(array $config): array
     {
-        $response = Http::timeout($config['timeout'] ?? 30)
+        $response = Http::withoutRedirecting()->timeout((int) min($config['timeout'] ?? 30, 30))
             ->withHeaders($config['headers'] ?? [])
             ->post($config['endpoint'], $config['payload']);
 
         // Se bidirectional, envia callback com resposta
         if (($config['bidirectional'] ?? false) && isset($config['callback_url'])) {
-            Http::post($config['callback_url'], [
+            Http::withoutRedirecting()->timeout(10)->post($config['callback_url'], [
                 'original_payload' => $config['payload'],
                 'response' => $response->json(),
                 'timestamp' => now()->toIso8601String(),

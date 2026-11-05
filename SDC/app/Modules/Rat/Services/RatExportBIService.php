@@ -5,7 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Services;
 
 use App\Modules\Rat\Models\RatOcorrencia;
+use App\Modules\Rat\Models\RatOcorrenciaRelato;
+use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
+use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
+use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
+use App\Modules\Rat\Models\Relatos\RatRelatoVistoria;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 
 /**
@@ -20,6 +27,14 @@ use Illuminate\Http\Request;
  */
 class RatExportBIService
 {
+    /** Tabelas de conteudo dos relatos (conteudo_type do ponteiro). */
+    private const RELATOS_DE_CONTEUDO = [
+        RatRelatoDadosGerais::class,
+        RatRelatoEnvolvidos::class,
+        RatRelatoRecurso::class,
+        RatRelatoVistoria::class,
+    ];
+
     public function __construct(
         private readonly RatQueryService $queryService,
     ) {}
@@ -29,17 +44,108 @@ class RatExportBIService
      */
     public function getNormalizedDataForPowerBI(Request $request): array
     {
-        $ocorrencias = $this->queryService->applyFilters($request)->get();
+        return $this->normalizarOcorrencias($this->queryService->applyFilters($request));
+    }
 
-        if ($ocorrencias->isEmpty()) {
-            return [];
+    /**
+     * Normaliza RATs ja carregadas ou uma consulta (carrega com eager load).
+     *
+     * @param  iterable<RatOcorrencia>|Builder  $ocorrencias
+     */
+    public function normalizarOcorrencias(iterable|Builder $ocorrencias): array
+    {
+        if ($ocorrencias instanceof Builder) {
+            $ocorrencias = $ocorrencias->with($this->relacionamentosEager())->get();
         }
 
-        return $ocorrencias
-            ->map(fn (RatOcorrencia $o) => $this->buildRow($o))
-            ->filter()
-            ->values()
-            ->toArray();
+        $linhas = [];
+        foreach ($ocorrencias as $ocorrencia) {
+            $linhas[] = $this->buildRow($ocorrencia);
+        }
+
+        return array_values(array_filter($linhas));
+    }
+
+    /**
+     * Keyset por (atividade_em, id), ordem ascendente, ja com eager load.
+     * O id da RAT e uuid (string), por isso $aposId e string e nao int.
+     *
+     * atividade_em = maior data entre a RAT e seus relatos (ponteiro e conteudo,
+     * inclusive exclusao logica): o updated_at da RAT nao acompanha edicoes
+     * feitas so nos relatos, entao filtrar so por ele perderia essas mudancas.
+     * O valor chega em cada modelo como atributo atividade_em.
+     *
+     * @param  ?string  $conexao  conexao de leitura (null = default); os relatos herdam
+     */
+    public function consultaIncremental(
+        ?Carbon $desde,
+        ?string $aposId,
+        int $lote,
+        ?Carbon $ate = null,
+        ?string $conexao = null,
+    ): Builder {
+        $modelo = new RatOcorrencia();
+        $modelo->setConnection($conexao);
+        $tabela = $modelo->getTable();
+
+        [$sql, $binds] = $this->expressaoAtividade($tabela);
+        $interna = $modelo->newQuery()->selectRaw("{$tabela}.*, {$sql} AS atividade_em", $binds);
+
+        $query = $modelo->newQuery()->withoutGlobalScopes()->fromSub($interna, $tabela)
+            ->with($this->relacionamentosEager());
+
+        $fuso = (string) config('app.timezone');
+        if ($ate !== null) {
+            $query->where('atividade_em', '<=', $ate->copy()->setTimezone($fuso)->format('Y-m-d H:i:s.u'));
+        }
+        if ($desde !== null) {
+            $desde = $desde->copy()->setTimezone($fuso)->format('Y-m-d H:i:s.u');
+            $query->where(function (Builder $q) use ($desde, $aposId): void {
+                $q->where('atividade_em', '>', $desde);
+                if ($aposId !== null) {
+                    $q->orWhere(fn (Builder $e) => $e->where('atividade_em', $desde)->where('id', '>', $aposId));
+                }
+            });
+        }
+
+        return $query->orderBy('atividade_em')->orderBy('id')->limit($lote);
+    }
+
+    /**
+     * SQL da maior data de alteracao da RAT e dos relatos (ponteiro e conteudo).
+     *
+     * @return array{0: string, 1: list<string>}
+     */
+    private function expressaoAtividade(string $tabela): array
+    {
+        $ponteiro = (new RatOcorrenciaRelato())->getTable();
+        $partes = ["SELECT GREATEST(r.updated_at, r.deleted_at) AS t FROM {$ponteiro} r WHERE r.ocorrencia_id = {$tabela}.id"];
+        $binds = [];
+
+        foreach (self::RELATOS_DE_CONTEUDO as $classe) {
+            $conteudo = (new $classe())->getTable();
+            $partes[] = "SELECT GREATEST(c.updated_at, c.deleted_at) FROM {$ponteiro} r JOIN {$conteudo} c ON c.id = r.conteudo_id"
+                ." AND r.conteudo_type = ? WHERE r.ocorrencia_id = {$tabela}.id";
+            $binds[] = $classe;
+        }
+
+        return ["GREATEST({$tabela}.updated_at, (SELECT MAX(x.t) FROM (".implode(' UNION ALL ', $partes).') x))', $binds];
+    }
+
+    /**
+     * Elimina o N+1 dos accessors (relatosMorph/conteudo/agentes/creator).
+     * Os accessors ja respeitam relatosMorph carregado.
+     *
+     * @return array<int|string, mixed>
+     */
+    private function relacionamentosEager(): array
+    {
+        return [
+            'creator',
+            'relatosMorph.conteudo' => fn (MorphTo $q) => $q->morphWith([
+                RatRelatoRecurso::class => ['agentes'],
+            ]),
+        ];
     }
 
     // =========================================================================

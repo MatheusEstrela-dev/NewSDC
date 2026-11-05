@@ -306,7 +306,7 @@ class RatDtoPersistenciaTest extends TestCase
         $o = $novo->createRat(RatRelatosDTO::fromArray(['dadosGerais' => ['nat_nome_operacao' => 'Enchente']]));
         $this->assertSame('Enchente', RatRelatoDadosGerais::where('ocorrencia_id', $o->id)->value('nat_nome_operacao'));
 
-        $this->assertSame('RAT-TESTE-UUID', $novo->updateRat($o->id, ['numero_bos' => 'RAT-TESTE-UUID'])->numero_bos);
+        $this->assertSame('Nota', $novo->updateRat($o->id, ['historico' => 'Nota'])->historico);
 
         $novo->deleteRat($o->id);
         $this->assertNull(RatOcorrencia::find($o->id));
