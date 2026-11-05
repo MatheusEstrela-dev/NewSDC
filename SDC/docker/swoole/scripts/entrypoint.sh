@@ -244,6 +244,11 @@ require_uint() {
     esac
 }
 
+# Quantidade de hosts numa lista separada por virgula (ignora vazios e espacos).
+contar_hosts() {
+    printf '%s' "${1:-}" | awk -F',' '{ n=0; for(i=1;i<=NF;i++) { gsub(/[[:space:]]/, "", $i); if(length($i)) n++ } print n }'
+}
+
 WORKERS="${OCTANE_WORKERS:-}"
 if [ -n "$WORKERS" ]; then
     require_uint OCTANE_WORKERS "$WORKERS"
@@ -317,7 +322,7 @@ CONN_PROJECTED=$((CONN_PER_INSTANCE * APP_INSTANCES + EXTERNAL_DB_CONSUMERS + PG
 # podem continuar abertas nele apos uma promocao, inclusive as de tasks/filas.
 READ_CONN_PROJECTED=0
 if [ "${DB_READ_ENABLED:-false}" = "true" ]; then
-    READ_HOST_COUNT=$(printf '%s' "${DB_READ_HOSTS:-}" | awk -F',' '{ n=0; for(i=1;i<=NF;i++) { gsub(/[[:space:]]/, "", $i); if(length($i)) n++ } print n }')
+    READ_HOST_COUNT="$(contar_hosts "${DB_READ_HOSTS:-}")"
     READ_CONN_POR_WORKER=1
     if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
         READ_CONN_POR_WORKER="${SWOOLE_PG_READ_POOL_SIZE:-2}"
@@ -365,8 +370,15 @@ projetar_conexao_dedicada() {
     _var_pool="$3"
     _var_host="$4"
     _pool_padrao="$5"
+    # Opcionais: servidor onde as sessoes caem (rotulo cujo ${X}_PG_MAX_CONNECTIONS
+    # vale; SDC = servidor principal, sem teto proprio) e sessoes de replica
+    # (var do pool por host, padrao, quantidade de hosts de replica).
+    _servidor="${6:-${_rotulo}}"
+    _var_replica="${7:-}"
+    _replica_padrao="${8:-0}"
+    _hosts_replica="${9:-0}"
 
-    eval "${_rotulo}_CONN_NAME=''; ${_rotulo}_CONN_PROJECTED=0; ${_rotulo}_CONN_POR_WORKER=1; ${_rotulo}_VIA_POOLER=false; ${_rotulo}_CONN_SEPARADO=false"
+    eval "${_rotulo}_CONN_NAME=''; ${_rotulo}_CONN_PROJECTED=0; ${_rotulo}_CONN_POR_WORKER=1; ${_rotulo}_VIA_POOLER=false; ${_rotulo}_CONN_SEPARADO=false; ${_rotulo}_SERVIDOR='${_servidor}'; ${_rotulo}_POOL_VAR='${_var_pool}'"
 
     if [ -z "${_conexao}" ] || [ "${_conexao}" = "${DB_CONNECTION:-pgsql}" ] || [ "${_conexao}" = "pgsql" ]; then
         return 0
@@ -381,7 +393,19 @@ projetar_conexao_dedicada() {
         _modo="hooks ON: ${_por_worker} conexoes/worker"
     fi
     _por_instancia=$(((WORKERS * _por_worker) + TASK_WORKERS + QUEUE_WORKERS))
-    _projetado=$((_por_instancia * APP_INSTANCES + EXTERNAL_DB_CONSUMERS))
+    _externas=$((EXTERNAL_DB_CONSUMERS))
+    if [ "${_hosts_replica}" -gt 0 ]; then
+        _por_worker_replica=1
+        if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+            _por_worker_replica="$(valor_de "${_var_replica}")"
+            _por_worker_replica="${_por_worker_replica:-${_replica_padrao}}"
+            require_uint "${_var_replica}" "${_por_worker_replica}"
+        fi
+        _por_instancia=$((_por_instancia + (WORKERS * _por_worker_replica + TASK_WORKERS + QUEUE_WORKERS) * _hosts_replica))
+        _externas=$((_externas * (1 + _hosts_replica)))
+        _modo="${_modo} + ${_hosts_replica} replica(s)"
+    fi
+    _projetado=$((_por_instancia * APP_INSTANCES + _externas))
 
     _host="$(valor_de "${_var_host}")"
     _via_pooler=false
@@ -391,7 +415,7 @@ projetar_conexao_dedicada() {
 
     eval "${_rotulo}_CONN_NAME='${_conexao}'; ${_rotulo}_CONN_PROJECTED=${_projetado}; ${_rotulo}_CONN_POR_WORKER=${_por_worker}; ${_rotulo}_VIA_POOLER=${_via_pooler}"
     _nome="$(printf '%s' "${_rotulo}" | tr '[:upper:]' '[:lower:]')"
-    echo "Conexao de ${_nome} ${_conexao} (${_modo}): ${_por_instancia}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas = ${_projetado}"
+    echo "Conexao de ${_nome} ${_conexao} (${_modo}): ${_por_instancia}/inst x ${APP_INSTANCES} + ${_externas} externas = ${_projetado}"
 }
 
 # Ranking e sempre um banco separado: so entra na conta quando o modulo esta
@@ -401,11 +425,37 @@ if [ "$(printf '%s' "${RANKING_HABILITADO:-false}" | tr '[:upper:]' '[:lower:]')
     RANKING_CONN_ALVO="ranking"
 fi
 
-BANCOS_DEDICADOS="LOG GEO TREINAMENTO RANKING"
+# Pools de leitura/origem (database.coroutine_pools) tem sessoes proprias e so
+# existem com o dominio ativo: pgsql_geo_read cai no servidor do geo (mais as
+# replicas, com GEO_DB_READ_ENABLED/DB_READ_ENABLED + hosts), ranking_read no do
+# ranking e ranking_source_ro no do sdc (RANKING_SOURCE_HOST: origem das projecoes).
+GEO_READ_CONN_ALVO=""
+GEO_REPLICA_HOSTS=0
+if [ -n "${DB_GEO_CONNECTION:-}" ]; then
+    GEO_READ_CONN_ALVO="pgsql_geo_read"
+    if [ "$(printf '%s' "${GEO_DB_READ_ENABLED:-${DB_READ_ENABLED:-false}}" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
+        if [ -n "${GEO_DB_READ_HOSTS:-}" ]; then
+            GEO_REPLICA_HOSTS="$(contar_hosts "${GEO_DB_READ_HOSTS}")"
+        elif [ -z "${GEO_DB_HOST:-}" ] || [ "${GEO_DB_HOST}" = "${DB_HOST:-}" ]; then
+            GEO_REPLICA_HOSTS="$(contar_hosts "${DB_READ_HOSTS:-}")"
+        fi
+    fi
+fi
+RANKING_READ_CONN_ALVO=""
+RANKING_SOURCE_CONN_ALVO=""
+if [ -n "${RANKING_CONN_ALVO}" ]; then
+    RANKING_READ_CONN_ALVO="ranking_read"
+    RANKING_SOURCE_CONN_ALVO="ranking_source_ro"
+fi
+
+BANCOS_DEDICADOS="LOG GEO GEO_READ TREINAMENTO RANKING RANKING_READ RANKING_SOURCE"
 projetar_conexao_dedicada LOG "${DB_LOG_CONNECTION:-}" SWOOLE_PG_LOG_POOL_SIZE LOG_DB_HOST 4
 projetar_conexao_dedicada GEO "${DB_GEO_CONNECTION:-}" SWOOLE_PG_GEO_POOL_SIZE GEO_DB_HOST 4
+projetar_conexao_dedicada GEO_READ "${GEO_READ_CONN_ALVO}" SWOOLE_PG_GEO_READ_POOL_SIZE GEO_DB_HOST 4 GEO SWOOLE_PG_GEO_REPLICA_POOL_SIZE 1 "${GEO_REPLICA_HOSTS}"
 projetar_conexao_dedicada TREINAMENTO "${DB_TREINAMENTO_CONNECTION:-}" SWOOLE_PG_TREINAMENTO_POOL_SIZE TREINAMENTO_DB_HOST 4
 projetar_conexao_dedicada RANKING "${RANKING_CONN_ALVO}" SWOOLE_PG_RANKING_POOL_SIZE RANKING_DB_HOST 4
+projetar_conexao_dedicada RANKING_READ "${RANKING_READ_CONN_ALVO}" SWOOLE_PG_RANKING_READ_POOL_SIZE RANKING_DB_HOST 3 RANKING
+projetar_conexao_dedicada RANKING_SOURCE "${RANKING_SOURCE_CONN_ALVO}" SWOOLE_PG_RANKING_SOURCE_POOL_SIZE RANKING_SOURCE_HOST 2 SDC
 
 if [ -n "${POOLER_MODE}" ]; then
     PGB_MAX_CLIENTES="${PGBOUNCER_MAX_CLIENT_CONN:-1000}"
@@ -448,15 +498,21 @@ for ROTULO in ${BANCOS_DEDICADOS}; do
     [ "${PROJETADO_BANCO}" -gt 0 ] || continue
     NOME_BANCO="$(valor_de "${ROTULO}_CONN_NAME")"
     ROTULO_MIN="$(printf '%s' "${ROTULO}" | tr '[:upper:]' '[:lower:]')"
-    TETO_BANCO="$(valor_de "${ROTULO}_PG_MAX_CONNECTIONS")"
+    # Pools filhos (geo_read, ranking_read) dividem o servidor do dominio pai: o
+    # teto e o do pai e as sessoes acumulam. SDC nunca tem teto proprio.
+    SERVIDOR="$(valor_de "${ROTULO}_SERVIDOR")"
+    TETO_BANCO=""
+    [ "${SERVIDOR}" = "SDC" ] || TETO_BANCO="$(valor_de "${SERVIDOR}_PG_MAX_CONNECTIONS")"
     if [ -n "${TETO_BANCO}" ]; then
-        require_uint "${ROTULO}_PG_MAX_CONNECTIONS" "${TETO_BANCO}"
-        if [ "${PROJETADO_BANCO}" -gt "${TETO_BANCO}" ]; then
-            echo "FATAL: conexoes projetadas de ${ROTULO_MIN} (${PROJETADO_BANCO}) excedem ${ROTULO}_PG_MAX_CONNECTIONS (${TETO_BANCO})."
-            echo "       Reduza SWOOLE_PG_${ROTULO}_POOL_SIZE ou o numero de workers/replicas. Abortando boot."
+        require_uint "${SERVIDOR}_PG_MAX_CONNECTIONS" "${TETO_BANCO}"
+        ACUMULADO_SERVIDOR=$(($(valor_de "SOMA_SERVIDOR_${SERVIDOR}") + PROJETADO_BANCO))
+        eval "SOMA_SERVIDOR_${SERVIDOR}=${ACUMULADO_SERVIDOR}"
+        if [ "${ACUMULADO_SERVIDOR}" -gt "${TETO_BANCO}" ]; then
+            echo "FATAL: conexoes projetadas de ${ROTULO_MIN} (${PROJETADO_BANCO}; ${ACUMULADO_SERVIDOR} no servidor) excedem ${SERVIDOR}_PG_MAX_CONNECTIONS (${TETO_BANCO})."
+            echo "       Reduza $(valor_de "${ROTULO}_POOL_VAR") ou o numero de workers/replicas. Abortando boot."
             exit 1
         fi
-        echo "Servidor separado de ${ROTULO_MIN} (${NOME_BANCO}): ${PROJETADO_BANCO} de ${TETO_BANCO}."
+        echo "Servidor separado de ${ROTULO_MIN} (${NOME_BANCO}): ${PROJETADO_BANCO} de ${TETO_BANCO} (${ACUMULADO_SERVIDOR} no servidor)."
         eval "${ROTULO}_CONN_SEPARADO=true"
         continue
     fi
@@ -506,7 +562,7 @@ if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
                 ROTULO_MIN="$(printf '%s' "${ROTULO}" | tr '[:upper:]' '[:lower:]')"
                 echo "       A conexao de ${ROTULO_MIN} soma ${PROJETADO_BANCO} sessoes diretas no Postgres."
                 if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
-                    echo "       Sob hooks ON reduza SWOOLE_PG_${ROTULO}_POOL_SIZE (hoje $(valor_de "${ROTULO}_CONN_POR_WORKER")) -- cada"
+                    echo "       Sob hooks ON reduza $(valor_de "${ROTULO}_POOL_VAR") (hoje $(valor_de "${ROTULO}_CONN_POR_WORKER")) -- cada"
                     echo "       unidade a menos libera ${WORKERS} x ${APP_INSTANCES} conexoes."
                 fi
                 echo "       Ou volte o ${ROTULO_MIN} para a sessao da pgsql desligando a conexao dedicada."
