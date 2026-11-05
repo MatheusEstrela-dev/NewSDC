@@ -294,34 +294,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
         Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi');
     });
 
-    // Módulo RAT — Auditoria
-    Route::prefix('rat-audit')->name('api.v1.rat-audit.')->group(function () {
-        Route::get('/', [RatAuditController::class, 'index'])->name('index');
-        Route::get('/{id}', [RatAuditController::class, 'show'])->name('show');
-    });
-
-    // Integração entre Módulos
-    Route::prefix('integracao')->name('api.v1.integracao.')->group(function () {
-        Route::get('rat/{ratId}/pae', [IntegracaoController::class, 'getPaeByRat'])->name('rat.pae');
-        Route::get('pae/{paeId}/rat', [IntegracaoController::class, 'getRatByPae'])->name('pae.rat');
-    });
-
     // BI - Dados de Entrada (autenticacao Sanctum padrao)
     Route::prefix('bi')->name('api.v1.bi.')->group(function () {
         Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index');
         Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show');
-    });
-
-    // Power BI - Gerenciamento de Tokens para múltiplas APIs
-    Route::prefix('power-bi')->name('api.v1.power-bi.')->group(function () {
-        Route::post('token', [TokenController::class, 'generateToken'])->name('token.generate');
-        Route::get('token/{token}', [TokenController::class, 'validateToken'])->name('token.validate');
-        Route::get('tokens', [TokenController::class, 'listTokens'])->name('tokens.list');
-
-        // Proxy para acessar APIs externas
-        Route::match(['get', 'post', 'put', 'patch', 'delete'], 'proxy/{api}/{path}', [\App\Http\Controllers\Api\V1\PowerBI\ProxyController::class, 'proxy'])
-            ->where('path', '.*')
-            ->name('proxy');
     });
 
     // Webhooks - Sistema de alta performance para 100k+ usuários
