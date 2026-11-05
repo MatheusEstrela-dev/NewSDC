@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1\Tdap;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Tdap\Services\TdapExportBiService;
+use App\Modules\Tdap\Support\EscopoDeLeitura;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -97,10 +98,26 @@ class TdapApiController extends Controller
             'ate'           => ['nullable', 'date', 'after_or_equal:de'],
             'prestador_id'  => ['nullable', 'integer'],
             'municipio_id'  => ['nullable', 'integer'],
-            'limit'         => ['nullable', 'integer', 'min:1', 'max:50000'],
+            'limit'         => ['nullable', 'integer', 'min:1', 'max:'.TdapExportBiService::LIMITE_MAXIMO],
+            'apos_id'       => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $rows = $this->bi->viagensValidadasFlat($request->only(['de', 'ate', 'prestador_id', 'municipio_id', 'limit']));
+        // O middleware de autenticacao aceita QUALQUER sessao ou token valido:
+        // sem esta checagem, um usuario sem nada no TDAP baixava as viagens
+        // do estado inteiro (achado P1 da auditoria de 2026-11-05).
+        $user = $request->user();
+        abort_unless($user?->can('tdap.cronogramas.export'), 403, 'Sem permissao para exportar dados do TDAP.');
+
+        $filtros = $request->only(['de', 'ate', 'prestador_id', 'municipio_id', 'limit', 'apos_id']);
+
+        // Usuario lotado num municipio so exporta o proprio: o municipio_id do
+        // request e ignorado. Estadual (escopo null) segue filtrando livremente.
+        $escopo = EscopoDeLeitura::municipioId($user);
+        if ($escopo !== null) {
+            $filtros['municipio_id'] = $escopo;
+        }
+
+        $rows = $this->bi->viagensValidadasFlat($filtros);
 
         return response()->json([
             'data'  => $rows,
@@ -108,6 +125,10 @@ class TdapApiController extends Controller
             'meta'  => [
                 'generated_at' => now()->toIso8601String(),
                 'format'       => $request->input('format', 'json'),
+                // Pagina cheia = pode haver mais: repetir a chamada com apos_id.
+                'proximo_apos_id' => count($rows) >= (int) $request->input('limit', TdapExportBiService::LIMITE_MAXIMO) && $rows !== []
+                    ? end($rows)['viagem_id']
+                    : null,
             ],
         ]);
     }

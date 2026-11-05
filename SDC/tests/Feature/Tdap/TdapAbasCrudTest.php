@@ -73,7 +73,10 @@ class TdapAbasCrudTest extends TestCase
 
         // Caminhao (aba Frota)
         $this->get(route('tdap.frota.index'))->assertOk();
-        $this->get(route('tdap.frota.create'))->assertOk();
+        // O cadastro avulso de caminhao virou "caminhao + primeira vistoria" (e5d1efbe):
+        // o create so encaminha para a tela nova, levando o prestador.
+        $this->get(route('tdap.frota.create', ['prestador_id' => $prestador->id]))
+            ->assertRedirect(route('tdap.frota.vistorias.nova', ['prestador_id' => $prestador->id]));
         $this->post(route('tdap.frota.store'), ['prestador_id' => $prestador->id, 'placa' => 'CRD1A23', 'capacidade_m3' => 16])
             ->assertSessionHasNoErrors()->assertRedirect();
         $caminhao = Caminhao::where('placa', 'CRD1A23')->firstOrFail();

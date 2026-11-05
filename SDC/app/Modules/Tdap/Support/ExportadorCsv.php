@@ -35,10 +35,14 @@ final class ExportadorCsv
     private const SEPARADOR = ';';
 
     /**
-     * @param  array<int, array<string, mixed>>  $linhas
+     * Aceita array ou qualquer iteravel (LazyCollection, generator): com um
+     * iteravel preguicoso as linhas sao lidas e escritas aos poucos, e a
+     * memoria do worker Swoole nao cresce com o tamanho do acervo.
+     *
+     * @param  iterable<int, array<string, mixed>>  $linhas
      * @param  string  $prefixo  Nome do arquivo sem data nem extensao (ex.: 'frota')
      */
-    public static function baixar(array $linhas, string $prefixo): StreamedResponse
+    public static function baixar(iterable $linhas, string $prefixo): StreamedResponse
     {
         $arquivo = $prefixo.'_'.now()->format('Y-m-d_H-i-s').'.csv';
 
@@ -47,11 +51,13 @@ final class ExportadorCsv
 
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
 
-            if ($linhas !== []) {
-                fputcsv($handle, self::neutralizarLinha(array_keys($linhas[0])), self::SEPARADOR);
-            }
-
+            $cabecalhoEscrito = false;
             foreach ($linhas as $linha) {
+                if (! $cabecalhoEscrito) {
+                    fputcsv($handle, self::neutralizarLinha(array_keys($linha)), self::SEPARADOR);
+                    $cabecalhoEscrito = true;
+                }
+
                 fputcsv($handle, self::neutralizarLinha(array_values($linha)), self::SEPARADOR);
             }
 

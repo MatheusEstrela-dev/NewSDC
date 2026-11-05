@@ -146,8 +146,8 @@ class HistoricoController extends Controller
             ->when($filtros['entity_id'] ?? null, fn ($q, $id) => $q->where('entity_id', (int) $id))
             ->when($filtros['tipo_evento'] ?? null, fn ($q, $t) => $q->where('tipo_evento', (string) $t))
             ->when($filtros['user_id'] ?? null, fn ($q, $id) => $q->where('user_id', (int) $id))
-            ->when($filtros['de'] ?? null, fn ($q, $de) => $q->whereDate('data_evento', '>=', (string) $de))
-            ->when($filtros['ate'] ?? null, fn ($q, $ate) => $q->whereDate('data_evento', '<=', (string) $ate))
+            ->when($filtros['de'] ?? null, fn ($q, $de) => $q->where('data_evento', '>=', IlluminateSupportCarbon::parse((string) $de)->startOfDay()))
+            ->when($filtros['ate'] ?? null, fn ($q, $ate) => $q->where('data_evento', '<', IlluminateSupportCarbon::parse((string) $ate)->startOfDay()->addDay()))
             ->orderByDesc('data_evento')
             ->orderByDesc('id');
     }

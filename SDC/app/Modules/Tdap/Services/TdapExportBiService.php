@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\DB;
  */
 class TdapExportBiService
 {
+    /** Linhas por pagina; para mais, paginar com `apos_id`. */
+    public const LIMITE_MAXIMO = 10000;
+
     /**
      * @param  array<string, mixed>  $filtros
      * @return array<int, array<string, mixed>>
@@ -60,21 +63,34 @@ class TdapExportBiService
                 DB::raw('COALESCE(v.capacidade_m3, cam.capacidade_m3) AS capacidade_m3'),
             ]);
 
+        // Intervalo [de 00:00, ate+1 00:00) em vez de whereDate: o CAST(... AS
+        // date) do whereDate anula o indice de data_aprovacao e varre a tabela.
         if ($de = $filtros['de'] ?? null) {
-            $query->whereDate('v.data_aprovacao', '>=', (string) $de);
+            $query->where('v.data_aprovacao', '>=', Carbon::parse((string) $de)->startOfDay());
         }
         if ($ate = $filtros['ate'] ?? null) {
-            $query->whereDate('v.data_aprovacao', '<=', (string) $ate);
+            $query->where('v.data_aprovacao', '<', Carbon::parse((string) $ate)->startOfDay()->addDay());
+        }
+        // Paginacao por cursor: o cliente pede a proxima pagina com o ultimo
+        // viagem_id recebido, sem OFFSET (que relê tudo o que pulou).
+        if ($aposId = $filtros['apos_id'] ?? null) {
+            $query->where('v.id', '>', (int) $aposId);
         }
         if ($prestadorId = $filtros['prestador_id'] ?? null) {
             $query->where('p.id', (int) $prestadorId);
         }
-        if ($municipioId = $filtros['municipio_id'] ?? null) {
+        // `!== null`, nao truthiness: o escopo "sem lotacao" e o municipio 0
+        // (EscopoDeLeitura::SEM_ESCOPO) e tem de filtrar -- e devolver nada.
+        if (($municipioId = $filtros['municipio_id'] ?? null) !== null && $municipioId !== '') {
             $query->where('m.id', (int) $municipioId);
         }
 
-        return $query->orderBy('v.data_aprovacao')
-            ->limit((int) ($filtros['limit'] ?? 10000))
+        // Teto fixo por pagina, mesmo que o request peca mais: a resposta e
+        // montada em memoria no worker. Volume maior vem em varias paginas.
+        $limite = min(max((int) ($filtros['limit'] ?? self::LIMITE_MAXIMO), 1), self::LIMITE_MAXIMO);
+
+        return $query->orderBy('v.id')
+            ->limit($limite)
             ->get()
             ->map(function ($row) {
                 $cap = (float) ($row->capacidade_m3 ?? 0);

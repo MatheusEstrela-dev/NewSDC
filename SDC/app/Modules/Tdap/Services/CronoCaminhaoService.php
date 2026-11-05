@@ -202,6 +202,12 @@ class CronoCaminhaoService
             $cc->setRelation('cronograma', $this->travarCronograma($cc->cronograma_id));
             $this->garantirEditavel($cc->cronograma);
 
+            // Mesmo guard de alocar()/atualizar(): cronograma encerrado e
+            // registro fechado, e a frota dele nao muda mais.
+            if ($cc->cronograma->encerrado_em) {
+                throw new \DomainException('Cronograma encerrado nao aceita remocao de caminhoes.');
+            }
+
             $cc->loadCount('viagens');
             if ($cc->viagens_count > 0) {
                 throw new \DomainException(

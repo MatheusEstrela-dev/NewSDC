@@ -95,30 +95,7 @@ class TdapRelatorioAgendaHistoricoTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_agenda_mostra_vistoria_vencimento_e_revistoria(): void
-    {
-        // Vistoria aprovada ha 11 meses e 20 dias: vence em ~10 dias.
-        $data = now()->subMonthsNoOverflow(12)->addDays(10)->toDateString();
-        DB::table('tdap_vistorias')->insert([
-            'nome' => 'Vistoria agenda', 'placa_id' => $this->caminhaoId, 'data' => $data, 'capacidade' => 8,
-            'parecer' => 'aprovada', 'user_id' => $this->user->id, 'created_at' => now(), 'updated_at' => now(),
-        ]);
-        $vence = VigenciaVistoria::validoAte($data);
-
-        $this->get(route('tdap.frota.vistorias.agenda', ['ano' => $vence->year, 'mes' => $vence->month]))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Tdap/Frota/Vistorias/Agenda')
-                ->where('eventos', fn ($eventos) => collect($eventos)->contains(fn ($e) => $e['id'] === "vencimento-{$this->caminhaoId}" && $e['start'] === $vence->toDateString()))
-                ->where('revistorias', fn ($r) => collect($r)->contains(fn ($x) => $x['caminhao']['id'] === $this->caminhaoId && $x['dias'] >= 0 && $x['dias'] <= 30)));
-
-        $mesDaVistoria = \Illuminate\Support\Carbon::parse($data);
-        $this->get(route('tdap.frota.vistorias.agenda', ['ano' => $mesDaVistoria->year, 'mes' => $mesDaVistoria->month, 'minhas' => 1]))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('minhas', true)
-                ->where('eventos', fn ($eventos) => collect($eventos)->contains(fn ($e) => ($e['extendedProps']['tipo'] ?? null) === 'vistoria' && $e['extendedProps']['ehMinha'] === true)));
-    }
+    // A agenda do vistoriador foi excluida em 15862d14; o teste dela saiu junto.
 
     public function test_historico_mostra_entidade_legivel_com_link(): void
     {

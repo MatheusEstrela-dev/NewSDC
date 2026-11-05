@@ -228,16 +228,17 @@ class CronoViagemService
 
         $recusadas = [];
         $decididas = 0;
-        $hoje = now();
-
-        DB::transaction(function () use ($ids, $municipioId, $usuario, $decisao, $observacao, $hoje, &$recusadas, &$decididas): void {
+        DB::transaction(function () use ($ids, $municipioId, $usuario, $decisao, $observacao, &$recusadas, &$decididas): void {
             // lockForUpdate: dois cliques (ou duas abas) nao decidem a mesma
             // viagem duas vezes -- a segunda transacao ja a encontra decidida.
             $viagens = CronoViagem::query()
                 ->whereIn('id', $ids)
                 ->doMunicipio($municipioId)
                 ->naoConfirmada()
-                ->when(CronoViagem::exigeConfirmacaoDoMunicipio(), fn ($q) => $q->pendente())
+                // Sempre so pendente: com a chave de confirmacao desligada, a
+                // fila pegava viagem que a CEDEC ja aprovou/rejeitou e o
+                // municipio "reprovava" viagem paga (M2, auditoria 2026-11-05).
+                ->pendente()
                 ->with('cronoCaminhao.cronograma')
                 ->lockForUpdate()
                 ->get();
@@ -245,7 +246,7 @@ class CronoViagemService
             foreach ($viagens as $viagem) {
                 $cronograma = $viagem->cronoCaminhao?->cronograma;
 
-                if (! LimiteDoCronograma::permiteDecisao($cronograma, $viagem->data_registro, $hoje)) {
+                if (! LimiteDoCronograma::permiteDecisao($cronograma, $viagem->data_registro)) {
                     $recusadas[] = [
                         'id'     => (int) $viagem->id,
                         'motivo' => 'Fora do limite do cronograma (encerra em '
@@ -457,6 +458,18 @@ class CronoViagemService
             // rejeitada, entao "rejeite primeiro" mandava a um beco sem saida.
             if ($viagem->validado === CronoViagem::STATUS_APROVADA) {
                 throw new \DomainException('Viagem aprovada nao pode ser excluida: ela ja conta na agua entregue e no valor do cronograma.');
+            }
+
+            // M1 (auditoria 2026-11-05): o municipio ja atestou (confirmou ou
+            // reprovou). Excluir apagava esse ato sem trilha; a CEDEC rejeita.
+            if ($viagem->confirmado_em !== null) {
+                throw new \DomainException('Viagem ja atestada pelo municipio nao pode ser excluida. Rejeite-a na validacao.');
+            }
+
+            // Cronograma encerrado e registro fechado (mesma regra das alocacoes).
+            $cronogramaId = CronoCaminhao::withTrashed()->whereKey($viagem->crono_caminhao_id)->value('cronograma_id');
+            if ($cronogramaId !== null && Cronograma::withTrashed()->whereKey($cronogramaId)->whereNotNull('encerrado_em')->exists()) {
+                throw new \DomainException('Cronograma encerrado nao aceita exclusao de viagens. Rejeite-a na validacao.');
             }
 
             $cronoCaminhaoId = $viagem->crono_caminhao_id;
