@@ -126,7 +126,10 @@ services:
       <<: *ha-client-dependencies
   scheduler:
     image: *ha-app-image
-    environment: *ha-client-environment
+    # Hosts de BI tambem: reconciliar/publicar-arquivos podem rodar no proprio
+    # scheduler e precisam ler a fonte no db_bi (6436), nunca no lider.
+    environment:
+      <<: [*ha-bi-environment, *ha-client-environment]
     depends_on: !override
       <<: *ha-client-dependencies
   reverb:

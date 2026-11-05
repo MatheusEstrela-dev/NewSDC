@@ -775,9 +775,12 @@ services:
       - "-c"
       - "php artisan schedule:work"
     environment:
-      <<: [*homolog-worker-env, *ranking-env, *diretorio-env]
+      <<: [*homolog-worker-env, *ranking-env, *diretorio-env, *powerbi-db-env]
       APP_NAME: "SDC Homologacao Scheduler"
       OUTBOX_AGENDAR_DESPACHO: "true"
+      # Sem a chave o PowerBiServiceProvider nao agenda materializar,
+      # reconciliar nem publicar-arquivos: o BI ficaria parado.
+      DB_POWERBI_CONNECTION: pgsql_powerbi
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'schedule:work' >/dev/null || exit 1"]
       interval: 30s
