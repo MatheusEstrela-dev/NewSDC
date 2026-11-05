@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Medalhao\Database\EsquemaGeo;
 use App\Support\Database\Geo\DominioGeo;
+use App\Support\Database\GuardaDeBancoDedicado;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +26,6 @@ return new class extends Migration
 {
     protected $connection = 'pgsql_geo';
 
-    private const DESTINOS_PROIBIDOS = ['sdc', 'forge'];
 
     /** Meses futuros mantidos prontos; a rotina diaria de retencao repoe. */
     private const MESES_A_FRENTE = 2;
@@ -341,18 +341,6 @@ return new class extends Migration
 
     private function validarDestino(Connection $db): void
     {
-        // Em --pretend nao ha query executada; nada a proteger.
-        if ($db->pretending()) {
-            return;
-        }
-
-        $atual = (string) $db->selectOne('SELECT current_database() AS db')->db;
-        $operacional = (string) config('database.connections.pgsql.database');
-
-        if (in_array($atual, self::DESTINOS_PROIBIDOS, true) || $atual === $operacional) {
-            throw new RuntimeException(
-                "Migration geoespacial recusada: destino '{$atual}' e base operacional."
-            );
-        }
+        GuardaDeBancoDedicado::validar($db, 'geoespacial');
     }
 };

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Support\Database\GuardaDeBancoDedicado;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +41,6 @@ return new class extends Migration
     /**
      * Bases operacionais que esta migration nunca pode tocar.
      */
-    private const DESTINOS_PROIBIDOS = ['sdc', 'forge'];
 
     public function up(): void
     {
@@ -307,20 +307,6 @@ return new class extends Migration
      */
     private function validarDestino(): void
     {
-        // Em --pretend o Laravel nao executa query: selectOne() devolve null.
-        // Simular nao escreve nada; o guard volta a valer na execucao real.
-        if ($this->conexao()->pretending()) {
-            return;
-        }
-
-        $atual = (string) $this->conexao()->selectOne('SELECT current_database() AS db')->db;
-        $principal = (string) config('database.connections.pgsql.database');
-
-        if (in_array($atual, self::DESTINOS_PROIBIDOS, true) || $atual === $principal) {
-            throw new RuntimeException(
-                "Migration de treinamento recusada: destino '{$atual}' e base operacional. "
-                .'Aplique com --database=pgsql_treinamento apontando para sdc_treinamento.'
-            );
-        }
+        GuardaDeBancoDedicado::validar($this->conexao(), 'treinamento');
     }
 };
