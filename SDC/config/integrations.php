@@ -94,5 +94,20 @@ return [
         'ttl' => env('TOKEN_CACHE_TTL', 3300), // 55 minutos (menor que o TTL do token)
         'prefix' => 'api_token_',
     ],
-];
 
+    /*
+    |--------------------------------------------------------------------------
+    | Saida do hub de integracao (anti-SSRF)
+    |--------------------------------------------------------------------------
+    |
+    | allowed_hosts: hosts (ou dominios, com subdominios) aceitos em
+    | integration/execute. Vazio = tudo recusado. http_hosts: subconjunto
+    | autorizado a usar http (por padrao so https).
+    |
+    */
+
+    'outbound' => [
+        'allowed_hosts' => array_filter(array_map('trim', explode(',', (string) env('INTEGRATION_ALLOWED_HOSTS', '')))),
+        'http_hosts' => array_filter(array_map('trim', explode(',', (string) env('INTEGRATION_HTTP_HOSTS', '')))),
+    ],
+];
