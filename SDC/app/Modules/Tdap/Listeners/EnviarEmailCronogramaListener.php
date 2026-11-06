@@ -15,8 +15,9 @@ use Illuminate\Support\Facades\Mail;
 /**
  * Consumer event-driven do CronogramaAtivadoV1.
  *
- * Substitui o Mail::send sincrono do CronogramaService::ativar pela versao
- * idempotente via outbox.
+ * Confirma o consumo somente apos a fila aceitar o email. A deduplicacao
+ * evita novos envios depois de confirmado; queda entre aceite e commit ainda
+ * pode repetir a mensagem, pois fila e banco nao compartilham transacao.
  */
 class EnviarEmailCronogramaListener extends IdempotentListener
 {
@@ -42,9 +43,10 @@ class EnviarEmailCronogramaListener extends IdempotentListener
         $mail = new CronogramaAtivadoMail($cronograma);
         $destinatarios = $mail->destinatariosLogicos();
         if (! empty($destinatarios)) {
-            // queue() em vez de send(): SMTP nao bloqueia o worker do
-            // outbox e falha de transporte cai na fila com retry isolado.
-            Mail::to($destinatarios)->queue($mail);
+            // Nao adiar o aceite ate afterCommit: falha da fila deve reverter
+            // processed_events para que a entrega do listener possa tentar de novo.
+            // O cronograma ja foi confirmado antes do consumo do outbox.
+            Mail::to($destinatarios)->queue($mail->beforeCommit());
         }
     }
 }

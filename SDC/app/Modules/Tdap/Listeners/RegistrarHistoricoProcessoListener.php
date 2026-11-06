@@ -16,9 +16,10 @@ use App\Support\Database\ConexaoDeLog;
  * Idempotente: cada evento gera no maximo um registro de historico
  * (chave evento_id deduplicada via processed_events).
  *
- * O historico vai pela conexao de log: o insert roda depois do commit da
- * transacao do processed_events (rollback descarta os dois) e, se falhar,
- * vira GravarLogPendenteJob, com entrega pelo menos uma vez.
+ * Historico e processed_events usam a mesma transacao na conexao de log.
+ * A role dessa conexao precisa acessar tambem processed_events; em banco
+ * dedicado, a tabela deve ser provisionada pela migration de idempotencia.
+ * Falhas propagam ao worker para retry, sem confirmar consumo prematuramente.
  *
  * O nome fala em "Processo" por heranca: ele nasceu para o modulo de Processos,
  * que saiu, mas continua sendo o unico registrador do historico de CRONOGRAMA
@@ -27,6 +28,11 @@ use App\Support\Database\ConexaoDeLog;
  */
 class RegistrarHistoricoProcessoListener extends IdempotentListener
 {
+    protected function databaseConnection(): ?string
+    {
+        return ConexaoDeLog::nome();
+    }
+
     protected function execute(DomainEvent $event): void
     {
         $entityType = match (true) {
@@ -51,7 +57,9 @@ class RegistrarHistoricoProcessoListener extends IdempotentListener
             default => $event->eventName(),
         };
 
-        ConexaoDeLog::inserir('tdap_historicos', [
+        // Escrita direta: inserir() pode adiar para afterCommit ou engolir
+        // falha ao enfileirar, separando o efeito do marcador de idempotencia.
+        ConexaoDeLog::tabela('tdap_historicos')->insert([
             'data_evento' => $event->occurredAt->format('Y-m-d H:i:sP'),
             'tipo_evento' => $event->eventName(),
             'entity_type' => $entityType,
