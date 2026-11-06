@@ -27,7 +27,7 @@ final class ExecutorMaterializacao
 
     public function materializar(Materializador $m, ?Carbon $desde = null, bool $seco = false): ResultadoExecucao
     {
-        return $this->comLock('materializar', $m->modulo(), function () use ($m, $desde, $seco): ResultadoExecucao {
+        return $this->comLock($m->modulo(), function () use ($m, $desde, $seco): ResultadoExecucao {
             $janela = JanelaDaFonte::obter();
             $cursor = new CursorDeMaterializacao($m->modulo(), $desde);
             $id = $seco ? null : $this->registro->iniciar($m->modulo(), $desde ? 'incremental_desde' : 'incremental');
@@ -51,10 +51,12 @@ final class ExecutorMaterializacao
         });
     }
 
-    /** Lock por modulo e operacao; lanca se ja ha execucao em curso. */
-    public function comLock(string $operacao, string $modulo, Closure $fn): mixed
+    /** Materializacao e reconciliacao escrevem a mesma projecao: lock por modulo. */
+    public function comLock(string $modulo, Closure $fn): mixed
     {
-        $lock = Cache::lock("powerbi:{$operacao}:{$modulo}", self::LOCK_SEGUNDOS);
+        // Mantem a chave dos materializadores existentes. A reconciliacao
+        // tambem deve reserva-la para nao remover linhas durante um upsert.
+        $lock = Cache::lock("powerbi:materializar:{$modulo}", self::LOCK_SEGUNDOS);
         if (! $lock->get()) {
             throw ModuloEmExecucaoException::modulo($modulo);
         }

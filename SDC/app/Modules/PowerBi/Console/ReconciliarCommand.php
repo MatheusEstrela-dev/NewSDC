@@ -34,7 +34,7 @@ final class ReconciliarCommand extends Command
                 continue;
             }
 
-            $porTabela = $executor->comLock('reconciliar', $modulo, fn (): array => $reconciliador->reconciliar($m));
+            $porTabela = $executor->comLock($modulo, fn (): array => $reconciliador->reconciliar($m));
             foreach ($porTabela as $tabela => $r) {
                 $this->info(sprintf(
                     '%s.%s: origem=%d destino=%d removidas=%d divergentes=%d',
