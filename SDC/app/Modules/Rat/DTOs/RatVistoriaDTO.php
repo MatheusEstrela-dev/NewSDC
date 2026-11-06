@@ -18,6 +18,103 @@ readonly class RatVistoriaDTO
     use LeituraComPresenca;
     use SafeCastingTrait;
 
+    /**
+     * Fonte unica das chaves aninhadas (grupo => chave => tipo) que fromArray()
+     * le pelo segundo caminho do ler() ("grupo.chave"). O ReceiveRatBIRequest
+     * gera as regras de validacao daqui: chave nova no fromArray entra tambem
+     * neste mapa, senao a API externa a descarta no validated().
+     *
+     * Tipos: bool, int, latitude, longitude, misto (bool ou texto, ver
+     * simOuTexto), text (ate 65535) e string:N (ate N caracteres).
+     *
+     * @var array<string, array<string, string>>
+     */
+    private const CAMPOS_GRUPOS = [
+        'solicitante' => [
+            'nome' => 'string:255', 'cpf' => 'string:11', 'telefone' => 'string:20',
+            'endereco' => 'string:255', 'bairro' => 'string:100', 'cep' => 'string:8',
+        ],
+        'imovel' => [
+            'endereco' => 'string:255', 'complemento' => 'string:255', 'bairro' => 'string:100',
+            'municipio' => 'int', 'municipio_nome' => 'string:255', 'cep' => 'string:8',
+            'latitude' => 'latitude', 'longitude' => 'longitude',
+        ],
+        'estrutura' => [
+            'tipo_area' => 'string:50', 'tipo_imovel' => 'string:50', 'tipo_construcao' => 'string:50',
+            'tipo_edificacao' => 'string:50', 'tipo_destinacao' => 'string:20',
+            'tipo_terreno_relevo' => 'string:50', 'sistema_estrutural' => 'string:50',
+            'num_pavimentos' => 'int', 'estado_conservacao' => 'string:20',
+            'regime_ocupacao' => 'string:20', 'tipo_localizacao' => 'string:20',
+        ],
+        'moradores' => [
+            'proprietario' => 'string:255', 'telefone' => 'string:20', 'num_moradores' => 'int',
+            'ha_idosos' => 'bool', 'ha_criancas' => 'bool', 'ha_pcd' => 'misto',
+        ],
+        'infraestrutura' => [
+            'abastecimento_agua' => 'string:10', 'esgotamento_sanitario' => 'string:10',
+            'drenagem_superficial' => 'string:10', 'sistema_viario_acesso' => 'string:255',
+            'tipo_revestimento' => 'string:50', 'condicoes_acesso' => 'string:500',
+            'num_moradias_terreno' => 'int', 'distancia_encosta' => 'string:50',
+        ],
+        'tecnico' => [
+            'material_construtivo' => 'string:255', 'conservacao_estrutural' => 'string:1000',
+            'elementos_estruturais' => 'string:1000', 'elementos_construtivos' => 'string:1000',
+            'agentes_potencializadores' => 'string:1000', 'processos_geodinamicos' => 'string:1000',
+            'danos_estruturais' => 'string:20', 'manutencao_uso_ocupacao' => 'string:20',
+            'historico' => 'text',
+        ],
+    ];
+
+    /**
+     * Grupos de marcacao (chave => bool, mais outros_descricao em texto).
+     *
+     * @var array<string, array<int, string>>
+     */
+    private const GRUPOS_BOOLEANOS = [
+        'patologias' => [
+            'rachaduras', 'trincas', 'fissuras_estruturais', 'deformacoes_estruturais', 'infiltracoes',
+            'corrosao_armaduras', 'desagregacao', 'eflorescencia', 'desplacamento', 'fundacoes',
+            'instabilidade_talude', 'movimentacao_solo', 'tombamento_muralhas', 'inundacoes',
+            'alagamentos', 'enxurradas', 'madeira', 'elementos_nao_estruturais', 'falha_drenagem',
+            'queda_arvores', 'outros',
+        ],
+        'encaminhamentos' => [
+            'interdicao_parcial', 'interdicao_total', 'remocao_temporaria', 'remocao_definitiva',
+            'isolamento_area', 'desocupacao_abrigo', 'notificacao_responsavel',
+            'contratacao_responsavel', 'comunicacao_orgaos', 'apoio_social', 'outros',
+        ],
+        'bens_afetados' => [
+            'residencia', 'muros', 'vias_publicas', 'pontes', 'viadutos', 'comercios', 'galpoes',
+            'predios_publicos', 'edificios_publicos', 'outros',
+        ],
+        'orgaos_acionados' => [
+            'copasa', 'cemig', 'secretaria_municipal', 'defesa_civil_estadual', 'dnit', 'crea',
+            'emater', 'seapa', 'outros',
+        ],
+    ];
+
+    /** Chaves de primeiro nivel da vistoria lidas como alternativa (v_historico). */
+    public const CAMPOS_RAIZ = ['observacoes' => 'text'];
+
+    /**
+     * Mapa canonico grupo => chave => tipo dos caminhos "grupo.chave" do fromArray().
+     *
+     * @return array<string, array<string, string>>
+     */
+    public static function camposAninhados(): array
+    {
+        $grupos = self::CAMPOS_GRUPOS;
+
+        foreach (self::GRUPOS_BOOLEANOS as $grupo => $chaves) {
+            $grupos[$grupo] = array_fill_keys($chaves, 'bool') + ['outros_descricao' => 'text'];
+        }
+
+        // PM e BM aceitam booleano ou texto (simOuTexto).
+        $grupos['orgaos_acionados'] += ['pm' => 'misto', 'bm' => 'misto'];
+
+        return $grupos;
+    }
+
     public function __construct(
         // UUID: as tabelas RAT usam uuid desde 2026_05_18_000001.
         public ?string $id = null,

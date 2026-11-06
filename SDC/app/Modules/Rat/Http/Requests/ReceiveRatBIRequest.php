@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Http\Requests;
 
+use App\Modules\Rat\DTOs\RatVistoriaDTO;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ReceiveRatBIRequest extends FormRequest
@@ -13,7 +14,55 @@ class ReceiveRatBIRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Regras de vistoria.<grupo>.<chave> geradas do mapa canonico do
+     * RatVistoriaDTO (tudo nullable: nenhum campo e obrigatorio).
+     *
+     * @return array<string, array<int, string>>
+     */
+    private static function regrasVistoriaAninhada(): array
+    {
+        $regras = [];
+
+        foreach (RatVistoriaDTO::camposAninhados() as $grupo => $chaves) {
+            $regras["vistoria.{$grupo}"] = ['nullable', 'array'];
+
+            foreach ($chaves as $chave => $tipo) {
+                $regras["vistoria.{$grupo}.{$chave}"] = self::regraDoTipo($tipo);
+            }
+        }
+
+        foreach (RatVistoriaDTO::CAMPOS_RAIZ as $chave => $tipo) {
+            $regras["vistoria.{$chave}"] = self::regraDoTipo($tipo);
+        }
+
+        return $regras;
+    }
+
+    /** @return array<int, string> */
+    private static function regraDoTipo(string $tipo): array
+    {
+        [$base, $limite] = array_pad(explode(':', $tipo, 2), 2, null);
+
+        return match ($base) {
+            'bool'      => ['nullable', 'boolean'],
+            'int'       => ['nullable', 'integer', 'min:0', 'max:32767'],
+            'latitude'  => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'misto'     => ['nullable'],
+            'text'      => ['nullable', 'string', 'max:65535'],
+            default     => ['nullable', 'string', 'max:' . ($limite ?? '255')],
+        };
+    }
+
     public function rules(): array
+    {
+        // Explicitas vencem: o contrato atual nao muda; o gerado so acrescenta o que faltava.
+        return array_merge(self::regrasVistoriaAninhada(), $this->regrasExplicitas());
+    }
+
+    /** @return array<string, array<int, string>> */
+    private function regrasExplicitas(): array
     {
         return [
             // Dados Gerais

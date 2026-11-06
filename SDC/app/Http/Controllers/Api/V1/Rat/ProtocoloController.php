@@ -120,7 +120,7 @@ class ProtocoloController extends Controller
      *     operationId="ratProtocolosReceive",
      *     tags={"RAT"},
      *     summary="Criar RAT via sistema externo",
-     *     description="Cria um novo RAT a partir de dados enviados por sistema externo (Power BI, TDAP, integração). O campo `finalize` controla se o RAT é salvo como rascunho (`false`, padrão) ou já finalizado (`true`). Ao finalizar, `dados_gerais.data_fato`, `dados_gerais.nat_ocorrencia`, `local.uf` e `local.municipio_id` tornam-se obrigatórios.",
+     *     description="Cria um novo RAT a partir de dados enviados por sistema externo (Power BI, TDAP, integração). O campo `finalize` controla se o RAT é salvo como rascunho (`false`, padrão) ou já finalizado (`true`). Ao finalizar, `dados_gerais.data_fato`, `dados_gerais.nat_ocorrencia`, `local.uf` e `local.municipio_id` tornam-se obrigatórios. A `vistoria` aceita os grupos `solicitante`, `imovel`, `estrutura`, `moradores`, `infraestrutura`, `tecnico`, `patologias`, `encaminhamentos`, `bens_afetados` e `orgaos_acionados` (marcações booleanas, mais `outros_descricao`) e `observacoes`; com `finalize=true`, `vistoria.encaminhamentos.interdicao_parcial` ou `interdicao_total` retorna 422 (salve o RAT e emita o termo de interdição antes de finalizar).",
      *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
