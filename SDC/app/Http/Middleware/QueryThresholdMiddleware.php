@@ -9,6 +9,7 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Swoole\Coroutine;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -24,13 +25,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class QueryThresholdMiddleware
 {
-    /**
-     * Chave em $request->attributes onde as queries da request corrente sao
-     * acumuladas. Estado por-request (nao static, nao de instancia): sob
-     * Octane/Swoole com enable_coroutine, requests podem intercalar no mesmo
-     * worker e estado static misturaria queries de usuarios distintos.
-     */
+    /** Chave em $request->attributes para as queries da request corrente. */
     private const REQUEST_ATTRIBUTE = 'query_threshold.queries';
+
+    private const CONTEXT_REQUEST_KEY = '__sdc_query_threshold_request';
 
     /**
      * O DB::listen e registrado uma unica vez por processo PHP; registrar a
@@ -40,14 +38,30 @@ class QueryThresholdMiddleware
 
     public function handle(Request $request, Closure $next, int|string $threshold = 15): Response
     {
-        $threshold = (int) $threshold;
         $request->attributes->set(self::REQUEST_ATTRIBUTE, []);
 
+        if (self::inCoroutine()) {
+            Coroutine::getContext()[self::CONTEXT_REQUEST_KEY] = $request;
+        }
+
+        try {
+            return $this->trackQueries($request, $next, (int) $threshold);
+        } finally {
+            $request->attributes->remove(self::REQUEST_ATTRIBUTE);
+
+            if (self::inCoroutine()) {
+                unset(Coroutine::getContext()[self::CONTEXT_REQUEST_KEY]);
+            }
+        }
+    }
+
+    private function trackQueries(Request $request, Closure $next, int $threshold): Response
+    {
         if (!self::$listenerRegistered) {
             self::$listenerRegistered = true;
 
             DB::listen(static function (QueryExecuted $event): void {
-                $current = app()->bound('request') ? app('request') : null;
+                $current = self::activeRequest();
 
                 if (!$current instanceof Request) {
                     return;
@@ -74,7 +88,6 @@ class QueryThresholdMiddleware
 
         /** @var array<int, array{sql: string, time: float, bindings: array<int, mixed>}> $queries */
         $queries = $request->attributes->get(self::REQUEST_ATTRIBUTE, []);
-        $request->attributes->remove(self::REQUEST_ATTRIBUTE);
 
         $count = count($queries);
 
@@ -117,5 +130,23 @@ class QueryThresholdMiddleware
         }
 
         return $response;
+    }
+
+    private static function activeRequest(): ?Request
+    {
+        if (self::inCoroutine()) {
+            $request = Coroutine::getContext()[self::CONTEXT_REQUEST_KEY] ?? null;
+
+            return $request instanceof Request ? $request : null;
+        }
+
+        $request = app()->bound('request') ? app('request') : null;
+
+        return $request instanceof Request ? $request : null;
+    }
+
+    private static function inCoroutine(): bool
+    {
+        return extension_loaded('swoole') && Coroutine::getCid() > 0;
     }
 }

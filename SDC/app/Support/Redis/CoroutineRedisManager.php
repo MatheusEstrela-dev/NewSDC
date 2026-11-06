@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support\Redis;
 
 use Illuminate\Redis\Connections\Connection;
-use Illuminate\Redis\Connections\PhpRedisConnection;
 use Illuminate\Redis\RedisManager;
 
 /**
@@ -63,17 +62,30 @@ final class CoroutineRedisManager extends RedisManager
         if ($cid > 0) {
             $pool = $this->poolPara($name);
 
-            if ($pool !== null) {
-                if (! isset($this->coroutineConnections[$cid][$name])) {
-                    $client = $pool->acquire();
-                    $this->coroutineConnections[$cid][$name] = $this->wrap($name, $client);
+            if ($pool === null) {
+                throw new \RuntimeException("Pool Redis '{$name}' indisponivel para coroutine.");
+            }
+
+            if (! isset($this->coroutineConnections[$cid][$name])) {
+                $client = $pool->acquire();
+                try {
+                    $connection = $this->wrap($name, $client);
                     // Garante devolucao tambem em coroutines filhas e excecoes,
                     // sem depender do evento de termino da requisicao HTTP.
                     \Swoole\Coroutine::defer(fn () => $this->releaseCoroutine($cid));
-                }
+                    $this->coroutineConnections[$cid][$name] = $connection;
+                } catch (\Throwable $e) {
+                    try {
+                        $pool->release($client);
+                    } catch (\Throwable) {
+                        $pool->discard();
+                    }
 
-                return $this->coroutineConnections[$cid][$name];
+                    throw $e;
+                }
             }
+
+            return $this->coroutineConnections[$cid][$name];
         }
 
         return parent::connection($name);
@@ -95,11 +107,9 @@ final class CoroutineRedisManager extends RedisManager
      * parte dos workers o registro no boot nao ocorreu e a sonda mostrou
      * 'pools=nenhum' durante requisicoes reais.
      *
-     * Ou seja: o padrao anterior era compartilhar socket (quebra o servidor)
-     * e o novo e abrir um pool (custa conexoes de Redis, que sao baratas).
-     * Entre os dois, o unico aceitavel e o segundo. Se nem o pool puder ser
-     * criado, ai sim delega ao manager padrao -- nesse ponto o Redis esta
-     * fora do ar e a falha aparece como falha, nao como corrupcao silenciosa.
+     * Quando nao e possivel criar o pool, connection() falha explicitamente:
+     * usar o RedisManager compartilhado nessa situacao voltaria a expor o
+     * mesmo socket a coroutines diferentes.
      */
     private function poolPara(string $name): ?SwooleRedisPool
     {
@@ -134,12 +144,29 @@ final class CoroutineRedisManager extends RedisManager
      */
     public function releaseCoroutine(int $cid): void
     {
-        foreach ($this->coroutineConnections[$cid] ?? [] as $name => $conn) {
+        $connections = $this->coroutineConnections[$cid] ?? [];
+        unset($this->coroutineConnections[$cid]);
+
+        foreach ($connections as $name => $conn) {
             if (isset($this->pools[$name])) {
-                $this->pools[$name]->release($conn->client());
+                $pool = $this->pools[$name];
+                if ($conn instanceof PooledPhpRedisConnection && $conn->shouldDiscard()) {
+                    try {
+                        $conn->disconnect();
+                    } catch (\Throwable) {
+                    }
+                    $pool->discard();
+
+                    continue;
+                }
+
+                try {
+                    $pool->release($conn->client());
+                } catch (\Throwable) {
+                    $pool->discard();
+                }
             }
         }
-        unset($this->coroutineConnections[$cid]);
     }
 
     private function coroutineId(): int
@@ -151,11 +178,10 @@ final class CoroutineRedisManager extends RedisManager
         return \Swoole\Coroutine::getCid();
     }
 
-    /** Embrulha um \Redis cru numa PhpRedisConnection do Laravel. */
+    /** Embrulha um \Redis cru numa conexao que sinaliza falhas ao pool. */
     private function wrap(string $name, object $client): Connection
     {
-        // PhpRedisConnection::__construct($client, ?callable $connector = null, array $config = [])
-        return new PhpRedisConnection(
+        return new PooledPhpRedisConnection(
             $client,
             null,
             $this->config[$name] ?? []

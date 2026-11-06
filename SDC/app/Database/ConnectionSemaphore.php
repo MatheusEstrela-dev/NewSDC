@@ -195,12 +195,19 @@ class ConnectionSemaphore
      * mesma coisa que a fila serve. Nesse caso a resposta correta e recusar na
      * hora (503 com Retry-After) e devolver o worker ao pool.
      *
-     * Com hooks ligados o usleep vira sleep de corrotina e a espera custa
-     * memoria, nao um worker: ai o prazo configurado vale.
+     * Dentro de uma coroutine com hooks ligados, o usleep vira sleep de
+     * coroutine e a espera custa memoria, nao um worker.
      */
     private function maxWaitMsEfetivo(): int
     {
         if ($this->maxWaitMs <= 0) {
+            return 0;
+        }
+
+        // Sem coroutine HTTP, usleep bloqueia o worker inteiro mesmo que os
+        // hooks estejam configurados. Tentar apenas uma vez e devolver 503.
+        if (config('octane.server') === 'swoole'
+            && ! (bool) config('octane.swoole.options.enable_coroutine', false)) {
             return 0;
         }
 

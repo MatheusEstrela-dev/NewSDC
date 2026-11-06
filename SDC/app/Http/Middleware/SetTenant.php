@@ -40,6 +40,8 @@ class SetTenant
 
     private const TENANT_MEMO_TTL = 300;
 
+    private const MEMO_MAX_ENTRIES = 256;
+
     public function handle(Request $request, Closure $next): Response
     {
         $tenant = null;
@@ -86,16 +88,16 @@ class SetTenant
         $now = microtime(true);
         $hit = self::$tenantMemo[$tenantId] ?? null;
         if ($hit !== null && $hit['exp'] > $now) {
-            return $hit['tenant'];
+            return $hit['tenant'] === null ? null : clone $hit['tenant'];
         }
 
         $tenant = Cache::remember(
             "tenant:{$tenantId}",
-            300,
+            self::TENANT_MEMO_TTL,
             fn (): ?Tenant => Tenant::find($tenantId),
         );
 
-        self::$tenantMemo[$tenantId] = ['tenant' => $tenant, 'exp' => $now + self::TENANT_MEMO_TTL];
+        self::memoize(self::$tenantMemo, $tenantId, $tenant, $now);
 
         return $tenant;
     }
@@ -122,16 +124,41 @@ class SetTenant
             return Tenant::resolveFromRequest($request);
         }
 
-        $key = $request->header('X-Tenant') ?: ('host:' . $request->getHost());
+        $slug = $request->header('X-Tenant');
+        $key = $slug
+            ? 'slug:' . hash('sha256', $slug)
+            : 'host:' . hash('sha256', $request->getHost());
         $now = microtime(true);
         $hit = self::$resolveMemo[$key] ?? null;
         if ($hit !== null && $hit['exp'] > $now) {
-            return $hit['tenant'];
+            return $hit['tenant'] === null ? null : clone $hit['tenant'];
         }
 
         $tenant = Tenant::resolveFromRequest($request);
-        self::$resolveMemo[$key] = ['tenant' => $tenant, 'exp' => $now + self::TENANT_MEMO_TTL];
+        self::memoize(self::$resolveMemo, $key, $tenant, $now);
 
         return $tenant;
+    }
+
+    /**
+     * Mantem os dois memos de worker dentro do TTL e de um limite fixo.
+     * A ordem do array fornece a entrada mais antiga para eviccao.
+     *
+     * @param array<int|string, array{tenant: ?Tenant, exp: float}> $memo
+     */
+    private static function memoize(array &$memo, int|string $key, ?Tenant $tenant, float $now): void
+    {
+        foreach ($memo as $memoKey => $entry) {
+            if ($entry['exp'] <= $now) {
+                unset($memo[$memoKey]);
+            }
+        }
+
+        if (count($memo) >= self::MEMO_MAX_ENTRIES) {
+            unset($memo[array_key_first($memo)]);
+        }
+
+        // O modelo guardado nunca deve ser o objeto entregue a request.
+        $memo[$key] = ['tenant' => $tenant === null ? null : clone $tenant, 'exp' => $now + self::TENANT_MEMO_TTL];
     }
 }

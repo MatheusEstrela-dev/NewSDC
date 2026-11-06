@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support\Redis;
 
+use Illuminate\Redis\Connectors\PhpRedisConnector;
+use Illuminate\Support\ConfigurationUrlParser;
 use Redis;
 use RuntimeException;
 use Swoole\Coroutine\Channel;
@@ -37,7 +39,8 @@ final class SwooleRedisPool
 
     /**
      * Constroi o pool a partir de uma conexao redis do config/database.php.
-     * Monta a conexao phpredis manualmente com TLS (Azure 6380) + auth + select.
+     * Usa o conector do Laravel para manter URL, TLS, auth, prefixo e options
+     * com a mesma semantica das conexoes Redis fora do pool.
      */
     public static function fromConnection(string $connection = 'default', int $size = 16, float $timeout = 3.0): self
     {
@@ -46,24 +49,16 @@ final class SwooleRedisPool
             throw new RuntimeException("SwooleRedisPool: conexao redis '{$connection}' invalida.");
         }
 
-        $scheme = $cfg['scheme'] ?? 'tcp';
-        $host = ($scheme === 'tls' ? 'tls://' : '').($cfg['host'] ?? '127.0.0.1');
-        $port = (int) ($cfg['port'] ?? 6379);
-        $password = $cfg['password'] ?? null;
-        $username = $cfg['username'] ?? null;
-        $db = (int) ($cfg['database'] ?? 0);
+        $cfg = (new ConfigurationUrlParser())->parseConfiguration($cfg);
+        $driver = strtolower((string) ($cfg['driver'] ?? ''));
+        if (in_array($driver, ['tcp', 'tls'], true)) {
+            $cfg['scheme'] = $driver;
+        }
+        unset($cfg['driver']);
+        $cfg['timeout'] ??= 2.0;
 
-        $factory = static function () use ($host, $port, $username, $password, $db): Redis {
-            $r = new Redis();
-            $r->connect($host, $port, 2.0);
-            if ($password) {
-                // Azure usa ACL user opcional; phpredis aceita [user, pass] ou pass.
-                $username ? $r->auth([$username, $password]) : $r->auth($password);
-            }
-            $r->select($db);
-
-            return $r;
-        };
+        $options = config('database.redis.options', []);
+        $factory = static fn (): Redis => (new PhpRedisConnector())->connect($cfg, $options)->client();
 
         return new self($factory, max(1, $size), $timeout);
     }

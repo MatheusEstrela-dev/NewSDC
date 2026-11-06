@@ -79,6 +79,15 @@ scrape_configs:
           service: 'redis'
           tier: 'cache'
 
+  # Metricas do runtime Swoole e dos mecanismos de resiliencia da aplicacao.
+  - job_name: 'newsdc-app'
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ['newsdc_app:8000']
+        labels:
+          service: 'newsdc-app'
+          tier: 'application'
+
   # ==========================================================================
   # Blackbox Exporter - External Probes
   # HTTP, TCP, ICMP monitoring

@@ -70,14 +70,15 @@ final class CoroutineDatabaseManager extends DatabaseManager
             $ctx = $this->contexto->storage();
             $chave = self::CHAVE_CONEXAO.$nome;
             if (! isset($ctx[$chave])) {
-                $ctx[$chave] = $this->criarConexaoPoolada($nome, $ctx);
                 // Filhas criadas pelos helpers nao disparam RequestTerminated.
                 // A devolucao explicita no HTTP continua valida e e idempotente.
-                // Um defer por coroutine basta: ele devolve todos os pools.
+                // Agendar antes do acquire evita deixar um PDO sem limpeza se
+                // o agendamento falhar. Um defer devolve todos os pools.
                 if (! isset($ctx[self::CHAVE_DEVOLUCAO_AGENDADA])) {
-                    $ctx[self::CHAVE_DEVOLUCAO_AGENDADA] = true;
                     $this->contexto->defer(fn () => $this->releaseCurrentCoroutine());
+                    $ctx[self::CHAVE_DEVOLUCAO_AGENDADA] = true;
                 }
+                $ctx[$chave] = $this->criarConexaoPoolada($nome, $ctx);
             }
 
             return $ctx[$chave];
@@ -112,23 +113,26 @@ final class CoroutineDatabaseManager extends DatabaseManager
     private function devolver(string $nome, PdoPool $pool, ArrayAccess $ctx): void
     {
         $conn = $ctx[self::CHAVE_CONEXAO.$nome] ?? null;
-        if (! $conn instanceof Connection) {
-            return;
-        }
+        $rollbackFailed = false;
 
         // Transacao aberta no fim do request -> rollback antes de devolver,
         // senao a proxima coroutine que pegar o PDO herda a transacao.
-        try {
-            while ($conn->transactionLevel() > 0) {
-                $conn->rollBack();
+        if ($conn instanceof Connection) {
+            try {
+                while ($conn->transactionLevel() > 0) {
+                    $conn->rollBack();
+                }
+            } catch (\Throwable) {
+                $rollbackFailed = true;
             }
-        } catch (\Throwable $e) {
         }
 
         $writer = $ctx[self::CHAVE_ESCRITOR.$nome] ?? null;
         if ($writer instanceof \PDO) {
             try {
-                if ($conn->getRawPdo() === $writer) {
+                if ($rollbackFailed || ! $conn instanceof Connection) {
+                    $pool->discard();
+                } elseif ($conn->getRawPdo() === $writer) {
                     $pool->release($writer);
                 } else {
                     $pool->discard();
