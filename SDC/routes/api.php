@@ -292,7 +292,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     // Módulo RAT — Nova Estrutura (RatOcorrencia + relatos polimórficos)
     Route::prefix('rat-novo')->name('api.v1.rat-novo.')->group(function () {
         Route::get('/', [RatNovoController::class, 'index'])->name('index')->middleware('can:rat.protocolos.view');
-        Route::post('/', [RatNovoController::class, 'store'])->name('store')->middleware('can:rat.protocolos.create');
+        Route::post('/', [RatNovoController::class, 'store'])->name('store')->middleware(['can:rat.protocolos.create', 'integracao.entrada:rat.novo.criar']);
         Route::get('/{id}', [RatNovoController::class, 'show'])->name('show')->middleware('can:rat.protocolos.view');
         Route::put('/{id}', [RatNovoController::class, 'update'])->name('update')->middleware(['can:rat.protocolos.edit', 'integracao.entrada:rat.novo.atualizar']);
         Route::delete('/{id}', [RatNovoController::class, 'destroy'])->name('destroy')->middleware('can:rat.protocolos.delete');
@@ -491,7 +491,7 @@ Route::prefix('v1/decretacoes')
         'api-rate-limiter:default',
     ])
     ->group(function () {
-        Route::post('/receive', [DecretacoesApiController::class, 'receive'])->name('api.v1.decretacoes.receive')->middleware('can:decretacoes.processos.create');
+        Route::post('/receive', [DecretacoesApiController::class, 'receive'])->name('api.v1.decretacoes.receive')->middleware(['can:decretacoes.processos.create', 'integracao.entrada:decretacoes.processos.receber']);
     });
 
 // ============================================================================
@@ -531,7 +531,7 @@ Route::prefix('v1/rat')
         'api-rate-limiter:default',
     ])
     ->group(function () {
-        Route::post('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'receive'])->name('protocolos.receive')->middleware('can:rat.protocolos.create');
+        Route::post('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'receive'])->name('protocolos.receive')->middleware(['can:rat.protocolos.create', 'integracao.entrada:rat.protocolos.criar']);
     });
 
 // ============================================================================

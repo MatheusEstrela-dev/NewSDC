@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Modules\Integracao\Aplicadores\Decretacoes\ReceberProcessoAplicador;
 use App\Modules\Integracao\Aplicadores\Estoque\CriarProdutoAplicador;
 use App\Modules\Integracao\Aplicadores\Estoque\RegistrarMovimentacaoAplicador;
 use App\Modules\Integracao\Aplicadores\Pae\AtualizarEmpreendimentoAplicador;
 use App\Modules\Integracao\Aplicadores\Pae\RegistrarDevolutivaAplicador;
 use App\Modules\Integracao\Aplicadores\Rat\AtualizarOcorrenciaAplicador;
 use App\Modules\Integracao\Aplicadores\Rat\AtualizarRatNovoAplicador;
+use App\Modules\Integracao\Aplicadores\Rat\CriarProtocoloAplicador;
+use App\Modules\Integracao\Aplicadores\Rat\CriarRatNovoAplicador;
 use App\Modules\Integracao\Aplicadores\Rat\FinalizarOcorrenciaAplicador;
 
 /*
@@ -21,13 +24,16 @@ use App\Modules\Integracao\Aplicadores\Rat\FinalizarOcorrenciaAplicador;
 return [
     // operacao => aplicador (App\Modules\Integracao\Contracts\AplicadorDeEntrada).
     'operacoes' => [
+        'decretacoes.processos.receber'   => ReceberProcessoAplicador::class,
         'estoque.movimentacoes.registrar' => RegistrarMovimentacaoAplicador::class,
         'estoque.produtos.criar'          => CriarProdutoAplicador::class,
         'pae.devolutiva.registrar'        => RegistrarDevolutivaAplicador::class,
         'pae.empreendimentos.atualizar'   => AtualizarEmpreendimentoAplicador::class,
+        'rat.novo.criar'                  => CriarRatNovoAplicador::class,
         'rat.novo.atualizar'              => AtualizarRatNovoAplicador::class,
         'rat.ocorrencias.atualizar'       => AtualizarOcorrenciaAplicador::class,
         'rat.ocorrencias.finalizar'       => FinalizarOcorrenciaAplicador::class,
+        'rat.protocolos.criar'            => CriarProtocoloAplicador::class,
     ],
 
     // Operacoes cuja repeticao duplica o efeito (movimentacao soma/debita de
@@ -36,11 +42,15 @@ return [
     'exige_chave_idempotente' => [
         'estoque.movimentacoes.registrar',
         'rat.ocorrencias.atualizar',
+        'rat.novo.criar',
+        'rat.protocolos.criar',
+        'decretacoes.processos.receber',
     ],
 
     // Adesao por fonte: sincrono (contrato atual) | adesao (desvia para a
     // caixa quando o cliente pede: Prefer: respond-async ou ability abaixo).
     'modo' => [
+        'decretacoes' => env('INTEGRACAO_MODO_DECRETACOES', 'sincrono'),
         'estoque' => env('INTEGRACAO_MODO_ESTOQUE', 'sincrono'),
         'pae'     => env('INTEGRACAO_MODO_PAE', 'sincrono'),
         'rat'     => env('INTEGRACAO_MODO_RAT', 'sincrono'),
