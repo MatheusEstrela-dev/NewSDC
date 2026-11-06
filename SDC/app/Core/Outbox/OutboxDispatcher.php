@@ -66,15 +66,15 @@ class OutboxDispatcher
         }
 
         $this->exigirForaDeTransacao();
+        $retentativas = new OutboxRetryPolicy;
         $db = $this->conexaoDeReserva();
         $tentados = [];
         $count = 0;
 
         try {
             for ($i = 0; $i < $batch; $i++) {
-                $resultado = $db->transaction(function () use ($db, $tentados): ?array {
-                    $registro = $db->table((new OutboxEvent)->getTable())
-                        ->whereNull('dispatched_at')
+                $resultado = $db->transaction(function () use ($db, $tentados, $retentativas): ?array {
+                    $registro = $retentativas->elegiveis($db->table((new OutboxEvent)->getTable()))
                         ->whereNotIn('id', $tentados)
                         ->orderBy('occurred_at')->orderBy('id')
                         ->lock('FOR UPDATE SKIP LOCKED')
