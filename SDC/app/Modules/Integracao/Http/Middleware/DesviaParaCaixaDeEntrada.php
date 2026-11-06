@@ -41,7 +41,13 @@ final class DesviaParaCaixaDeEntrada
             return $next($request);
         }
 
-        if (mb_strlen((string) $request->header('Idempotency-Key', '')) > self::TAMANHO_MAXIMO_CHAVE) {
+        $chave = (string) $request->header('Idempotency-Key', '');
+
+        if ($chave === '' && $this->catalogo->exigeChaveIdempotente($operacao)) {
+            return response()->json(['message' => 'Idempotency-Key obrigatoria para esta operacao no modo assincrono.'], 428);
+        }
+
+        if (mb_strlen($chave) > self::TAMANHO_MAXIMO_CHAVE) {
             return response()->json(['message' => 'Idempotency-Key acima de '.self::TAMANHO_MAXIMO_CHAVE.' caracteres.'], 400);
         }
 

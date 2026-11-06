@@ -105,10 +105,10 @@
 	# matcher e a linha reverse_proxy @api_integracao, e recarregar o Caddy
 	# (docker exec newsdc_homolog_caddy caddy reload --config /etc/caddy/Caddyfile).
 	# Sem o matcher tudo volta ao app, como antes.
-	# As escritas da caixa de entrada (inventario, pae, rat-novo, rat/ocorrencias)
+	# As escritas da caixa de entrada (inventario, estoque/movimentacoes, pae, rat-novo, rat/ocorrencias)
 	# precisam cair aqui: so o api_integracao tem DB_POWERBI_CONNECTION para
 	# desviar. As telas do site usam rotas web, nao estes caminhos /api/v1.
-	@api_integracao path /api/v1/integracao/* /api/v1/bi/* /api/v1/rat/protocolos* /api/v1/inventario /api/v1/inventario/* /api/v1/pae/empreendimentos* /api/v1/pae/notificacoes/* /api/v1/rat-novo* /api/v1/rat/ocorrencias* /api/v1/decretacoes/receive /api/v1/decretacoes/export/* /api/v1/decretacoes/traces/* /api/v1/tdap/* /api/v1/ajuda-humanitaria/liberacoes/cedec /api/v1/ajuda-humanitaria/pedidos/consolidado /api/v1/cisternas/beneficiarios/export
+	@api_integracao path /api/v1/integracao/* /api/v1/bi/* /api/v1/rat/protocolos* /api/v1/inventario /api/v1/inventario/* /api/v1/estoque/movimentacoes /api/v1/pae/empreendimentos* /api/v1/pae/notificacoes/* /api/v1/rat-novo* /api/v1/rat/ocorrencias* /api/v1/decretacoes/receive /api/v1/decretacoes/export/* /api/v1/decretacoes/traces/* /api/v1/tdap/* /api/v1/ajuda-humanitaria/liberacoes/cedec /api/v1/ajuda-humanitaria/pedidos/consolidado /api/v1/cisternas/beneficiarios/export
 	reverse_proxy @api_integracao {
 		import lb_homolog api_integracao
 	}

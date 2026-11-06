@@ -182,7 +182,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
             ->middleware(['can:estoque.movimentacoes.view', 'throttle:120,1']);
         Route::post('movimentacoes', [\App\Http\Controllers\Api\V1\Estoque\MovimentacaoApiController::class, 'store'])
             ->name('movimentacoes.store')
-            ->middleware(['can:estoque.movimentacoes.create', 'throttle:60,1']);
+            ->middleware(['can:estoque.movimentacoes.create', 'throttle:60,1', 'integracao.entrada:estoque.movimentacoes.registrar']);
         Route::get('saldos', [\App\Http\Controllers\Api\V1\Estoque\MovimentacaoApiController::class, 'saldos'])
             ->name('saldos.index')
             ->middleware(['can:estoque.produtos.view', 'throttle:120,1']);
@@ -278,7 +278,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
         Route::get('/', [RatOcorrenciaApiController::class, 'index'])->name('index');
         Route::post('/', [RatOcorrenciaApiController::class, 'store'])->name('store');
         Route::get('/{id}', [RatOcorrenciaApiController::class, 'show'])->name('show');
-        Route::put('/{id}', [RatOcorrenciaApiController::class, 'update'])->name('update');
+        Route::put('/{id}', [RatOcorrenciaApiController::class, 'update'])->name('update')->middleware('integracao.entrada:rat.ocorrencias.atualizar');
         Route::patch('/{id}/finalizar', [RatOcorrenciaApiController::class, 'finalize'])->name('finalize')->middleware('integracao.entrada:rat.ocorrencias.finalizar');
         Route::delete('/{id}', [RatOcorrenciaApiController::class, 'destroy'])->name('destroy');
     });

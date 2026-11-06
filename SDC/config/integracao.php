@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Modules\Integracao\Aplicadores\Estoque\CriarProdutoAplicador;
+use App\Modules\Integracao\Aplicadores\Estoque\RegistrarMovimentacaoAplicador;
 use App\Modules\Integracao\Aplicadores\Pae\AtualizarEmpreendimentoAplicador;
 use App\Modules\Integracao\Aplicadores\Pae\RegistrarDevolutivaAplicador;
+use App\Modules\Integracao\Aplicadores\Rat\AtualizarOcorrenciaAplicador;
 use App\Modules\Integracao\Aplicadores\Rat\AtualizarRatNovoAplicador;
 use App\Modules\Integracao\Aplicadores\Rat\FinalizarOcorrenciaAplicador;
 
@@ -19,11 +21,21 @@ use App\Modules\Integracao\Aplicadores\Rat\FinalizarOcorrenciaAplicador;
 return [
     // operacao => aplicador (App\Modules\Integracao\Contracts\AplicadorDeEntrada).
     'operacoes' => [
-        'estoque.produtos.criar'        => CriarProdutoAplicador::class,
-        'pae.devolutiva.registrar'      => RegistrarDevolutivaAplicador::class,
-        'pae.empreendimentos.atualizar' => AtualizarEmpreendimentoAplicador::class,
-        'rat.novo.atualizar'            => AtualizarRatNovoAplicador::class,
-        'rat.ocorrencias.finalizar'     => FinalizarOcorrenciaAplicador::class,
+        'estoque.movimentacoes.registrar' => RegistrarMovimentacaoAplicador::class,
+        'estoque.produtos.criar'          => CriarProdutoAplicador::class,
+        'pae.devolutiva.registrar'        => RegistrarDevolutivaAplicador::class,
+        'pae.empreendimentos.atualizar'   => AtualizarEmpreendimentoAplicador::class,
+        'rat.novo.atualizar'              => AtualizarRatNovoAplicador::class,
+        'rat.ocorrencias.atualizar'       => AtualizarOcorrenciaAplicador::class,
+        'rat.ocorrencias.finalizar'       => FinalizarOcorrenciaAplicador::class,
+    ],
+
+    // Operacoes cuja repeticao duplica o efeito (movimentacao soma/debita de
+    // novo; PUT de ocorrencia recria itens sem id). No modo assincrono exigem
+    // Idempotency-Key, senao 428: um retry do cliente nao pode reaplicar.
+    'exige_chave_idempotente' => [
+        'estoque.movimentacoes.registrar',
+        'rat.ocorrencias.atualizar',
     ],
 
     // Adesao por fonte: sincrono (contrato atual) | adesao (desvia para a

@@ -23,6 +23,17 @@ final readonly class RatRelatosDTO
 {
     use SafeCastingTrait;
 
+    /** Regras de validacao da atualizacao via API (sincrona e caixa de entrada). */
+    public const REGRAS_ATUALIZACAO = [
+        'dadosGerais' => 'nullable|array',
+        'comunicacao' => 'nullable|array',
+        'local'       => 'nullable|array',
+        'endereco'    => 'nullable|array',
+        'recursos'    => 'nullable|array',
+        'envolvidos'  => 'nullable|array',
+        'vistoria'    => 'nullable|array',
+    ];
+
     /**
      * @param  list<RatRecursoDTO>|null  $recursos
      * @param  list<RatEnvolvidoDTO>|null  $envolvidos

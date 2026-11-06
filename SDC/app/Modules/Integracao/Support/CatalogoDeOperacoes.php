@@ -31,6 +31,12 @@ final class CatalogoDeOperacoes
             && config('integracao.modo.'.$this->fonte($operacao)) === self::MODO_ADESAO;
     }
 
+    /** Repetir a chamada duplicaria o efeito: o assincrono exige Idempotency-Key. */
+    public function exigeChaveIdempotente(string $operacao): bool
+    {
+        return in_array($operacao, (array) config('integracao.exige_chave_idempotente', []), true);
+    }
+
     public function aplicador(string $operacao): AplicadorDeEntrada
     {
         $classe = $this->classe($operacao);
