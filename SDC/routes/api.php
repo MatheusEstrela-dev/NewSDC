@@ -117,6 +117,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     // Activity Feed
     Route::get('activity-feed', [ActivityFeedController::class, 'index'])->name('api.v1.activity-feed');
 
+    // Status de mensagem aceita com 202 pela caixa de entrada (integracao.entrada).
+    Route::get('integracao/entradas/{id}', [\App\Modules\Integracao\Http\Controllers\EntradaStatusController::class, 'show'])
+        ->name('api.v1.integracao.entradas.show')
+        ->whereUuid('id');
+
     // Traces: status de requests assincronos despachados via AsynchronousResponse.
     Route::prefix('traces')->name('api.v1.traces.')->group(function () {
         Route::get('{traceId}', [\App\Http\Controllers\Api\V1\TraceController::class, 'show'])
@@ -142,7 +147,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
         Route::match(['put', 'patch'], 'empreendimentos/{id}', [EmpreendimentoController::class, 'update'])
             ->name('empreendimentos.update')
             ->whereNumber('id')
-            ->middleware('can:pae.empreendimentos.edit');
+            ->middleware(['can:pae.empreendimentos.edit', 'integracao.entrada:pae.empreendimentos.atualizar']);
         Route::delete('empreendimentos/{id}', [EmpreendimentoController::class, 'destroy'])
             ->name('empreendimentos.destroy')
             ->whereNumber('id')
@@ -158,7 +163,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
 
         Route::post('notificacoes/{paeNotificacao}/devolutiva', [NotificacaoController::class, 'devolutiva'])
             ->name('notificacoes.devolutiva')
-            ->middleware('can:pae.protocolos.edit');
+            ->middleware(['can:pae.protocolos.edit', 'integracao.entrada:pae.devolutiva.registrar']);
     });
 
     // Modulo Ajuda Humanitaria: fornecimento de dados, somente leitura.
@@ -170,7 +175,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
         ->middleware(['can:estoque.produtos.view', 'throttle:120,1']);
     Route::post('inventario', [\App\Http\Controllers\Api\V1\Estoque\InventarioApiController::class, 'store'])
         ->name('api.v1.inventario.store')
-        ->middleware(['can:estoque.produtos.create', 'throttle:60,1']);
+        ->middleware(['can:estoque.produtos.create', 'throttle:60,1', 'integracao.entrada:estoque.produtos.criar']);
     Route::prefix('estoque')->name('api.v1.estoque.')->group(function () {
         Route::get('movimentacoes', [\App\Http\Controllers\Api\V1\Estoque\MovimentacaoApiController::class, 'index'])
             ->name('movimentacoes.index')
@@ -274,7 +279,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
         Route::post('/', [RatOcorrenciaApiController::class, 'store'])->name('store');
         Route::get('/{id}', [RatOcorrenciaApiController::class, 'show'])->name('show');
         Route::put('/{id}', [RatOcorrenciaApiController::class, 'update'])->name('update');
-        Route::patch('/{id}/finalizar', [RatOcorrenciaApiController::class, 'finalize'])->name('finalize');
+        Route::patch('/{id}/finalizar', [RatOcorrenciaApiController::class, 'finalize'])->name('finalize')->middleware('integracao.entrada:rat.ocorrencias.finalizar');
         Route::delete('/{id}', [RatOcorrenciaApiController::class, 'destroy'])->name('destroy');
     });
 
@@ -289,7 +294,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
         Route::get('/', [RatNovoController::class, 'index'])->name('index')->middleware('can:rat.protocolos.view');
         Route::post('/', [RatNovoController::class, 'store'])->name('store')->middleware('can:rat.protocolos.create');
         Route::get('/{id}', [RatNovoController::class, 'show'])->name('show')->middleware('can:rat.protocolos.view');
-        Route::put('/{id}', [RatNovoController::class, 'update'])->name('update')->middleware('can:rat.protocolos.edit');
+        Route::put('/{id}', [RatNovoController::class, 'update'])->name('update')->middleware(['can:rat.protocolos.edit', 'integracao.entrada:rat.novo.atualizar']);
         Route::delete('/{id}', [RatNovoController::class, 'destroy'])->name('destroy')->middleware('can:rat.protocolos.delete');
         Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi')->middleware('can:rat.protocolos.export');
     });

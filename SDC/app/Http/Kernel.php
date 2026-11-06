@@ -101,5 +101,6 @@ class Kernel extends HttpKernel
         'cache_swagger' => \App\Http\Middleware\CacheSwaggerUi::class,
         'token.abilities' => \App\Http\Middleware\EnforceTokenAbilities::class,
         'pmda.editavel' => \App\Modules\Pmda\Http\Middleware\GarantirPmdaEditavel::class,
+        'integracao.entrada' => \App\Modules\Integracao\Http\Middleware\DesviaParaCaixaDeEntrada::class,
     ];
 }
