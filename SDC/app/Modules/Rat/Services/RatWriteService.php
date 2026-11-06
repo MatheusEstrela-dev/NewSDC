@@ -200,10 +200,21 @@ class RatWriteService
         });
     }
 
+    public const MSG_PRAZO_EDICAO_ENCERRADO = 'O prazo de edição de 48h foi encerrado. Este RAT não pode mais ser alterado.';
+
+    /**
+     * Regra unica do prazo de edicao de 48h (prazo_edicao vencido). Usada pelo
+     * formulario web e pela API v1 para nao divergirem.
+     */
+    public function prazoEdicaoEncerrado(RatOcorrencia $ocorrencia): bool
+    {
+        return $ocorrencia->prazo_edicao !== null && $ocorrencia->prazo_edicao->isPast();
+    }
+
     /**
      * Edicao sem mexer no status. O formulario (PUT rat/{id}) substitui as
      * listas, como o rascunho; a API v1 mescla itens por id
-     * ($substituirListas = false). O prazo de 48h e conferido no Controller.
+     * ($substituirListas = false). O prazo de 48h e conferido no Controller (prazoEdicaoEncerrado).
      */
     public function atualizar(string $id, RatRelatosDTO $relatos, bool $substituirListas = true): void
     {
