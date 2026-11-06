@@ -211,10 +211,25 @@ class RatWriteService
         return $ocorrencia->prazo_edicao !== null && $ocorrencia->prazo_edicao->isPast();
     }
 
+    public const MSG_RAT_FINALIZADO = 'RAT finalizado: não pode mais ser alterado.';
+
+    /**
+     * Motivo pelo qual a API (sincrona e caixa de entrada) nao aceita editar o
+     * RAT: prazo de 48h vencido ou RAT finalizado. null = edicao liberada.
+     */
+    public function motivoBloqueioEdicaoApi(RatOcorrencia $ocorrencia): ?string
+    {
+        return match (true) {
+            $this->prazoEdicaoEncerrado($ocorrencia) => self::MSG_PRAZO_EDICAO_ENCERRADO,
+            $ocorrencia->isFinalizada()              => self::MSG_RAT_FINALIZADO,
+            default                                  => null,
+        };
+    }
+
     /**
      * Edicao sem mexer no status. O formulario (PUT rat/{id}) substitui as
      * listas, como o rascunho; a API v1 mescla itens por id
-     * ($substituirListas = false). O prazo de 48h e conferido no Controller (prazoEdicaoEncerrado).
+     * ($substituirListas = false). O bloqueio por prazo/finalizacao e conferido por quem chama (motivoBloqueioEdicaoApi).
      */
     public function atualizar(string $id, RatRelatosDTO $relatos, bool $substituirListas = true): void
     {

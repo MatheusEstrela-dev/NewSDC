@@ -85,13 +85,9 @@ class OcorrenciaController extends Controller
             return response()->json(['message' => 'Ocorrência não encontrada.'], 404);
         }
 
-        // Mesma regra do formulario web (RatWriteService::prazoEdicaoEncerrado)
-        // e RAT finalizado nao aceita mais edicao.
-        $mensagemBloqueio = match (true) {
-            $this->writeService->prazoEdicaoEncerrado($ocorrencia) => RatWriteService::MSG_PRAZO_EDICAO_ENCERRADO,
-            $ocorrencia->isFinalizada()                            => 'RAT finalizado: não pode mais ser alterado.',
-            default                                                => null,
-        };
+        // Prazo de 48h e RAT finalizado: regra unica no RatWriteService, tambem
+        // usada pelo aplicador da caixa de entrada.
+        $mensagemBloqueio = $this->writeService->motivoBloqueioEdicaoApi($ocorrencia);
 
         if ($mensagemBloqueio !== null) {
             return response()->json(['success' => false, 'message' => $mensagemBloqueio], 422);
@@ -99,15 +95,7 @@ class OcorrenciaController extends Controller
 
         // Mesmo contrato do formulario, mas mesclando recursos/envolvidos por
         // id (com id atualiza, sem id cria), como esta API sempre fez.
-        $validated = $request->validate([
-            'dadosGerais' => 'nullable|array',
-            'comunicacao' => 'nullable|array',
-            'local'       => 'nullable|array',
-            'endereco'    => 'nullable|array',
-            'recursos'    => 'nullable|array',
-            'envolvidos'  => 'nullable|array',
-            'vistoria'    => 'nullable|array',
-        ]);
+        $validated = $request->validate(RatRelatosDTO::REGRAS_ATUALIZACAO);
 
         $this->writeService->atualizar($id, RatRelatosDTO::fromArray($validated), substituirListas: false);
 
