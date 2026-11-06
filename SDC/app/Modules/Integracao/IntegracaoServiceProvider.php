@@ -10,14 +10,14 @@ use App\Modules\Integracao\Support\CaixaDeEntrada;
 use App\Modules\Integracao\Support\CatalogoDeOperacoes;
 use App\Modules\Integracao\Support\ProcessadorDeEntrada;
 use App\Modules\Integracao\Support\RegistroDeAplicacoes;
-use App\Support\Database\ConexaoPowerBi;
+use App\Support\Database\ConexaoEntrada;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
 
 /**
  * Entrada assincrona da API externa: middleware integracao.entrada grava em
- * entrada.mensagens (sdc_powerbi) e AplicarEntradaJob aplica no sdc.
- * Inerte sem DB_POWERBI_CONNECTION: as rotas seguem sincronas.
+ * entrada.mensagens (sdc_entrada) e AplicarEntradaJob aplica no sdc.
+ * Inerte sem DB_ENTRADA_CONNECTION: as rotas seguem sincronas.
  */
 class IntegracaoServiceProvider extends ServiceProvider
 {
@@ -36,7 +36,7 @@ class IntegracaoServiceProvider extends ServiceProvider
         }
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
-            if (! ConexaoPowerBi::ativa()) {
+            if (! ConexaoEntrada::ativa()) {
                 return;
             }
 

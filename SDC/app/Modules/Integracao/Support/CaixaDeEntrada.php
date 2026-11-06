@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Integracao\Support;
 
 use App\Modules\Integracao\Exceptions\ChaveIdempotenteEmConflitoException;
-use App\Support\Database\ConexaoPowerBi;
+use App\Support\Database\ConexaoEntrada;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\Crypt;
@@ -13,8 +13,8 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Unica classe que toca o schema entrada.* (sdc_powerbi). Mover a caixa para
- * outro banco e trocar a conexao aqui.
+ * Unica classe que toca o schema entrada.* (sdc_entrada). Trocar a caixa de banco
+ * e trocar a conexao aqui.
  *
  * LGPD: o payload vai cifrado (Crypt, APP_KEY) e vira NULL quando a mensagem
  * termina (aplicada, rejeitada ou morta); so entrada.mortas guarda o cifrado
@@ -414,7 +414,7 @@ final class CaixaDeEntrada
     private function db(): Connection
     {
         // Sem cache: sob pool por coroutine a Connection vale so para quem a obteve.
-        return ConexaoPowerBi::escrita();
+        return ConexaoEntrada::conexao();
     }
 
     /** @return array<string, mixed> */

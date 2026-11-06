@@ -9,7 +9,7 @@ use App\Modules\Integracao\Jobs\AplicarEntradaJob;
 use App\Modules\Integracao\Support\CaixaDeEntrada;
 use App\Modules\Integracao\Support\CatalogoDeOperacoes;
 use App\Modules\Integracao\Support\NovaEntrada;
-use App\Support\Database\ConexaoPowerBi;
+use App\Support\Database\ConexaoEntrada;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Uso na rota: ->middleware('integracao.entrada:<operacao>'), depois do can:.
  *
  * Desvia para a caixa de entrada (202 + status_url) so quando TUDO vale:
- * sdc_powerbi ligado, fonte da operacao em adesao, cliente pediu assincrono
+ * sdc_entrada ligado, fonte da operacao em adesao, cliente pediu assincrono
  * (Prefer: respond-async ou ability integracao:assincrono), token de API (nao
  * sessao web) e sem arquivo enviado. Senao segue o fluxo sincrono intacto.
  */
@@ -82,7 +82,7 @@ final class DesviaParaCaixaDeEntrada
 
     private function deveDesviar(Request $request, string $operacao): bool
     {
-        if (! ConexaoPowerBi::ativa() || ! $this->catalogo->emAdesao($operacao)) {
+        if (! ConexaoEntrada::ativa() || ! $this->catalogo->emAdesao($operacao)) {
             return false;
         }
 

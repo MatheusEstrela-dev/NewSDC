@@ -38,20 +38,29 @@ x-ha-client-environment: &ha-client-environment
   TREINAMENTO_DB_HOST: db,db_replica_1,db_replica_2
   TREINAMENTO_DB_PORT: 6434
 
-# sdc_powerbi e membro de BI, so para api_integracao, queue_integracao e
-# queue_powerbi. Escrita (sdc_powerbi) no lider pelo multi-host 6434, igual ao
-# resto; leitura e fonte de BI pelo HAProxy 6436 de qualquer membro Patroni,
-# que so encaminha ao db_bi (check /health, nao /replica).
+# sdc_powerbi (C1) fica no db_powerbi, instancia propria fora do Patroni (sem
+# HA): escrita e leitura vao direto a ele, porta 5432. A FONTE do materializador
+# (FONTE_BI_*) segue sendo o db_bi pelo HAProxy 6436 de qualquer membro Patroni,
+# que so encaminha ao db_bi (check /health, nao /replica) e serve apenas a fonte
+# do BI.
 x-ha-bi-environment: &ha-bi-environment
-  POWERBI_DB_HOST: db,db_replica_1,db_replica_2
-  POWERBI_DB_PORT: 6434
-  POWERBI_DB_READ_HOST: db,db_replica_1,db_replica_2
-  POWERBI_DB_READ_PORT: 6436
+  POWERBI_DB_HOST: db_powerbi
+  POWERBI_DB_PORT: 5432
+  POWERBI_DB_READ_HOST: db_powerbi
+  POWERBI_DB_READ_PORT: 5432
+  POWERBI_PG_MAX_CONNECTIONS: 100
   FONTE_BI_DB_HOST: db,db_replica_1,db_replica_2
   FONTE_BI_DB_PORT: 6436
   # Teto do lider com max_connections 400 no Patroni (clientes do site seguem
   # no PG_MAX_CONNECTIONS 200 da ancora acima).
   PG_MAX_CONNECTIONS: 400
+
+# Caixa de entrada (C1): banco sdc_entrada no cluster do sdc, escrita no lider
+# pelo multi-host 6434 (mesmo padrao das demais conexoes de escrita). Para
+# api_integracao, queue_integracao e scheduler.
+x-ha-entrada-environment: &ha-entrada-environment
+  ENTRADA_DB_HOST: db,db_replica_1,db_replica_2
+  ENTRADA_DB_PORT: 6434
 
 x-patroni-environment: &patroni-environment
   PATRONI_SCOPE: ${PATRONI_SCOPE:-sdc-homolog}
@@ -100,7 +109,7 @@ services:
   api_integracao:
     image: *ha-app-image
     environment:
-      <<: [*ha-bi-environment, *ha-client-environment]
+      <<: [*ha-bi-environment, *ha-entrada-environment, *ha-client-environment]
       # Nao usa replicas do site (mesmo valor da base, depois do merge acima).
       DB_READ_ENABLED: "false"
     depends_on: !override
@@ -108,28 +117,32 @@ services:
   queue_integracao:
     image: *ha-app-image
     environment:
-      <<: [*ha-bi-environment, *ha-client-environment]
+      <<: [*ha-bi-environment, *ha-entrada-environment, *ha-client-environment]
       DB_READ_ENABLED: "false"
     depends_on: !override
       <<: *ha-client-dependencies
   queue_powerbi:
     image: *ha-app-image
     environment:
-      # Escrita e log no lider (6434); a conexao default pgsql le o membro de
-      # BI (6436) e a fonte tem de ser standby.
+      # Log no lider (6434); sdc_powerbi no db_powerbi; a conexao default pgsql
+      # le o membro de BI (6436) e a fonte tem de ser standby.
       <<: [*ha-bi-environment, *ha-client-environment]
       DB_HOST: db,db_replica_1,db_replica_2
       DB_PORT: 6436
       DB_READ_ENABLED: "false"
       POWERBI_FONTE_EXIGE_STANDBY: "true"
+    # O !override descarta o depends_on do base: repete o db_powerbi (so o
+    # materializador depende dele; api_integracao e queue_integracao nao).
     depends_on: !override
       <<: *ha-client-dependencies
+      db_powerbi:
+        condition: service_healthy
   scheduler:
     image: *ha-app-image
     # Hosts de BI tambem: reconciliar/publicar-arquivos podem rodar no proprio
     # scheduler e precisam ler a fonte no db_bi (6436), nunca no lider.
     environment:
-      <<: [*ha-bi-environment, *ha-client-environment]
+      <<: [*ha-bi-environment, *ha-entrada-environment, *ha-client-environment]
     depends_on: !override
       <<: *ha-client-dependencies
   reverb:
@@ -243,7 +256,10 @@ services:
     <<: *patroni-node
     container_name: newsdc_homolog_db_bi
     restart: unless-stopped
-    mem_limit: 1536m
+    # Encolhido (C1): agora e so a FONTE de leitura do materializador (o
+    # sdc_powerbi saiu para o db_powerbi). max_connections segue 400: o standby
+    # precisa ser >= ao primario.
+    mem_limit: 1g
     cpus: 1.0
     environment:
       <<: *patroni-environment
@@ -259,9 +275,9 @@ services:
       PATRONI_LOCAL_PARAM_hot_standby_feedback: "off"
       PATRONI_LOCAL_PARAM_max_standby_streaming_delay: 300s
       PATRONI_LOCAL_PARAM_work_mem: 64MB
-      # Memoria compativel com o teto de 1,5g (homolog na VM de 7,6g).
-      PATRONI_MEMORY_SHARED_BUFFERS: 384MB
-      PATRONI_MEMORY_EFFECTIVE_CACHE_SIZE: 768MB
+      # Memoria compativel com o teto de 1g.
+      PATRONI_MEMORY_SHARED_BUFFERS: 256MB
+      PATRONI_MEMORY_EFFECTIVE_CACHE_SIZE: 512MB
       PATRONI_MEMORY_MAINTENANCE_WORK_MEM: 64MB
     volumes: !override
       - homolog_pgdata_bi:/var/lib/postgresql

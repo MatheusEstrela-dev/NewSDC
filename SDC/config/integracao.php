@@ -15,10 +15,10 @@ use App\Modules\Integracao\Aplicadores\Rat\FinalizarOcorrenciaAplicador;
 
 /*
 |--------------------------------------------------------------------------
-| Caixa de entrada assincrona da API externa (sdc_powerbi, schema entrada)
+| Caixa de entrada assincrona da API externa (sdc_entrada, schema entrada)
 |--------------------------------------------------------------------------
 |
-| So tem efeito com DB_POWERBI_CONNECTION definida (ConexaoPowerBi::ativa()).
+| So tem efeito com DB_ENTRADA_CONNECTION definida (ConexaoEntrada::ativa()).
 | A fonte de uma operacao e o prefixo antes do primeiro ponto.
 */
 return [
