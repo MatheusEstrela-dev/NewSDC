@@ -23,7 +23,9 @@ x-ha-client-environment: &ha-client-environment
   SWOOLE_PG_POOL_SIZE: 2
   SWOOLE_PG_READ_POOL_SIZE: 1
   DB_CONNECT_TIMEOUT: 2
-  PG_MAX_CONNECTIONS: 200
+  # = max_connections do Patroni (patroni.yml). O guardrail ja soma os demais
+  # consumidores (EXTERNAL_DB_CONSUMERS), entao o teto e o do servidor, sem cota.
+  PG_MAX_CONNECTIONS: 400
   RANKING_DB_HOST: db,db_replica_1,db_replica_2
   RANKING_DB_PORT: 6434
   RANKING_SOURCE_HOST: db,db_replica_1,db_replica_2
@@ -51,8 +53,7 @@ x-ha-bi-environment: &ha-bi-environment
   POWERBI_PG_MAX_CONNECTIONS: 100
   FONTE_BI_DB_HOST: db,db_replica_1,db_replica_2
   FONTE_BI_DB_PORT: 6436
-  # Teto do lider com max_connections 400 no Patroni (clientes do site seguem
-  # no PG_MAX_CONNECTIONS 200 da ancora acima).
+  # Teto do lider com max_connections 400 no Patroni (mesmo da ancora acima).
   PG_MAX_CONNECTIONS: 400
 
 # Caixa de entrada (C1): banco sdc_entrada no cluster do sdc, escrita no lider
