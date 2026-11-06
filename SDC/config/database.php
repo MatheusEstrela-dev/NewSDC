@@ -133,11 +133,17 @@ return [
     'geo_connection' => env('DB_GEO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
     'treinamento_connection' => env('DB_TREINAMENTO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
 
-    // Banco sdc_powerbi (entrada assincrona + tabelas bi_*). DIFERENTE das
-    // chaves acima: SEM fallback para a conexao default. Sem a env o recurso
-    // fica DESLIGADO (entrada sincrona, saida ao vivo, como hoje) e nada deste
-    // dominio pode cair no sdc (ver App\Support\Database\ConexaoPowerBi).
+    // Separacao C1. Duas chaves DIFERENTES das acima: SEM fallback para a
+    // conexao default. Sem a env o recurso fica DESLIGADO (entrada sincrona,
+    // saida ao vivo, como hoje) e nada deste dominio pode cair no sdc.
+    //  - powerbi_connection: banco sdc_powerbi (tabelas bi_* e controle), dado
+    //    derivado e reconstruivel, em instancia Postgres PROPRIA fora do
+    //    Patroni (ver App\Support\Database\ConexaoPowerBi).
+    //  - entrada_connection: banco sdc_entrada (caixa de entrada assincrona),
+    //    NO CLUSTER do sdc para ter durabilidade sincrona: a mensagem aceita
+    //    nao pode se perder (ver App\Support\Database\ConexaoEntrada).
     'powerbi_connection' => env('DB_POWERBI_CONNECTION'),
+    'entrada_connection' => env('DB_ENTRADA_CONNECTION'),
 
     /*
     |--------------------------------------------------------------------------
@@ -186,13 +192,20 @@ return [
             'timeout' => (float) env('SWOOLE_PG_TREINAMENTO_POOL_TIMEOUT', 2.0),
             'warm' => false,
         ],
-        // Entrada assincrona e materializacao: carga fora do site, falha rapida.
+        // Caixa de entrada (sdc_entrada, no cluster): o aceite da API passa
+        // por aqui, mas e INSERT curto; esgotou, a API responde erro rapido.
+        'pgsql_entrada' => [
+            'size' => (int) env('SWOOLE_PG_ENTRADA_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_ENTRADA_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        // Materializacao no sdc_powerbi (instancia propria): carga fora do site, falha rapida.
         'pgsql_powerbi' => [
             'size' => (int) env('SWOOLE_PG_POWERBI_POOL_SIZE', 4),
             'timeout' => (float) env('SWOOLE_PG_POWERBI_POOL_TIMEOUT', 1.0),
             'warm' => false,
         ],
-        // Leitura da API de BI no membro de BI: pode esperar um pouco mais.
+        // Leitura da API de BI no mesmo servidor do powerbi: pode esperar um pouco mais.
         'pgsql_powerbi_read' => [
             'size' => (int) env('SWOOLE_PG_POWERBI_READ_POOL_SIZE', 4),
             'timeout' => (float) env('SWOOLE_PG_POWERBI_READ_POOL_TIMEOUT', 2.0),
@@ -243,6 +256,11 @@ return [
             'chave' => 'treinamento_connection',
             'extensoes' => [],
             'migrations' => 'database/migrations/treinamento',
+        ],
+        'pgsql_entrada' => [
+            'chave' => 'entrada_connection',
+            'extensoes' => [],
+            'migrations' => 'database/migrations/entrada',
         ],
         'pgsql_powerbi' => [
             'chave' => 'powerbi_connection',
@@ -623,20 +641,24 @@ return [
         // acesso ao sdc. So usado com DB_TREINAMENTO_CONNECTION.
         'pgsql_treinamento' => $bancoDedicado('TREINAMENTO', 'sdc_treinamento', 'treinamento'),
 
-        // Banco sdc_powerbi: entrada assincrona e tabelas bi_*. Escrita no lider
-        // (porta padrao). So usado com DB_POWERBI_CONNECTION=pgsql_powerbi.
+        // Banco sdc_entrada (schema entrada): caixa de entrada assincrona, no
+        // cluster do sdc (mesmo host/porta do lider por padrao, durabilidade
+        // sincrona). Usa uuidv7() nativo do PG18, sem extensao. So usado com
+        // DB_ENTRADA_CONNECTION=pgsql_entrada.
+        'pgsql_entrada' => $bancoDedicado('ENTRADA', 'sdc_entrada', 'entrada'),
+
+        // Banco sdc_powerbi (bi_* e controle): dado derivado em instancia
+        // Postgres PROPRIA (servico db_powerbi, fora do Patroni), apontada por
+        // POWERBI_DB_HOST/PORT. So usado com DB_POWERBI_CONNECTION=pgsql_powerbi.
         'pgsql_powerbi' => $bancoDedicado('POWERBI', 'sdc_powerbi', 'powerbi'),
 
-        // Leitura do sdc_powerbi no membro de BI (HAProxy 6436 no HA; sem HA, o
-        // mesmo servidor/porta do powerbi). De proposito SEM replica_routing e
-        // sem read/write: o fallback do ConsistentPostgresConnection mandaria
-        // a leitura de BI para o lider, que e justamente o que se evita.
+        // Leitura do sdc_powerbi. Escrita e leitura ficam no MESMO servidor
+        // (instancia propria, sem replica): sem POWERBI_DB_READ_HOST herda host
+        // e porta do powerbi. De proposito SEM replica_routing e sem read/write.
         'pgsql_powerbi_read' => $bancoDedicado('POWERBI', 'sdc_powerbi', 'powerbi-read', [
             'read_only' => true,
             'host' => env('POWERBI_DB_READ_HOST', env('POWERBI_DB_HOST', env('DB_HOST', '127.0.0.1'))),
-            'port' => env('POWERBI_DB_READ_PORT', env('POWERBI_DB_READ_HOST')
-                ? '6436'
-                : env('POWERBI_DB_PORT', env('DB_PORT', '5432'))),
+            'port' => env('POWERBI_DB_READ_PORT', env('POWERBI_DB_PORT', env('DB_PORT', '5432'))),
             'username' => env('POWERBI_DB_READ_USERNAME', env('POWERBI_DB_USERNAME', env('DB_USERNAME', 'sdc'))),
             'password' => env('POWERBI_DB_READ_PASSWORD', env('POWERBI_DB_PASSWORD', env('DB_PASSWORD', ''))),
         ]),

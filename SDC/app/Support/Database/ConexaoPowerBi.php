@@ -7,10 +7,9 @@ namespace App\Support\Database;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 /**
- * Conexoes do sdc_powerbi: escrita (entrada e materializacao), leitura (API de
+ * Conexoes do sdc_powerbi: escrita (materializacao), leitura (API de
  * BI no membro de BI) e fonte (leitura do sdc no mesmo membro).
  *
  * Diferente de ConexaoGeo, NAO ha fallback para a conexao default: sem
@@ -22,21 +21,15 @@ use RuntimeException;
  */
 final class ConexaoPowerBi
 {
+    use ConexaoSemFallback;
+
     public const CHAVE = 'powerbi_connection';
+
+    public const VARIAVEL = 'DB_POWERBI_CONNECTION (ex.: pgsql_powerbi)';
 
     public const LEITURA = 'pgsql_powerbi_read';
 
     public const FONTE = 'pgsql_fonte_bi';
-
-    /**
-     * Ligada so com a chave definida e apontando para fora da conexao default.
-     */
-    public static function ativa(): bool
-    {
-        $nome = (string) config('database.'.self::CHAVE);
-
-        return $nome !== '' && $nome !== (string) config('database.default');
-    }
 
     /**
      * Nome da conexao de escrita; lanca se o recurso estiver desligado.
@@ -44,15 +37,6 @@ final class ConexaoPowerBi
     public static function nome(): string
     {
         return self::exigirAtiva();
-    }
-
-    public static function exigirAtiva(): string
-    {
-        if (! self::ativa()) {
-            throw new RuntimeException('sdc_powerbi desligado: defina DB_POWERBI_CONNECTION (ex.: pgsql_powerbi).');
-        }
-
-        return (string) config('database.'.self::CHAVE);
     }
 
     public static function escrita(): Connection

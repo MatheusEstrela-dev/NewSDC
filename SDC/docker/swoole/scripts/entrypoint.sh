@@ -279,8 +279,9 @@ echo "vCores=$(nproc 2>/dev/null || echo '?'); workers=${WORKERS}; task-workers=
 #       + <BANCO>_CONN_PROJECTED + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE
 #       <= PG_MAX_CONNECTIONS
 # <BANCO>_CONN_PROJECTED soma as conexoes dedicadas (log, geo, treinamento,
-# ranking), com sessao e pool proprios no MESMO servidor; zero enquanto o
-# modulo segue na pgsql.
+# ranking, entrada), com sessao e pool proprios no MESMO servidor; zero enquanto
+# o modulo segue na pgsql. Excecoes com teto proprio (nao somam aqui): powerbi e
+# powerbi_read (POWERBI_PG_MAX_CONNECTIONS) e fonte_bi (BI_PG_MAX_CONNECTIONS).
 # Descubra o real: psql -c 'SHOW max_connections;'  (dev = 100)
 #   az postgres flexible-server parameter show -g <rg> -s <srv> -n max_connections
 TASK_WORKERS="${OCTANE_TASK_WORKERS:-4}"
@@ -454,10 +455,12 @@ if [ -n "${RANKING_CONN_ALVO}" ]; then
     RANKING_SOURCE_CONN_ALVO="ranking_source_ro"
 fi
 
-# sdc_powerbi so conta com DB_POWERBI_CONNECTION. A escrita cai no lider (soma
-# no teto do sdc, salvo POWERBI_PG_MAX_CONNECTIONS). Leitura e fonte vivem no
-# membro de BI, servidor proprio com teto BI_PG_MAX_CONNECTIONS (rotulo BI):
-# nao pesam no max_connections do lider.
+# Separacao C1. sdc_entrada (caixa de entrada) vive NO CLUSTER do sdc: soma no
+# max_connections do lider, como log/geo/treinamento (so conta com
+# DB_ENTRADA_CONNECTION). sdc_powerbi (bi_* e controle) vive em instancia
+# Postgres PROPRIA (db_powerbi, fora do Patroni): escrita e leitura caem no
+# MESMO servidor e somam contra POWERBI_PG_MAX_CONNECTIONS, nao contra o lider.
+# A fonte do materializador (sdc no membro de BI) segue contra BI_PG_MAX_CONNECTIONS.
 POWERBI_READ_CONN_ALVO=""
 FONTE_BI_CONN_ALVO=""
 if [ -n "${DB_POWERBI_CONNECTION:-}" ]; then
@@ -465,7 +468,7 @@ if [ -n "${DB_POWERBI_CONNECTION:-}" ]; then
     FONTE_BI_CONN_ALVO="pgsql_fonte_bi"
 fi
 
-BANCOS_DEDICADOS="LOG GEO GEO_READ TREINAMENTO RANKING RANKING_READ RANKING_SOURCE POWERBI POWERBI_READ FONTE_BI"
+BANCOS_DEDICADOS="LOG GEO GEO_READ TREINAMENTO RANKING RANKING_READ RANKING_SOURCE ENTRADA POWERBI POWERBI_READ FONTE_BI"
 projetar_conexao_dedicada LOG "${DB_LOG_CONNECTION:-}" SWOOLE_PG_LOG_POOL_SIZE LOG_DB_HOST 4
 projetar_conexao_dedicada GEO "${DB_GEO_CONNECTION:-}" SWOOLE_PG_GEO_POOL_SIZE GEO_DB_HOST 4
 projetar_conexao_dedicada GEO_READ "${GEO_READ_CONN_ALVO}" SWOOLE_PG_GEO_READ_POOL_SIZE GEO_DB_HOST 4 GEO SWOOLE_PG_GEO_REPLICA_POOL_SIZE 1 "${GEO_REPLICA_HOSTS}"
@@ -473,8 +476,9 @@ projetar_conexao_dedicada TREINAMENTO "${DB_TREINAMENTO_CONNECTION:-}" SWOOLE_PG
 projetar_conexao_dedicada RANKING "${RANKING_CONN_ALVO}" SWOOLE_PG_RANKING_POOL_SIZE RANKING_DB_HOST 4
 projetar_conexao_dedicada RANKING_READ "${RANKING_READ_CONN_ALVO}" SWOOLE_PG_RANKING_READ_POOL_SIZE RANKING_DB_HOST 3 RANKING
 projetar_conexao_dedicada RANKING_SOURCE "${RANKING_SOURCE_CONN_ALVO}" SWOOLE_PG_RANKING_SOURCE_POOL_SIZE RANKING_SOURCE_HOST 2 SDC
+projetar_conexao_dedicada ENTRADA "${DB_ENTRADA_CONNECTION:-}" SWOOLE_PG_ENTRADA_POOL_SIZE ENTRADA_DB_HOST 4
 projetar_conexao_dedicada POWERBI "${DB_POWERBI_CONNECTION:-}" SWOOLE_PG_POWERBI_POOL_SIZE POWERBI_DB_HOST 4
-projetar_conexao_dedicada POWERBI_READ "${POWERBI_READ_CONN_ALVO}" SWOOLE_PG_POWERBI_READ_POOL_SIZE POWERBI_DB_READ_HOST 4 BI
+projetar_conexao_dedicada POWERBI_READ "${POWERBI_READ_CONN_ALVO}" SWOOLE_PG_POWERBI_READ_POOL_SIZE POWERBI_DB_READ_HOST 4 POWERBI
 projetar_conexao_dedicada FONTE_BI "${FONTE_BI_CONN_ALVO}" SWOOLE_PG_FONTE_BI_POOL_SIZE FONTE_BI_DB_HOST 2 BI
 
 if [ -n "${POOLER_MODE}" ]; then
