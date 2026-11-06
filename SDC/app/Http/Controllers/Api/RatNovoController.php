@@ -50,9 +50,8 @@ use Illuminate\Http\Request;
  * @OA\Schema(
  *     schema="RatNovoStoreRequest",
  *     type="object",
- *     required={"numero_bos"},
- *     @OA\Property(property="numero_bos", type="string", example="BOS-2026-001"),
- *     @OA\Property(property="status", type="integer", enum={0, 1}, default=0),
+ *     @OA\Property(property="numero_bos", type="string", readOnly=true, description="Ignorado: o numero do BOS e gerado pelo servidor (RatProtocoloService)", example="BOS-2026-001"),
+ *     @OA\Property(property="status", type="integer", enum={0, 1}, default=0, description="1 finaliza o RAT na criacao (mesmo caminho do finalize)"),
  *     @OA\Property(
  *         property="dados_gerais",
  *         type="object",
@@ -180,8 +179,9 @@ class RatNovoController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // numero_bos nao e validado: o servidor gera o protocolo e um valor
+        // enviado pelo cliente e ignorado. status=1 finaliza na criacao.
         $validated = $request->validate([
-            'numero_bos'   => 'nullable|string|max:50',
             'status'       => 'integer|in:0,1',
             'dados_gerais' => 'nullable|array',
         ]);
@@ -190,6 +190,7 @@ class RatNovoController extends Controller
         // dadosGerais, entao o bloco era validado e descartado em silencio.
         $ocorrencia = $this->service->createRat(RatRelatosDTO::fromArray([
             'dadosGerais' => $validated['dados_gerais'] ?? null,
+            'finalize'    => (int) ($validated['status'] ?? 0) === 1,
         ]));
 
         return response()->json([

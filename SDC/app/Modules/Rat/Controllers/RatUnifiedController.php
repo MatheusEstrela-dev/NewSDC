@@ -377,8 +377,8 @@ class RatUnifiedController extends BaseController
     public function update(Request $request, string $id): RedirectResponse|JsonResponse
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
-        if ($ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isPast()) {
-            $msg = 'O prazo de edição de 48h foi encerrado. Este RAT não pode mais ser alterado.';
+        if ($this->writeService->prazoEdicaoEncerrado($ocorrencia)) {
+            $msg = RatWriteService::MSG_PRAZO_EDICAO_ENCERRADO;
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }

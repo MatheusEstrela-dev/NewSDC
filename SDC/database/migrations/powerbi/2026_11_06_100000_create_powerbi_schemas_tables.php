@@ -91,6 +91,12 @@ return new class extends Migration
      * Caixa de entrada. id uuidv7 (PG18) ordena por tempo e mantem o indice
      * da PK compacto; a PK inclui recebido_em por causa da particao.
      *
+     * payload e text: vai cifrado (Crypt::encryptString, APP_KEY) porque pode
+     * trazer CPF/nome; vira NULL quando a mensagem termina. So entrada.mortas
+     * guarda o cifrado (NOT NULL) para reprocessamento manual. rota guarda
+     * metodo, caminho e parametros crus da rota (ids), sem dado pessoal.
+     * Acesso exclusivo por App\Modules\Integracao\Support\CaixaDeEntrada.
+     *
      * @return list<string>
      */
     private function entrada(): array
@@ -109,7 +115,8 @@ return new class extends Migration
                     ip                   inet        NULL,
                     chave_idempotente    text        NULL,
                     hash_payload         bytea       NULL,
-                    payload              jsonb       NOT NULL,
+                    payload              text        NULL,
+                    rota                 jsonb       NULL,
                     cabecalhos           jsonb       NULL,
                     status               text        NOT NULL DEFAULT 'recebida',
                     tentativas           integer     NOT NULL DEFAULT 0,
@@ -150,6 +157,7 @@ return new class extends Migration
                     PRIMARY KEY (fonte, chave)
                 )
             SQL,
+            // chave = escopo do cliente (t<token_id>: ou u<user_id>:) + Idempotency-Key.
             'CREATE INDEX IF NOT EXISTS idx_entrada_chaves_expira ON entrada.chaves_idempotentes (expira_em)',
             // Copia da mensagem que esgotou as tentativas (dead-letter); sem particao, volume baixo.
             <<<'SQL'
@@ -165,7 +173,8 @@ return new class extends Migration
                     ip                   inet        NULL,
                     chave_idempotente    text        NULL,
                     hash_payload         bytea       NULL,
-                    payload              jsonb       NOT NULL,
+                    payload              text        NOT NULL,
+                    rota                 jsonb       NULL,
                     cabecalhos           jsonb       NULL,
                     status               text        NOT NULL DEFAULT 'morta',
                     tentativas           integer     NOT NULL DEFAULT 0,
