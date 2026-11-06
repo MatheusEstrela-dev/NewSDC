@@ -6,7 +6,7 @@ namespace App\Modules\Integracao\Console;
 
 use App\Modules\Integracao\Jobs\AplicarEntradaJob;
 use App\Modules\Integracao\Support\CaixaDeEntrada;
-use App\Support\Database\ConexaoPowerBi;
+use App\Support\Database\ConexaoEntrada;
 use Illuminate\Console\Command;
 
 final class ReenfileirarCommand extends Command
@@ -17,8 +17,8 @@ final class ReenfileirarCommand extends Command
 
     public function handle(CaixaDeEntrada $caixa): int
     {
-        if (! ConexaoPowerBi::ativa()) {
-            $this->error('sdc_powerbi desligado (DB_POWERBI_CONNECTION).');
+        if (! ConexaoEntrada::ativa()) {
+            $this->error('sdc_entrada desligado (DB_ENTRADA_CONNECTION).');
 
             return self::FAILURE;
         }

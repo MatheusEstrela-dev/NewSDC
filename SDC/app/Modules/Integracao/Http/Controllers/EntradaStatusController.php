@@ -6,7 +6,7 @@ namespace App\Modules\Integracao\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Integracao\Support\CaixaDeEntrada;
-use App\Support\Database\ConexaoPowerBi;
+use App\Support\Database\ConexaoEntrada;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -22,7 +22,7 @@ final class EntradaStatusController extends Controller
         $user = $request->user();
         $token = $user?->currentAccessToken();
 
-        $status = ConexaoPowerBi::ativa() && $user !== null
+        $status = ConexaoEntrada::ativa() && $user !== null
             ? $caixa->status(
                 $id,
                 $token instanceof PersonalAccessToken ? (int) $token->getKey() : null,
