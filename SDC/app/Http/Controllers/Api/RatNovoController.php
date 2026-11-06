@@ -181,17 +181,11 @@ class RatNovoController extends Controller
     {
         // numero_bos nao e validado: o servidor gera o protocolo e um valor
         // enviado pelo cliente e ignorado. status=1 finaliza na criacao.
-        $validated = $request->validate([
-            'status'       => 'integer|in:0,1',
-            'dados_gerais' => 'nullable|array',
-        ]);
+        $validated = $request->validate(RatRelatosDTO::REGRAS_CRIACAO_RAT_NOVO);
 
         // A API recebe dados_gerais (snake_case); o service entendia so
         // dadosGerais, entao o bloco era validado e descartado em silencio.
-        $ocorrencia = $this->service->createRat(RatRelatosDTO::fromArray([
-            'dadosGerais' => $validated['dados_gerais'] ?? null,
-            'finalize'    => (int) ($validated['status'] ?? 0) === 1,
-        ]));
+        $ocorrencia = $this->service->createRat(RatRelatosDTO::fromRatNovo($validated));
 
         return response()->json([
             'message' => 'RAT criado com sucesso!',

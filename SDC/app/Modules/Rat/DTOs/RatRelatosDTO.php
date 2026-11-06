@@ -34,6 +34,12 @@ final readonly class RatRelatosDTO
         'vistoria'    => 'nullable|array',
     ];
 
+    /** Regras da criacao via POST v1/rat-novo (sincrona e caixa de entrada). */
+    public const REGRAS_CRIACAO_RAT_NOVO = [
+        'status'       => 'integer|in:0,1',
+        'dados_gerais' => 'nullable|array',
+    ];
+
     /**
      * @param  list<RatRecursoDTO>|null  $recursos
      * @param  list<RatEnvolvidoDTO>|null  $envolvidos
@@ -49,6 +55,40 @@ final readonly class RatRelatosDTO
         // RegistroCompletoV1 na criacao.
         public bool $temConteudo = false,
     ) {}
+
+    /**
+     * Monta o DTO da criacao via POST v1/rat/protocolos (snake_case da
+     * ReceiveRatBIRequest). Unico ponto: controller e aplicador usam o mesmo.
+     *
+     * @param array<string, mixed> $dados validated() da ReceiveRatBIRequest
+     */
+    public static function fromProtocolo(array $dados): self
+    {
+        return self::fromArray([
+            'dadosGerais' => $dados['dados_gerais'] ?? [],
+            'comunicacao' => $dados['comunicacao'] ?? [],
+            'local'       => $dados['local'] ?? [],
+            'endereco'    => $dados['endereco'] ?? [],
+            'recursos'    => $dados['recursos'] ?? [],
+            'envolvidos'  => $dados['envolvidos'] ?? [],
+            'vistoria'    => $dados['vistoria'] ?? [],
+            'finalize'    => $dados['finalize'] ?? false,
+        ]);
+    }
+
+    /**
+     * Monta o DTO da criacao via POST v1/rat-novo: dados_gerais (snake_case)
+     * vira dadosGerais e status=1 vira finalize.
+     *
+     * @param array<string, mixed> $validated validate() de REGRAS_CRIACAO_RAT_NOVO
+     */
+    public static function fromRatNovo(array $validated): self
+    {
+        return self::fromArray([
+            'dadosGerais' => $validated['dados_gerais'] ?? null,
+            'finalize'    => (int) ($validated['status'] ?? 0) === 1,
+        ]);
+    }
 
     /** @param array<string, mixed> $dados validated() do formulario/API */
     public static function fromArray(array $dados): self
