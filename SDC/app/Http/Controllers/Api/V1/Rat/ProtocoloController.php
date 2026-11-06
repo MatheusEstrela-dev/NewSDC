@@ -141,16 +141,7 @@ class ProtocoloController extends Controller
         // input() deixava passar campos fora dele.
         $dados = $request->validated();
 
-        $rat = $this->writeService->createWithData(RatRelatosDTO::fromArray([
-            'dadosGerais' => $dados['dados_gerais'] ?? [],
-            'comunicacao' => $dados['comunicacao'] ?? [],
-            'local'       => $dados['local'] ?? [],
-            'endereco'    => $dados['endereco'] ?? [],
-            'recursos'    => $dados['recursos'] ?? [],
-            'envolvidos'  => $dados['envolvidos'] ?? [],
-            'vistoria'    => $dados['vistoria'] ?? [],
-            'finalize'    => $dados['finalize'] ?? false,
-        ]));
+        $rat = $this->writeService->createWithData(RatRelatosDTO::fromProtocolo($dados));
 
         return response()->json([
             'success' => true,
