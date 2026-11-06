@@ -2,11 +2,17 @@
 # ============================================================================
 # SDC - Entrypoint de Producao (Octane sobre Swoole)
 # Unico entrypoint de producao do projeto (o legado FrankenPHP/App Service
-# foi removido). OCTANE_SERVER=swoole e DB_PERSISTENT=false sao obrigatorios
-# sob SWOOLE_HOOK_ALL.
+# foi removido). OCTANE_SERVER=swoole e DB_PERSISTENT=false sao obrigatorios.
 # ============================================================================
 
 set -e
+
+# A configuracao do Octane desliga hooks ate haver isolamento completo das
+# requisicoes HTTP. Recusar a flag antiga evita um deploy que aparente liga-los.
+if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+    echo "FATAL: OCTANE_HOOK_FLAGS_ENABLED=true indisponivel nesta versao do Octane."
+    exit 1
+fi
 
 # Anexos no bind mount (ANEXOS_ROOT): app e queue podem rodar com usuarios
 # diferentes (root/www-data). umask 002 mantem diretorios/arquivos novos

@@ -15,6 +15,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Log\Context\Repository as ContextRepository;
 use Laravel\Octane\Events\RequestReceived;
+use Laravel\Octane\Events\TaskReceived;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -175,11 +176,13 @@ class AppServiceProvider extends ServiceProvider
         // coroutines. O cache deve ser limpo em deploy/comando admin ou quando
         // permissoes forem alteradas, nao no RequestReceived.
 
-        // Query budget guard: bind globalmente e zera contador por request.
+        // Um listener por worker; reset antes de cada request ou task.
         $budget = $this->app->make(QueryBudgetGuard::class);
         $budget->bind();
-        if (class_exists(\Laravel\Octane\Events\RequestReceived::class)) {
-            $this->app['events']->listen(RequestReceived::class, fn () => $budget->reset());
+        foreach ([RequestReceived::class, TaskReceived::class] as $event) {
+            if (class_exists($event)) {
+                $this->app['events']->listen($event, fn () => $budget->reset());
+            }
         }
 
         // Overrides para NativePHP / Mobile / Android

@@ -7,6 +7,7 @@ namespace App\Database;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Swoole\Coroutine;
 
 /**
  * Guarda de budget de queries por request. Sinaliza N+1 cedo via DB::listen.
@@ -15,13 +16,18 @@ use Illuminate\Support\Facades\Log;
  * - Acima de fail_at: log error (confirmado).
  * - isentar(): silencia o request corrente, para varredura em chunk legitima.
  *
- * Reset por request via Octane RequestReceived listener (em AppServiceProvider).
+ * Reset por request/task via Octane RequestReceived/TaskReceived (em AppServiceProvider).
  */
 class QueryBudgetGuard
 {
-    private int $count = 0;
+    private const CONTEXT_KEY = '__sdc_query_budget_guard';
+
+    private const EMPTY_STATE = ['count' => 0, 'isento' => false];
+
+    /** @var array{count: int, isento: bool} */
+    private array $fallbackState = self::EMPTY_STATE;
+
     private bool $bound = false;
-    private bool $isento = false;
 
     public function __construct(
         private int $warnAt = 30,
@@ -40,11 +46,13 @@ class QueryBudgetGuard
      * pega N+1 de verdade nas outras rotas. Aviso falso em toda execucao custa
      * mais que isso: ensina a equipe a ignorar o alarme.
      *
-     * Vale so para este request -- reset() em RequestReceived limpa a isencao.
+     * Vale so para a execucao corrente; os eventos Octane limpam a isencao.
      */
     public function isentar(): void
     {
-        $this->isento = true;
+        $state = $this->state();
+        $state['isento'] = true;
+        $this->setState($state);
     }
 
     public function bind(): void
@@ -57,22 +65,24 @@ class QueryBudgetGuard
         DB::listen(function (QueryExecuted $event): void {
             // Conta sempre, mesmo isento: count() continua sendo o numero real de
             // queries do request. So o aviso e que fica em silencio.
-            $this->count++;
+            $state = $this->state();
+            $state['count']++;
+            $this->setState($state);
 
-            if ($this->isento) {
+            if ($state['isento']) {
                 return;
             }
 
-            if ($this->count === $this->warnAt + 1) {
+            if ($state['count'] === $this->warnAt + 1) {
                 Log::warning('Query budget warning crossed', [
-                    'count' => $this->count,
+                    'count' => $state['count'],
                     'last_sql' => $event->sql,
                 ]);
             }
 
-            if ($this->count === $this->failAt + 1) {
+            if ($state['count'] === $this->failAt + 1) {
                 Log::error('Query budget exceeded - possivel N+1', [
-                    'count' => $this->count,
+                    'count' => $state['count'],
                     'last_sql' => $event->sql,
                 ]);
             }
@@ -81,15 +91,38 @@ class QueryBudgetGuard
 
     public function reset(): void
     {
-        $this->count = 0;
-        // A isencao e do request, nao do worker: sem zerar aqui, um export
-        // silenciaria o guard para todos os requests seguintes daquele worker
-        // Octane -- e o N+1 real de outra rota passaria sem aviso.
-        $this->isento = false;
+        $this->setState(self::EMPTY_STATE);
     }
 
     public function count(): int
     {
-        return $this->count;
+        return $this->state()['count'];
+    }
+
+    /** @return array{count: int, isento: bool} */
+    private function state(): array
+    {
+        if ($this->inCoroutine()) {
+            return Coroutine::getContext()[self::CONTEXT_KEY] ?? self::EMPTY_STATE;
+        }
+
+        return $this->fallbackState;
+    }
+
+    /** @param array{count: int, isento: bool} $state */
+    private function setState(array $state): void
+    {
+        if ($this->inCoroutine()) {
+            Coroutine::getContext()[self::CONTEXT_KEY] = $state;
+
+            return;
+        }
+
+        $this->fallbackState = $state;
+    }
+
+    private function inCoroutine(): bool
+    {
+        return extension_loaded('swoole') && Coroutine::getCid() > 0;
     }
 }
