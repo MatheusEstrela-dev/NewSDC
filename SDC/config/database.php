@@ -500,8 +500,9 @@ return [
         // Usuario leitor exclusivo das projecoes. Conceder SELECT no destino.
         'ranking_read' => [
             'driver' => 'pgsql',
-            'host' => env('RANKING_DB_HOST', '127.0.0.1'),
-            'port' => env('RANKING_DB_PORT', '5432'),
+            'read_only' => true,
+            'host' => env('RANKING_READ_HOST', env('RANKING_DB_HOST', '127.0.0.1')),
+            'port' => env('RANKING_READ_PORT', env('RANKING_DB_PORT', '5432')),
             'database' => env('RANKING_DB_DATABASE', 'sdc_ranking'),
             'username' => env('RANKING_READ_USERNAME', ''),
             'password' => env('RANKING_READ_PASSWORD', ''),
@@ -520,6 +521,7 @@ return [
         // Nao usar o OutboxDispatcher aqui: ele grava na origem.
         'ranking_source_ro' => [
             'driver' => 'pgsql',
+            'read_only' => true,
             'host' => env('RANKING_SOURCE_HOST', '127.0.0.1'),
             'port' => env('RANKING_SOURCE_PORT', '5432'),
             'database' => env('RANKING_SOURCE_DATABASE', 'sdc'),
@@ -599,6 +601,7 @@ return [
         // SELECT dos mapas. Role de leitura propria em producao
         // (GEO_DB_READ_USERNAME); nas replicas quando houver.
         'pgsql_geo_read' => $bancoDedicado('GEO', 'sdc_geoespacial', 'geo-read', array_filter([
+            'read_only' => true,
             'username' => env('GEO_DB_READ_USERNAME', env('GEO_DB_USERNAME', env('DB_USERNAME', 'sdc'))),
             'password' => env('GEO_DB_READ_PASSWORD', env('GEO_DB_PASSWORD', env('DB_PASSWORD', ''))),
             'replica_routing' => $geoReplicaRouting ?: null,
@@ -629,6 +632,7 @@ return [
         // sem read/write: o fallback do ConsistentPostgresConnection mandaria
         // a leitura de BI para o lider, que e justamente o que se evita.
         'pgsql_powerbi_read' => $bancoDedicado('POWERBI', 'sdc_powerbi', 'powerbi-read', [
+            'read_only' => true,
             'host' => env('POWERBI_DB_READ_HOST', env('POWERBI_DB_HOST', env('DB_HOST', '127.0.0.1'))),
             'port' => env('POWERBI_DB_READ_PORT', env('POWERBI_DB_READ_HOST')
                 ? '6436'
@@ -643,6 +647,7 @@ return [
         // lider e venceria o host.
         'pgsql_fonte_bi' => [
             'driver' => 'pgsql',
+            'read_only' => true,
             'host' => env('FONTE_BI_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('FONTE_BI_DB_PORT', env('FONTE_BI_DB_HOST') ? '6436' : env('DB_PORT', '5432')),
             'database' => env('DB_DATABASE', 'sdc'),
