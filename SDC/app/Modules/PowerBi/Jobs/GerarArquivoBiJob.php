@@ -88,29 +88,35 @@ final class GerarArquivoBiJob implements ShouldQueue
     /** CSV (;, UTF-8 com BOM, como os exports existentes) num temporario local. */
     private function gerarCsv(DefinicaoTabela $d, LeitorTabelaBi $leitor): string
     {
-        $tipos = $leitor->tipos($d);
-        $temporario = sprintf('%s/powerbi-%s-%s-%s.csv', sys_get_temp_dir(), $d->modulo, $d->nome, bin2hex(random_bytes(8)));
-        $fh = fopen($temporario, 'wb');
-        if ($fh === false) {
-            throw new RuntimeException("Falha ao abrir {$temporario} para escrita.");
-        }
+        $temporario = null;
+        $fh = null;
 
         try {
-            fwrite($fh, "\xEF\xBB\xBF");
-            fputcsv($fh, array_keys($tipos), ';', '"', '');
-            foreach ($leitor->lotes($d, $tipos, (int) config('powerbi.lote', 1000)) as $lote) {
-                foreach ($lote as $linha) {
-                    fputcsv($fh, array_map(fn (mixed $v): mixed => is_bool($v) ? ($v ? 'true' : 'false') : $v, $linha), ';', '"', '');
+            return $leitor->emSnapshot(function () use ($d, $leitor, &$temporario, &$fh): string {
+                $tipos = $leitor->tipos($d);
+                $temporario = sprintf('%s/powerbi-%s-%s-%s.csv', sys_get_temp_dir(), $d->modulo, $d->nome, bin2hex(random_bytes(8)));
+                $fh = fopen($temporario, 'wb');
+                if ($fh === false) {
+                    throw new RuntimeException("Falha ao abrir {$temporario} para escrita.");
                 }
-            }
+
+                fwrite($fh, "\xEF\xBB\xBF");
+                fputcsv($fh, array_keys($tipos), ';', '"', '');
+                foreach ($leitor->lotes($d, $tipos, (int) config('powerbi.lote', 1000)) as $lote) {
+                    foreach ($lote as $linha) {
+                        fputcsv($fh, array_map(fn (mixed $v): mixed => is_bool($v) ? ($v ? 'true' : 'false') : $v, $linha), ';', '"', '');
+                    }
+                }
+                fclose($fh);
+                $fh = null;
+
+                return $temporario;
+            });
         } catch (Throwable $e) {
-            fclose($fh);
-            @unlink($temporario);
+            is_resource($fh) && fclose($fh);
+            $temporario !== null && is_file($temporario) && @unlink($temporario);
 
             throw $e;
         }
-        fclose($fh);
-
-        return $temporario;
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\PowerBi\Console;
 
-use App\Modules\PowerBi\Arquivos\LeitorTabelaBi;
 use App\Modules\PowerBi\Arquivos\PublicadorParquetBi;
 use App\Modules\PowerBi\Arquivos\RegistroDeArquivos;
 use App\Modules\PowerBi\Support\CatalogoBi;
@@ -25,7 +24,6 @@ final class PublicarArquivosCommand extends Command
     public function handle(
         CatalogoBi $catalogo,
         PublicadorParquetBi $publicador,
-        LeitorTabelaBi $leitor,
         RegistroDeArquivos $registro,
     ): int {
         if (! ConexaoPowerBi::ativa()) {
@@ -60,7 +58,7 @@ final class PublicarArquivosCommand extends Command
                     } finally {
                         @unlink($gerado['temporario']);
                     }
-                    $registro->registrar($modulo, $d->nome, $caminho, $gerado['linhas'], $leitor->dadosAte($d));
+                    $registro->registrar($modulo, $d->nome, $caminho, $gerado['linhas'], $gerado['dados_ate']);
                     $removidos = $registro->aplicarRetencao($modulo, $d->nome);
                     $this->info(sprintf('%s.%s: %d linhas -> %s (retencao apagou %d)', $modulo, $d->nome, $gerado['linhas'], $caminho, $removidos));
                 } catch (Throwable $e) {
