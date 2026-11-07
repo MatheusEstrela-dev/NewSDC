@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace App\Modules\PowerBi\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\PowerBi\Http\ParametrosConsultaBi;
 use App\Modules\PowerBi\Support\CatalogoBi;
 use App\Modules\PowerBi\Support\DefinicaoTabela;
 use App\Support\Database\ConexaoPowerBi;
 use App\Support\Database\LeituraConsistentePostgres;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Throwable;
+use Illuminate\Validation\ValidationException;
 
 /**
  * GET /api/v1/bi/{modulo}/{tabela}: leitura paginada por keyset
@@ -39,31 +41,39 @@ final class BiTabelaController extends Controller
         }
 
         try {
-            $desde = $request->query('desde') ? Carbon::parse((string) $request->query('desde')) : null;
-            $apos = $this->decodificar((string) $request->query('cursor', ''), count($d->pk));
-        } catch (Throwable) {
-            return response()->json(['message' => 'Parametro cursor ou desde invalido.'], 422);
+            $parametros = ParametrosConsultaBi::de($request->query(), $d);
+
+            return $this->pagina($d, $parametros);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Parametros de consulta invalidos.', 'errors' => $e->errors()], 422);
         }
+    }
 
-        $limite = max(1, min(
-            (int) $request->query('limite', (int) config('powerbi.api.limite_padrao', 1000)),
-            (int) config('powerbi.api.limite_maximo', 10000)
-        ));
-
+    private function pagina(DefinicaoTabela $d, ParametrosConsultaBi $parametros): JsonResponse
+    {
         $db = ConexaoPowerBi::leitura();
         // Cerca, linhas e referencia pertencem ao mesmo snapshot desta pagina.
         // A proxima requisicao abre outro snapshot e retoma pelo keyset.
-        return LeituraConsistentePostgres::executar($db, function () use ($db, $d, $request, $desde, $apos, $modulo, $tabela, $limite): JsonResponse {
-            $consulta = $this->consulta($db, $d, $request, $desde, $apos, $this->cerca($db, $modulo), $limite);
+        return LeituraConsistentePostgres::executar($db, function () use ($db, $d, $parametros): JsonResponse {
+            $consulta = $this->consulta($db, $d, $parametros, $this->cerca($db, $d->modulo));
 
-            $linhas = $consulta->get();
+            try {
+                $linhas = $consulta->get();
+            } catch (QueryException $e) {
+                // PKs e filtros variam por tabela. O PostgreSQL valida seus
+                // tipos; somente erros de conversao da consulta viram 422.
+                if (in_array($e->errorInfo[0] ?? null, ['22P02', '22003', '22007', '22008'], true)) {
+                    throw ValidationException::withMessages(['consulta' => 'Cursor ou filtro incompativel com os tipos da tabela.']);
+                }
+                throw $e;
+            }
             $proximo = null;
-            if ($linhas->count() > $limite) {
-                $linhas = $linhas->take($limite);
+            if ($linhas->count() > $parametros->limite) {
+                $linhas = $linhas->take($parametros->limite);
                 $proximo = $this->codificar($linhas->last(), $d);
             }
 
-            $dadosAte = $db->table('controle.cursores')->where('modulo', $modulo)->where('tabela', $tabela)->value('fonte_replay_em');
+            $dadosAte = $db->table('controle.cursores')->where('modulo', $d->modulo)->where('tabela', $d->nome)->value('fonte_replay_em');
             $dadosAte = $dadosAte !== null ? Carbon::parse($dadosAte)->toIso8601String() : null;
 
             $dados = $linhas->map(fn (object $l): array => $this->saida($l, $d))->values()->all();
@@ -76,7 +86,7 @@ final class BiTabelaController extends Controller
         });
     }
 
-    private function consulta(Connection $db, DefinicaoTabela $d, Request $request, ?Carbon $desde, ?array $apos, ?string $cerca, int $limite): Builder
+    private function consulta(Connection $db, DefinicaoTabela $d, ParametrosConsultaBi $parametros, ?string $cerca): Builder
     {
         $colunas = array_values(array_unique([...$d->expostas, ...$d->pk]));
         $q = $db->table($d->alvo())
@@ -84,24 +94,19 @@ final class BiTabelaController extends Controller
             ->addSelect('materializado_em', 'removido')
             ->selectRaw('materializado_em::text AS _m');
 
-        foreach ($d->filtros as $coluna) {
-            $valor = $request->query($coluna);
-            if (is_scalar($valor) && $valor !== '') {
-                $q->where($coluna, $valor);
-            }
+        foreach ($parametros->filtros as $coluna => $valor) {
+            $q->where($coluna, $valor);
         }
-        if ($desde !== null) {
-            // O binding padrao de DateTime do Laravel remove microssegundos
-            // e offset; ambos fazem parte da fronteira incremental.
-            $q->where('materializado_em', '>', $desde->format('Y-m-d H:i:s.uP'));
+        if ($parametros->desde !== null) {
+            $q->where('materializado_em', '>', $parametros->desde);
         }
         if ($cerca !== null) {
             $q->where('materializado_em', '<', $cerca);
         }
-        if ($apos !== null) {
+        if ($parametros->apos !== null) {
             $q->whereRaw(
                 '(materializado_em, '.implode(', ', $d->pk).') > (?, '.implode(', ', array_fill(0, count($d->pk), '?')).')',
-                $apos
+                $parametros->apos
             );
         }
 
@@ -110,7 +115,7 @@ final class BiTabelaController extends Controller
             $q->orderBy($c);
         }
 
-        return $q->limit($limite + 1);
+        return $q->limit($parametros->limite + 1);
     }
 
     /** Inicio da execucao mais antiga em curso do modulo (ignora travadas ha mais de 2h). */
@@ -143,19 +148,5 @@ final class BiTabelaController extends Controller
         $partes = [$dados['_m'], ...array_map(fn (string $c): mixed => $dados[$c], $d->pk)];
 
         return rtrim(strtr(base64_encode(json_encode($partes, JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
-    }
-
-    /** @return list<mixed>|null */
-    private function decodificar(string $cursor, int $partesPk): ?array
-    {
-        if ($cursor === '') {
-            return null;
-        }
-        $partes = json_decode((string) base64_decode(strtr($cursor, '-_', '+/'), true), true, 4, JSON_THROW_ON_ERROR);
-        if (! is_array($partes) || count($partes) !== $partesPk + 1 || ! array_is_list($partes)) {
-            throw new \InvalidArgumentException('cursor invalido');
-        }
-
-        return array_map(fn (mixed $p): string => (string) $p, $partes);
     }
 }
