@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Modules\PowerBi\Support\CatalogoBi;
 use App\Modules\PowerBi\Support\DefinicaoTabela;
 use App\Support\Database\ConexaoPowerBi;
+use App\Support\Database\LeituraConsistentePostgres;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,31 +51,35 @@ final class BiTabelaController extends Controller
         ));
 
         $db = ConexaoPowerBi::leitura();
-        $consulta = $this->consulta($d, $request, $desde, $apos, $this->cerca($modulo), $limite);
+        // Cerca, linhas e referencia pertencem ao mesmo snapshot desta pagina.
+        // A proxima requisicao abre outro snapshot e retoma pelo keyset.
+        return LeituraConsistentePostgres::executar($db, function () use ($db, $d, $request, $desde, $apos, $modulo, $tabela, $limite): JsonResponse {
+            $consulta = $this->consulta($db, $d, $request, $desde, $apos, $this->cerca($db, $modulo), $limite);
 
-        $linhas = $consulta->get();
-        $proximo = null;
-        if ($linhas->count() > $limite) {
-            $linhas = $linhas->take($limite);
-            $proximo = $this->codificar($linhas->last(), $d);
-        }
+            $linhas = $consulta->get();
+            $proximo = null;
+            if ($linhas->count() > $limite) {
+                $linhas = $linhas->take($limite);
+                $proximo = $this->codificar($linhas->last(), $d);
+            }
 
-        $dadosAte = $db->table('controle.cursores')->where('modulo', $modulo)->where('tabela', $tabela)->value('fonte_replay_em');
-        $dadosAte = $dadosAte !== null ? Carbon::parse($dadosAte)->toIso8601String() : null;
+            $dadosAte = $db->table('controle.cursores')->where('modulo', $modulo)->where('tabela', $tabela)->value('fonte_replay_em');
+            $dadosAte = $dadosAte !== null ? Carbon::parse($dadosAte)->toIso8601String() : null;
 
-        $dados = $linhas->map(fn (object $l): array => $this->saida($l, $d))->values()->all();
+            $dados = $linhas->map(fn (object $l): array => $this->saida($l, $d))->values()->all();
 
-        return response()->json(
-            ['dados' => $dados, 'proximo_cursor' => $proximo, 'dados_ate' => $dadosAte],
-            200,
-            $dadosAte !== null ? ['X-Dados-Ate' => $dadosAte] : []
-        );
+            return response()->json(
+                ['dados' => $dados, 'proximo_cursor' => $proximo, 'dados_ate' => $dadosAte],
+                200,
+                $dadosAte !== null ? ['X-Dados-Ate' => $dadosAte] : []
+            );
+        });
     }
 
-    private function consulta(DefinicaoTabela $d, Request $request, ?Carbon $desde, ?array $apos, ?string $cerca, int $limite): Builder
+    private function consulta(Connection $db, DefinicaoTabela $d, Request $request, ?Carbon $desde, ?array $apos, ?string $cerca, int $limite): Builder
     {
         $colunas = array_values(array_unique([...$d->expostas, ...$d->pk]));
-        $q = ConexaoPowerBi::leitura()->table($d->alvo())
+        $q = $db->table($d->alvo())
             ->select($colunas)
             ->addSelect('materializado_em', 'removido')
             ->selectRaw('materializado_em::text AS _m');
@@ -85,7 +91,9 @@ final class BiTabelaController extends Controller
             }
         }
         if ($desde !== null) {
-            $q->where('materializado_em', '>', $desde);
+            // O binding padrao de DateTime do Laravel remove microssegundos
+            // e offset; ambos fazem parte da fronteira incremental.
+            $q->where('materializado_em', '>', $desde->format('Y-m-d H:i:s.uP'));
         }
         if ($cerca !== null) {
             $q->where('materializado_em', '<', $cerca);
@@ -106,9 +114,9 @@ final class BiTabelaController extends Controller
     }
 
     /** Inicio da execucao mais antiga em curso do modulo (ignora travadas ha mais de 2h). */
-    private function cerca(string $modulo): ?string
+    private function cerca(Connection $db, string $modulo): ?string
     {
-        $f = ConexaoPowerBi::leitura()->selectOne(
+        $f = $db->selectOne(
             "SELECT min(iniciada_em)::text AS f FROM controle.execucoes
              WHERE modulo = ? AND status = 'executando' AND iniciada_em > now() - interval '2 hours'",
             [$modulo]
