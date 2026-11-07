@@ -27,28 +27,35 @@ final class ExecutorMaterializacao
 
     public function materializar(Materializador $m, ?Carbon $desde = null, bool $seco = false): ResultadoExecucao
     {
-        return $this->comLock($m->modulo(), function () use ($m, $desde, $seco): ResultadoExecucao {
-            $janela = JanelaDaFonte::obter();
-            $cursor = new CursorDeMaterializacao($m->modulo(), $desde);
-            $id = $seco ? null : $this->registro->iniciar($m->modulo(), $desde ? 'incremental_desde' : 'incremental');
+        return $this->comLock($m->modulo(), fn (): ResultadoExecucao => $this->executar($m, $desde, $seco));
+    }
 
-            try {
-                $resultado = $seco
+    private function executar(Materializador $m, ?Carbon $desde, bool $seco): ResultadoExecucao
+    {
+        $id = null;
+
+        try {
+            $resultado = LeituraConsistenteDaFonte::executar(function () use ($m, $desde, $seco, &$id): ResultadoExecucao {
+                $janela = JanelaDaFonte::obter();
+                $cursor = new CursorDeMaterializacao($m->modulo(), $desde);
+                $id = $seco ? null : $this->registro->iniciar($m->modulo(), $desde ? 'incremental_desde' : 'incremental');
+
+                return $seco
                     ? $this->emRollback(fn (): ResultadoExecucao => $m->materializar($janela, $cursor))
                     : $m->materializar($janela, $cursor);
-            } catch (Throwable $e) {
-                if ($id !== null) {
-                    $this->registro->falhar($id, $e);
-                }
-                throw $e;
-            }
-
+            });
+        } catch (Throwable $e) {
             if ($id !== null) {
-                $this->registro->concluir($id, $resultado);
+                $this->registro->falhar($id, $e);
             }
+            throw $e;
+        }
 
-            return $resultado;
-        });
+        if ($id !== null) {
+            $this->registro->concluir($id, $resultado);
+        }
+
+        return $resultado;
     }
 
     /** Materializacao e reconciliacao escrevem a mesma projecao: lock por modulo. */
