@@ -27,34 +27,43 @@ final class ExecutorMaterializacao
 
     public function materializar(Materializador $m, ?Carbon $desde = null, bool $seco = false): ResultadoExecucao
     {
-        return $this->comLock('materializar', $m->modulo(), function () use ($m, $desde, $seco): ResultadoExecucao {
-            $janela = JanelaDaFonte::obter();
-            $cursor = new CursorDeMaterializacao($m->modulo(), $desde);
-            $id = $seco ? null : $this->registro->iniciar($m->modulo(), $desde ? 'incremental_desde' : 'incremental');
-
-            try {
-                $resultado = $seco
-                    ? $this->emRollback(fn (): ResultadoExecucao => $m->materializar($janela, $cursor))
-                    : $m->materializar($janela, $cursor);
-            } catch (Throwable $e) {
-                if ($id !== null) {
-                    $this->registro->falhar($id, $e);
-                }
-                throw $e;
-            }
-
-            if ($id !== null) {
-                $this->registro->concluir($id, $resultado);
-            }
-
-            return $resultado;
-        });
+        return $this->comLock($m->modulo(), fn (): ResultadoExecucao => $this->executar($m, $desde, $seco));
     }
 
-    /** Lock por modulo e operacao; lanca se ja ha execucao em curso. */
-    public function comLock(string $operacao, string $modulo, Closure $fn): mixed
+    private function executar(Materializador $m, ?Carbon $desde, bool $seco): ResultadoExecucao
     {
-        $lock = Cache::lock("powerbi:{$operacao}:{$modulo}", self::LOCK_SEGUNDOS);
+        $id = null;
+
+        try {
+            $resultado = LeituraConsistenteDaFonte::executar(function () use ($m, $desde, $seco, &$id): ResultadoExecucao {
+                $janela = JanelaDaFonte::obter();
+                $cursor = new CursorDeMaterializacao($m->modulo(), $desde);
+                $id = $seco ? null : $this->registro->iniciar($m->modulo(), $desde ? 'incremental_desde' : 'incremental');
+
+                return $seco
+                    ? $this->emRollback(fn (): ResultadoExecucao => $m->materializar($janela, $cursor))
+                    : $m->materializar($janela, $cursor);
+            });
+        } catch (Throwable $e) {
+            if ($id !== null) {
+                $this->registro->falhar($id, $e);
+            }
+            throw $e;
+        }
+
+        if ($id !== null) {
+            $this->registro->concluir($id, $resultado);
+        }
+
+        return $resultado;
+    }
+
+    /** Materializacao e reconciliacao escrevem a mesma projecao: lock por modulo. */
+    public function comLock(string $modulo, Closure $fn): mixed
+    {
+        // Mantem a chave dos materializadores existentes. A reconciliacao
+        // tambem deve reserva-la para nao remover linhas durante um upsert.
+        $lock = Cache::lock("powerbi:materializar:{$modulo}", self::LOCK_SEGUNDOS);
         if (! $lock->get()) {
             throw ModuloEmExecucaoException::modulo($modulo);
         }

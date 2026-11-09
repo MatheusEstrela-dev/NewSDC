@@ -24,6 +24,12 @@ final class Reconciliador
      */
     public function reconciliar(Materializador $m, ?string $so = null): array
     {
+        return LeituraConsistenteDaFonte::executar(fn (): array => $this->executar($m, $so));
+    }
+
+    /** @return array<string, array{origem: int, destino: int, removidas: int, divergentes: int}> */
+    private function executar(Materializador $m, ?string $so): array
+    {
         JanelaDaFonte::obter(); // aplica a trava de standby antes de ler a fonte
 
         $saida = [];

@@ -28,32 +28,35 @@ final class PublicadorParquetBi
      * Escreve o Parquet num temporario local e confere a contagem lida de volta.
      * Quem chama apaga o temporario.
      *
-     * @return array{temporario: string, linhas: int}
+     * @return array{temporario: string, linhas: int, dados_ate: ?\Carbon\Carbon}
      */
     public function gerarLocal(DefinicaoTabela $d): array
     {
-        $tipos = $this->leitor->tipos($d);
-        $temporario = sprintf('%s/powerbi-%s-%s-%s.parquet', sys_get_temp_dir(), $d->modulo, $d->nome, bin2hex(random_bytes(8)));
+        $temporario = null;
 
         try {
-            $writer = new Writer();
-            $writer->open($temporario, $this->schema($tipos));
+            return $this->leitor->emSnapshot(function () use ($d, &$temporario): array {
+                $tipos = $this->leitor->tipos($d);
+                $temporario = sprintf('%s/powerbi-%s-%s-%s.parquet', sys_get_temp_dir(), $d->modulo, $d->nome, bin2hex(random_bytes(8)));
+                $writer = new Writer();
+                $writer->open($temporario, $this->schema($tipos));
 
-            $linhas = 0;
-            foreach ($this->leitor->lotes($d, $tipos, (int) config('powerbi.lote', 1000)) as $lote) {
-                $writer->writeBatch($lote);
-                $linhas += count($lote);
-            }
-            $writer->close();
+                $linhas = 0;
+                foreach ($this->leitor->lotes($d, $tipos, (int) config('powerbi.lote', 1000)) as $lote) {
+                    $writer->writeBatch($lote);
+                    $linhas += count($lote);
+                }
+                $writer->close();
 
-            $lidas = (new Reader())->read($temporario)->metadata()->rowsNumber();
-            if (! is_file($temporario) || $lidas !== $linhas) {
-                throw new RuntimeException("Parquet de {$d->alvo()} divergente: gravadas {$linhas}, lidas {$lidas}.");
-            }
+                $lidas = (new Reader())->read($temporario)->metadata()->rowsNumber();
+                if (! is_file($temporario) || $lidas !== $linhas) {
+                    throw new RuntimeException("Parquet de {$d->alvo()} divergente: gravadas {$linhas}, lidas {$lidas}.");
+                }
 
-            return ['temporario' => $temporario, 'linhas' => $linhas];
+                return ['temporario' => $temporario, 'linhas' => $linhas, 'dados_ate' => $this->leitor->dadosAte($d)];
+            });
         } catch (Throwable $e) {
-            is_file($temporario) && @unlink($temporario);
+            $temporario !== null && is_file($temporario) && @unlink($temporario);
 
             throw $e;
         }

@@ -6,8 +6,11 @@ namespace App\Modules\PowerBi\Arquivos;
 
 use App\Modules\PowerBi\Support\DefinicaoTabela;
 use App\Support\Database\ConexaoPowerBi;
+use App\Support\Database\LeituraConsistentePostgres;
 use Carbon\Carbon;
+use Closure;
 use Generator;
+use InvalidArgumentException;
 
 /**
  * Le uma tabela bi_* inteira (somente removido=false, colunas expostas) em
@@ -16,6 +19,12 @@ use Generator;
 final class LeitorTabelaBi
 {
     private const INTEIROS = ['bigint', 'integer', 'smallint'];
+
+    /** Consome dados e metadados no mesmo snapshot, antes de enviar o arquivo. */
+    public function emSnapshot(Closure $leitura): mixed
+    {
+        return LeituraConsistentePostgres::executar(ConexaoPowerBi::leitura(), $leitura);
+    }
 
     /**
      * Tipo por coluna exposta: int | bool | timestamptz | texto.
@@ -53,6 +62,10 @@ final class LeitorTabelaBi
      */
     public function lotes(DefinicaoTabela $d, array $tipos, int $tamanho): Generator
     {
+        if ($tamanho < 1) {
+            throw new InvalidArgumentException('O tamanho do lote de exportacao do BI deve ser positivo.');
+        }
+
         $selecionar = array_values(array_unique([...$d->expostas, ...$d->pk]));
         $marcadores = implode(', ', array_fill(0, count($d->pk), '?'));
         $apos = null;
