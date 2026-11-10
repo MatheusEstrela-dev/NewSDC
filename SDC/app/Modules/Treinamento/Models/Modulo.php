@@ -40,7 +40,7 @@ class Modulo extends Model
 
     public function itens(): HasMany
     {
-        return $this->hasMany(ModuloItem::class)->orderBy('ordem');
+        return $this->hasMany(ModuloItem::class)->orderBy('ordem')->orderBy('id');
     }
 
     public function frequencias(): HasMany
@@ -57,6 +57,6 @@ class Modulo extends Model
 
     public function scopeOrdenados($query)
     {
-        return $query->orderBy('ordem');
+        return $query->orderBy('ordem')->orderBy('id');
     }
 }

@@ -15,6 +15,7 @@ use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\ProgressoItem;
 use App\Modules\Treinamento\Models\ProgressoPasta;
 use App\Modules\Treinamento\Models\ProjetoEntrega;
+use App\Modules\Treinamento\Models\Treinamento;
 use Illuminate\Support\Collection;
 
 /**
@@ -56,6 +57,30 @@ class TrilhaService
         $percentual = $total === 0 ? 0.0 : round(100 * $concluidos / $total, 1);
 
         return new EstadoTrilha($percentual, $proximo, $concluidos, $total, $pastas);
+    }
+
+    /**
+     * Previa do professor: tudo liberado, nada concluido, sem gravar progresso.
+     */
+    public function estadoPrevia(Treinamento $treinamento): EstadoTrilha
+    {
+        $pastas = [];
+        $total = 0;
+        $proximo = null;
+
+        $modulos = Modulo::query()->porTreinamento($treinamento->id)->ordenados()->with('itens')->get();
+
+        foreach ($modulos as $modulo) {
+            $itens = [];
+            foreach ($modulo->itens as $item) {
+                $total += $item->obrigatorio ? 1 : 0;
+                $proximo ??= $item->id;
+                $itens[] = new EstadoItem($item, true, null, 0, null, null);
+            }
+            $pastas[] = new EstadoPasta($modulo, true, false, $itens);
+        }
+
+        return new EstadoTrilha(0.0, $proximo, 0, $total, $pastas);
     }
 
     public function itemLiberado(Inscricao $inscricao, ModuloItem $item): bool
