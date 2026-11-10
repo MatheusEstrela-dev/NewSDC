@@ -18,5 +18,34 @@ export function usePdf() {
     }
   }
 
-  return { contarPaginas };
+  /**
+   * Abre um PDF servido por endpoint autorizado (usa os cookies da sessao).
+   */
+  async function abrirDocumento(url) {
+    return pdfjs.getDocument({ url, withCredentials: true }).promise;
+  }
+
+  /**
+   * Desenha a pagina no canvas, nitida em telas de alta densidade. Devolve a
+   * tarefa de renderizacao: o chamador espera `tarefa.promise` e pode chamar
+   * `tarefa.cancel()` se a pagina mudar antes de terminar.
+   */
+  async function renderizarPagina(documento, numero, canvas, escala = 1.2) {
+    const pagina = await documento.getPage(numero);
+    const densidade = window.devicePixelRatio || 1;
+    const viewport = pagina.getViewport({ scale: escala });
+
+    canvas.width = Math.floor(viewport.width * densidade);
+    canvas.height = Math.floor(viewport.height * densidade);
+    canvas.style.width = `${Math.floor(viewport.width)}px`;
+    canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+    return pagina.render({
+      canvasContext: canvas.getContext('2d'),
+      viewport,
+      transform: densidade === 1 ? null : [densidade, 0, 0, densidade, 0, 0],
+    });
+  }
+
+  return { contarPaginas, abrirDocumento, renderizarPagina };
 }
