@@ -9,6 +9,8 @@ use App\Modules\Treinamento\DTOs\EstadoPasta;
 use App\Modules\Treinamento\DTOs\EstadoTrilha;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\StatusProgresso;
+use App\Modules\Treinamento\Enums\TipoItem;
+use App\Modules\Treinamento\Enums\VideoStatus;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Modulo;
 use App\Modules\Treinamento\Models\ModuloItem;
@@ -16,6 +18,7 @@ use App\Modules\Treinamento\Models\ProgressoItem;
 use App\Modules\Treinamento\Models\ProgressoPasta;
 use App\Modules\Treinamento\Models\ProjetoEntrega;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Support\CaminhosVideo;
 use Illuminate\Support\Collection;
 
 /**
@@ -34,6 +37,7 @@ class TrilhaService
 
         foreach ($this->percorrer($inscricao) as $p) {
             $estadoItens = [];
+            $p['itens']->load('video');
             foreach ($p['itens'] as $item) {
                 $progresso = $p['progressos']->get($item->id);
                 $concluido = $progresso?->status === StatusProgresso::CONCLUIDO;
@@ -48,7 +52,7 @@ class TrilhaService
                 }
 
                 $estadoItens[] = new EstadoItem(
-                    $item, $p['liberada'], $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer,
+                    $item, $p['liberada'], $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item),
                 );
             }
             $pastas[] = new EstadoPasta($p['modulo'], $p['liberada'], $p['concluida'], $estadoItens);
@@ -68,19 +72,50 @@ class TrilhaService
         $total = 0;
         $proximo = null;
 
-        $modulos = Modulo::query()->porTreinamento($treinamento->id)->ordenados()->with('itens')->get();
+        $modulos = Modulo::query()->porTreinamento($treinamento->id)->ordenados()->with('itens.video')->get();
 
         foreach ($modulos as $modulo) {
             $itens = [];
             foreach ($modulo->itens as $item) {
                 $total += $item->obrigatorio ? 1 : 0;
                 $proximo ??= $item->id;
-                $itens[] = new EstadoItem($item, true, null, 0, null, null);
+                $itens[] = new EstadoItem($item, true, null, 0, null, null, $this->estadoVideo($item));
             }
             $pastas[] = new EstadoPasta($modulo, true, false, $itens);
         }
 
         return new EstadoTrilha(0.0, $proximo, 0, $total, $pastas);
+    }
+
+    /**
+     * Dados do video do item para o player; null fora de itens VIDEO. A URL do
+     * master existe sempre que ha versao publicada, inclusive durante a troca
+     * do arquivo (o aluno segue na versao atual).
+     *
+     * @return array{status: string, status_label: string, duracao_segundos: ?int, url_master: ?string}|null
+     */
+    private function estadoVideo(ModuloItem $item): ?array
+    {
+        if ($item->tipo !== TipoItem::VIDEO) {
+            return null;
+        }
+
+        $video = $item->video;
+        if ($video === null) {
+            return [
+                'status' => VideoStatus::SEM_VIDEO->value,
+                'status_label' => VideoStatus::SEM_VIDEO->getLabel(),
+                'duracao_segundos' => null,
+                'url_master' => null,
+            ];
+        }
+
+        return [
+            'status' => $video->status->value,
+            'status_label' => $video->status->getLabel(),
+            'duracao_segundos' => $video->duracao_segundos,
+            'url_master' => $video->temVersaoPublicada() ? CaminhosVideo::urlMaster($video->id, $video->hls_versao) : null,
+        ];
     }
 
     public function itemLiberado(Inscricao $inscricao, ModuloItem $item): bool
