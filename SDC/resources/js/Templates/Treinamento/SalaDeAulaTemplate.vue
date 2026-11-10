@@ -5,8 +5,10 @@ import axios from 'axios';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import ItemProjeto from '@/Components/Organisms/Treinamento/Sala/ItemProjeto.vue';
+import PlayerVideo from '@/Components/Organisms/Treinamento/Sala/PlayerVideo.vue';
 import TrilhaLateral from '@/Components/Organisms/Treinamento/Sala/TrilhaLateral.vue';
 import VisualizadorPdf from '@/Components/Organisms/Treinamento/Sala/VisualizadorPdf.vue';
+import { useProgressoVideo } from '@/Composables/treinamento/useProgressoVideo';
 import { useRotasSala } from '@/Composables/treinamento/useRotasSala';
 import { useToast } from '@/Composables/useToast';
 
@@ -41,7 +43,7 @@ const anterior = computed(() => itens.value[indiceAtual.value - 1] ?? null);
 const proximo = computed(() => itens.value[indiceAtual.value + 1] ?? null);
 const podeAvancar = computed(() => proximo.value?.liberado === true);
 
-// Progresso de leitura: um envio por pausa de 1 s na troca de pagina.
+// Progresso (pagina do PDF ou segundo do video): um envio por pausa de 1 s.
 let temporizador = null;
 let pendente = null;
 let falhou = false;
@@ -64,14 +66,29 @@ async function enviarPendente() {
   }
 }
 
-function registrarPagina(item, pagina) {
+function registrarProgresso(item, valor) {
   const url = rotas.progresso(item.id);
-  if (!url || pagina <= item.posicao) return;
+  if (!url || valor <= item.posicao) return;
 
   if (pendente && pendente.url !== url) enviarPendente();
-  pendente = { url, posicao: pendente?.url === url ? Math.max(pendente.posicao, pagina) : pagina };
+  pendente = { url, posicao: pendente?.url === url ? Math.max(pendente.posicao, valor) : valor };
   clearTimeout(temporizador);
   temporizador = setTimeout(enviarPendente, ATRASO_PROGRESSO_MS);
+}
+
+// Um controle de progresso por item de video, para lembrar o ponto ja enviado.
+const progressosVideo = new Map();
+
+function progressoVideo(item) {
+  if (!progressosVideo.has(item.id)) {
+    progressosVideo.set(item.id, useProgressoVideo({
+      enviar: async (segundos) => registrarProgresso(item, segundos),
+      duracao: item.video?.duracao_segundos ?? 0,
+      posicaoInicial: item.posicao,
+    }));
+  }
+
+  return progressosVideo.get(item.id);
 }
 
 function selecionar(id) {
@@ -118,8 +135,21 @@ onBeforeUnmount(enviarPendente);
             :url="rotas.arquivo(itemAtual.id)"
             :posicao-inicial="itemAtual.posicao"
             :total-paginas="itemAtual.total_paginas ?? 1"
-            @pagina="registrarPagina(itemAtual, $event)"
+            @pagina="registrarProgresso(itemAtual, $event)"
           />
+          <PlayerVideo
+            v-else-if="itemAtual.tipo === 'VIDEO' && itemAtual.video?.url_master"
+            :key="itemAtual.id"
+            :url-master="itemAtual.video.url_master"
+            :posicao-inicial="itemAtual.posicao"
+            :duracao="itemAtual.video.duracao_segundos ?? 0"
+            :concluido="itemAtual.status === 'CONCLUIDO'"
+            @posicao="progressoVideo(itemAtual).aoPosicao($event)"
+            @terminou="progressoVideo(itemAtual).aoTerminar()"
+          />
+          <p v-else-if="itemAtual.tipo === 'VIDEO'" class="p-6 text-sm text-slate-500">
+            Vídeo em preparação<template v-if="itemAtual.video?.status_label">: {{ itemAtual.video.status_label }}</template>
+          </p>
           <ItemProjeto
             v-else-if="itemAtual.tipo === 'PROJETO'"
             :key="itemAtual.id"
