@@ -398,10 +398,6 @@ return new class extends Migration
     }
 
     /**
-     * ALTERs sobre tabelas criadas por criarTreinamento(), todos idempotentes:
-     * colunas com IF NOT EXISTS e CHECKs recriados (DROP IF EXISTS + ADD).
-     */
-    /**
      * Biblioteca de videos on-premise: o video e um registro proprio (reusavel
      * em varios cursos); o item do curso apenas aponta para ele.
      */
@@ -474,6 +470,10 @@ return new class extends Migration
             SQL);
     }
 
+    /**
+     * ALTERs sobre tabelas criadas por criarTreinamento(), todos idempotentes:
+     * colunas com IF NOT EXISTS e CHECKs recriados (DROP IF EXISTS + ADD).
+     */
     private function ajustarTabelasExistentes(): void
     {
         $this->exec("ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS publico_alvo varchar(20) NOT NULL DEFAULT 'CIDADAOS'");

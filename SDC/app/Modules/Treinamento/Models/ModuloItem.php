@@ -67,7 +67,7 @@ class ModuloItem extends Model
     public function totalProgresso(): ?int
     {
         return match ($this->tipo) {
-            TipoItem::PDF => $this->total_paginas,
+            TipoItem::PDF => max(1, (int) $this->total_paginas),
             TipoItem::VIDEO => $this->temVideoPronto() ? $this->video->duracao_segundos : null,
             default => null,
         };
