@@ -6,6 +6,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import TreinamentoStatusBadge from '@/Components/Molecules/Treinamento/TreinamentoStatusBadge.vue';
 import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/TreinamentoFiltersSection.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
 import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
@@ -195,9 +196,7 @@ function handleExportCsv(params) {
               </span>
             </td>
             <td class="px-4 py-3">
-              <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
-                {{ treinamento.status_label || treinamento.status }}
-              </span>
+              <TreinamentoStatusBadge :status="treinamento.status" :label="treinamento.status_label" />
             </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ treinamento.instrutor || '—' }}</td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">

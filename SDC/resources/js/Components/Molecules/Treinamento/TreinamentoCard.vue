@@ -1,5 +1,6 @@
 <script setup>
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import TreinamentoStatusBadge from '@/Components/Molecules/Treinamento/TreinamentoStatusBadge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
@@ -49,9 +50,7 @@ const vagasText = computed(() => {
           {{ treinamento.titulo }}
         </Heading>
       </div>
-      <Badge :color="treinamento.status_color" class="ml-2">
-        {{ treinamento.status_label || treinamento.status }}
-      </Badge>
+      <TreinamentoStatusBadge :status="treinamento.status" :label="treinamento.status_label" class="ml-2" />
     </div>
 
     <!-- Descrição -->
