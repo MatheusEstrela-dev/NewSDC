@@ -2,12 +2,15 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const INTERVALO_POSICAO_MS = 15000;
-const MENSAGEM_ERRO = 'Nao foi possivel reproduzir este video. Tente novamente em instantes.';
+const MAX_RECUPERACOES_MIDIA = 2;
+const TIPO_HLS_NATIVO = 'application/vnd.apple.mpegurl';
+const MENSAGEM_ERRO = 'Não foi possível reproduzir este vídeo. Tente novamente em instantes.';
+const MENSAGEM_SEM_SUPORTE = 'Este navegador não consegue reproduzir este vídeo.';
 
 const props = defineProps({
+  itemId: { type: [Number, String], required: true },
   urlMaster: { type: String, required: true },
   posicaoInicial: { type: Number, default: 0 },
-  duracao: { type: Number, default: 0 },
   concluido: { type: Boolean, default: false },
 });
 
@@ -22,9 +25,17 @@ let intervalo = null;
 let desmontado = false;
 let geracao = 0;
 let tentouRede = false;
+let recuperacoes = 0;
+let nativo = false;
+let maxAlcancado = 0;
 
 function emitirPosicao() {
-  if (video.value) emit('posicao', Math.floor(video.value.currentTime));
+  if (maxAlcancado > 0) emit('posicao', maxAlcancado, props.itemId);
+}
+
+function aoAtualizarTempo() {
+  const atual = Math.floor(video.value?.currentTime ?? 0);
+  if (atual > maxAlcancado) maxAlcancado = atual;
 }
 
 function pararIntervalo() {
@@ -44,7 +55,8 @@ function aoPausar() {
 
 function aoTerminar() {
   pararIntervalo();
-  emit('terminou');
+  const duracao = video.value ? Math.floor(video.value.duration) : 0;
+  emit('terminou', Number.isFinite(duracao) ? duracao : 0, props.itemId);
 }
 
 function aoMudarVisibilidade() {
@@ -56,17 +68,28 @@ function aoCarregarMetadados() {
   if (!props.concluido && props.posicaoInicial > 0) video.value.currentTime = props.posicaoInicial;
 }
 
+function mostrarErro(mensagem = MENSAGEM_ERRO) {
+  erro.value = mensagem;
+  carregando.value = false;
+}
+
+function aoFalharElemento() {
+  if (nativo) mostrarErro();
+}
+
 function aoFalhar(_evento, dados) {
   if (!dados.fatal) return;
 
   if (dados.type === 'networkError' && !tentouRede) {
     tentouRede = true;
     hls.startLoad();
-  } else if (dados.type === 'mediaError') {
+  } else if (dados.type === 'mediaError' && recuperacoes < MAX_RECUPERACOES_MIDIA) {
+    recuperacoes++;
     hls.recoverMediaError();
   } else {
-    erro.value = MENSAGEM_ERRO;
-    carregando.value = false;
+    hls?.destroy();
+    hls = null;
+    mostrarErro();
   }
 }
 
@@ -82,6 +105,9 @@ async function carregar() {
   erro.value = '';
   carregando.value = true;
   tentouRede = false;
+  recuperacoes = 0;
+  nativo = false;
+  maxAlcancado = Math.max(0, Math.floor(props.posicaoInicial));
 
   try {
     const { default: Hls } = await import('hls.js');
@@ -92,13 +118,15 @@ async function carregar() {
       hls.on(Hls.Events.ERROR, aoFalhar);
       hls.loadSource(props.urlMaster);
       hls.attachMedia(video.value);
-    } else {
+    } else if (video.value.canPlayType(TIPO_HLS_NATIVO)) {
+      nativo = true;
       video.value.src = props.urlMaster;
+    } else {
+      mostrarErro(MENSAGEM_SEM_SUPORTE);
     }
   } catch {
     if (desmontado || minha !== geracao) return;
-    erro.value = MENSAGEM_ERRO;
-    carregando.value = false;
+    mostrarErro();
   }
 }
 
@@ -131,9 +159,11 @@ onBeforeUnmount(() => {
       @loadedmetadata="aoCarregarMetadados"
       @play="aoTocar"
       @pause="aoPausar"
+      @timeupdate="aoAtualizarTempo"
+      @error="aoFalharElemento"
       @ended="aoTerminar"
     />
-    <p v-if="carregando && !erro" class="absolute text-sm text-white">Carregando o video...</p>
+    <p v-if="carregando && !erro" class="absolute text-sm text-white">Carregando o vídeo...</p>
     <p v-if="erro" role="alert" class="p-6 text-center text-sm text-white">{{ erro }}</p>
   </div>
 </template>

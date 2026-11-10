@@ -61,7 +61,7 @@ async function enviarPendente() {
     estadoLocal.value = data;
     falhou = false;
   } catch {
-    if (!falhou) toast('Nao foi possivel salvar seu progresso agora. Voce pode continuar lendo.', 'warning');
+    if (!falhou) toast('Não foi possível salvar seu progresso agora. Você pode continuar lendo.', 'warning');
     falhou = true;
   }
 }
@@ -76,20 +76,11 @@ function registrarProgresso(item, valor) {
   temporizador = setTimeout(enviarPendente, ATRASO_PROGRESSO_MS);
 }
 
-// Um controle de progresso por item de video, para lembrar o ponto ja enviado.
-const progressosVideo = new Map();
-
-function progressoVideo(item) {
-  if (!progressosVideo.has(item.id)) {
-    progressosVideo.set(item.id, useProgressoVideo({
-      enviar: async (segundos) => registrarProgresso(item, segundos),
-      duracao: item.video?.duracao_segundos ?? 0,
-      posicaoInicial: item.posicao,
-    }));
-  }
-
-  return progressosVideo.get(item.id);
-}
+// Controle único de progresso dos vídeos: o item vem do id do evento, nunca do item aberto agora.
+const progressoVideo = useProgressoVideo({
+  resolverItem: (id) => itens.value.find((item) => item.id === id) ?? null,
+  enviar: (item, segundos) => registrarProgresso(item, segundos),
+});
 
 function selecionar(id) {
   enviarPendente();
@@ -140,15 +131,15 @@ onBeforeUnmount(enviarPendente);
           <PlayerVideo
             v-else-if="itemAtual.tipo === 'VIDEO' && itemAtual.video?.url_master"
             :key="itemAtual.id"
+            :item-id="itemAtual.id"
             :url-master="itemAtual.video.url_master"
             :posicao-inicial="itemAtual.posicao"
-            :duracao="itemAtual.video.duracao_segundos ?? 0"
             :concluido="itemAtual.status === 'CONCLUIDO'"
-            @posicao="progressoVideo(itemAtual).aoPosicao($event)"
-            @terminou="progressoVideo(itemAtual).aoTerminar()"
+            @posicao="progressoVideo.aoPosicao"
+            @terminou="progressoVideo.aoTerminar"
           />
           <p v-else-if="itemAtual.tipo === 'VIDEO'" class="p-6 text-sm text-slate-500">
-            V�deo em prepara��o<template v-if="itemAtual.video?.status_label">: {{ itemAtual.video.status_label }}</template>
+            Vídeo em preparação<template v-if="itemAtual.video?.status_label">: {{ itemAtual.video.status_label }}</template>
           </p>
           <ItemProjeto
             v-else-if="itemAtual.tipo === 'PROJETO'"

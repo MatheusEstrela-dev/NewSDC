@@ -1,28 +1,41 @@
 /**
- * Progresso do video por tempo: so envia quando o aluno avanca alem do
- * ponto mais distante ja enviado; ao terminar, envia a duracao total.
+ * Progresso do vídeo por tempo. O item é sempre resolvido pelo id do evento
+ * no momento do envio, nunca capturado: só envia quando o aluno passa do ponto
+ * mais distante já enviado daquele item; ao terminar, envia a duração total.
  */
-export function useProgressoVideo({ enviar, duracao, posicaoInicial = 0 }) {
-  let ultimaEnviada = Math.max(0, Math.floor(posicaoInicial));
+export function useProgressoVideo({ resolverItem, enviar }) {
+  const enviadas = new Map();
 
-  const registrar = (segundos) => {
-    ultimaEnviada = segundos;
+  const itemDeVideo = (itemId) => {
+    const item = resolverItem(itemId);
 
-    return enviar(segundos);
+    return item?.tipo === 'VIDEO' ? item : null;
+  };
+
+  const ultimaEnviada = (item) => Math.max(enviadas.get(item.id) ?? 0, Math.floor(item.posicao ?? 0));
+
+  const registrar = (item, segundos) => {
+    enviadas.set(item.id, segundos);
+
+    return enviar(item, segundos);
   };
 
   return {
-    aoPosicao(segundos) {
+    aoPosicao(segundos, itemId) {
+      const item = itemDeVideo(itemId);
       const valor = Math.floor(segundos);
-      if (!Number.isFinite(valor) || valor <= ultimaEnviada) return;
+      if (!item || !Number.isFinite(valor) || valor <= ultimaEnviada(item)) return;
 
-      return registrar(valor);
+      return registrar(item, valor);
     },
-    aoTerminar() {
-      const total = Math.floor(duracao);
+    aoTerminar(segundosDoPlayer, itemId) {
+      const item = itemDeVideo(itemId);
+      if (!item) return;
+
+      const total = Math.floor(item.video?.duracao_segundos || segundosDoPlayer);
       if (!Number.isFinite(total) || total <= 0) return;
 
-      return registrar(total);
+      return registrar(item, total);
     },
   };
 }
