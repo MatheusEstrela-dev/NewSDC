@@ -42,8 +42,13 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
     Route::get('/export', TreinamentoExportController::class)
         ->name('export')
         ->middleware('can:treinamento.cursos.export');
+    // Curso EAD: area do aluno servidor e area do professor (inclui a designacao
+    // de professores pelo admin). Antes do /{id} pelo mesmo motivo do /create.
+    require __DIR__ . '/treinamento-aluno.php';
+    require __DIR__ . '/treinamento-professor.php';
+
     // Antes do /{id} de proposito: senao o wildcard casaria com "create" primeiro.
-    Route::get('/create', TreinamentoCreateController::class)
+    Route::get('/create',TreinamentoCreateController::class)
         ->name('create')
         ->middleware('can:treinamento.cursos.create');
     // Tambem antes do /{id}, pelo mesmo motivo do /create.
