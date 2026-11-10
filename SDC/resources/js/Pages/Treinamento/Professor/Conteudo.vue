@@ -10,10 +10,14 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import MenuCurso from '@/Components/Organisms/Treinamento/Professor/MenuCurso.vue';
+import UploaderVideo from '@/Components/Organisms/Treinamento/Conteudo/UploaderVideo.vue';
+import SeletorVideo from '@/Components/Organisms/Treinamento/Conteudo/SeletorVideo.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
 import { usePdf } from '@/Composables/treinamento/usePdf';
+import { formatarDuracao } from '@/Composables/treinamento/formatarDuracao';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -105,7 +109,9 @@ const formItem = useForm({ ...ITEM_VAZIO });
 // Troca a chave para recriar o input file e descartar o arquivo escolhido antes.
 const chaveArquivo = ref(0);
 
-const ehPdf = computed(() => (itemEmEdicao.value?.tipo ?? formItem.tipo) === 'PDF');
+const tipoDoItem = computed(() => itemEmEdicao.value?.tipo ?? formItem.tipo);
+const ehPdf = computed(() => tipoDoItem.value === 'PDF');
+const ehVideo = computed(() => tipoDoItem.value === 'VIDEO');
 
 function abrirItem(pasta, item = null) {
   pastaDoItem.value = pasta;
@@ -166,6 +172,48 @@ function reordenarItens(pasta) {
   router.post(route('treinamentos.professor.itens.ordem', [props.curso.id, pasta.id]), {
     ids: pasta.itens.map((i) => i.id),
   }, { preserveScroll: true, onError: avisarErro });
+}
+
+// ---- Video do item -------------------------------------------------------
+
+const seletorAberto = ref(false);
+const itemDoSeletor = ref(null);
+
+function abrirSeletor(item) {
+  itemDoSeletor.value = item;
+  seletorAberto.value = true;
+}
+
+// O servidor e a fonte do payload do video vinculado.
+function recarregarPastas() {
+  router.reload({ only: ['pastas'], preserveScroll: true });
+}
+
+// Substitui o video em todos os itens que o usam, sem recarregar a pagina.
+function atualizarVideo(atualizado) {
+  lista.value.forEach((pasta) => pasta.itens.forEach((item) => {
+    if (item.video?.id === atualizado.id) item.video = { ...item.video, ...atualizado };
+  }));
+}
+
+async function desvincularVideo(item) {
+  if (!window.confirm(`Desvincular o vídeo do item "${item.titulo}"? O vídeo continua na biblioteca.`)) return;
+  try {
+    await window.axios.delete(route('treinamentos.professor.itens.video.desvincular', [props.curso.id, item.id]));
+    recarregarPastas();
+  } catch (e) {
+    toast(e.response?.data?.message || 'Não foi possível desvincular o vídeo.', 'error');
+  }
+}
+
+function avisoDoVideo(video) {
+  if (video.status === 'FALHOU') {
+    return video.tem_versao ? 'O processamento da nova versão falhou; a versão atual continua disponível para os alunos.' : '';
+  }
+  if (video.status === 'PRONTO') return '';
+  return video.tem_versao
+    ? 'Nova versão em processamento; a versão atual continua disponível para os alunos.'
+    : 'Em preparação: os alunos só veem o vídeo depois que o processamento terminar.';
 }
 
 function publicar() {
@@ -234,7 +282,8 @@ function publicar() {
                 @end="reordenarItens(pasta)"
               >
                 <template #item="{ element: item }">
-                  <div class="flex items-center gap-3 rounded-md border border-slate-200 px-3 py-2 dark:border-slate-700">
+                  <div class="rounded-md border border-slate-200 dark:border-slate-700">
+                  <div class="flex items-center gap-3 px-3 py-2">
                     <span class="handle-item cursor-grab select-none text-slate-400" title="Arraste para reordenar">::</span>
                     <div class="min-w-0 flex-1">
                       <Text class="block truncate font-medium">{{ item.titulo }}</Text>
@@ -253,6 +302,26 @@ function publicar() {
                     >Abrir</a>
                     <Button size="sm" variant="outline" @click="abrirItem(pasta, item)">Editar</Button>
                     <Button size="sm" variant="danger" @click="excluirItem(item)">Excluir</Button>
+                  </div>
+
+                  <div v-if="item.tipo === 'VIDEO'" class="space-y-2 border-t border-slate-200 px-3 py-2 dark:border-slate-700">
+                    <template v-if="item.video">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <Text class="font-medium">{{ item.video.titulo }}</Text>
+                        <Badge :variant="item.video.status === 'FALHOU' ? 'danger' : item.video.status === 'PRONTO' ? 'success' : 'warning'">{{ item.video.status_label }}</Badge>
+                        <Text v-if="item.video.duracao_segundos != null" size="xs" color="muted">{{ formatarDuracao(item.video.duracao_segundos) }}</Text>
+                      </div>
+                      <Text v-if="avisoDoVideo(item.video)" size="xs" color="muted">{{ avisoDoVideo(item.video) }}</Text>
+                    </template>
+                    <Text v-else size="xs" color="muted">Nenhum vídeo vinculado a este item.</Text>
+
+                    <div class="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" @click="abrirSeletor(item)">{{ item.video ? 'Trocar vídeo' : 'Escolher vídeo' }}</Button>
+                      <Button v-if="item.video" size="sm" variant="outline" @click="desvincularVideo(item)">Desvincular</Button>
+                    </div>
+
+                    <UploaderVideo v-if="item.video" :video="item.video" @atualizado="atualizarVideo" />
+                  </div>
                   </div>
                 </template>
               </draggable>
@@ -304,6 +373,7 @@ function publicar() {
           <select v-model="formItem.tipo" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800">
             <option value="PDF">Material em PDF</option>
             <option value="PROJETO">Projeto</option>
+            <option value="VIDEO">Vídeo</option>
           </select>
           <p v-if="formItem.errors.tipo" class="mt-1 text-sm text-red-600">{{ formItem.errors.tipo }}</p>
         </div>
@@ -318,7 +388,7 @@ function publicar() {
           <textarea v-model="formItem.descricao" rows="3" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800" />
         </div>
 
-        <div>
+        <div v-if="!ehVideo">
           <label class="mb-1 block text-sm font-medium">
             {{ ehPdf ? 'Arquivo PDF' : 'Arquivo de apoio (opcional)' }}
           </label>
@@ -329,6 +399,8 @@ function publicar() {
           <p v-if="formItem.errors.arquivo" class="mt-1 text-sm text-red-600">{{ formItem.errors.arquivo }}</p>
           <p v-if="formItem.errors.total_paginas" class="mt-1 text-sm text-red-600">{{ formItem.errors.total_paginas }}</p>
         </div>
+
+        <Text v-if="ehVideo && !itemEmEdicao" size="xs" color="muted">O vídeo é escolhido na biblioteca depois que o item for criado.</Text>
 
         <label class="flex items-center gap-2 text-sm">
           <input v-model="formItem.obrigatorio" type="checkbox">
@@ -341,5 +413,13 @@ function publicar() {
         </div>
       </form>
     </Modal>
+
+    <SeletorVideo
+      :show="seletorAberto"
+      :treinamento-id="curso.id"
+      :item="itemDoSeletor"
+      @vinculado="recarregarPastas"
+      @fechar="seletorAberto = false"
+    />
   </div>
 </template>
