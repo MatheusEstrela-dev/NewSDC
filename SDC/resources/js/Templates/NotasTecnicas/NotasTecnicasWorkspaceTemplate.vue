@@ -54,7 +54,10 @@ const props = defineProps({
   informacoesAbertas: { type: Boolean, default: false },
 });
 
-const painel = 'flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/40';
+// `relative`: overflow-hidden so recorta descendente absoluto se o painel for o
+// bloco de contencao. Sem ele, os sr-only da lista longa escapavam para a grade
+// e esticavam o documento abaixo do rodape. O lg:absolute das informacoes vence.
+const painel = 'relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/40';
 
 // Literais por extenso: o Tailwind so gera classe que encontra escrita no fonte.
 const colunas = computed(() => {
