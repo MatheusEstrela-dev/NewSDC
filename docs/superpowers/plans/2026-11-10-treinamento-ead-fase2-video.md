@@ -17,9 +17,11 @@
 - Vídeo **nunca** passa inteiro pelo Octane: parte de `8 * 1024 * 1024` bytes, limite por vídeo `2 * 1024 * 1024 * 1024` bytes, mimes `video/mp4`, `video/quicktime`, `video/x-matroska`, sessão expira em 24 h (§7.1). `config/octane.php` **não** muda nesta fase: já declara `package_max_length` de 64 MB desde a Fase 1 (§13).
 - FFmpeg roda **só** no worker da fila `videos` (conexão `redis-videos`, `retry_after` 3700, `--timeout=3600`, `--tries=3`), com `nice -n 10` e `-threads 2`; renditions 480p (854x480, 800k) e 720p (1280x720, 2500k) ativas, 1080p (1920x1080, 5000k) desligada por config; `preset veryfast`, `crf 23`, `hls_time 6`, áudio `aac 128k` (§8).
 - Caminhos em disco e URL são chaveados por **videoId** (nunca por item): HLS publicado por versão em `hls/{videoId}/{versao}/master.m3u8`; a troca é atômica (`rename`), a versão anterior só some depois (§8.4) e vale para todos os cursos que usam o vídeo. URL pública `/videos/{videoId}/{versao}/...` servida pelo Caddy; o Laravel só serve segmento quando `TREINAMENTO_VIDEO_SERVIR_PELO_APP=true` e fora de produção (§9.3).
-- `/videos/auth`: 204 ou 403 sem corpo, cache positivo de 300 s por `(id da sessão, vídeo, versão)`, negativo não cacheia (§9.2).
+- `/videos/auth`: 204 ou 403 sem corpo, cache positivo de 300 s por `(id da sessão, vídeo, versão)`, negativo não cacheia (§9.2). O 403 sai com `Cache-Control: no-store`; caminho com segmento `.tmp-*` é sempre 403.
 - Permissões da biblioteca (§7.3): gerenciar um vídeo = dono (`videos.user_id`) ou `treinamento.cursos.edit` (middleware `gerencia.video`); ver a biblioteca e vincular um vídeo `PRONTO` = `treinamento.professor.acessar` no curso que leciona (`leciona.curso`); excluir só se `!emUso()`, senão 422 "Vídeo em uso por N itens".
 - Rotas do professor ficam em `SDC/routes/modules/treinamento-professor.php` (não em `treinamento.php`); o alias `gerencia.video` é registrado no `TreinamentoServiceProvider`, ao lado de `leciona.curso`.
+- Multi-réplica (homolog roda 4 réplicas do app atrás do Caddy; partes do mesmo upload caem em réplicas diferentes): nenhum estado de upload ou de autorização em memória do processo (`static`, `SwooleTable`, cache `array`). Estado no banco + disco `treinamentos` (volume compartilhado); exclusão mútua (abrir, finalizar, mesma parte duas vezes) por `Cache::lock()` no redis ou constraint do banco; cache do `/videos/auth` pelo `Cache` facade.
+- Produção entrega vídeo **só** pelo Caddy; a rota que serve pelo app (`TREINAMENTO_VIDEO_SERVIR_PELO_APP`) fica bloqueada em produção e a contingência pelo Swoole fica para uma fase posterior.
 - Sem emojis no código. Logs de depuração removidos após o teste. DRY/SOLID. Testes em `SDC/tests/Feature/Treinamento/Ead/` rodam localmente e **não entram em commit**. Commits atômicos por task, gitmoji, pt-BR, **sem** trailer `Co-Authored-By`.
 - Testes rodam via `bash .superpowers/sdd/2026-11-10-treinamento-ead-fase2-video/phpunit.sh <path relativo a SDC/>` (abaixo, `TEST <x>` é esse comando). FFmpeg não existe no host: todo teste de processamento usa `Process::fake()`.
 - Fixtures: títulos `TST-EAD-`, CPF de cidadão `999...`; arquivos de teste via `Storage::fake('treinamentos')` e `UploadedFile::fake()->create(...)`.
@@ -51,7 +53,7 @@
 - `Requests/Professor/Video/{SalvarVideoRequest,AbrirUploadRequest,ReceberParteRequest,VincularVideoRequest}.php` (novos).
 - `Services/ProgressoService.php`, `Services/TrilhaService.php` (alterados).
 
-**Outros backend:** migration principal; `SDC/config/treinamento.php` (novo); `SDC/config/queue.php`, `SDC/config/logging.php`; `SDC/routes/modules/treinamento-professor.php` (rotas de biblioteca, gerência e vínculo; **não** `treinamento.php`), `SDC/routes/web.php`, `SDC/routes/console.php`; `SDC/app/Modules/Treinamento/Providers/TreinamentoServiceProvider.php` (alias); `SDC/app/Http/Controllers/Api/MetricsController.php`; `SDC/.env.example`. `config/octane.php` **não** muda (64 MB desde a Fase 1).
+**Outros backend:** migration principal; `SDC/config/treinamento.php` (novo); `SDC/config/queue.php`, `SDC/config/logging.php`; `SDC/routes/modules/treinamento-professor.php` (rotas de biblioteca, gerência e vínculo; **não** `treinamento.php`), `SDC/routes/web.php`, `SDC/routes/console.php`; `SDC/app/Modules/Treinamento/TreinamentoServiceProvider.php` (alias); `SDC/app/Http/Controllers/Api/MetricsController.php`; `SDC/.env.example`. `config/octane.php` **não** muda (64 MB desde a Fase 1).
 
 **Infra (`SDC/docker/`)**: `Dockerfile.queue`, `queue/entrypoint.sh`, `supervisor/videos-worker.conf` (novo), `jenkins/stack.app.onpremise.yml`, `jenkins/Jenkinsfile.onprem`, `compose.homolog.yml`, `caddy/Caddyfile`, `caddy/Caddyfile.homolog`.
 
@@ -93,7 +95,7 @@
 
 ```bash
 docker exec newsdc_dev_db psql -U sdc -d sdc_treinamento -c "DELETE FROM migrations WHERE migration = '2026_11_05_210000_create_treinamento_schemas_tables';"
-docker exec newsdc_dev_app php artisan migrate --database=pgsql_treinamento --path=database/migrations/treinamento --force
+bash .superpowers/sdd/2026-11-10-treinamento-ead-fase2-video/artisan.sh migrate --database=pgsql_treinamento --path=database/migrations/treinamento --force
 ```
 
 - [ ] **Step 6: Rodar os dois testes**: PASS (5 + 7). Rodar também `TEST tests/Feature/Treinamento/Ead/TrilhaServiceTest.php` (Fase 1) para garantir que o progresso do PDF não mudou.
@@ -139,7 +141,7 @@ git commit -m "🗃️ db(treinamento): biblioteca de videos (schema e config), 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add SDC/config/queue.php SDC/routes/modules/treinamento-professor.php SDC/app/Modules/Treinamento/Providers/TreinamentoServiceProvider.php SDC/app/Modules/Treinamento/Http/Middleware/GerenciaVideo.php SDC/app/Modules/Treinamento/Services/Video/VideoBibliotecaService.php SDC/app/Modules/Treinamento/Services/Video/VideoUploadService.php SDC/app/Modules/Treinamento/Controllers/Professor/Video SDC/app/Modules/Treinamento/Requests/Professor/Video SDC/app/Modules/Treinamento/Requests/Professor/SalvarItemRequest.php SDC/app/Modules/Treinamento/Services/ConteudoCursoService.php SDC/app/Modules/Treinamento/Jobs/ProcessarVideoJob.php
+git add SDC/config/queue.php SDC/routes/modules/treinamento-professor.php SDC/app/Modules/Treinamento/TreinamentoServiceProvider.php SDC/app/Modules/Treinamento/Http/Middleware/GerenciaVideo.php SDC/app/Modules/Treinamento/Services/Video/VideoBibliotecaService.php SDC/app/Modules/Treinamento/Services/Video/VideoUploadService.php SDC/app/Modules/Treinamento/Controllers/Professor/Video SDC/app/Modules/Treinamento/Requests/Professor/Video SDC/app/Modules/Treinamento/Requests/Professor/SalvarItemRequest.php SDC/app/Modules/Treinamento/Services/ConteudoCursoService.php SDC/app/Modules/Treinamento/Jobs/ProcessarVideoJob.php
 git commit -m "✨ feat(treinamento): biblioteca de videos, vinculo no item e upload em partes"
 ```
 
@@ -191,7 +193,7 @@ git commit -m "✨ feat(treinamento): processamento de video para HLS na fila co
 - Produces:
   - `AutorizacaoVideoService::autorizarUri(string $uri): bool`: casa `#^/videos/(\d+)/([A-Za-z0-9_-]{1,40})/#`; senão `false`. Resolve o `Video` (não excluído, `PRONTO`), aceita `versao === hls_versao` ou `versao === Cache::get("video_versao_anterior:{videoId}")` (gravado pelo `PublicadorHls` na Task 3); delega a `podeAssistir`.
   - `AutorizacaoVideoService::podeAssistir(Video $video, ?Authenticatable $servidor, ?Authenticatable $cidadao): bool`: libera o dono do vídeo; `can('treinamento.cursos.edit')`; professor de **qualquer** curso com item (não excluído) apontando para o vídeo; aluno (`servidor` em curso `SERVIDORES`, `cidadao` em `CIDADAOS`) com `Inscricao` `APROVADA` (consulta direta por `inscrito_type`/`inscrito_id`, sem o `InscricaoDoAluno`, que aborta) em curso EAD publicado com item apontando para o vídeo e `itemLiberado(inscricao, item)` verdadeiro para **pelo menos um** desses itens; senão `false`. O resultado positivo é cacheado por `auth_cache_segundos` em `video_auth:{session()->getId()}:{videoId}:{versao}`; o negativo **não** é cacheado.
-  - `VideoAuthController` (`GET /videos/auth`, nome `videos.auth`, middleware só `web`): lê `X-Forwarded-Uri` (fallback `X-Original-URI`), responde `204` ou `403` sem corpo, sem Inertia.
+  - `VideoAuthController` (`GET /videos/auth`, nome `videos.auth`, middleware só `web`): lê `X-Forwarded-Uri` (fallback `X-Original-URI`), responde `204` ou `403` sem corpo, sem Inertia. O parser aceita o caminho com ou sem o prefixo `/videos` (o Caddy envia o caminho original, `{http.request.orig_uri}`).
   - `VideoArquivoDevController` (`GET /videos/{videoId}/{versao}/{arquivo}` com `->where('arquivo', '[A-Za-z0-9_\-]+(/[A-Za-z0-9_\-]+)*\.(m3u8|ts)')`, nome `videos.arquivo-dev`): `abort(404)` se `!config('treinamento.video.servir_pelo_app') || app()->isProduction()`; `403` se `!autorizarUri(request()->getPathInfo())`; senão `response()->file()` do caminho no disco com `Content-Type` `application/vnd.apple.mpegurl` ou `video/MP2T`. Registrada **antes** de `videos.auth` não conflita (`auth` não casa o regex por falta de extensão).
   - `EstadoItem` ganha `public ?array $video = null` (`['status' => string, 'status_label' => string, 'duracao_segundos' => ?int, 'url_master' => ?string]`, vindo de `item->video`; `url_master` só quando o vídeo está `PRONTO`), preenchido no `TrilhaService::estado()` e `estadoPrevia()` para itens `VIDEO` (item sem vídeo vinculado -> `video` com `status SEM_VIDEO`); `toArray()` inclui a chave `video`.
 
@@ -320,7 +322,7 @@ git commit -m "✨ feat(treinamento): player HLS com retomada por tempo na sala 
 
 - [ ] **Step 1: Escrever `LimpezaVideosTest`** (`Storage::fake`): `test_upload_expirado_e_cancelado_e_partes_apagadas`; `test_upload_vigente_e_mantido`; `test_original_de_video_pronto_e_apagado_sem_manter_original`; `test_versao_antiga_e_apagada_e_atual_mantida`; `test_tmp_recente_e_preservado`; `test_metricas_formatam_linhas_prometheus` (após `registrarProcessamento(true, 90, 1000)`, `linhas()` contém `sdc_treinamento_video_processados_total{resultado="sucesso"} 1` e `sdc_treinamento_video_hls_bytes 1000`).
 - [ ] **Step 2: Rodar e ver falhar**: `TEST tests/Feature/Treinamento/Ead/Video/LimpezaVideosTest.php`.
-- [ ] **Step 3: Implementar**; rodar; PASS (6). Conferir `docker exec newsdc_dev_app php artisan schedule:list | grep -i video`.
+- [ ] **Step 3: Implementar**; rodar; PASS (6). Conferir `bash .superpowers/sdd/2026-11-10-treinamento-ead-fase2-video/artisan.sh schedule:list | grep -i video`.
 - [ ] **Step 4: Commit**
 
 ```bash
@@ -333,7 +335,7 @@ git commit -m "✨ feat(treinamento): limpeza de videos orfaos e metricas do pip
 ### Task 9: Verificação da fase (dev, homolog e produção externa)
 
 - [ ] **Step 1: Suite**: `TEST tests/Feature/Treinamento`; tudo verde (Fase 1 + os 7 arquivos desta fase).
-- [ ] **Step 2: Rotas**: `docker exec newsdc_dev_app php artisan route:list --path=video` lista as rotas de biblioteca/gerência (`treinamentos.professor.videos.*`), vincular/desvincular do item, `videos.auth` e `videos.arquivo-dev`; `--path=treinamentos/aluno` inalterado.
+- [ ] **Step 2: Rotas**: `bash .superpowers/sdd/2026-11-10-treinamento-ead-fase2-video/artisan.sh route:list --path=video` lista as rotas de biblioteca/gerência (`treinamentos.professor.videos.*`), vincular/desvincular do item, `videos.auth` e `videos.arquivo-dev`; `--path=treinamentos/aluno` inalterado.
 - [ ] **Step 3: Homolog ponta a ponta com Caddy real** (`compose.homolog.yml`, `TREINAMENTO_VIDEO_SERVIR_PELO_APP` ausente): professor sobe uma aula de 2 min e uma de 1 h e reaproveita uma delas num segundo curso pela biblioteca; acompanhar `docker stats newsdc_homolog_queue_videos` (CPU perto de 150%, não mais) e o p95 de `/health` do app durante o processamento (não deve subir); `master.m3u8` da aula de 1 h tem as duas renditions; aluno toca pelo Caddy em `:8090`, troca de qualidade com a rede limitada no DevTools; `curl` anônimo no `.ts` recebe 403; aluno do segundo curso só toca se o item dele estiver liberado; anotar o tempo de processamento e o tamanho de `hls/{item}` para calibrar `preset`/renditions (§8.3).
 - [ ] **Step 4: Deploy em produção** seguindo a ordem de §11 (migration, config, imagem `sdc-queue`, `docker stack deploy` por causa do serviço e do volume novos, app). Antes do `stack deploy`, Matheus confirma no R760 `docker volume inspect sdc_app_storage` e a presença/ausência de `ANEXOS_ROOT` em `docker service inspect sdc_app`, e escolhe a linha certa da tabela de §11.
 - [ ] **Step 5: Smoke externo em produção** (§11, passo 6): de uma conexão fora da rede corporativa, professor sobe uma aula real e aluno assiste; se alguma parte de 8 MB ou segmento falhar por limite no caminho, baixar `TREINAMENTO_VIDEO_PARTE_BYTES` e/ou `hls_time` e repetir, sem mudança de código.
