@@ -90,6 +90,16 @@ return [
             'after_commit' => false,
         ],
 
+        // Transcodificacao de video do Treinamento (ffmpeg): jobs de ate 1h.
+        'redis-videos' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'videos',
+            'retry_after' => 3700,
+            'block_for' => 5,
+            'after_commit' => false,
+        ],
+
         // ProcessIntegration pode usar qualquer prioridade e tem timeout=120.
         // A reserva considera o timeout do job, que vence o --timeout do worker.
         // Fila critica - maxima prioridade.
