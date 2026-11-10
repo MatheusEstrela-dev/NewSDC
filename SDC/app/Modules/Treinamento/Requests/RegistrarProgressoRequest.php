@@ -18,7 +18,7 @@ class RegistrarProgressoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'posicao' => ['required', 'integer', 'min:1'],
+            'posicao' => ['required', 'integer', 'min:0'],
         ];
     }
 }

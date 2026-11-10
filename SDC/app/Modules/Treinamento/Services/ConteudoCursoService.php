@@ -79,7 +79,7 @@ class ConteudoCursoService
     {
         $tipo = TipoItem::from($dados['tipo']);
 
-        if ($tipo === TipoItem::PDF && $arquivo === null) {
+        if ($tipo->exigeArquivo() && $arquivo === null) {
             throw new \DomainException('O item PDF exige um arquivo.');
         }
         $this->exigirPaginas($tipo, $dados);
