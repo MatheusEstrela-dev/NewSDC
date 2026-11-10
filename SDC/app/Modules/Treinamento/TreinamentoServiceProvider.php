@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento;
 
 use App\Modules\Treinamento\Console\CopiarParaBancoCommand;
+use App\Modules\Treinamento\Http\Middleware\LecionaCurso;
 use Illuminate\Support\ServiceProvider;
 
 class TreinamentoServiceProvider extends ServiceProvider
@@ -28,6 +29,8 @@ class TreinamentoServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Rotas carregadas via routes/web.php -> routes/modules/treinamento.php
+
+        $this->app['router']->aliasMiddleware('leciona.curso', LecionaCurso::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([CopiarParaBancoCommand::class]);

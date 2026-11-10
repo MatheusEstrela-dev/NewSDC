@@ -357,6 +357,9 @@ return [
                 'reemitir' => 'treinamento.certificados.reemitir',
                 'download' => 'treinamento.certificados.download',
             ],
+            'Professor' => [
+                'acessar' => 'treinamento.professor.acessar',
+            ],
         ],
         'PLANTAO' => [
             'Turnos' => [

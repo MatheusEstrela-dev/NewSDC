@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
+use App\Modules\Treinamento\Services\ProfessorService;
 use App\Modules\Treinamento\Services\TreinamentoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,7 +15,8 @@ use Inertia\Response;
 class TreinamentoShowController extends Controller
 {
     public function __construct(
-        private readonly TreinamentoService $treinamentoService
+        private readonly TreinamentoService $treinamentoService,
+        private readonly ProfessorService $professorService
     ) {
     }
 
@@ -32,6 +34,7 @@ class TreinamentoShowController extends Controller
 
         return Inertia::render('Treinamento/TreinamentoShow', [
             'treinamento' => (new TreinamentoResource($treinamento))->resolve(),
+            'professores' => $treinamento->isEad() ? $this->professorService->listar($treinamento) : [],
             'minhaInscricao' => $minhaInscricao ? [
                 'id' => $minhaInscricao->id,
                 'status' => $minhaInscricao->status->value,

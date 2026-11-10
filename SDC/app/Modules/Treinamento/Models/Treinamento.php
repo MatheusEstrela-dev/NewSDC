@@ -241,7 +241,13 @@ class Treinamento extends Model implements Rastreavel
      */
     public function donosNotificacao(): array
     {
-        return $this->created_by === null ? [] : [(int) $this->created_by];
+        $ids = $this->professores()->pluck('user_id')->map(fn ($id) => (int) $id);
+
+        if ($this->created_by !== null) {
+            $ids->prepend((int) $this->created_by);
+        }
+
+        return $ids->unique()->values()->all();
     }
 
     public function urlNotificacao(): ?string

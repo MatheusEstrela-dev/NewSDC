@@ -47,6 +47,10 @@ class InscricaoService extends BaseService
             throw new \DomainException('Este treinamento nao e destinado ao seu perfil.');
         }
 
+        if ($inscrito instanceof User && app(ProfessorService::class)->leciona((int) $inscrito->getKey(), $treinamento)) {
+            throw new \DomainException('Professor do curso nao pode se inscrever como aluno.');
+        }
+
         $jaInscrito = Inscricao::query()
             ->porTreinamento($treinamento->id)
             ->where('inscrito_type', $inscrito::class)
