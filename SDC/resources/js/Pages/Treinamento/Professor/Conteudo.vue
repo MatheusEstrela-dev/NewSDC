@@ -283,45 +283,45 @@ function publicar() {
               >
                 <template #item="{ element: item }">
                   <div class="rounded-md border border-slate-200 dark:border-slate-700">
-                  <div class="flex items-center gap-3 px-3 py-2">
-                    <span class="handle-item cursor-grab select-none text-slate-400" title="Arraste para reordenar">::</span>
-                    <div class="min-w-0 flex-1">
-                      <Text class="block truncate font-medium">{{ item.titulo }}</Text>
-                      <Text size="xs" color="muted">
-                        {{ item.tipo_label }}
-                        <template v-if="item.tipo === 'PDF'"> - {{ item.total_paginas }} pagina(s)</template>
-                        - {{ item.obrigatorio ? 'Obrigatorio' : 'Opcional' }}
-                      </Text>
-                    </div>
-                    <a
-                      v-if="item.tem_arquivo"
-                      :href="route('treinamentos.professor.itens.arquivo', [curso.id, item.id])"
-                      target="_blank"
-                      rel="noopener"
-                      class="text-sm text-sky-600 hover:underline"
-                    >Abrir</a>
-                    <Button size="sm" variant="outline" @click="abrirItem(pasta, item)">Editar</Button>
-                    <Button size="sm" variant="danger" @click="excluirItem(item)">Excluir</Button>
-                  </div>
-
-                  <div v-if="item.tipo === 'VIDEO'" class="space-y-2 border-t border-slate-200 px-3 py-2 dark:border-slate-700">
-                    <template v-if="item.video">
-                      <div class="flex flex-wrap items-center gap-2">
-                        <Text class="font-medium">{{ item.video.titulo }}</Text>
-                        <Badge :variant="item.video.status === 'FALHOU' ? 'danger' : item.video.status === 'PRONTO' ? 'success' : 'warning'">{{ item.video.status_label }}</Badge>
-                        <Text v-if="item.video.duracao_segundos != null" size="xs" color="muted">{{ formatarDuracao(item.video.duracao_segundos) }}</Text>
+                    <div class="flex items-center gap-3 px-3 py-2">
+                      <span class="handle-item cursor-grab select-none text-slate-400" title="Arraste para reordenar">::</span>
+                      <div class="min-w-0 flex-1">
+                        <Text class="block truncate font-medium">{{ item.titulo }}</Text>
+                        <Text size="xs" color="muted">
+                          {{ item.tipo_label }}
+                          <template v-if="item.tipo === 'PDF'"> - {{ item.total_paginas }} pagina(s)</template>
+                          - {{ item.obrigatorio ? 'Obrigatorio' : 'Opcional' }}
+                        </Text>
                       </div>
-                      <Text v-if="avisoDoVideo(item.video)" size="xs" color="muted">{{ avisoDoVideo(item.video) }}</Text>
-                    </template>
-                    <Text v-else size="xs" color="muted">Nenhum vídeo vinculado a este item.</Text>
-
-                    <div class="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" @click="abrirSeletor(item)">{{ item.video ? 'Trocar vídeo' : 'Escolher vídeo' }}</Button>
-                      <Button v-if="item.video" size="sm" variant="outline" @click="desvincularVideo(item)">Desvincular</Button>
+                      <a
+                        v-if="item.tem_arquivo"
+                        :href="route('treinamentos.professor.itens.arquivo', [curso.id, item.id])"
+                        target="_blank"
+                        rel="noopener"
+                        class="text-sm text-sky-600 hover:underline"
+                      >Abrir</a>
+                      <Button size="sm" variant="outline" @click="abrirItem(pasta, item)">Editar</Button>
+                      <Button size="sm" variant="danger" @click="excluirItem(item)">Excluir</Button>
                     </div>
 
-                    <UploaderVideo v-if="item.video" :video="item.video" @atualizado="atualizarVideo" />
-                  </div>
+                    <div v-if="item.tipo === 'VIDEO'" class="space-y-2 border-t border-slate-200 px-3 py-2 dark:border-slate-700">
+                      <template v-if="item.video">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <Text class="font-medium">{{ item.video.titulo }}</Text>
+                          <Badge :variant="item.video.status === 'FALHOU' ? 'danger' : item.video.status === 'PRONTO' ? 'success' : 'warning'">{{ item.video.status_label }}</Badge>
+                          <Text v-if="item.video.duracao_segundos != null" size="xs" color="muted">{{ formatarDuracao(item.video.duracao_segundos) }}</Text>
+                        </div>
+                        <Text v-if="avisoDoVideo(item.video)" size="xs" color="muted">{{ avisoDoVideo(item.video) }}</Text>
+                      </template>
+                      <Text v-else size="xs" color="muted">Nenhum vídeo vinculado a este item.</Text>
+
+                      <div class="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" @click="abrirSeletor(item)">{{ item.video ? 'Trocar vídeo' : 'Escolher vídeo' }}</Button>
+                        <Button v-if="item.video" size="sm" variant="outline" @click="desvincularVideo(item)">Desvincular</Button>
+                      </div>
+
+                      <UploaderVideo v-if="item.video" :key="item.video.id" :video="item.video" @atualizado="atualizarVideo" />
+                    </div>
                   </div>
                 </template>
               </draggable>

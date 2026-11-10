@@ -27,7 +27,10 @@ class ConteudoController extends Controller
         $pastas = Modulo::query()
             ->porTreinamento($treinamento->id)
             ->ordenados()
-            ->with(['itens.video.uploadAberto'])
+            ->with([
+                'itens.video' => fn ($query) => $query->withCount('itens as usos'),
+                'itens.video.uploadAberto',
+            ])
             ->get()
             ->map(fn (Modulo $m) => [
                 'id' => $m->id,
@@ -75,6 +78,7 @@ class ConteudoController extends Controller
             'status_label' => $video->status->getLabel(),
             'duracao_segundos' => $video->duracao_segundos,
             'erro' => $video->erro,
+            'usos' => (int) $video->usos,
             'tem_versao' => $video->temVersaoPublicada(),
             'pode_gerenciar' => $this->permissaoDeVideo->podeGerenciar($video, $request->user()),
             'upload_aberto' => $upload ? [

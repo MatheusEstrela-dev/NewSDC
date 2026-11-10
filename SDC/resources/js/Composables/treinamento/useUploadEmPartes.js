@@ -5,9 +5,10 @@ export const TIPOS_ACEITOS = ['video/mp4', 'video/quicktime', 'video/x-matroska'
 export const ACCEPT_VIDEO = TIPOS_ACEITOS.join(',');
 
 const MIME_POR_EXTENSAO = { mp4: 'video/mp4', mov: 'video/quicktime', mkv: 'video/x-matroska' };
-const MAX_TENTATIVAS = 3;
-// Espera antes da 2a e da 3a tentativa.
-const ESPERAS_MS = [1000, 2000];
+// 1 tentativa inicial + 3 reenvios, com espera de 1 s, 2 s e 4 s antes de cada reenvio.
+const MAX_TENTATIVAS = 4;
+const ESPERAS_MS = [1000, 2000, 4000];
+const TIMEOUT_PARTE_MS = 120000;
 
 function mimeDoArquivo(file) {
   if (file.type) return file.type;
@@ -54,22 +55,20 @@ export function useUploadEmPartes({ videoId }) {
   const progresso = ref(0);
   const estado = ref('ocioso');
   const erro = ref(null);
+  // Status do video devolvido por finalizar.
+  const statusFinal = ref(null);
 
   let controlador = null;
+  let id = null;
   let uploadId = null;
 
   const rota = (nome, parametros) => route(`treinamentos.professor.videos.upload.${nome}`, parametros);
 
-  async function enviarParte(file, n, tamanhoParte, id) {
+  // Reenvia so falha transitoria; o servidor trata parte e finalizar de forma idempotente.
+  async function comReenvio(chamada) {
     for (let tentativa = 1; ; tentativa++) {
-      const corpo = new FormData();
-      corpo.append('_method', 'PUT');
-      corpo.append('parte', file.slice((n - 1) * tamanhoParte, n * tamanhoParte));
-
       try {
-        // POST com _method: o PUT multipart nao e interpretado pelo PHP/Swoole.
-        await window.axios.post(rota('parte', [toValue(videoId), id, n]), corpo, { signal: controlador.signal });
-        return;
+        return await chamada();
       } catch (e) {
         if (!ehTransitorio(e) || tentativa >= MAX_TENTATIVAS || controlador.signal.aborted) throw e;
         await esperar(ESPERAS_MS[tentativa - 1], controlador.signal);
@@ -77,15 +76,31 @@ export function useUploadEmPartes({ videoId }) {
     }
   }
 
+  function enviarParte(file, n, tamanhoParte) {
+    return comReenvio(() => {
+      const corpo = new FormData();
+      corpo.append('_method', 'PUT');
+      corpo.append('parte', file.slice((n - 1) * tamanhoParte, n * tamanhoParte));
+
+      // POST com _method: o PUT multipart nao e interpretado pelo PHP/Swoole.
+      return window.axios.post(rota('parte', [id, uploadId, n]), corpo, {
+        signal: controlador.signal,
+        timeout: TIMEOUT_PARTE_MS,
+      });
+    });
+  }
+
   async function enviar(file) {
     controlador = new AbortController();
+    id = toValue(videoId);
     uploadId = null;
     progresso.value = 0;
     erro.value = null;
+    statusFinal.value = null;
     estado.value = 'enviando';
 
     try {
-      const { data: aberto } = await window.axios.post(rota('abrir', toValue(videoId)), {
+      const { data: aberto } = await window.axios.post(rota('abrir', id), {
         nome_original: file.name,
         tamanho_total: file.size,
         mime: mimeDoArquivo(file),
@@ -93,12 +108,13 @@ export function useUploadEmPartes({ videoId }) {
       uploadId = aberto.upload_id;
 
       for (let n = 1; n <= aberto.total_partes; n++) {
-        await enviarParte(file, n, aberto.tamanho_parte, uploadId);
+        await enviarParte(file, n, aberto.tamanho_parte);
         progresso.value = Math.round((n / aberto.total_partes) * 100);
       }
 
       estado.value = 'finalizando';
-      await window.axios.post(rota('finalizar', [toValue(videoId), uploadId]));
+      const { data: finalizado } = await comReenvio(() => window.axios.post(rota('finalizar', [id, uploadId]), null, { signal: controlador.signal }));
+      statusFinal.value = finalizado.status;
       estado.value = 'enviado';
     } catch (e) {
       if (controlador.signal.aborted) return;
@@ -115,7 +131,7 @@ export function useUploadEmPartes({ videoId }) {
     controlador.abort();
     if (uploadId) {
       try {
-        await window.axios.delete(rota('cancelar', [toValue(videoId), uploadId]));
+        await window.axios.delete(rota('cancelar', [id, uploadId]));
       } catch {
         // O servidor expira o envio aberto sozinho.
       }
@@ -124,5 +140,5 @@ export function useUploadEmPartes({ videoId }) {
 
   onBeforeUnmount(cancelar);
 
-  return { enviar, cancelar, progresso, estado, erro };
+  return { enviar, cancelar, progresso, estado, erro, statusFinal };
 }

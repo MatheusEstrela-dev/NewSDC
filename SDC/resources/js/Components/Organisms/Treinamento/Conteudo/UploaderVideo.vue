@@ -6,6 +6,9 @@ import { ACCEPT_VIDEO, useUploadEmPartes, validarArquivoDeVideo } from '@/Compos
 import { formatarDuracao } from '@/Composables/treinamento/formatarDuracao';
 
 const INTERVALO_STATUS_MS = 5000;
+const STATUS_TERMINAIS = ['PRONTO', 'FALHOU'];
+// Respostas que nao melhoram com nova tentativa.
+const ERROS_DEFINITIVOS = [401, 403, 404, 422];
 
 const props = defineProps({
   video: { type: Object, required: true },
@@ -13,15 +16,21 @@ const props = defineProps({
 
 const emit = defineEmits(['atualizado']);
 
-const { enviar, cancelar, progresso, estado, erro: erroEnvio } = useUploadEmPartes({ videoId: () => props.video.id });
+const { enviar, cancelar, progresso, estado, erro: erroEnvio, statusFinal } = useUploadEmPartes({ videoId: () => props.video.id });
 
 const erroArquivo = ref(null);
 const substituindo = ref(false);
+const desistiuDeAcompanhar = ref(false);
 const arrastando = ref(false);
 
 const erro = computed(() => erroArquivo.value ?? erroEnvio.value);
 const emEnvio = computed(() => estado.value === 'enviando' || estado.value === 'finalizando');
 const emProcessamento = computed(() => ['ENVIADO', 'PROCESSANDO'].includes(props.video.status));
+// Logo apos o envio o status da prop pode ainda nao ter alcancado o servidor.
+const aguardandoProcessamento = computed(() => estado.value === 'enviado' && !STATUS_TERMINAIS.includes(props.video.status));
+const acompanhar = computed(() => props.video.pode_gerenciar
+  && !desistiuDeAcompanhar.value
+  && (emProcessamento.value || aguardandoProcessamento.value));
 const podeSubstituir = computed(() => ['PRONTO', 'FALHOU'].includes(props.video.status) && !substituindo.value && !emEnvio.value);
 const mostrarZona = computed(() => !emEnvio.value
   && (substituindo.value || (estado.value !== 'enviado' && ['SEM_VIDEO', 'UPLOAD_ABERTO'].includes(props.video.status))));
@@ -49,8 +58,12 @@ async function consultar() {
   try {
     const { data } = await window.axios.get(route('treinamentos.professor.videos.status', props.video.id), { signal: consultaAtual.signal });
     emit('atualizado', mesclar(data));
-  } catch {
-    // Falha transitoria: a proxima consulta tenta de novo.
+  } catch (e) {
+    // Rede e 5xx: a proxima consulta tenta de novo. O resto nao se resolve sozinho.
+    if (ERROS_DEFINITIVOS.includes(e.response?.status)) {
+      desistiuDeAcompanhar.value = true;
+      pararAcompanhamento();
+    }
   } finally {
     consultaAtual = null;
   }
@@ -63,14 +76,17 @@ function pararAcompanhamento() {
   consultaAtual = null;
 }
 
-watch(() => emProcessamento.value && props.video.pode_gerenciar, (acompanhar) => {
+watch(acompanhar, (ativo) => {
   pararAcompanhamento();
-  if (acompanhar) intervalo = setInterval(consultar, INTERVALO_STATUS_MS);
+  if (ativo) intervalo = setInterval(consultar, INTERVALO_STATUS_MS);
 }, { immediate: true });
 
 watch(estado, (novo) => {
   if (novo !== 'enviado') return;
   substituindo.value = false;
+  desistiuDeAcompanhar.value = false;
+  // Estado devolvido por finalizar, sem esperar a primeira consulta.
+  emit('atualizado', { ...props.video, status: statusFinal.value, status_label: props.video.status_label, erro: null });
   consultar();
 });
 
@@ -127,12 +143,12 @@ async function reprocessar() {
       <Text size="xs" color="muted">MP4, MOV ou MKV, até 2 GB.</Text>
     </label>
 
-    <template v-if="substituindo && mostrarZona">
-      <Text size="xs" color="muted">
-        {{ video.em_uso ? 'Este vídeo é usado por outros itens: a troca vale para todos os cursos que o usam.' : 'A troca vale para todos os cursos que usam este vídeo.' }}
-      </Text>
-      <Button size="sm" variant="outline" @click="cancelarSubstituicao">Cancelar substituição</Button>
-    </template>
+    <Button v-if="substituindo && mostrarZona" size="sm" variant="outline" @click="cancelarSubstituicao">Cancelar substituição</Button>
+    <Text v-if="(substituindo || podeSubstituir) && video.usos > 1" size="xs" color="muted">
+      Este vídeo é usado em {{ video.usos }} itens; substituir o arquivo altera todos.
+    </Text>
+
+    <Text v-if="desistiuDeAcompanhar" size="xs" color="muted">Não foi possível acompanhar o processamento; recarregue a página.</Text>
 
     <div v-if="emEnvio" class="space-y-1">
       <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">

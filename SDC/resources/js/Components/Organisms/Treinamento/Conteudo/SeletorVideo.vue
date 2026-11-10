@@ -1,11 +1,10 @@
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { onUnmounted, ref, watch } from 'vue';
 import Modal from '@/Components/Modal.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
-import UploaderVideo from '@/Components/Organisms/Treinamento/Conteudo/UploaderVideo.vue';
 import { formatarDuracao } from '@/Composables/treinamento/formatarDuracao';
 import { mensagemDeErro } from '@/Composables/treinamento/useUploadEmPartes';
 
@@ -33,6 +32,7 @@ let debounce = null;
 let consulta = null;
 
 async function carregar() {
+  if (!props.show) return;
   consulta?.abort();
   consulta = new AbortController();
   carregando.value = true;
@@ -53,6 +53,7 @@ async function carregar() {
 
 watch(busca, () => {
   clearTimeout(debounce);
+  if (!props.show) return;
   debounce = setTimeout(carregar, DEBOUNCE_MS);
 });
 
@@ -72,30 +73,17 @@ async function vincular(videoId) {
 
 // ---- Enviar novo ------------------------------------------------------------
 
-const novo = ref(null);
-const vinculando = ref(false);
-const aguardando = computed(() => novo.value && ['ENVIADO', 'PROCESSANDO'].includes(novo.value.status) && !novo.value.tem_versao);
-
+// Cria o registro e vincula ao item; o arquivo e enviado no card do item.
 async function criarNovo() {
+  if (ocupado.value) return;
   erro.value = null;
   ocupado.value = true;
   try {
-    const { data } = await window.axios.post(route('treinamentos.professor.videos.store'), { titulo: props.item.titulo });
-    novo.value = { ...data, pode_gerenciar: true, tem_versao: false, erro: null, upload_aberto: null };
+    const { data: criado } = await window.axios.post(route('treinamentos.professor.videos.store'), { titulo: props.item.titulo });
+    await vincular(criado.id);
   } catch (e) {
     erro.value = mensagemDeErro(e);
-  } finally {
     ocupado.value = false;
-  }
-}
-
-// Vincular exige versao publicada: o vinculo acontece quando o processamento termina.
-async function acompanhar(video) {
-  novo.value = video;
-  if (video.tem_versao && !vinculando.value) {
-    vinculando.value = true;
-    await vincular(video.id);
-    vinculando.value = false;
   }
 }
 
@@ -106,10 +94,9 @@ function limpar() {
   consulta?.abort();
   aba.value = 'biblioteca';
   busca.value = '';
+  clearTimeout(debounce);
   videos.value = [];
   erro.value = null;
-  novo.value = null;
-  vinculando.value = false;
   ocupado.value = false;
 }
 
@@ -164,17 +151,11 @@ onUnmounted(limpar);
       </div>
 
       <div v-show="aba === 'novo'" class="space-y-3">
-        <template v-if="!novo">
-          <Text color="muted">O vídeo será criado com o título do item: "{{ item.titulo }}".</Text>
-          <Button size="sm" :loading="ocupado" @click="criarNovo">Criar e escolher arquivo</Button>
-        </template>
-        <template v-else>
-          <UploaderVideo :video="novo" @atualizado="acompanhar" />
-          <Text v-if="aguardando" size="xs" color="muted">
-            Envio concluído. Mantenha esta janela aberta: o vídeo é vinculado ao item quando o processamento terminar.
-            Se fechar, vincule depois pela aba Biblioteca.
-          </Text>
-        </template>
+        <Text color="muted">
+          O vídeo é criado com o título do item ("{{ item.titulo }}") e vinculado a ele agora.
+          Depois, escolha o arquivo no próprio item.
+        </Text>
+        <Button size="sm" :loading="ocupado" @click="criarNovo">Criar vídeo e vincular ao item</Button>
       </div>
 
       <div class="flex justify-end">
