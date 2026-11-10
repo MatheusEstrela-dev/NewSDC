@@ -69,7 +69,7 @@ function registrarPagina(item, pagina) {
   if (!url || pagina <= item.posicao) return;
 
   if (pendente && pendente.url !== url) enviarPendente();
-  pendente = { url, posicao: pagina };
+  pendente = { url, posicao: pendente?.url === url ? Math.max(pendente.posicao, pagina) : pagina };
   clearTimeout(temporizador);
   temporizador = setTimeout(enviarPendente, ATRASO_PROGRESSO_MS);
 }

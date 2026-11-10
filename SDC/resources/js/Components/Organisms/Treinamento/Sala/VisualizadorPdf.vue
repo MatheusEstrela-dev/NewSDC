@@ -25,21 +25,27 @@ const pagina = ref(Math.min(Math.max(1, props.posicaoInicial), total.value));
 
 let documento = null;
 let tarefa = null;
+let desmontado = false;
+let geracao = 0;
+let fila = Promise.resolve();
 
-const zoomPercentual = computed(() => Math.round((zoom.value / 1.2) * 100));
-const temAnterior = computed(() => pagina.value > 1);
-const temProxima = computed(() => pagina.value < total.value);
-
-async function desenhar() {
-  if (!documento || !canvas.value) return;
-
+// Renders em serie: cada chamada cancela a anterior, espera ela terminar e so
+// entao usa o canvas. Chamadas superadas por uma mais nova nao fazem nada.
+function desenhar() {
+  const minha = ++geracao;
   tarefa?.cancel();
-  try {
-    tarefa = await renderizarPagina(documento, pagina.value, canvas.value, zoom.value);
-    await tarefa.promise;
-  } catch (e) {
-    if (e?.name !== 'RenderingCancelledException') erro.value = true;
-  }
+
+  fila = fila.then(async () => {
+    if (minha !== geracao || desmontado || !documento || !canvas.value) return;
+    try {
+      tarefa = await renderizarPagina(documento, pagina.value, canvas.value, zoom.value);
+      await tarefa.promise;
+    } catch (e) {
+      if (e?.name !== 'RenderingCancelledException' && minha === geracao && !desmontado) erro.value = true;
+    }
+  });
+
+  return fila;
 }
 
 function irPara(numero) {
@@ -51,14 +57,21 @@ function ajustarZoom(delta) {
 }
 
 onMounted(async () => {
+  let aberto = null;
   try {
-    documento = await abrirDocumento(props.url);
+    aberto = await abrirDocumento(props.url);
+    if (desmontado) {
+      aberto.destroy();
+      return;
+    }
+    documento = aberto;
     total.value = documento.numPages;
     pagina.value = Math.min(pagina.value, total.value);
     carregando.value = false;
     emit('pagina', pagina.value);
     await desenhar();
   } catch {
+    if (desmontado) return;
     erro.value = true;
     carregando.value = false;
   }
@@ -71,6 +84,8 @@ watch(pagina, (n) => {
 watch(zoom, desenhar);
 
 onBeforeUnmount(() => {
+  desmontado = true;
+  geracao++;
   tarefa?.cancel();
   documento?.destroy();
 });
