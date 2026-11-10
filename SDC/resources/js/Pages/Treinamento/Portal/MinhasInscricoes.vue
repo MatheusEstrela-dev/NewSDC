@@ -12,6 +12,7 @@ defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   inscricoes: { type: Object, required: true },
+  salas: { type: Object, default: () => ({}) },
 });
 
 const pagination = computed(() => {
@@ -66,6 +67,13 @@ const formatDate = (dateValue) => {
           >
             Ver certificado
           </a>
+          <Link
+            v-if="salas[inscricao.id]"
+            :href="salas[inscricao.id].sala_url"
+            class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Abrir curso ({{ Math.round(salas[inscricao.id].percentual) }}%)
+          </Link>
         </div>
       </CardBase>
 

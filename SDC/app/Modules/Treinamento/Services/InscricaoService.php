@@ -39,8 +39,20 @@ class InscricaoService extends BaseService
      */
     public function inscrever(Treinamento $treinamento, Model $inscrito): Inscricao
     {
+        if ($treinamento->isEad() && !$treinamento->estaPublicado()) {
+            throw new \DomainException('Este curso ainda nao foi publicado.');
+        }
+
         if (!$treinamento->podeReceberInscricao()) {
             throw new \DomainException('Este treinamento nao esta recebendo inscricoes no momento.');
+        }
+
+        if (!$treinamento->publico_alvo->aceita($inscrito)) {
+            throw new \DomainException('Este treinamento nao e destinado ao seu perfil.');
+        }
+
+        if ($inscrito instanceof User && app(ProfessorService::class)->leciona((int) $inscrito->getKey(), $treinamento)) {
+            throw new \DomainException('Professor do curso nao pode se inscrever como aluno.');
         }
 
         $jaInscrito = Inscricao::query()
@@ -53,14 +65,22 @@ class InscricaoService extends BaseService
             throw new \DomainException('Voce ja possui uma inscricao neste treinamento.');
         }
 
+        $aprovacaoAutomatica = (bool) $treinamento->inscricao_aprovacao_automatica;
+
         $inscricao = Inscricao::create([
             'treinamento_id' => $treinamento->id,
             'inscrito_type' => $inscrito::class,
             'inscrito_id' => $inscrito->getKey(),
-            'status' => StatusInscricao::PENDENTE->value,
+            'status' => ($aprovacaoAutomatica ? StatusInscricao::APROVADA : StatusInscricao::PENDENTE)->value,
+            'data_aprovacao' => $aprovacaoAutomatica ? now() : null,
+            'aprovado_por_id' => null,
             'qr_code_token' => (string) Str::uuid(),
             'data_inscricao' => now(),
         ]);
+
+        if ($aprovacaoAutomatica) {
+            $this->notificarAprovacao($inscricao);
+        }
 
         // O QR Code (o "ingresso") so sai por e-mail quando a inscricao e
         // aprovada (ver aprovar() abaixo) - antes disso a inscricao ainda pode
@@ -81,6 +101,16 @@ class InscricaoService extends BaseService
         return $inscricao;
     }
 
+    /**
+     * Texto do aviso apos inscrever: a inscricao pode ja nascer aprovada.
+     */
+    public function mensagemDeSucesso(Inscricao $inscricao): string
+    {
+        return $inscricao->status === StatusInscricao::APROVADA
+            ? 'Inscricao realizada e aprovada!'
+            : 'Inscricao realizada! Aguarde a aprovacao.';
+    }
+
     public function aprovar(Inscricao $inscricao, User $aprovador, ?string $observacoes = null): void
     {
         if ($inscricao->status !== StatusInscricao::PENDENTE) {
@@ -94,6 +124,11 @@ class InscricaoService extends BaseService
             'observacoes' => $observacoes,
         ]);
 
+        $this->notificarAprovacao($inscricao);
+    }
+
+    private function notificarAprovacao(Inscricao $inscricao): void
+    {
         // RF03: QR Code por e-mail so faz sentido para presencial - online
         // confirma presenca direto na tela (ver PresencaService::autoconfirmar()).
         $inscricao->loadMissing(['treinamento', 'inscrito']);

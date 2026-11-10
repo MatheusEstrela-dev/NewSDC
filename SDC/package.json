@@ -58,6 +58,7 @@
         "idb-keyval": "^6.2.1",
         "laravel-echo": "^2.3.4",
         "leaflet": "^1.9.4",
+        "pdfjs-dist": "4.10.38",
         "pusher-js": "^8.5.0",
         "qr-scanner": "^1.4.2",
         "qrcode": "^1.5.4",

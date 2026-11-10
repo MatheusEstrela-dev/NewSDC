@@ -38,7 +38,7 @@ watch(() => props.minhaInscricao?.qr_code_token, desenharQr);
 function inscreverSe() {
   router.post(route('portal.treinamento.inscricoes.store', props.treinamento.link_publico_slug), {}, {
     preserveScroll: true,
-    onSuccess: () => toast('Inscrição realizada com sucesso!', 'success'),
+    // O sucesso aparece no banner do flash (texto vem do servidor, conforme o status).
     onError: (errors) => toast(Object.values(errors)[0] || 'Não foi possível concluir a inscrição.', 'error'),
   });
 }

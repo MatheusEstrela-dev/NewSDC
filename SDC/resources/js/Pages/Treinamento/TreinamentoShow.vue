@@ -3,6 +3,7 @@ import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
@@ -13,7 +14,8 @@ import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from '@/Composables/useToast';
 import { useTabs } from '@/Composables/core/useTabs';
 import { router, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import axios from 'axios';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -26,6 +28,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  professores: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const { can } = usePermissions();
@@ -37,6 +43,12 @@ const tabConfig = computed(() => [
   { id: 'modulos', label: 'Módulos', icon: BookOpenIcon, badge: props.treinamento.modulos?.length || null, hidden: !props.treinamento.modulos?.length },
   { id: 'inscricao', label: 'Inscrição', icon: UsersIcon },
 ]);
+
+// Servidor so se inscreve em curso para servidores; EAD ainda nao publicado nao aceita inscricao.
+const destinadoAoServidor = computed(() => props.treinamento.publico_alvo === 'SERVIDORES');
+const podeInscreverServidor = computed(() => destinadoAoServidor.value
+  && props.treinamento.pode_receber_inscricao
+  && (props.treinamento.tipo !== 'EAD' || props.treinamento.esta_publicado));
 
 const formatDate = (dateValue) => {
   if (!dateValue) return null;
@@ -70,6 +82,49 @@ const bloquearPresenca = () => postAction('treinamentos.bloquear-presenca', {}, 
 const transicionar = (status) => postAction('treinamentos.status', { status }, 'Status atualizado.');
 
 const podeTransicionarPara = (status) => (props.treinamento.status_transicoes || []).includes(status);
+
+// Professores (somente cursos EAD)
+const buscaProfessor = ref('');
+const candidatos = ref([]);
+let timerBusca = null;
+
+const candidatosDisponiveis = computed(() => {
+  const ja = new Set(props.professores.map((p) => p.id));
+  return candidatos.value.filter((c) => !ja.has(c.id));
+});
+
+watch(buscaProfessor, (valor) => {
+  clearTimeout(timerBusca);
+  const termo = valor.trim();
+  if (!termo) {
+    candidatos.value = [];
+    return;
+  }
+  timerBusca = setTimeout(async () => {
+    const { data } = await axios.get(route('treinamentos.professores.candidatos'), { params: { busca: termo } });
+    candidatos.value = data;
+  }, 300);
+});
+
+function adicionarProfessor(userId) {
+  router.post(route('treinamentos.professores.store', props.treinamento.id), { user_id: userId }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast('Professor designado.', 'success');
+      buscaProfessor.value = '';
+    },
+    onError: (errors) => toast(Object.values(errors)[0] || 'Nao foi possivel designar o professor.', 'error'),
+  });
+}
+
+function removerProfessor(userId) {
+  router.delete(route('treinamentos.professores.destroy', [props.treinamento.id, userId]), {
+    preserveScroll: true,
+    onSuccess: () => toast('Professor removido.', 'success'),
+  });
+}
+
+onBeforeUnmount(() => clearTimeout(timerBusca));
 
 function copiarLinkPublico() {
   const url = `${window.location.origin}/portal-treinamento/eventos/${props.treinamento.link_publico_slug}`;
@@ -203,6 +258,13 @@ function copiarLinkPublico() {
               >
                 Confirmar minha presença
               </Button>
+              <Link
+                v-if="treinamento.tipo === 'EAD' && minhaInscricao.status === 'APROVADA'"
+                :href="route('treinamentos.aluno.sala', treinamento.id)"
+                class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Abrir sala
+              </Link>
               <a
                 v-if="minhaInscricao.certificado_disponivel"
                 :href="route('treinamentos.certificados.imprimir', minhaInscricao.certificado_id)"
@@ -212,13 +274,49 @@ function copiarLinkPublico() {
                 Ver / imprimir certificado
               </a>
             </div>
-            <Button v-else-if="treinamento.pode_receber_inscricao" variant="primary" @click="inscreverSe">
+            <Button v-else-if="podeInscreverServidor" variant="primary" @click="inscreverSe">
               Inscrever-se
             </Button>
+            <Text v-else-if="!destinadoAoServidor" size="sm" color="muted">Este treinamento é destinado ao público do Portal do Cidadão.</Text>
             <Text v-else size="sm" color="muted">Este treinamento não está recebendo inscrições no momento.</Text>
           </div>
         </template>
       </TreinamentoTabs>
+
+      <!-- Professores (EAD) -->
+      <section v-if="treinamento.tipo === 'EAD'" class="mt-8 space-y-3">
+        <Heading :level="3" class="text-lg font-semibold">Professores</Heading>
+        <Text v-if="!professores.length" size="sm" color="muted">Nenhum professor designado.</Text>
+        <ul v-else class="space-y-2">
+          <li
+            v-for="professor in professores"
+            :key="professor.id"
+            class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
+          >
+            <Text size="sm" class="font-medium">{{ professor.name }}</Text>
+            <Button v-if="can('treinamento.cursos.edit')" variant="danger" size="sm" @click="removerProfessor(professor.id)">
+              Remover
+            </Button>
+          </li>
+        </ul>
+
+        <div v-if="can('treinamento.cursos.edit')" class="space-y-2">
+          <TextInput v-model="buscaProfessor" placeholder="Buscar professor por nome ou e-mail" />
+          <ul v-if="candidatosDisponiveis.length" class="space-y-2">
+            <li
+              v-for="candidato in candidatosDisponiveis"
+              :key="candidato.id"
+              class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
+            >
+              <div>
+                <Text size="sm" class="font-medium">{{ candidato.name }}</Text>
+                <Text size="xs" color="muted">{{ candidato.email }}</Text>
+              </div>
+              <Button variant="primary" size="sm" @click="adicionarProfessor(candidato.id)">Adicionar</Button>
+            </li>
+          </ul>
+        </div>
+      </section>
     </div>
 
 </template>

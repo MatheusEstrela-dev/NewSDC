@@ -8,6 +8,10 @@ use App\Modules\Treinamento\Controllers\Portal\InscricaoController;
 use App\Modules\Treinamento\Controllers\Portal\MinhasInscricoesController;
 use App\Modules\Treinamento\Controllers\Portal\PresencaAutoconfirmacaoController;
 use App\Modules\Treinamento\Controllers\Portal\RegisterController;
+use App\Modules\Treinamento\Controllers\Portal\SalaDeAulaController;
+use App\Modules\Treinamento\Controllers\Portal\SalaEntregaStoreController;
+use App\Modules\Treinamento\Controllers\Portal\SalaItemArquivoController;
+use App\Modules\Treinamento\Controllers\Portal\SalaProgressoController;
 use App\Modules\Treinamento\Controllers\Portal\VerificarEmailController;
 use App\Modules\Treinamento\Http\Middleware\DisableDebugbarOnPortal;
 use App\Modules\Treinamento\Http\Middleware\ShareCidadaoInertiaData;
@@ -63,6 +67,17 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
             ->name('inscricoes.presenca');
 
         Route::get('/minhas-inscricoes', MinhasInscricoesController::class)->name('inscricoes.index');
+        // Sala de aula do EAD (cidadao): o acesso a cada conteudo e decidido no
+        // backend pela trilha, nunca pelo front.
+        Route::get('/cursos/{slug}', SalaDeAulaController::class)->name('cursos.sala');
+        Route::get('/cursos/{slug}/itens/{item}/arquivo', SalaItemArquivoController::class)->name('cursos.itens.arquivo');
+        Route::post('/cursos/{slug}/itens/{item}/progresso', SalaProgressoController::class)
+            ->middleware('throttle:120,1')
+            ->name('cursos.itens.progresso');
+        Route::post('/cursos/{slug}/itens/{item}/entregas', SalaEntregaStoreController::class)
+            ->middleware('throttle:10,1')
+            ->name('cursos.itens.entregas');
+
         Route::get('/certificados', CertificadoController::class)->name('certificados.index');
         Route::get('/certificados/{certificado}/imprimir', CertificadoImprimirController::class)->name('certificados.imprimir');
     });

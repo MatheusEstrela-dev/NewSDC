@@ -17,6 +17,10 @@ const props = defineProps({
     type: Object,
     default: () => ({ tipos: [], categorias: [] }),
   },
+  publicos: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const { show: toast } = useToast();
@@ -27,6 +31,8 @@ const form = useForm({
   carga_horaria: props.treinamento.carga_horaria ?? '',
   categoria: props.treinamento.categoria ?? 'CURSO',
   tipo: props.treinamento.tipo ?? 'PRESENCIAL',
+  publico_alvo: props.treinamento.publico_alvo ?? '',
+  inscricao_aprovacao_automatica: props.treinamento.inscricao_aprovacao_automatica ?? false,
   instrutor: props.treinamento.instrutor ?? '',
   local: props.treinamento.local ?? '',
   data_inicio: props.treinamento.data_inicio ?? '',
@@ -96,6 +102,15 @@ function cancelar() {
             />
           </div>
           <div>
+            <label class="field-label">Público <span class="req">*</span></label>
+            <SelectInput
+              v-model="form.publico_alvo"
+              :options="publicos.map(p => ({ value: p.value, label: p.label }))"
+              placeholder="Selecione"
+            />
+            <p v-if="form.errors.publico_alvo" class="field-error">{{ form.errors.publico_alvo }}</p>
+          </div>
+          <div>
             <label class="field-label">Carga Horária (h) <span class="req">*</span></label>
             <TextInput v-model="form.carga_horaria" type="number" />
             <p v-if="form.errors.carga_horaria" class="field-error">{{ form.errors.carga_horaria }}</p>
@@ -136,6 +151,16 @@ function cancelar() {
             <TextInput v-model="form.percentual_frequencia_minimo" type="number" />
           </div>
         </div>
+
+        <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <input type="checkbox" v-model="form.inscricao_aprovacao_automatica" class="mt-0.5 rounded border-slate-300 dark:border-slate-600" />
+          <span>
+            Aprovar inscrições automaticamente
+            <span class="block text-xs text-slate-500 dark:text-slate-400">
+              Sem isso, cada inscrição fica pendente até um administrador aprovar.
+            </span>
+          </span>
+        </label>
 
         <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
           <input type="checkbox" v-model="form.presenca_autoconfirmavel" class="mt-0.5 rounded border-slate-300 dark:border-slate-600" />

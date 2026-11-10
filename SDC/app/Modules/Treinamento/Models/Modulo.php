@@ -8,10 +8,11 @@ use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Modulo extends Model
 {
-    use UsaConexaoDeTreinamento;
+    use SoftDeletes, UsaConexaoDeTreinamento;
 
     protected $table = 'treinamento.modulos';
 
@@ -37,6 +38,11 @@ class Modulo extends Model
         return $this->belongsTo(Treinamento::class);
     }
 
+    public function itens(): HasMany
+    {
+        return $this->hasMany(ModuloItem::class)->orderBy('ordem')->orderBy('id');
+    }
+
     public function frequencias(): HasMany
     {
         return $this->hasMany(Frequencia::class);
@@ -51,6 +57,6 @@ class Modulo extends Model
 
     public function scopeOrdenados($query)
     {
-        return $query->orderBy('ordem');
+        return $query->orderBy('ordem')->orderBy('id');
     }
 }

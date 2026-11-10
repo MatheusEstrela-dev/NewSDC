@@ -17,6 +17,17 @@ use Illuminate\Support\Facades\DB;
  *
  *   php artisan migrate --database=pgsql_treinamento --path=database/migrations/treinamento
  *
+ * Reaplicar em banco ja migrado
+ * A migration e idempotente (SQL com IF NOT EXISTS / ADD COLUMN IF NOT EXISTS).
+ * Em ambiente onde ela ja consta como rodada (homolog, producao), a DDL nova
+ * so entra depois de apagar o registro dela no sdc_treinamento e rodar de novo:
+ *
+ *   DELETE FROM migrations WHERE migration = '2026_11_05_210000_create_treinamento_schemas_tables';
+ *   php artisan migrate --database=pgsql_treinamento --path=database/migrations/treinamento --force
+ *
+ * Fazer isso ANTES de subir o codigo novo: sem publico_alvo o catalogo do
+ * portal e as inscricoes quebram.
+ *
  * Schemas
  * - cadastro: cidadaos, cidadao_email_verificacoes, cidadao_password_reset_tokens
  *   (login e dado pessoal do cidadao, LGPD).
@@ -55,6 +66,8 @@ return new class extends Migration
 
         $this->criarCadastro();
         $this->criarTreinamento();
+        $this->criarEad();
+        $this->ajustarTabelasExistentes();
     }
 
     public function down(): void
@@ -275,6 +288,130 @@ return new class extends Migration
             'certificados_status_index' => 'status',
             'certificados_treinamento_id_fkidx' => 'treinamento_id',
         ]);
+    }
+
+    private function criarEad(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.modulo_itens (
+                id bigserial PRIMARY KEY,
+                modulo_id bigint NOT NULL,
+                tipo varchar(20) NOT NULL,
+                titulo varchar(255) NOT NULL,
+                descricao text,
+                ordem integer NOT NULL DEFAULT 0,
+                obrigatorio boolean NOT NULL DEFAULT true,
+                arquivo_path varchar(500),
+                arquivo_nome varchar(255),
+                arquivo_mime varchar(100),
+                arquivo_tamanho bigint,
+                total_paginas integer,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                deleted_at timestamp(0),
+                CONSTRAINT modulo_itens_tipo_check CHECK (tipo IN ('PDF', 'PROJETO', 'PROVA', 'VIDEO')),
+                CONSTRAINT modulo_itens_modulo_id_foreign
+                    FOREIGN KEY (modulo_id) REFERENCES treinamento.modulos (id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.modulo_itens', [
+            'modulo_itens_modulo_id_ordem_index' => 'modulo_id, ordem',
+        ]);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.treinamento_professores (
+                id bigserial PRIMARY KEY,
+                treinamento_id bigint NOT NULL,
+                user_id bigint NOT NULL,
+                created_at timestamp(0),
+                CONSTRAINT treinamento_professores_treinamento_id_user_id_unique UNIQUE (treinamento_id, user_id),
+                CONSTRAINT treinamento_professores_treinamento_id_foreign
+                    FOREIGN KEY (treinamento_id) REFERENCES treinamento.treinamentos (id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.treinamento_professores', [
+            'treinamento_professores_user_id_fkidx' => 'user_id',
+        ]);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.progresso_itens (
+                id bigserial PRIMARY KEY,
+                inscricao_id bigint NOT NULL,
+                modulo_item_id bigint NOT NULL,
+                status varchar(20) NOT NULL,
+                posicao integer NOT NULL DEFAULT 0,
+                concluido_em timestamp(0),
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT progresso_itens_inscricao_id_modulo_item_id_unique UNIQUE (inscricao_id, modulo_item_id),
+                CONSTRAINT progresso_itens_status_check CHECK (status IN ('EM_ANDAMENTO', 'CONCLUIDO')),
+                CONSTRAINT progresso_itens_inscricao_id_foreign
+                    FOREIGN KEY (inscricao_id) REFERENCES treinamento.inscricoes (id) ON DELETE CASCADE,
+                CONSTRAINT progresso_itens_modulo_item_id_foreign
+                    FOREIGN KEY (modulo_item_id) REFERENCES treinamento.modulo_itens (id) ON DELETE CASCADE
+            )
+            SQL);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.progresso_pastas (
+                id bigserial PRIMARY KEY,
+                inscricao_id bigint NOT NULL,
+                modulo_id bigint NOT NULL,
+                concluida_em timestamp(0) NOT NULL,
+                CONSTRAINT progresso_pastas_inscricao_id_modulo_id_unique UNIQUE (inscricao_id, modulo_id),
+                CONSTRAINT progresso_pastas_inscricao_id_foreign
+                    FOREIGN KEY (inscricao_id) REFERENCES treinamento.inscricoes (id) ON DELETE CASCADE,
+                CONSTRAINT progresso_pastas_modulo_id_foreign
+                    FOREIGN KEY (modulo_id) REFERENCES treinamento.modulos (id) ON DELETE CASCADE
+            )
+            SQL);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.projeto_entregas (
+                id bigserial PRIMARY KEY,
+                inscricao_id bigint NOT NULL,
+                modulo_item_id bigint NOT NULL,
+                arquivo_path varchar(500),
+                arquivo_nome varchar(255),
+                arquivo_mime varchar(100),
+                arquivo_tamanho bigint,
+                comentario text,
+                status varchar(20) NOT NULL DEFAULT 'ENVIADA',
+                parecer text,
+                corrigido_por bigint,
+                corrigido_em timestamp(0),
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT projeto_entregas_status_check CHECK (status IN ('ENVIADA', 'APROVADA', 'DEVOLVIDA')),
+                CONSTRAINT projeto_entregas_inscricao_id_foreign
+                    FOREIGN KEY (inscricao_id) REFERENCES treinamento.inscricoes (id) ON DELETE CASCADE,
+                CONSTRAINT projeto_entregas_modulo_item_id_foreign
+                    FOREIGN KEY (modulo_item_id) REFERENCES treinamento.modulo_itens (id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.projeto_entregas', [
+            'projeto_entregas_modulo_item_id_status_index' => 'modulo_item_id, status',
+            'projeto_entregas_inscricao_id_modulo_item_id_index' => 'inscricao_id, modulo_item_id',
+            'projeto_entregas_corrigido_por_fkidx' => 'corrigido_por',
+        ]);
+    }
+
+    /**
+     * ALTERs sobre tabelas criadas por criarTreinamento(), todos idempotentes:
+     * colunas com IF NOT EXISTS e CHECKs recriados (DROP IF EXISTS + ADD).
+     */
+    private function ajustarTabelasExistentes(): void
+    {
+        $this->exec("ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS publico_alvo varchar(20) NOT NULL DEFAULT 'CIDADAOS'");
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS inscricao_aprovacao_automatica boolean NOT NULL DEFAULT false');
+
+        $this->exec('ALTER TABLE treinamento.treinamentos DROP CONSTRAINT IF EXISTS treinamentos_publico_alvo_check');
+        $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_publico_alvo_check CHECK (publico_alvo IN ('SERVIDORES', 'CIDADAOS'))");
+
+        $this->exec('ALTER TABLE treinamento.treinamentos DROP CONSTRAINT IF EXISTS treinamentos_tipo_check');
+        $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_tipo_check CHECK (tipo IN ('PRESENCIAL', 'ONLINE', 'EAD'))");
+
+        $this->exec('ALTER TABLE treinamento.modulos ADD COLUMN IF NOT EXISTS deleted_at timestamp(0)');
     }
 
     /**

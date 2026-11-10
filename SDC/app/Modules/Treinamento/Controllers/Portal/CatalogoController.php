@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Resources\TreinamentoListResource;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
@@ -19,7 +20,7 @@ class CatalogoController extends Controller
     {
         $filters = $request->only(['search', 'categoria']);
 
-        $query = Treinamento::query()->publicado()->with('modulos');
+        $query = Treinamento::query()->publicado()->paraPublico(PublicoAlvo::CIDADAOS)->with('modulos');
 
         if (!empty($filters['search'])) {
             $query->where('titulo', 'like', "%{$filters['search']}%");
@@ -41,6 +42,7 @@ class CatalogoController extends Controller
     {
         $treinamento = Treinamento::query()
             ->publicado()
+            ->paraPublico(PublicoAlvo::CIDADAOS)
             ->where('link_publico_slug', $slug)
             ->with('modulos')
             ->firstOrFail();

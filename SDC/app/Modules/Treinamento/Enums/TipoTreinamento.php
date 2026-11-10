@@ -8,12 +8,14 @@ enum TipoTreinamento: string
 {
     case PRESENCIAL = 'PRESENCIAL';
     case ONLINE = 'ONLINE';
+    case EAD = 'EAD';
 
     public function getLabel(): string
     {
         return match ($this) {
             self::PRESENCIAL => 'Presencial',
             self::ONLINE => 'Online',
+            self::EAD => 'EAD (curso com trilha)',
         };
     }
 
@@ -27,6 +29,7 @@ enum TipoTreinamento: string
         return match ($this) {
             self::PRESENCIAL => 'users',
             self::ONLINE => 'computer-desktop',
+            self::EAD => 'academic-cap',
         };
     }
 
