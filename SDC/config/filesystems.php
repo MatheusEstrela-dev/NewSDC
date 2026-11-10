@@ -167,6 +167,10 @@ return [
         // Anexos do modulo TDAP (comprovantes de prorrogacao de cronograma).
         'tdap' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_TDAP', 'sdc-tdap'), 'TDAP', 'app/tdap'),
 
+        // Arquivos do Treinamento EAD (PDFs dos itens e entregas de projeto).
+        // Privados: servidos por stream so em endpoint autorizado pela trilha.
+        'treinamentos' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_TREINAMENTOS', 'sdc-treinamentos'), 'TREINAMENTOS', 'app/treinamentos'),
+
         // Planos de contingencia municipais (PDF por municipio). Privados,
         // servidos por rota autenticada plancon.planos.download.
         'plancon' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_PLANCON', 'sdc-plancon'), 'PLANCON', 'app/plancon'),
