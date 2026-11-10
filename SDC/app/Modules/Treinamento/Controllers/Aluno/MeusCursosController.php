@@ -50,6 +50,8 @@ class MeusCursosController extends Controller
             'id' => $inscricao->treinamento_id,
             'titulo' => $inscricao->treinamento->titulo,
             'carga_horaria' => $inscricao->treinamento->carga_horaria,
+            'descricao' => $inscricao->treinamento->descricao,
+            'instrutor' => $inscricao->treinamento->instrutor,
             'status_label' => $inscricao->status->getLabel(),
             'aprovada' => $aprovada,
             'percentual' => $aprovada ? $this->trilha->estado($inscricao)->percentual : 0,
@@ -81,6 +83,7 @@ class MeusCursosController extends Controller
                 'titulo' => $t->titulo,
                 'carga_horaria' => $t->carga_horaria,
                 'descricao' => $t->descricao,
+                'instrutor' => $t->instrutor,
             ])
             ->values()
             ->all();

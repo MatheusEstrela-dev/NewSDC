@@ -2,9 +2,8 @@
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import CursoEadCard from '@/Components/Molecules/Treinamento/CursoEadCard.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
@@ -48,22 +47,8 @@ function inscrever(curso) {
         <Text color="muted">Você ainda não está inscrito em nenhum curso EAD.</Text>
       </CardBase>
 
-      <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <CardBase v-for="curso in meus_cursos" :key="curso.id">
-          <div class="flex items-start justify-between gap-2">
-            <Heading :level="3" class="text-base font-semibold">{{ curso.titulo }}</Heading>
-            <Badge v-if="!curso.aprovada" variant="warning">{{ curso.status_label }}</Badge>
-          </div>
-          <Text v-if="curso.carga_horaria" size="xs" color="muted" class="mt-1">{{ curso.carga_horaria }}h</Text>
-
-          <div v-if="curso.aprovada" class="mt-4">
-            <div class="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-              <div class="h-full bg-amber-500" :style="{ width: `${curso.percentual}%` }" />
-            </div>
-            <Text size="xs" color="muted" class="mt-1">{{ Math.round(curso.percentual) }}% concluído</Text>
-            <Button size="sm" class="mt-3" :href="curso.sala_url">Continuar</Button>
-          </div>
-        </CardBase>
+      <div v-else class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <CursoEadCard v-for="curso in meus_cursos" :key="curso.id" :curso="curso" modo="inscrito" />
       </div>
     </section>
 
@@ -74,13 +59,15 @@ function inscrever(curso) {
         <Text color="muted">Nenhum curso aberto para inscrição no momento.</Text>
       </CardBase>
 
-      <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <CardBase v-for="curso in disponiveis" :key="curso.id">
-          <Heading :level="3" class="text-base font-semibold">{{ curso.titulo }}</Heading>
-          <Text v-if="curso.carga_horaria" size="xs" color="muted" class="mt-1">{{ curso.carga_horaria }}h</Text>
-          <Text v-if="curso.descricao" size="sm" color="muted" class="mt-2 line-clamp-3">{{ curso.descricao }}</Text>
-          <Button size="sm" class="mt-4" :loading="inscrevendo === curso.id" @click="inscrever(curso)">Inscrever-se</Button>
-        </CardBase>
+      <div v-else class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <CursoEadCard
+          v-for="curso in disponiveis"
+          :key="curso.id"
+          :curso="curso"
+          modo="disponivel"
+          :loading="inscrevendo === curso.id"
+          @inscrever="inscrever"
+        />
       </div>
     </section>
   </div>
