@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Support\Database\ConsistentPostgresConnection;
+use App\Support\Database\ConfiguredPostgresConnector;
 use Illuminate\Database\Connection;
 use Illuminate\Database\PostgresConnection;
 use Illuminate\Queue\Events\JobProcessing;
@@ -14,6 +15,8 @@ final class ReplicaRoutingServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind('db.connector.pgsql', ConfiguredPostgresConnector::class);
+
         Connection::resolverFor('pgsql', static function ($pdo, $database, $prefix, $config) {
             return ($config['replica_routing'] ?? false)
                 ? new ConsistentPostgresConnection($pdo, $database, $prefix, $config)

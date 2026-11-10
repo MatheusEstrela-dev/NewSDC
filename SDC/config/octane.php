@@ -57,30 +57,22 @@ return [
     | Swoole Server Options
     |--------------------------------------------------------------------------
     |
-    | Opcoes passadas ao Swoole quando OCTANE_SERVER=swoole. Coroutines com
-    | SWOOLE_HOOK_ALL tornam Eloquent/PDO e predis (PHP puro) assincronos sem
-    | reescrita. IMPORTANTE: DB_PERSISTENT deve ser false sob hook (PDO
-    | persistente compartilhado entre coroutines quebra). Task workers isolam
-    | CPU pesada (hash) do pool HTTP. enable_reuse_port elimina o lock de
-    | accept(); http_compression reduz I/O de rede em respostas grandes.
+    | Opcoes passadas ao Swoole quando OCTANE_SERVER=swoole. Requisicoes HTTP
+    | ficam sequenciais por worker para preservar o contexto Laravel. Task
+    | workers continuam isolando CPU pesada (hash) do pool HTTP.
     |
     */
 
     'swoole' => [
         'options' => [
-            'enable_coroutine' => true,
-            // Paralelismo por coroutine ligado com OCTANE_HOOK_FLAGS_ENABLED=true.
-            // Os pools por-coroutine (PDO + Redis) tornam Eloquent/predis seguros
-            // sob hooks. EXCLUIMOS o hook de curl: o SWOOLE_HOOK_CURL troca o handle
-            // por Swoole\Curl\Handler, que o CurlMultiHandler do Guzzle nao consegue
-            // usar (Object ... could not be converted to int) -> quebra qualquer SDK
-            // baseada em Guzzle (ex.: upload Azure Blob dos anexos). Curl fica
-            // bloqueante (ok, nao e hot path); PDO/Redis/stream seguem assincronos.
-            'hook_flags' => env('OCTANE_HOOK_FLAGS_ENABLED', false) && defined('SWOOLE_HOOK_ALL')
-                ? SWOOLE_HOOK_ALL
-                    & ~(defined('SWOOLE_HOOK_CURL') ? SWOOLE_HOOK_CURL : 0)
-                    & ~(defined('SWOOLE_HOOK_NATIVE_CURL') ? SWOOLE_HOOK_NATIVE_CURL : 0)
-                : 0,
+            // Octane 2.13 troca Container e Facade globalmente por request.
+            // taskWaitMulti cede execucao mesmo com hooks desligados, entao
+            // cada worker HTTP deve processar apenas uma request por vez.
+            'enable_coroutine' => false,
+            'send_yield' => false,
+            // Hooks exigem coroutines HTTP e isolamento por request que o
+            // Octane atual nao fornece. Reativar apenas apos esse isolamento.
+            'hook_flags' => 0,
             'task_worker_num' => (int) env('OCTANE_TASK_WORKERS', 4),
             // Octane 2.13 registra o callback task com a assinatura classica.
             // Com task coroutine ativo, Swoole 6 entrega Swoole\Server\Task

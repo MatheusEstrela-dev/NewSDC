@@ -39,6 +39,21 @@ for parameter in ['shared_buffers', 'effective_cache_size', 'maintenance_work_me
     override = os.environ.get('PATRONI_MEMORY_' + parameter.upper())
     if override:
         configuration['postgresql']['parameters'][parameter] = override
+
+def coerce(value):
+    lowered = value.strip().lower()
+    if lowered in ('true', 'false'):
+        return lowered == 'true'
+    return value.strip()
+
+
+# Tags e parametros por membro via env; sem as envs, nada muda nos membros atuais.
+# PATRONI_TAG_<NOME>=valor e PATRONI_LOCAL_PARAM_<param>=valor (param em minusculas).
+for key, value in os.environ.items():
+    if key.startswith('PATRONI_TAG_') and value != '':
+        configuration.setdefault('tags', {})[key[len('PATRONI_TAG_'):].lower()] = coerce(value)
+    elif key.startswith('PATRONI_LOCAL_PARAM_') and value != '':
+        configuration['postgresql']['parameters'][key[len('PATRONI_LOCAL_PARAM_'):]] = value
 with open('/run/patroni/patroni.yml', 'w', encoding='utf-8') as target:
     yaml.safe_dump(configuration, target)
 PY

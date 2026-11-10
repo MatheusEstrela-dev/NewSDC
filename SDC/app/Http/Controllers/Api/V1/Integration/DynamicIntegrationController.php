@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Integration;
 
 use App\Http\Controllers\Controller;
 use App\Services\Integration\IntegrationHubService;
+use App\Services\Integration\UrlSaidaNaoPermitidaException;
 use App\Enums\RequestPriority;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -171,6 +172,12 @@ class DynamicIntegrationController extends Controller
             'callback_url' => 'nullable|url',
         ]);
 
+        try {
+            $this->integrationHub->assertDestinos($validated);
+        } catch (UrlSaidaNaoPermitidaException $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+        }
+
         $priority = RequestPriority::from($validated['priority'] ?? 'normal');
         $async = $validated['async'] ?? false;
         $userId = $request->user()?->id;
@@ -207,7 +214,6 @@ class DynamicIntegrationController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),
-                'external_response' => $e->getTrace()[0] ?? null,
             ], 500);
         }
     }

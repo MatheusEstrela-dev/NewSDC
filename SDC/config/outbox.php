@@ -25,4 +25,12 @@ return [
     // eventos por hora, muito acima do volume de marcos de negocio, sem
     // segurar transacao longa na base operacional.
     'lote' => (int) env('OUTBOX_LOTE', 100),
+
+    // Limite por ciclo, incluindo a primeira publicacao. Eventos que atingem
+    // o limite continuam salvos e podem ser retomados por outbox:retry {id}.
+    'max_tentativas' => (int) env('OUTBOX_MAX_TENTATIVAS', 8),
+
+    // Espera apos cada falha; a ultima se repete nas tentativas restantes.
+    // Usa updated_at da falha, sem exigir novas colunas em bancos existentes.
+    'backoff_segundos' => [30, 120, 600, 1800, 3600],
 ];

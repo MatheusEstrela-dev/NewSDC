@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Rat;
 
+use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
 use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\Http\Resources\RatResource;
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
 
 class OcorrenciaController extends Controller
 {
+    use LimitaPorPagina;
+
     public function __construct(
         private readonly RatWriteService $writeService,
     ) {}
@@ -25,7 +28,7 @@ class OcorrenciaController extends Controller
             $query->where('status', $request->integer('status'));
         }
 
-        $paginated = $query->paginate($request->integer('per_page', 15));
+        $paginated = $query->paginate($this->porPagina($request));
 
         return response()->json([
             'data' => RatResource::collection($paginated)->resolve(),
@@ -82,17 +85,17 @@ class OcorrenciaController extends Controller
             return response()->json(['message' => 'Ocorrência não encontrada.'], 404);
         }
 
+        // Prazo de 48h e RAT finalizado: regra unica no RatWriteService, tambem
+        // usada pelo aplicador da caixa de entrada.
+        $mensagemBloqueio = $this->writeService->motivoBloqueioEdicaoApi($ocorrencia);
+
+        if ($mensagemBloqueio !== null) {
+            return response()->json(['success' => false, 'message' => $mensagemBloqueio], 422);
+        }
+
         // Mesmo contrato do formulario, mas mesclando recursos/envolvidos por
         // id (com id atualiza, sem id cria), como esta API sempre fez.
-        $validated = $request->validate([
-            'dadosGerais' => 'nullable|array',
-            'comunicacao' => 'nullable|array',
-            'local'       => 'nullable|array',
-            'endereco'    => 'nullable|array',
-            'recursos'    => 'nullable|array',
-            'envolvidos'  => 'nullable|array',
-            'vistoria'    => 'nullable|array',
-        ]);
+        $validated = $request->validate(RatRelatosDTO::REGRAS_ATUALIZACAO);
 
         $this->writeService->atualizar($id, RatRelatosDTO::fromArray($validated), substituirListas: false);
 

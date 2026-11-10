@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
+use App\Modules\PowerBi\Materializadores\RatLeituraMaterializada;
+use App\Modules\PowerBi\Support\SaidaBi;
 use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Services\Rat\RatNovoService;
 use App\Modules\Rat\Http\Resources\RatResource;
@@ -47,9 +50,8 @@ use Illuminate\Http\Request;
  * @OA\Schema(
  *     schema="RatNovoStoreRequest",
  *     type="object",
- *     required={"numero_bos"},
- *     @OA\Property(property="numero_bos", type="string", example="BOS-2026-001"),
- *     @OA\Property(property="status", type="integer", enum={0, 1}, default=0),
+ *     @OA\Property(property="numero_bos", type="string", readOnly=true, description="Ignorado: o numero do BOS e gerado pelo servidor (RatProtocoloService)", example="BOS-2026-001"),
+ *     @OA\Property(property="status", type="integer", enum={0, 1}, default=0, description="1 finaliza o RAT na criacao (mesmo caminho do finalize)"),
  *     @OA\Property(
  *         property="dados_gerais",
  *         type="object",
@@ -61,6 +63,8 @@ use Illuminate\Http\Request;
  */
 class RatNovoController extends Controller
 {
+    use LimitaPorPagina;
+
     public function __construct(
         private readonly RatNovoService $service
     ) {}
@@ -111,6 +115,13 @@ class RatNovoController extends Controller
      */
     public function powerBiData(string $id): JsonResponse
     {
+        if (SaidaBi::materializada('rat')) {
+            $materializado = app(RatLeituraMaterializada::class)->porId($id);
+            abort_if($materializado === null, 404);
+
+            return response()->json($materializado);
+        }
+
         $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::with('relatosMorph')->findOrFail($id);
 
         return response()->json([
@@ -138,10 +149,10 @@ class RatNovoController extends Controller
      *     )
      * )
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
         $ocorrencias = \App\Modules\Rat\Models\RatOcorrencia::latest()
-            ->paginate(request()->integer('per_page', 15));
+            ->paginate($this->porPagina($request));
 
         return RatResource::collection($ocorrencias);
     }
@@ -168,17 +179,13 @@ class RatNovoController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'numero_bos'   => 'nullable|string|max:50',
-            'status'       => 'integer|in:0,1',
-            'dados_gerais' => 'nullable|array',
-        ]);
+        // numero_bos nao e validado: o servidor gera o protocolo e um valor
+        // enviado pelo cliente e ignorado. status=1 finaliza na criacao.
+        $validated = $request->validate(RatRelatosDTO::REGRAS_CRIACAO_RAT_NOVO);
 
         // A API recebe dados_gerais (snake_case); o service entendia so
         // dadosGerais, entao o bloco era validado e descartado em silencio.
-        $ocorrencia = $this->service->createRat(RatRelatosDTO::fromArray([
-            'dadosGerais' => $validated['dados_gerais'] ?? null,
-        ]));
+        $ocorrencia = $this->service->createRat(RatRelatosDTO::fromRatNovo($validated));
 
         return response()->json([
             'message' => 'RAT criado com sucesso!',

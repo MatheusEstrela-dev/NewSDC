@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Services;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -25,7 +26,34 @@ class TdapExportBiService
      */
     public function viagensValidadasFlat(array $filtros = []): array
     {
-        $query = DB::table('tdap_crono_viagens as v')
+        $query = $this->consultaBase();
+
+        if ($de = $filtros['de'] ?? null) {
+            $query->whereDate('v.data_aprovacao', '>=', (string) $de);
+        }
+        if ($ate = $filtros['ate'] ?? null) {
+            $query->whereDate('v.data_aprovacao', '<=', (string) $ate);
+        }
+        if ($prestadorId = $filtros['prestador_id'] ?? null) {
+            $query->where('p.id', (int) $prestadorId);
+        }
+        if ($municipioId = $filtros['municipio_id'] ?? null) {
+            $query->where('m.id', (int) $municipioId);
+        }
+
+        return $query->orderBy('v.data_aprovacao')
+            ->limit((int) ($filtros['limit'] ?? 10000))
+            ->get()
+            ->map(fn (object $row): array => $this->mapearLinha($row))
+            ->toArray();
+    }
+
+    /**
+     * Viagens validadas com as dimensoes denormalizadas, sem filtro nem ordem.
+     */
+    public function consultaBase(): Builder
+    {
+        return DB::table('tdap_crono_viagens as v')
             ->join('tdap_crono_caminhoes as cc', 'cc.id', '=', 'v.crono_caminhao_id')
             ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
             ->join('tdap_caminhoes as cam', 'cam.id', '=', 'cc.caminhao_id')
@@ -62,67 +90,65 @@ class TdapExportBiService
                 'cam.placa as caminhao_placa',
                 DB::raw('COALESCE(v.capacidade_m3, cam.capacidade_m3) AS capacidade_m3'),
             ]);
+    }
 
-        // Intervalo [de 00:00, ate+1 00:00) em vez de whereDate: o CAST(... AS
-        // date) do whereDate anula o indice de data_aprovacao e varre a tabela.
-        if ($de = $filtros['de'] ?? null) {
-            $query->where('v.data_aprovacao', '>=', Carbon::parse((string) $de)->startOfDay());
-        }
-        if ($ate = $filtros['ate'] ?? null) {
-            $query->where('v.data_aprovacao', '<', Carbon::parse((string) $ate)->startOfDay()->addDay());
-        }
-        // Paginacao por cursor: o cliente pede a proxima pagina com o ultimo
-        // viagem_id recebido, sem OFFSET (que relê tudo o que pulou).
-        if ($aposId = $filtros['apos_id'] ?? null) {
-            $query->where('v.id', '>', (int) $aposId);
-        }
-        if ($prestadorId = $filtros['prestador_id'] ?? null) {
-            $query->where('p.id', (int) $prestadorId);
-        }
-        // `!== null`, nao truthiness: o escopo "sem lotacao" e o municipio 0
-        // (EscopoDeLeitura::SEM_ESCOPO) e tem de filtrar -- e devolver nada.
-        if (($municipioId = $filtros['municipio_id'] ?? null) !== null && $municipioId !== '') {
-            $query->where('m.id', (int) $municipioId);
+    /**
+     * Keyset por (v.updated_at, v.id) ascendente. Cobre so mudancas na
+     * viagem: alteracoes em cronograma, lote, ata, prestador, municipio ou
+     * caminhao NAO tocam a viagem, entao a F2 deve usar estrategia completa
+     * (recarga integral por hash) e nao apenas esta consulta.
+     */
+    public function consultaIncremental(?Carbon $desde, ?int $aposId, int $lote): Builder
+    {
+        $query = $this->consultaBase()->addSelect('v.updated_at as viagem_atualizada_em');
+
+        if ($desde !== null) {
+            $query->where(function (Builder $q) use ($desde, $aposId): void {
+                $q->where('v.updated_at', '>', $desde);
+                if ($aposId !== null) {
+                    $q->orWhere(fn (Builder $e) => $e->where('v.updated_at', $desde)->where('v.id', '>', $aposId));
+                }
+            });
         }
 
-        // Teto fixo por pagina, mesmo que o request peca mais: a resposta e
-        // montada em memoria no worker. Volume maior vem em varias paginas.
-        $limite = min(max((int) ($filtros['limit'] ?? self::LIMITE_MAXIMO), 1), self::LIMITE_MAXIMO);
+        return $query->orderBy('v.updated_at')->orderBy('v.id')->limit($lote);
+    }
 
-        return $query->orderBy('v.id')
-            ->limit($limite)
-            ->get()
-            ->map(function ($row) {
-                $cap = (float) ($row->capacidade_m3 ?? 0);
-                $valor = (float) ($row->valor_m3 ?? 0);
+    /**
+     * Linha da consulta base (ou incremental) no formato flat do Power BI.
+     *
+     * @return array<string, mixed>
+     */
+    public function mapearLinha(object $row): array
+    {
+        $cap = (float) ($row->capacidade_m3 ?? 0);
+        $valor = (float) ($row->valor_m3 ?? 0);
 
-                return [
-                    'viagem_id'         => (int) $row->viagem_id,
-                    'data_registro'     => $row->data_registro ? Carbon::parse($row->data_registro)->toIso8601String() : null,
-                    'data_aprovacao'    => $row->data_aprovacao ? Carbon::parse($row->data_aprovacao)->toIso8601String() : null,
-                    'cronograma_id'     => (int) $row->cronograma_id,
-                    'cronograma_numero' => $row->cronograma_numero,
-                    'empenho'           => $row->empenho,
-                    'nota_empenho'      => $row->nota_empenho,
-                    'cronograma_inicio' => $row->cronograma_inicio,
-                    'cronograma_final'  => $row->cronograma_final,
-                    'ata_id'            => (int) $row->ata_id,
-                    'ata_numero'        => $row->ata_numero,
-                    'lote_id'           => (int) $row->lote_id,
-                    'lote_numero'       => $row->lote_numero,
-                    'municipio_id'      => (int) $row->municipio_id,
-                    'municipio_nome'    => $row->municipio_nome,
-                    'municipio_uf'      => $row->municipio_uf,
-                    'prestador_id'      => (int) $row->prestador_id,
-                    'prestador_nome'    => $row->prestador_nome,
-                    'prestador_cnpj'    => $row->prestador_cnpj,
-                    'caminhao_id'       => (int) $row->caminhao_id,
-                    'caminhao_placa'    => $row->caminhao_placa,
-                    'capacidade_m3'     => $cap,
-                    'valor_m3'          => $valor,
-                    'valor_viagem'      => round($cap * $valor, 2),
-                ];
-            })
-            ->toArray();
+        return [
+            'viagem_id'         => (int) $row->viagem_id,
+            'data_registro'     => $row->data_registro ? Carbon::parse($row->data_registro)->toIso8601String() : null,
+            'data_aprovacao'    => $row->data_aprovacao ? Carbon::parse($row->data_aprovacao)->toIso8601String() : null,
+            'cronograma_id'     => (int) $row->cronograma_id,
+            'cronograma_numero' => $row->cronograma_numero,
+            'empenho'           => $row->empenho,
+            'nota_empenho'      => $row->nota_empenho,
+            'cronograma_inicio' => $row->cronograma_inicio,
+            'cronograma_final'  => $row->cronograma_final,
+            'ata_id'            => (int) $row->ata_id,
+            'ata_numero'        => $row->ata_numero,
+            'lote_id'           => (int) $row->lote_id,
+            'lote_numero'       => $row->lote_numero,
+            'municipio_id'      => (int) $row->municipio_id,
+            'municipio_nome'    => $row->municipio_nome,
+            'municipio_uf'      => $row->municipio_uf,
+            'prestador_id'      => (int) $row->prestador_id,
+            'prestador_nome'    => $row->prestador_nome,
+            'prestador_cnpj'    => $row->prestador_cnpj,
+            'caminhao_id'       => (int) $row->caminhao_id,
+            'caminhao_placa'    => $row->caminhao_placa,
+            'capacidade_m3'     => $cap,
+            'valor_m3'          => $valor,
+            'valor_viagem'      => round($cap * $valor, 2),
+        ];
     }
 }

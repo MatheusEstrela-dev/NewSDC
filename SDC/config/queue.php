@@ -166,6 +166,29 @@ return [
             'after_commit' => false,
         ],
 
+        // Entrada assincrona da API de integracao (AplicarEntradaJob). O
+        // consumidor roda com --timeout=120, abaixo do retry_after. after_commit
+        // para o job so ir ao Redis depois que a mensagem estiver commitada.
+        'redis-integracao' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'integracao',
+            'retry_after' => 150,
+            'block_for' => 5,
+            'after_commit' => true,
+        ],
+
+        // Materializacao do sdc_powerbi (powerbi:materializar). O maior job tem
+        // timeout de 900s; retry_after maior para nao reentregar enquanto roda.
+        'redis-powerbi' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'powerbi',
+            'retry_after' => 960,
+            'block_for' => 5,
+            'after_commit' => false,
+        ],
+
         // Dead Letter Queue - webhooks falhos para analise manual
         'redis-ranking' => [
             'driver' => 'redis',

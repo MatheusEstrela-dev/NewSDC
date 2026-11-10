@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support\Database;
 
 use PDO;
-use Illuminate\Database\Connectors\PostgresConnector;
 use RuntimeException;
 use Swoole\Coroutine\Channel;
 
@@ -206,10 +205,7 @@ final class SwoolePdoPool implements PdoPool
 
     private function connect(): PDO
     {
-        $connector = ($this->config['read_only'] ?? false)
-            ? new ReadonlyPostgresConnector : new PostgresConnector;
-
-        return $connector->connect($this->config);
+        return (new ConfiguredPostgresConnector)->connect($this->config);
     }
 
     /**

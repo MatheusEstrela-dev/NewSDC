@@ -23,7 +23,9 @@ x-ha-client-environment: &ha-client-environment
   SWOOLE_PG_POOL_SIZE: 2
   SWOOLE_PG_READ_POOL_SIZE: 1
   DB_CONNECT_TIMEOUT: 2
-  PG_MAX_CONNECTIONS: 200
+  # = max_connections do Patroni (patroni.yml). O guardrail ja soma os demais
+  # consumidores (EXTERNAL_DB_CONSUMERS), entao o teto e o do servidor, sem cota.
+  PG_MAX_CONNECTIONS: 400
   RANKING_DB_HOST: db,db_replica_1,db_replica_2
   RANKING_DB_PORT: 6434
   RANKING_SOURCE_HOST: db,db_replica_1,db_replica_2
@@ -37,6 +39,29 @@ x-ha-client-environment: &ha-client-environment
   GEO_DB_PORT: 6434
   TREINAMENTO_DB_HOST: db,db_replica_1,db_replica_2
   TREINAMENTO_DB_PORT: 6434
+
+# sdc_powerbi (C1) fica no db_powerbi, instancia propria fora do Patroni (sem
+# HA): escrita e leitura vao direto a ele, porta 5432. A FONTE do materializador
+# (FONTE_BI_*) segue sendo o db_bi pelo HAProxy 6436 de qualquer membro Patroni,
+# que so encaminha ao db_bi (check /health, nao /replica) e serve apenas a fonte
+# do BI.
+x-ha-bi-environment: &ha-bi-environment
+  POWERBI_DB_HOST: db_powerbi
+  POWERBI_DB_PORT: 5432
+  POWERBI_DB_READ_HOST: db_powerbi
+  POWERBI_DB_READ_PORT: 5432
+  POWERBI_PG_MAX_CONNECTIONS: 100
+  FONTE_BI_DB_HOST: db,db_replica_1,db_replica_2
+  FONTE_BI_DB_PORT: 6436
+  # Teto do lider com max_connections 400 no Patroni (mesmo da ancora acima).
+  PG_MAX_CONNECTIONS: 400
+
+# Caixa de entrada (C1): banco sdc_entrada no cluster do sdc, escrita no lider
+# pelo multi-host 6434 (mesmo padrao das demais conexoes de escrita). Para
+# api_integracao, queue_integracao e scheduler.
+x-ha-entrada-environment: &ha-entrada-environment
+  ENTRADA_DB_HOST: db,db_replica_1,db_replica_2
+  ENTRADA_DB_PORT: 6434
 
 x-patroni-environment: &patroni-environment
   PATRONI_SCOPE: ${PATRONI_SCOPE:-sdc-homolog}
@@ -82,9 +107,43 @@ services:
     environment: *ha-client-environment
     depends_on: !override
       <<: *ha-client-dependencies
+  api_integracao:
+    image: *ha-app-image
+    environment:
+      <<: [*ha-bi-environment, *ha-entrada-environment, *ha-client-environment]
+      # Nao usa replicas do site (mesmo valor da base, depois do merge acima).
+      DB_READ_ENABLED: "false"
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue_integracao:
+    image: *ha-app-image
+    environment:
+      <<: [*ha-bi-environment, *ha-entrada-environment, *ha-client-environment]
+      DB_READ_ENABLED: "false"
+    depends_on: !override
+      <<: *ha-client-dependencies
+  queue_powerbi:
+    image: *ha-app-image
+    environment:
+      # Log no lider (6434); sdc_powerbi no db_powerbi; a conexao default pgsql
+      # le o membro de BI (6436) e a fonte tem de ser standby.
+      <<: [*ha-bi-environment, *ha-client-environment]
+      DB_HOST: db,db_replica_1,db_replica_2
+      DB_PORT: 6436
+      DB_READ_ENABLED: "false"
+      POWERBI_FONTE_EXIGE_STANDBY: "true"
+    # O !override descarta o depends_on do base: repete o db_powerbi (so o
+    # materializador depende dele; api_integracao e queue_integracao nao).
+    depends_on: !override
+      <<: *ha-client-dependencies
+      db_powerbi:
+        condition: service_healthy
   scheduler:
     image: *ha-app-image
-    environment: *ha-client-environment
+    # Hosts de BI tambem: reconciliar/publicar-arquivos podem rodar no proprio
+    # scheduler e precisam ler a fonte no db_bi (6436), nunca no lider.
+    environment:
+      <<: [*ha-bi-environment, *ha-entrada-environment, *ha-client-environment]
     depends_on: !override
       <<: *ha-client-dependencies
   reverb:
@@ -189,7 +248,53 @@ services:
         aliases: [etcd_3]
     ports: !override []
 
+  # Replica de BI: sem voto no etcd e sem HAProxy embutido (ETCD_EMBEDDED=false
+  # faz o entrypoint dar exec direto no patroni). Fora do depends_on do site.
+  # Tags/params entram por env no patch do entrypoint. Cluster existente:
+  # patronictl edit-config (max_connections 400, max_slot_wal_keep_size,
+  # member_slots_ttl) e rolling restart dos membros atuais.
+  db_bi:
+    <<: *patroni-node
+    container_name: newsdc_homolog_db_bi
+    restart: unless-stopped
+    # Encolhido (C1): agora e so a FONTE de leitura do materializador (o
+    # sdc_powerbi saiu para o db_powerbi). max_connections segue 400: o standby
+    # precisa ser >= ao primario.
+    mem_limit: 1g
+    cpus: 1.0
+    environment:
+      <<: *patroni-environment
+      ETCD_EMBEDDED: "false"
+      PATRONI_NAME: db_bi
+      PATRONI_RESTAPI_CONNECT_ADDRESS: db_bi:8008
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: db_bi:5432
+      PATRONI_POSTGRESQL_DATA_DIR: /var/lib/postgresql/pgdata
+      PATRONI_TAG_NOFAILOVER: "true"
+      PATRONI_TAG_NOLOADBALANCE: "true"
+      PATRONI_TAG_NOSYNC: "true"
+      PATRONI_TAG_REPLICATEFROM: db_replica_2
+      PATRONI_LOCAL_PARAM_hot_standby_feedback: "off"
+      PATRONI_LOCAL_PARAM_max_standby_streaming_delay: 300s
+      PATRONI_LOCAL_PARAM_work_mem: 64MB
+      # Memoria compativel com o teto de 1g.
+      PATRONI_MEMORY_SHARED_BUFFERS: 256MB
+      PATRONI_MEMORY_EFFECTIVE_CACHE_SIZE: 512MB
+      PATRONI_MEMORY_MAINTENANCE_WORK_MEM: 64MB
+    volumes: !override
+      - homolog_pgdata_bi:/var/lib/postgresql
+    networks: !override
+      - homolog
+    ports: !override []
+    depends_on: !reset {}
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8008/readiness >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 60s
+
 volumes:
+  homolog_pgdata_bi:
   homolog_etcd_1:
   homolog_etcd_2:
   homolog_etcd_3:

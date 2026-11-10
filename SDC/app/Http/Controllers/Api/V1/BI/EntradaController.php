@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\BI;
 use App\Http\Controllers\Controller;
 use App\Modules\Decretacoes\Services\ProcessoExportBIService;
 use App\Modules\Decretacoes\Services\ProcessoQueryService;
+use App\Modules\PowerBi\Materializadores\DecretacoesLeituraMaterializada;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,7 +21,8 @@ class EntradaController extends Controller
 {
     public function __construct(
         private readonly ProcessoExportBIService $exportService,
-        private readonly ProcessoQueryService $queryService
+        private readonly ProcessoQueryService $queryService,
+        private readonly DecretacoesLeituraMaterializada $leituraMaterializada
     ) {
     }
 
@@ -101,7 +103,9 @@ class EntradaController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $dados = $this->exportService->getNormalizedDataForPowerBI($request);
+        $dados = $this->leituraMaterializada->atende($request)
+            ? $this->leituraMaterializada->linhas($request)
+            : $this->exportService->getNormalizedDataForPowerBI($request);
 
         return response()->json([
             'sucesso' => true,

@@ -6,6 +6,7 @@ namespace App\Modules\Pae\Services;
 
 use App\Modules\Pae\Models\PaeEmpnto;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 
 class EmpreendimentoApiService
 {
@@ -29,6 +30,48 @@ class EmpreendimentoApiService
             ->when($filters['search'] ?? null, fn ($q, $v) => $q->where('nome', 'like', "%{$v}%"))
             ->orderByDesc('id')
             ->paginate($perPage);
+    }
+
+    /**
+     * Consulta de todos os empreendimentos com as relacoes da listagem (base do
+     * BI). $conexao leva leitura e relacoes a outra conexao (membro de BI).
+     */
+    public function consultaParaBi(?string $conexao = null): Builder
+    {
+        return PaeEmpnto::on($conexao)->with(self::RELATIONS_LIST);
+    }
+
+    /**
+     * Linha de bi_pae.empreendimentos. LGPD: sem coordenador nem substituto.
+     *
+     * @return array<string, mixed>
+     */
+    public function linhaParaBi(PaeEmpnto $e): array
+    {
+        $protocolo = $e->latestProtocolo;
+
+        return [
+            'id' => $e->id,
+            'nome' => $e->nome,
+            'status' => $e->status,
+            'municipio_id' => $e->municipio_id,
+            'municipio' => $e->municipio?->nome,
+            'empreendedor_id' => $e->pae_empdor_id,
+            'empreendedor' => $e->empdor?->nome,
+            'empreendedor_cnpj' => $e->empdor?->cnpj,
+            'regiao_id' => $e->regiao_id,
+            'm_construcao' => $e->m_construcao,
+            'material' => $e->material,
+            'finalidade' => $e->finalidade,
+            'volume' => $e->volume,
+            'pop_zas' => $e->pop_zas,
+            'orgao_fisc' => $e->orgao_fisc,
+            'mina' => $e->mina,
+            'protocolo_status' => $protocolo?->status?->value,
+            'protocolo_entrada' => $protocolo?->dt_entrada?->toDateString(),
+            'criado_em' => $e->created_at?->toIso8601String(),
+            'atualizado_em' => $e->updated_at?->toIso8601String(),
+        ];
     }
 
     public function findById(int $id): PaeEmpnto

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Rat;
 
+use App\Http\Controllers\Api\Concerns\LimitaPorPagina;
 use App\Http\Controllers\Controller;
 use App\Modules\Rat\Services\RatHistoricoService;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,8 @@ use Illuminate\Http\Request;
  */
 class HistoricoController extends Controller
 {
+    use LimitaPorPagina;
+
     public function __construct(
         private readonly RatHistoricoService $historicoService,
     ) {}
@@ -58,7 +61,7 @@ class HistoricoController extends Controller
     {
         $timeline = $this->historicoService->timeline(
             $id,
-            $request->integer('per_page', 20)
+            $this->porPagina($request, 20)
         );
 
         return response()->json([

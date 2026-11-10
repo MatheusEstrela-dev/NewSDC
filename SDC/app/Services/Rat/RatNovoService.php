@@ -22,14 +22,23 @@ class RatNovoService
         return $this->writeService->createWithData($relatos);
     }
 
+    /**
+     * Atualiza apenas campos editaveis. numero_bos e o protocolo (evidencia do
+     * ranking) e status so muda pelo fluxo de finalizacao: numero_bos e
+     * ignorado aqui; status=1 delega a RatWriteService::finalize (outbox incluso).
+     */
     public function updateRat(string $id, array $data): RatOcorrencia
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
-        $ocorrencia->fill(array_filter([
-            'numero_bos' => $data['numero_bos'] ?? null,
-            'status'     => $data['status']     ?? null,
-        ], fn($v) => $v !== null));
-        $ocorrencia->save();
+
+        if (($data['historico'] ?? null) !== null) {
+            $ocorrencia->historico = $data['historico'];
+            $ocorrencia->save();
+        }
+
+        if ((int) ($data['status'] ?? 0) === 1 && (int) $ocorrencia->status !== 1) {
+            return $this->writeService->finalize($id);
+        }
 
         return $ocorrencia->fresh();
     }

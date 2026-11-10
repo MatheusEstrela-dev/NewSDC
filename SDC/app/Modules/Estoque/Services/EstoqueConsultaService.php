@@ -29,9 +29,22 @@ class EstoqueConsultaService
      */
     public function lotes(array $filtros, int $porPagina = 30, ?int $pagina = null): Paginator
     {
+        return $this->consultaLotes($filtros)
+            ->simplePaginate($porPagina, ['*'], 'page', $pagina)
+            ->through(fn (Lote $l) => $this->linhaDeLote($l));
+    }
+
+    /**
+     * Consulta de lotes com saldo (base da lista e do BI). $conexao leva a
+     * leitura e os relacionamentos a outra conexao (membro de BI).
+     *
+     * @param  array<string, mixed>  $filtros
+     */
+    public function consultaLotes(array $filtros = [], ?string $conexao = null): Builder
+    {
         $hoje = Carbon::today();
 
-        $query = Lote::query()
+        return Lote::on($conexao)
             ->select('estoque_lotes.*')
             ->join('estoque_produtos as p', 'p.id', '=', 'estoque_lotes.produto_id')
             ->whereNull('p.deleted_at')
@@ -60,8 +73,6 @@ class EstoqueConsultaService
             ->orderBy('p.nome')
             ->orderByRaw('estoque_lotes.validade IS NULL, estoque_lotes.validade')
             ->orderBy('estoque_lotes.id');
-
-        return $query->simplePaginate($porPagina, ['*'], 'page', $pagina)->through(fn (Lote $l) => $this->linhaDeLote($l));
     }
 
     /**
@@ -70,13 +81,26 @@ class EstoqueConsultaService
      */
     public function produtos(array $filtros, int $porPagina = 30): Paginator
     {
-        $saldos = Lote::query()
+        return $this->consultaProdutos($filtros)
+            ->simplePaginate($porPagina)
+            ->through(fn (Produto $p) => $this->linhaDeProduto($p));
+    }
+
+    /**
+     * Consulta de produtos com saldo (base do inventario e do BI). $conexao
+     * leva a leitura a outra conexao (membro de BI).
+     *
+     * @param  array<string, mixed>  $filtros
+     */
+    public function consultaProdutos(array $filtros = [], ?string $conexao = null): Builder
+    {
+        $saldos = Lote::on($conexao)
             ->selectRaw('produto_id, SUM(saldo) AS saldo_total')
             ->selectRaw('SUM(CASE WHEN bloqueado = false AND (validade IS NULL OR validade >= CURRENT_DATE) THEN saldo ELSE 0 END) AS saldo_disponivel')
             ->when($filtros['almoxarifado_id'] ?? null, fn ($q, $a) => $q->where('almoxarifado_id', (int) $a))
             ->groupBy('produto_id');
 
-        return Produto::query()
+        return Produto::on($conexao)
             ->leftJoinSub($saldos, 's', 's.produto_id', '=', 'estoque_produtos.id')
             ->select('estoque_produtos.*')
             ->selectRaw('COALESCE(s.saldo_total, 0) AS saldo_total, COALESCE(s.saldo_disponivel, 0) AS saldo_disponivel')
@@ -89,9 +113,7 @@ class EstoqueConsultaService
             ->when($filtros['categoria'] ?? null, fn ($q, $c) => $q->where('categoria', $c))
             ->when($filtros['patrimonio'] ?? null, fn ($q, $p) => $q->where('patrimonio', $p))
             ->orderBy('categoria')
-            ->orderBy('nome')
-            ->simplePaginate($porPagina)
-            ->through(fn (Produto $p) => $this->linhaDeProduto($p));
+            ->orderBy('nome');
     }
 
     /** @return array<string, int> */
@@ -241,6 +263,61 @@ class EstoqueConsultaService
             'destino_tipo' => $m->destino_tipo,
             'usuario'     => $m->user?->name,
         ];
+    }
+
+    /**
+     * Linha de bi_estoque.movimentacoes (aceita o modelo ou a linha crua).
+     * LGPD: sem usuario, documento, observacao nem texto livre de destino.
+     *
+     * @return array<string, mixed>
+     */
+    public function linhaParaBiDeMovimentacao(object $m): array
+    {
+        return [
+            'id'                   => (int) $m->id,
+            'data'                 => Carbon::parse($m->created_at)->toIso8601String(),
+            'tipo'                 => $m->tipo,
+            'produto_id'           => (int) $m->produto_id,
+            'quantidade'           => (int) $m->quantidade,
+            'lote_id'              => $m->lote_id === null ? null : (int) $m->lote_id,
+            'almoxarifado_id'      => $m->almoxarifado_id === null ? null : (int) $m->almoxarifado_id,
+            'saldo_apos'           => $m->saldo_apos === null ? null : (int) $m->saldo_apos,
+            'romaneio'             => $m->romaneio,
+            'destino_tipo'         => $m->destino_tipo,
+            'destino_municipio_id' => $m->destino_municipio_id === null ? null : (int) $m->destino_municipio_id,
+        ];
+    }
+
+    /**
+     * Linha de bi_estoque.lotes: subconjunto de linhaDeLote.
+     *
+     * @return array<string, mixed>
+     */
+    public function linhaParaBiDeLote(Lote $l): array
+    {
+        $linha = $this->linhaDeLote($l);
+
+        return array_intersect_key($linha, array_flip([
+            'id', 'produto_id', 'lote', 'validade', 'fornecedor', 'endereco', 'saldo',
+            'almoxarifado_id', 'almoxarifado', 'status', 'bloqueado',
+        ]));
+    }
+
+    /**
+     * Linha de bi_estoque.produtos: subconjunto de linhaDeProduto. O codigo de
+     * patrimonio e identificador de bem, nao de BI: sai so o indicador de que ha.
+     *
+     * @return array<string, mixed>
+     */
+    public function linhaParaBiDeProduto(Produto $p): array
+    {
+        $linha = array_intersect_key($this->linhaDeProduto($p), array_flip([
+            'id', 'sku', 'nome', 'categoria', 'unidade_base', 'estoque_minimo',
+            'controla_validade', 'ativo', 'saldo_total', 'saldo_disponivel',
+        ]));
+        $linha['patrimonio'] = $p->patrimonio !== null && $p->patrimonio !== '';
+
+        return $linha;
     }
 
     public function linhaDeLote(Lote $l): array

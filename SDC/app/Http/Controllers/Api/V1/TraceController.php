@@ -82,6 +82,11 @@ class TraceController extends Controller
             return response()->json(['error' => 'Artifact not found'], 404);
         }
 
-        return $disk->download($trace->result_path);
+        // O Flysystem local nao conhece o mime de .parquet e o download quebraria.
+        $headers = str_ends_with($trace->result_path, '.parquet')
+            ? ['Content-Type' => 'application/vnd.apache.parquet']
+            : [];
+
+        return $disk->download($trace->result_path, null, $headers);
     }
 }

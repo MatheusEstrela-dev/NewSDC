@@ -5,10 +5,12 @@ namespace App\Providers;
 use App\Support\Database\PdoPoolRegistry;
 use App\Support\Redis\CoroutineRedisManager;
 use App\Support\Redis\SwooleRedisPool;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events\RequestReceived;
 use Laravel\Octane\Events\RequestTerminated;
 use Laravel\Octane\Events\WorkerStarting;
+use Laravel\Octane\Events\WorkerErrorOccurred;
 
 class OctaneServiceProvider extends ServiceProvider
 {
@@ -86,6 +88,8 @@ class OctaneServiceProvider extends ServiceProvider
             $this->releaseRedisCoroutine();
             $this->releasePgsqlCoroutine();
         });
+
+        $this->app['events']->listen(WorkerErrorOccurred::class, fn () => TenantContext::clear());
     }
 
     /**
@@ -350,6 +354,8 @@ class OctaneServiceProvider extends ServiceProvider
 
     protected function resetRequestState(): void
     {
+        TenantContext::clear();
+
         if ($this->app->bound('octane.cache')) {
             $this->app->make('octane.cache')->forget('request_stats');
         }
@@ -357,6 +363,8 @@ class OctaneServiceProvider extends ServiceProvider
 
     protected function flushRequestState(): void
     {
+        TenantContext::clear();
+
         if ($this->app->bound(\Illuminate\Contracts\Debug\ExceptionHandler::class)) {
             try {
                 $handler = $this->app->make(\Illuminate\Contracts\Debug\ExceptionHandler::class);

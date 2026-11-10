@@ -120,6 +120,49 @@ x-diretorio-env: &diretorio-env
   DIRETORIO_CHAVE_ENTREGA: ${DIRETORIO_CHAVE_ENTREGA}
   DIRETORIO_FAKE_ARQUIVO: /var/www/storage/app/diretorio-fake.json
 
+# Caixa de entrada (C1): banco `sdc_entrada` NO CLUSTER do sdc (lider + standby
+# sincrono), conexao pgsql_entrada. Herdada por api_integracao,
+# queue_integracao e scheduler (este agenda reenfileirar/podar). Sem HA aponta
+# ao proprio db; o compose.homolog-ha.yml aponta ao lider pelo HAProxy 6434.
+x-entrada-db-env: &entrada-db-env
+  ENTRADA_DB_HOST: ${ENTRADA_DB_TARGET_HOST:-db}
+  ENTRADA_DB_PORT: ${ENTRADA_DB_TARGET_PORT:-5432}
+  ENTRADA_DB_DATABASE: sdc_entrada
+  ENTRADA_DB_USERNAME: ${ENTRADA_DB_USERNAME:-${DB_USERNAME:-sdc}}
+  ENTRADA_DB_PASSWORD: ${ENTRADA_DB_PASSWORD:-${DB_PASSWORD:-sdc}}
+
+# sdc_powerbi (C1) vive em INSTANCIA PROPRIA, o servico db_powerbi: fora do
+# Patroni, sem HA nem standby. E derivado e reconstruivel (bi_* e controle); se
+# cair, BI e materializacao param, mas site e caixa de entrada seguem. Membro de
+# BI, UMA vez so, herdado por api_integracao, queue_integracao e queue_powerbi.
+# O site (app, queue, scheduler...) NAO recebe estas envs nem
+# DB_POWERBI_CONNECTION: sem a chave o recurso fica desligado.
+#   - POWERBI_DB_*: escrita do sdc_powerbi, no db_powerbi (leitura = mesma
+#     instancia, nao ha standby).
+#   - FONTE_BI_*: onde o materializador LE o sdc (fonte). Sem HA cai no proprio
+#     db (porta 5432); o compose.homolog-ha.yml aponta para o HAProxy 6436, que
+#     so atende o db_bi.
+#   - POWERBI_PG_MAX_CONNECTIONS: max_connections do db_powerbi (100), base do
+#     guardrail de conexoes do sdc_powerbi.
+x-powerbi-db-env: &powerbi-db-env
+  POWERBI_DB_HOST: ${POWERBI_DB_TARGET_HOST:-db_powerbi}
+  POWERBI_DB_PORT: ${POWERBI_DB_TARGET_PORT:-5432}
+  POWERBI_DB_DATABASE: sdc_powerbi
+  POWERBI_DB_USERNAME: ${POWERBI_DB_USERNAME:-${DB_USERNAME:-sdc}}
+  POWERBI_DB_PASSWORD: ${POWERBI_DB_PASSWORD:-${DB_PASSWORD:-sdc}}
+  POWERBI_DB_READ_HOST: db_powerbi
+  POWERBI_DB_READ_PORT: 5432
+  POWERBI_DB_READ_USERNAME: ${POWERBI_DB_READ_USERNAME:-${DB_USERNAME:-sdc}}
+  POWERBI_DB_READ_PASSWORD: ${POWERBI_DB_READ_PASSWORD:-${DB_PASSWORD:-sdc}}
+  POWERBI_PG_MAX_CONNECTIONS: 100
+  FONTE_BI_DB_HOST: ${BI_DB_TARGET_HOST:-db}
+  FONTE_BI_DB_PORT: ${BI_DB_TARGET_PORT:-5432}
+  FONTE_BI_DB_USERNAME: ${FONTE_BI_DB_USERNAME:-${DB_USERNAME:-sdc}}
+  FONTE_BI_DB_PASSWORD: ${FONTE_BI_DB_PASSWORD:-${DB_PASSWORD:-sdc}}
+  FONTE_BI_DB_SSLMODE: disable
+  # Teto do membro de BI (leitura e fonte nao somam no lider).
+  BI_PG_MAX_CONNECTIONS: ${BI_PG_MAX_CONNECTIONS:-200}
+
 services:
   # --------------------------------------------------------------------------
   # Balanceador. Em producao o Swarm distribui pelo VIP do servico; aqui, sem
@@ -184,7 +227,8 @@ services:
     ports:
       - "8091-8098:8000"
 
-    environment:
+    # Ancora reaproveitada pelo api_integracao (mesmo ambiente base do app).
+    environment: &homolog-app-env
       WORKDIR: /var/www
       APP_NAME: "SDC Homologacao"
       # staging, e nao production, por UM motivo especifico: o middleware
@@ -240,7 +284,13 @@ services:
       # evitar.
       PG_MAX_CONNECTIONS: 100
       APP_INSTANCES: ${APP_INSTANCES:-2}
-      EXTERNAL_DB_CONSUMERS: 8
+      # Consumidores externos do lider do sdc (db): 8 (queue, queue_medalhao,
+      # queue_ranking, scheduler, reverb e sessoes de log) + 3 queue_integracao
+      # (sdc, entrada, log) + 1 queue_powerbi (log; a leitura vai ao membro de
+      # BI e o sdc_powerbi ao db_powerbi, fora deste lider) + 10 api_integracao
+      # (5 no sdc e 5 no sdc_entrada). O sdc_powerbi saiu da conta: tem
+      # instancia propria. Numero ainda a reconferir contra o guardrail.
+      EXTERNAL_DB_CONSUMERS: 22
       DB_MAX_CONCURRENT: 60
 
       # Destino do banco: direto ou pelo pooler. E o A/B que este ambiente
@@ -334,7 +384,7 @@ services:
       redis:
         condition: service_healthy
 
-    healthcheck:
+    healthcheck: &homolog-app-healthcheck
       test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
       interval: 15s
       timeout: 5s
@@ -551,6 +601,134 @@ services:
         condition: service_healthy
 
   # --------------------------------------------------------------------------
+  # API de integracao: mesma imagem e mesmo codigo do app, processo separado.
+  # Atende so o que o Caddy desvia (matcher @api_integracao no Caddyfile) e
+  # assim a carga externa (BI, RAT protocolos, TDAP...) nao disputa worker com
+  # o site. Sem ports: a entrada e so pelo Caddy. Sem --scale (uma instancia, o
+  # guardrail conta APP_INSTANCES=1). Nao usa replicas do site: DB_READ_ENABLED
+  # false. A conexao do sdc_powerbi liga so aqui (DB_POWERBI_CONNECTION).
+  # Rollback: tirar o matcher do Caddy e parar este servico.
+  # --------------------------------------------------------------------------
+  api_integracao:
+    image: newsdc-swoole-dev:latest
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
+    environment:
+      <<: [*homolog-app-env, *powerbi-db-env, *entrada-db-env]
+      APP_NAME: "SDC Homologacao API Integracao"
+      OCTANE_WORKERS: 4
+      OCTANE_TASK_WORKERS: 1
+      START_EMBEDDED_QUEUE: "false"
+      APP_INSTANCES: 1
+      DB_READ_ENABLED: "false"
+      DB_POWERBI_CONNECTION: pgsql_powerbi
+      DB_ENTRADA_CONNECTION: pgsql_entrada
+      # Os demais consumidores do lider: 16 do site (2 replicas x 8) + 8 dos
+      # workers do site + 3 queue_integracao + 1 queue_powerbi (so o log) = 28.
+      EXTERNAL_DB_CONSUMERS: ${API_INTEGRACAO_EXTERNAL_DB_CONSUMERS:-28}
+    volumes:
+      - homolog_storage:/var/www/storage/app
+      - homolog_logs:/var/www/storage/logs
+    networks:
+      - homolog
+    # SEM depends_on db_powerbi: se o BI cair, a entrada nao cai junto.
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck: *homolog-app-healthcheck
+
+  # --------------------------------------------------------------------------
+  # Consumidor da entrada assincrona (AplicarEntradaJob). Conexao redis-integracao
+  # (retry_after 150 > --timeout 120). Escreve no sdc e no sdc_entrada (ambos no
+  # lider) e no sdc_powerbi (db_powerbi). NAO depende do db_powerbi no
+  # depends_on: a entrada segue com o BI fora.
+  # --------------------------------------------------------------------------
+  queue_integracao:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_homolog_queue_integracao
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.25
+    command:
+      - "sh"
+      - "-c"
+      - "php artisan queue:work redis-integracao --queue=integracao --sleep=1 --tries=6 --max-time=3600 --timeout=120"
+    environment:
+      <<: [*homolog-worker-env, *powerbi-db-env, *entrada-db-env]
+      APP_NAME: "SDC Homologacao Queue Integracao"
+      DB_POWERBI_CONNECTION: pgsql_powerbi
+      DB_ENTRADA_CONNECTION: pgsql_entrada
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      - homolog_storage:/var/www/storage/app
+      - homolog_logs:/var/www/storage/logs
+    networks:
+      - homolog
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
+  # Materializador do sdc_powerbi (powerbi:materializar). A conexao default
+  # pgsql aponta para o MEMBRO DE BI, somente leitura: o worker le o sdc ali
+  # (DB_HOST/DB_PORT = BI_DB_TARGET_*; no HA, 6436) e grava o sdc_powerbi no
+  # db_powerbi pela pgsql_powerbi. POWERBI_FONTE_EXIGE_STANDBY=true faz o boot falhar
+  # se o destino nao for standby (pg_is_in_recovery); so o HA liga (sem HA
+  # o db e o proprio lider). failed_jobs e log vao ao
+  # lider por DB_LOG_CONNECTION=pgsql_log (LOG_DB_HOST herdado, apontando ao
+  # lider), pois a conexao default nao aceita escrita.
+  # --------------------------------------------------------------------------
+  queue_powerbi:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_homolog_queue_powerbi
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+    command:
+      - "sh"
+      - "-c"
+      - "php artisan queue:work redis-powerbi --queue=powerbi --sleep=3 --tries=3 --max-time=3600 --timeout=900"
+    environment:
+      <<: [*homolog-worker-env, *powerbi-db-env]
+      APP_NAME: "SDC Homologacao Queue PowerBI"
+      DB_HOST: ${BI_DB_TARGET_HOST:-db}
+      DB_PORT: ${BI_DB_TARGET_PORT:-5432}
+      DB_USERNAME: ${FONTE_BI_DB_USERNAME:-${DB_USERNAME:-sdc}}
+      DB_PASSWORD: ${FONTE_BI_DB_PASSWORD:-${DB_PASSWORD:-sdc}}
+      DB_READ_ENABLED: "false"
+      DB_POWERBI_CONNECTION: pgsql_powerbi
+      DB_LOG_CONNECTION: pgsql_log
+      POWERBI_FONTE_EXIGE_STANDBY: ${POWERBI_FONTE_EXIGE_STANDBY:-false}
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      - homolog_storage:/var/www/storage/app
+      - homolog_logs:/var/www/storage/logs
+    networks:
+      - homolog
+    depends_on:
+      db:
+        condition: service_healthy
+      db_powerbi:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
   # Worker da fila do diretorio (Acessos/AD). Conexao `diretorio`: driver
   # database no Postgres compartilhado (tabela acessos_fila_diretorio), com
   # backoff proprio. Isolado dos demais workers: uma chamada lenta ao AD nao
@@ -623,9 +801,14 @@ services:
       - "-c"
       - "php artisan schedule:work"
     environment:
-      <<: [*homolog-worker-env, *ranking-env, *diretorio-env]
+      <<: [*homolog-worker-env, *ranking-env, *diretorio-env, *powerbi-db-env, *entrada-db-env]
       APP_NAME: "SDC Homologacao Scheduler"
       OUTBOX_AGENDAR_DESPACHO: "true"
+      # Sem a chave o PowerBiServiceProvider nao agenda materializar,
+      # reconciliar nem publicar-arquivos: o BI ficaria parado.
+      DB_POWERBI_CONNECTION: pgsql_powerbi
+      # Agenda reenfileirar/podar da caixa de entrada (sdc_entrada).
+      DB_ENTRADA_CONNECTION: pgsql_entrada
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'schedule:work' >/dev/null || exit 1"]
       interval: 30s
@@ -676,6 +859,65 @@ services:
       - homolog
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sdc} -d ${DB_DATABASE:-sdc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # --------------------------------------------------------------------------
+  # sdc_powerbi (C1): instancia Postgres PROPRIA, fora do Patroni, sem HA nem
+  # standby. Guarda bi_* e controle da materializacao: dado derivado e
+  # reconstruivel a partir do sdc. Se cair, BI e materializacao param; site e
+  # caixa de entrada seguem (nada alem do queue_powerbi depende dela).
+  #
+  # synchronous_commit=off: o dado e o cursor da materializacao gravam na MESMA
+  # transacao, entao uma perda de commits recentes so obriga rematerializar,
+  # nunca deixa dado e cursor inconsistentes. fsync segue ligado (o cluster nao
+  # corrompe). Reaproveita a imagem postgis/postgis:18-3.6-alpine do db. Sem
+  # onprem.conf: instancia pequena, parametros inline.
+  # --------------------------------------------------------------------------
+  db_powerbi:
+    image: postgis/postgis:18-3.6-alpine
+    container_name: newsdc_homolog_db_powerbi
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 0.75
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=192MB"
+      - "-c"
+      - "effective_cache_size=512MB"
+      - "-c"
+      - "work_mem=32MB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "max_connections=100"
+      - "-c"
+      - "synchronous_commit=off"
+      - "-c"
+      - "statement_timeout=120s"
+      - "-c"
+      - "idle_in_transaction_session_timeout=600s"
+      - "-c"
+      - "max_wal_size=1GB"
+      - "-c"
+      - "wal_compression=on"
+    environment:
+      POSTGRES_DB: sdc_powerbi
+      POSTGRES_USER: ${POWERBI_DB_USERNAME:-${DB_USERNAME:-sdc}}
+      POSTGRES_PASSWORD: ${POWERBI_DB_PASSWORD:-${DB_PASSWORD:-sdc}}
+    volumes:
+      # PG 18: mount na RAIZ (mesmo motivo do db).
+      - homolog_pgdata_powerbi:/var/lib/postgresql
+    ports:
+      # 5435 ja e do db; 5439 so para acesso administrativo local.
+      - "127.0.0.1:5439:5432"
+    networks:
+      - homolog
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POWERBI_DB_USERNAME:-${DB_USERNAME:-sdc}} -d sdc_powerbi"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -896,6 +1138,7 @@ networks:
 
 volumes:
   homolog_pgdata:
+  homolog_pgdata_powerbi:
   homolog_pgdata_replica_1:
   homolog_pgdata_replica_2:
   homolog_storage:

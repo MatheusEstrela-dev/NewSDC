@@ -28,6 +28,64 @@
 	}
 }
 
+# Balanceamento e checagens compartilhados pelo app e pelo api_integracao.
+# Uso: import lb_homolog <servico>  (dentro de reverse_proxy).
+(lb_homolog) {
+	# Lista viva de replicas. refresh curto porque em homologacao a
+	# escala muda a toda hora (`docker compose up -d --scale app=N`);
+	# em producao isto seria desperdicio de consulta DNS.
+	dynamic a {
+		name {args[0]}
+		port 8000
+		refresh 5s
+		versions ipv4
+	}
+
+	# round_robin espelha o que o Swarm faz em producao (IPVS). Para
+	# medir capacidade com rotas de custo desigual, `least_conn`
+	# distribui melhor -- mas ai o ensaio deixa de refletir producao.
+	# Trocar de proposito, nunca por engano.
+	lb_policy round_robin
+
+	# Segura a requisicao ate 5s esperando uma replica saudavel em vez
+	# de devolver 502 na hora. E o que faz um deploy rolling (subir a
+	# nova antes de derrubar a velha) passar sem erro visivel.
+	lb_try_duration 5s
+	lb_try_interval 250ms
+
+	# Checagem ATIVA: bate em /health de tempos em tempos e tira do
+	# rodizio quem nao responde. 10s e um meio-termo -- mais curto
+	# gera ruido no log durante o boot de ~3min do Octane.
+	health_uri /health
+	health_interval 10s
+	health_timeout 3s
+	health_status 2xx
+
+	# Checagem PASSIVA: observa as requisicoes reais. Vale mais que a
+	# ativa sob carga, porque /health pode responder enquanto a replica
+	# ja esta afogada nas rotas de verdade.
+	fail_duration 10s
+	max_fails 3
+	unhealthy_status 5xx
+
+	# Octane monta URL de asset a partir do que recebe. Sem isto a
+	# aplicacao acha que foi acessada em app:8000 e gera link quebrado
+	# para quem entrou pelo balanceador.
+	#
+	# X-Forwarded-Host NAO entra aqui: o proprio Caddy avisa que e
+	# redundante, porque repassar o Host ao upstream ja e o padrao dele.
+	header_up X-Forwarded-Proto http
+	header_up X-Real-IP {remote_host}
+
+	# Devolve QUAL replica atendeu. Sem isto nao ha como provar que o
+	# balanceamento esta distribuindo -- o log de acesso do Caddy nao
+	# registra o upstream escolhido, e todas as replicas respondem igual.
+	#
+	# So em homologacao: em producao isto entregaria topologia interna a
+	# quem chama.
+	header_down X-Upstream {http.reverse_proxy.upstream.hostport}
+}
+
 :80 {
 	encode zstd gzip
 
@@ -42,60 +100,21 @@
 		body "caddy ok"
 	}
 
+	# API externa em processo separado (api_integracao, Octane proprio): so o
+	# que a integracao consome sai do app do site. ROLLBACK: remover este
+	# matcher e a linha reverse_proxy @api_integracao, e recarregar o Caddy
+	# (docker exec newsdc_homolog_caddy caddy reload --config /etc/caddy/Caddyfile).
+	# Sem o matcher tudo volta ao app, como antes.
+	# As escritas da caixa de entrada (inventario, estoque/movimentacoes, pae, rat-novo, rat/ocorrencias)
+	# precisam cair aqui: so o api_integracao tem DB_POWERBI_CONNECTION para
+	# desviar. As telas do site usam rotas web, nao estes caminhos /api/v1.
+	@api_integracao path /api/v1/integracao/* /api/v1/bi/* /api/v1/rat/protocolos* /api/v1/inventario /api/v1/inventario/* /api/v1/estoque/movimentacoes /api/v1/pae/empreendimentos* /api/v1/pae/notificacoes/* /api/v1/rat-novo* /api/v1/rat/ocorrencias* /api/v1/decretacoes/receive /api/v1/decretacoes/export/* /api/v1/decretacoes/traces/* /api/v1/tdap/* /api/v1/ajuda-humanitaria/liberacoes/cedec /api/v1/ajuda-humanitaria/pedidos/consolidado /api/v1/cisternas/beneficiarios/export
+	reverse_proxy @api_integracao {
+		import lb_homolog api_integracao
+	}
+
 	reverse_proxy {
-		# Lista viva de replicas. refresh curto porque em homologacao a
-		# escala muda a toda hora (`docker compose up -d --scale app=N`);
-		# em producao isto seria desperdicio de consulta DNS.
-		dynamic a {
-			name app
-			port 8000
-			refresh 5s
-			versions ipv4
-		}
-
-		# round_robin espelha o que o Swarm faz em producao (IPVS). Para
-		# medir capacidade com rotas de custo desigual, `least_conn`
-		# distribui melhor -- mas ai o ensaio deixa de refletir producao.
-		# Trocar de proposito, nunca por engano.
-		lb_policy round_robin
-
-		# Segura a requisicao ate 5s esperando uma replica saudavel em vez
-		# de devolver 502 na hora. E o que faz um deploy rolling (subir a
-		# nova antes de derrubar a velha) passar sem erro visivel.
-		lb_try_duration 5s
-		lb_try_interval 250ms
-
-		# Checagem ATIVA: bate em /health de tempos em tempos e tira do
-		# rodizio quem nao responde. 10s e um meio-termo -- mais curto
-		# gera ruido no log durante o boot de ~3min do Octane.
-		health_uri /health
-		health_interval 10s
-		health_timeout 3s
-		health_status 2xx
-
-		# Checagem PASSIVA: observa as requisicoes reais. Vale mais que a
-		# ativa sob carga, porque /health pode responder enquanto a replica
-		# ja esta afogada nas rotas de verdade.
-		fail_duration 10s
-		max_fails 3
-		unhealthy_status 5xx
-
-		# Octane monta URL de asset a partir do que recebe. Sem isto a
-		# aplicacao acha que foi acessada em app:8000 e gera link quebrado
-		# para quem entrou pelo balanceador.
-		#
-		# X-Forwarded-Host NAO entra aqui: o proprio Caddy avisa que e
-		# redundante, porque repassar o Host ao upstream ja e o padrao dele.
-		header_up X-Forwarded-Proto http
-		header_up X-Real-IP {remote_host}
-
-		# Devolve QUAL replica atendeu. Sem isto nao ha como provar que o
-		# balanceamento esta distribuindo -- o log de acesso do Caddy nao
-		# registra o upstream escolhido, e todas as replicas respondem igual.
-		#
-		# So em homologacao: em producao isto entregaria topologia interna a
-		# quem chama.
-		header_down X-Upstream {http.reverse_proxy.upstream.hostport}
+		import lb_homolog app
 	}
 
 	log {

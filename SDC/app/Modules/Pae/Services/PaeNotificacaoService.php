@@ -178,19 +178,24 @@ class PaeNotificacaoService extends BaseService
 
     public function registrarDevolutiva(PaeNotificacao $notificacao, User $user, string $dtDevolutiva): PaeNotificacao
     {
-        if ($notificacao->dt_devolutiva) {
-            throw ValidationException::withMessages([
-                'devolutiva' => 'Este ciclo de notificacao ja possui devolutiva registrada.',
-            ]);
-        }
-
-        if (Datas::dia($dtDevolutiva)->lessThan(Datas::dia($notificacao->dt_notificacao))) {
-            throw ValidationException::withMessages([
-                'dt_devolutiva' => 'A devolutiva nao pode ser anterior a emissao da notificacao.',
-            ]);
-        }
-
         return DB::transaction(function () use ($notificacao, $user, $dtDevolutiva): PaeNotificacao {
+            // Conferencias dentro da transacao, sobre a linha travada: duas
+            // chamadas simultaneas nao gravam as duas (TOCTOU). A segunda
+            // espera o lock e ve a devolutiva da primeira.
+            $notificacao = PaeNotificacao::query()->lockForUpdate()->findOrFail($notificacao->getKey());
+
+            if ($notificacao->dt_devolutiva) {
+                throw ValidationException::withMessages([
+                    'devolutiva' => 'Este ciclo de notificacao ja possui devolutiva registrada.',
+                ]);
+            }
+
+            if (Datas::dia($dtDevolutiva)->lessThan(Datas::dia($notificacao->dt_notificacao))) {
+                throw ValidationException::withMessages([
+                    'dt_devolutiva' => 'A devolutiva nao pode ser anterior a emissao da notificacao.',
+                ]);
+            }
+
             $notificacao->update(['dt_devolutiva' => $dtDevolutiva]);
 
             $protocolo = $notificacao->analise?->protocolo;

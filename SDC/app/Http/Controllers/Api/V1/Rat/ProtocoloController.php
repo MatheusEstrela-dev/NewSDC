@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Rat;
 
 use App\Http\Controllers\Controller;
+use App\Modules\PowerBi\Materializadores\RatLeituraMaterializada;
+use App\Modules\PowerBi\Support\SaidaBi;
 use App\Modules\Rat\DTOs\RatRelatosDTO;
 use App\Modules\Rat\Http\Requests\ReceiveRatBIRequest;
 use App\Modules\Rat\Http\Resources\RatListResource;
@@ -118,7 +120,7 @@ class ProtocoloController extends Controller
      *     operationId="ratProtocolosReceive",
      *     tags={"RAT"},
      *     summary="Criar RAT via sistema externo",
-     *     description="Cria um novo RAT a partir de dados enviados por sistema externo (Power BI, TDAP, integração). O campo `finalize` controla se o RAT é salvo como rascunho (`false`, padrão) ou já finalizado (`true`). Ao finalizar, `dados_gerais.data_fato`, `dados_gerais.nat_ocorrencia`, `local.uf` e `local.municipio_id` tornam-se obrigatórios.",
+     *     description="Cria um novo RAT a partir de dados enviados por sistema externo (Power BI, TDAP, integração). O campo `finalize` controla se o RAT é salvo como rascunho (`false`, padrão) ou já finalizado (`true`). Ao finalizar, `dados_gerais.data_fato`, `dados_gerais.nat_ocorrencia`, `local.uf` e `local.municipio_id` tornam-se obrigatórios. A `vistoria` aceita os grupos `solicitante`, `imovel`, `estrutura`, `moradores`, `infraestrutura`, `tecnico`, `patologias`, `encaminhamentos`, `bens_afetados` e `orgaos_acionados` (marcações booleanas, mais `outros_descricao`) e `observacoes`; com `finalize=true`, `vistoria.encaminhamentos.interdicao_parcial` ou `interdicao_total` retorna 422 (salve o RAT e emita o termo de interdição antes de finalizar).",
      *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
@@ -139,16 +141,7 @@ class ProtocoloController extends Controller
         // input() deixava passar campos fora dele.
         $dados = $request->validated();
 
-        $rat = $this->writeService->createWithData(RatRelatosDTO::fromArray([
-            'dadosGerais' => $dados['dados_gerais'] ?? [],
-            'comunicacao' => $dados['comunicacao'] ?? [],
-            'local'       => $dados['local'] ?? [],
-            'endereco'    => $dados['endereco'] ?? [],
-            'recursos'    => $dados['recursos'] ?? [],
-            'envolvidos'  => $dados['envolvidos'] ?? [],
-            'vistoria'    => $dados['vistoria'] ?? [],
-            'finalize'    => $dados['finalize'] ?? false,
-        ]));
+        $rat = $this->writeService->createWithData(RatRelatosDTO::fromProtocolo($dados));
 
         return response()->json([
             'success' => true,
@@ -180,7 +173,10 @@ class ProtocoloController extends Controller
      */
     public function exportPowerBI(Request $request): JsonResponse
     {
-        $dados = $this->exportService->getNormalizedDataForPowerBI($request);
+        // Flag materializado: le do sdc_powerbi (anonimizado, sem PII); ao vivo: como sempre.
+        $dados = SaidaBi::materializada('rat')
+            ? app(RatLeituraMaterializada::class)->exportar($request)
+            : $this->exportService->getNormalizedDataForPowerBI($request);
 
         return response()->json([
             'sucesso' => true,

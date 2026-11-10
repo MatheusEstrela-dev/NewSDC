@@ -133,6 +133,18 @@ return [
     'geo_connection' => env('DB_GEO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
     'treinamento_connection' => env('DB_TREINAMENTO_CONNECTION', env('DB_CONNECTION', 'pgsql')),
 
+    // Separacao C1. Duas chaves DIFERENTES das acima: SEM fallback para a
+    // conexao default. Sem a env o recurso fica DESLIGADO (entrada sincrona,
+    // saida ao vivo, como hoje) e nada deste dominio pode cair no sdc.
+    //  - powerbi_connection: banco sdc_powerbi (tabelas bi_* e controle), dado
+    //    derivado e reconstruivel, em instancia Postgres PROPRIA fora do
+    //    Patroni (ver App\Support\Database\ConexaoPowerBi).
+    //  - entrada_connection: banco sdc_entrada (caixa de entrada assincrona),
+    //    NO CLUSTER do sdc para ter durabilidade sincrona: a mensagem aceita
+    //    nao pode se perder (ver App\Support\Database\ConexaoEntrada).
+    'powerbi_connection' => env('DB_POWERBI_CONNECTION'),
+    'entrada_connection' => env('DB_ENTRADA_CONNECTION'),
+
     /*
     |--------------------------------------------------------------------------
     | Pools por coroutine (Octane/Swoole com hooks)
@@ -180,6 +192,31 @@ return [
             'timeout' => (float) env('SWOOLE_PG_TREINAMENTO_POOL_TIMEOUT', 2.0),
             'warm' => false,
         ],
+        // Caixa de entrada (sdc_entrada, no cluster): o aceite da API passa
+        // por aqui, mas e INSERT curto; esgotou, a API responde erro rapido.
+        'pgsql_entrada' => [
+            'size' => (int) env('SWOOLE_PG_ENTRADA_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_ENTRADA_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        // Materializacao no sdc_powerbi (instancia propria): carga fora do site, falha rapida.
+        'pgsql_powerbi' => [
+            'size' => (int) env('SWOOLE_PG_POWERBI_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_POWERBI_POOL_TIMEOUT', 1.0),
+            'warm' => false,
+        ],
+        // Leitura da API de BI no mesmo servidor do powerbi: pode esperar um pouco mais.
+        'pgsql_powerbi_read' => [
+            'size' => (int) env('SWOOLE_PG_POWERBI_READ_POOL_SIZE', 4),
+            'timeout' => (float) env('SWOOLE_PG_POWERBI_READ_POOL_TIMEOUT', 2.0),
+            'warm' => false,
+        ],
+        // Origem do materializador (sdc no membro de BI): poucas sessoes, longas.
+        'pgsql_fonte_bi' => [
+            'size' => (int) env('SWOOLE_PG_FONTE_BI_POOL_SIZE', 2),
+            'timeout' => (float) env('SWOOLE_PG_FONTE_BI_POOL_TIMEOUT', 5.0),
+            'warm' => false,
+        ],
         'ranking' => [
             'size' => (int) env('SWOOLE_PG_RANKING_POOL_SIZE', 4),
             'timeout' => (float) env('SWOOLE_PG_RANKING_POOL_TIMEOUT', 2.0),
@@ -219,6 +256,16 @@ return [
             'chave' => 'treinamento_connection',
             'extensoes' => [],
             'migrations' => 'database/migrations/treinamento',
+        ],
+        'pgsql_entrada' => [
+            'chave' => 'entrada_connection',
+            'extensoes' => [],
+            'migrations' => 'database/migrations/entrada',
+        ],
+        'pgsql_powerbi' => [
+            'chave' => 'powerbi_connection',
+            'extensoes' => [],
+            'migrations' => 'database/migrations/powerbi',
         ],
         'ranking' => [
             'chave' => null,
@@ -471,8 +518,9 @@ return [
         // Usuario leitor exclusivo das projecoes. Conceder SELECT no destino.
         'ranking_read' => [
             'driver' => 'pgsql',
-            'host' => env('RANKING_DB_HOST', '127.0.0.1'),
-            'port' => env('RANKING_DB_PORT', '5432'),
+            'read_only' => true,
+            'host' => env('RANKING_READ_HOST', env('RANKING_DB_HOST', '127.0.0.1')),
+            'port' => env('RANKING_READ_PORT', env('RANKING_DB_PORT', '5432')),
             'database' => env('RANKING_DB_DATABASE', 'sdc_ranking'),
             'username' => env('RANKING_READ_USERNAME', ''),
             'password' => env('RANKING_READ_PASSWORD', ''),
@@ -491,6 +539,7 @@ return [
         // Nao usar o OutboxDispatcher aqui: ele grava na origem.
         'ranking_source_ro' => [
             'driver' => 'pgsql',
+            'read_only' => true,
             'host' => env('RANKING_SOURCE_HOST', '127.0.0.1'),
             'port' => env('RANKING_SOURCE_PORT', '5432'),
             'database' => env('RANKING_SOURCE_DATABASE', 'sdc'),
@@ -570,6 +619,7 @@ return [
         // SELECT dos mapas. Role de leitura propria em producao
         // (GEO_DB_READ_USERNAME); nas replicas quando houver.
         'pgsql_geo_read' => $bancoDedicado('GEO', 'sdc_geoespacial', 'geo-read', array_filter([
+            'read_only' => true,
             'username' => env('GEO_DB_READ_USERNAME', env('GEO_DB_USERNAME', env('DB_USERNAME', 'sdc'))),
             'password' => env('GEO_DB_READ_PASSWORD', env('GEO_DB_PASSWORD', env('DB_PASSWORD', ''))),
             'replica_routing' => $geoReplicaRouting ?: null,
@@ -590,6 +640,55 @@ return [
         // de cidadao (LGPD). Em producao role propria sdc_treinamento_app, sem
         // acesso ao sdc. So usado com DB_TREINAMENTO_CONNECTION.
         'pgsql_treinamento' => $bancoDedicado('TREINAMENTO', 'sdc_treinamento', 'treinamento'),
+
+        // Banco sdc_entrada (schema entrada): caixa de entrada assincrona, no
+        // cluster do sdc (mesmo host/porta do lider por padrao, durabilidade
+        // sincrona). Usa uuidv7() nativo do PG18, sem extensao. So usado com
+        // DB_ENTRADA_CONNECTION=pgsql_entrada.
+        'pgsql_entrada' => $bancoDedicado('ENTRADA', 'sdc_entrada', 'entrada'),
+
+        // Banco sdc_powerbi (bi_* e controle): dado derivado em instancia
+        // Postgres PROPRIA (servico db_powerbi, fora do Patroni), apontada por
+        // POWERBI_DB_HOST/PORT. So usado com DB_POWERBI_CONNECTION=pgsql_powerbi.
+        'pgsql_powerbi' => $bancoDedicado('POWERBI', 'sdc_powerbi', 'powerbi'),
+
+        // Leitura do sdc_powerbi. Escrita e leitura ficam no MESMO servidor
+        // (instancia propria, sem replica): sem POWERBI_DB_READ_HOST herda host
+        // e porta do powerbi. De proposito SEM replica_routing e sem read/write.
+        'pgsql_powerbi_read' => $bancoDedicado('POWERBI', 'sdc_powerbi', 'powerbi-read', [
+            'read_only' => true,
+            'host' => env('POWERBI_DB_READ_HOST', env('POWERBI_DB_HOST', env('DB_HOST', '127.0.0.1'))),
+            'port' => env('POWERBI_DB_READ_PORT', env('POWERBI_DB_PORT', env('DB_PORT', '5432'))),
+            'username' => env('POWERBI_DB_READ_USERNAME', env('POWERBI_DB_USERNAME', env('DB_USERNAME', 'sdc'))),
+            'password' => env('POWERBI_DB_READ_PASSWORD', env('POWERBI_DB_PASSWORD', env('DB_PASSWORD', ''))),
+        ]),
+
+        // Leitura do SDC (database = DB_DATABASE) no membro de BI, usada so pelo
+        // materializador. Somente leitura por role; sem replica_routing pelo
+        // mesmo motivo da conexao acima. Sem 'url': DATABASE_URL aponta para o
+        // lider e venceria o host.
+        'pgsql_fonte_bi' => [
+            'driver' => 'pgsql',
+            'read_only' => true,
+            'host' => env('FONTE_BI_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('FONTE_BI_DB_PORT', env('FONTE_BI_DB_HOST') ? '6436' : env('DB_PORT', '5432')),
+            'database' => env('DB_DATABASE', 'sdc'),
+            'username' => env('FONTE_BI_DB_USERNAME', env('DB_USERNAME', 'sdc')),
+            'password' => env('FONTE_BI_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => $searchPathComLog,
+            'sslmode' => env('FONTE_BI_DB_SSLMODE', env('DB_SSLMODE', 'prefer')),
+            'sslrootcert' => env('DB_SSL_CA') ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel').'-fonte-bi',
+            'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => $emularPrepares,
+                PDO::ATTR_PERSISTENT => false,
+                PDO::ATTR_TIMEOUT => $pgConnectTimeout,
+            ],
+        ],
 
         'pgsql_ai' => [
             'driver' => 'pgsql',

@@ -45,17 +45,21 @@ Route::model('orgao', Orgao::class);
 Route::model('equipe', CompdecEquipe::class);
 Route::model('anexo', CompdecAnexo::class);
 
-Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_threshold', 15)])
+$queryThresholdPadrao = (int) config('compdec.query_threshold', 15);
+
+Route::middleware(['auth', 'compdec.query-threshold:' . $queryThresholdPadrao])
     ->prefix('compdec')
     ->name('compdec.')
-    ->group(function () {
+    ->group(function () use ($queryThresholdPadrao) {
 
         // Listagem e visualizacao
-        Route::middleware('can:compdec.orgaos.view')->group(function () {
+        Route::middleware('can:compdec.orgaos.view')->group(function () use ($queryThresholdPadrao) {
             Route::get('/orgaos', [OrgaoController::class, 'index'])->name('index');
-            Route::get('/orgaos/arvore', [OrgaoController::class, 'arvore'])
-                ->middleware('compdec.query-threshold:25')
-                ->name('arvore');
+            $arvore = Route::get('/orgaos/arvore', [OrgaoController::class, 'arvore'])->name('arvore');
+            if ($queryThresholdPadrao !== 25) {
+                $arvore->withoutMiddleware('compdec.query-threshold:' . $queryThresholdPadrao)
+                    ->middleware('compdec.query-threshold:25');
+            }
             Route::get('/orgaos/{orgao}', [OrgaoController::class, 'show'])
                 ->name('show')
                 ->whereNumber('orgao');
