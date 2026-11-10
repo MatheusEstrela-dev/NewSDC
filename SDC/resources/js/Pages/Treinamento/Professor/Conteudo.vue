@@ -10,6 +10,7 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import MenuCurso from '@/Components/Organisms/Treinamento/Professor/MenuCurso.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
 import { usePdf } from '@/Composables/treinamento/usePdf';
@@ -19,6 +20,7 @@ defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
   curso: { type: Object, required: true },
   pastas: { type: Array, default: () => [] },
+  pendentes: { type: Number, default: 0 },
 });
 
 const { show: toast } = useToast();
@@ -30,11 +32,6 @@ watch(() => props.pastas, (novas) => { lista.value = structuredClone(novas); });
 
 const totalItens = computed(() => lista.value.reduce((soma, p) => soma + p.itens.length, 0));
 
-const menu = computed(() => [
-  { rotulo: 'Meus cursos', href: route('treinamentos.professor.index'), ativo: false },
-  { rotulo: 'Conteudo', href: route('treinamentos.professor.conteudo', props.curso.id), ativo: true },
-  { rotulo: 'Previa', href: route('treinamentos.professor.previa', props.curso.id), ativo: false },
-]);
 
 function avisarErro(erros) {
   toast(Object.values(erros)[0] || 'Nao foi possivel concluir a acao.', 'error');
@@ -181,18 +178,7 @@ function publicar() {
     />
 
     <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[14rem_1fr]">
-      <!-- Menu do curso (provisorio) -->
-      <nav class="flex gap-2 lg:flex-col" aria-label="Menu do curso">
-        <Button
-          v-for="entrada in menu"
-          :key="entrada.rotulo"
-          size="sm"
-          :variant="entrada.ativo ? 'primary' : 'outline'"
-          :href="entrada.href"
-        >
-          {{ entrada.rotulo }}
-        </Button>
-      </nav>
+      <MenuCurso :curso="curso" ativo="conteudo" :pendentes="pendentes" />
 
       <div class="min-w-0 space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3">

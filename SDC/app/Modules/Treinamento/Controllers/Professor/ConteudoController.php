@@ -8,11 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Modulo;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Services\AcompanhamentoService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ConteudoController extends Controller
 {
+    public function __construct(private readonly AcompanhamentoService $acompanhamento) {}
+
     public function __invoke(Treinamento $treinamento): Response
     {
         $pastas = Modulo::query()
@@ -47,6 +50,7 @@ class ConteudoController extends Controller
                 'publicado' => $treinamento->estaPublicado(),
             ],
             'pastas' => $pastas,
+            'pendentes' => $this->acompanhamento->contarPendentes($treinamento),
         ]);
     }
 }

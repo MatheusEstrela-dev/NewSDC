@@ -15,14 +15,18 @@ use App\Modules\Treinamento\Models\ProgressoItem;
 use App\Modules\Treinamento\Models\ProjetoEntrega;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
+use App\Models\User;
+use App\Modules\Treinamento\Mail\EntregaCorrigidaMail;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 
 class ProjetoService
 {
     public function __construct(
         private readonly TrilhaService $trilha,
         private readonly ArquivoCursoService $arquivos,
+        private readonly ProgressoService $progresso,
     ) {}
 
     public function enviar(Inscricao $inscricao, ModuloItem $item, UploadedFile $arquivo, ?string $comentario): ProjetoEntrega
@@ -73,6 +77,62 @@ class ProjetoService
         );
 
         return $entrega;
+    }
+
+    /**
+     * Correcao pelo professor: so entrega ENVIADA. Aprovar conclui o item
+     * (e pode liberar a pasta seguinte); devolver exige parecer e deixa o
+     * aluno reenviar. O aluno e avisado por e-mail, se tiver um.
+     */
+    public function corrigir(ProjetoEntrega $entrega, User $professor, bool $aprovar, ?string $parecer): void
+    {
+        $parecer = $parecer === null ? null : trim($parecer);
+        if (! $aprovar && ($parecer === null || $parecer === '')) {
+            throw new \DomainException('Informe o parecer para devolver a entrega.');
+        }
+
+        $inscricao = ConexaoTreinamento::transacao(function () use ($entrega, $professor, $aprovar, $parecer) {
+            // Trava a entrega: duas correcoes simultaneas nao passam juntas.
+            $atual = ProjetoEntrega::query()->whereKey($entrega->id)->lockForUpdate()->firstOrFail();
+            if ($atual->status !== StatusEntrega::ENVIADA) {
+                throw new \DomainException('Esta entrega ja foi corrigida.');
+            }
+
+            $atual->update([
+                'status' => $aprovar ? StatusEntrega::APROVADA : StatusEntrega::DEVOLVIDA,
+                'parecer' => $parecer === '' ? null : $parecer,
+                'corrigido_por' => $professor->getKey(),
+                'corrigido_em' => now(),
+            ]);
+
+            $inscricao = Inscricao::query()->findOrFail($atual->inscricao_id);
+            if ($aprovar) {
+                // concluir() ja atualiza a conclusao das pastas.
+                $this->progresso->concluir($inscricao, ModuloItem::query()->findOrFail($atual->modulo_item_id));
+            }
+
+            $entrega->setRawAttributes($atual->getAttributes(), true);
+
+            return $inscricao;
+        });
+
+        $this->avisarAluno($inscricao, $entrega, $aprovar);
+    }
+
+    private function avisarAluno(Inscricao $inscricao, ProjetoEntrega $entrega, bool $aprovada): void
+    {
+        $inscrito = $inscricao->inscrito;
+        if ($inscrito === null || empty($inscrito->email)) {
+            return;
+        }
+
+        Mail::to($inscrito->email)->queue(new EntregaCorrigidaMail(
+            nomeInscrito: (string) $inscrito->name,
+            curso: (string) $inscricao->treinamento()->value('titulo'),
+            item: (string) ModuloItem::query()->whereKey($entrega->modulo_item_id)->value('titulo'),
+            aprovada: $aprovada,
+            parecer: $entrega->parecer,
+        ));
     }
 
     public function ultimaEntrega(Inscricao $inscricao, ModuloItem $item): ?ProjetoEntrega

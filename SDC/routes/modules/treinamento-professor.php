@@ -3,7 +3,11 @@
 use App\Modules\Treinamento\Controllers\Admin\ProfessorCandidatosController;
 use App\Modules\Treinamento\Controllers\Admin\ProfessorDestroyController;
 use App\Modules\Treinamento\Controllers\Admin\ProfessorStoreController;
+use App\Modules\Treinamento\Controllers\Professor\AlunosController;
 use App\Modules\Treinamento\Controllers\Professor\ConteudoController;
+use App\Modules\Treinamento\Controllers\Professor\CorrecaoStoreController;
+use App\Modules\Treinamento\Controllers\Professor\CorrecoesController;
+use App\Modules\Treinamento\Controllers\Professor\EntregaArquivoController;
 use App\Modules\Treinamento\Controllers\Professor\ItemArquivoController;
 use App\Modules\Treinamento\Controllers\Professor\ItemDestroyController;
 use App\Modules\Treinamento\Controllers\Professor\ItemReordenarController;
@@ -31,6 +35,10 @@ Route::prefix('professor')->name('professor.')->middleware('can:treinamento.prof
 
     Route::middleware('leciona.curso')->group(function () {
         Route::get('/{treinamento}/conteudo', ConteudoController::class)->name('conteudo');
+        Route::get('/{treinamento}/alunos', AlunosController::class)->name('alunos');
+        Route::get('/{treinamento}/correcoes', CorrecoesController::class)->name('correcoes');
+        Route::post('/{treinamento}/entregas/{entrega}/correcao', CorrecaoStoreController::class)->name('entregas.correcao');
+        Route::get('/{treinamento}/entregas/{entrega}/arquivo', EntregaArquivoController::class)->name('entregas.arquivo');
         Route::get('/{treinamento}/previa', PreviaController::class)->name('previa');
         Route::post('/{treinamento}/publicar', PublicarController::class)->name('publicar');
 
