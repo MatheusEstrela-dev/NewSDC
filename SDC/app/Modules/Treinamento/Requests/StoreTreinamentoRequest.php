@@ -22,7 +22,7 @@ class StoreTreinamentoRequest extends FormRequest
             'categoria' => ['required', 'string', 'in:EVENTO,CURSO'],
             'tipo' => ['required', 'string', 'in:PRESENCIAL,ONLINE,EAD'],
             'publico_alvo' => ['required', 'string', 'in:SERVIDORES,CIDADAOS'],
-            'inscricao_aprovacao_automatica' => ['nullable', 'boolean'],
+            'inscricao_aprovacao_automatica' => ['boolean'],
             'instrutor' => ['nullable', 'string', 'max:255'],
             'local' => ['nullable', 'string', 'max:255'],
             'data_inicio' => ['nullable', 'date'],

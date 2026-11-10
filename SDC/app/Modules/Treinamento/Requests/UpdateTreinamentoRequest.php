@@ -22,7 +22,7 @@ class UpdateTreinamentoRequest extends FormRequest
             'categoria' => ['sometimes', 'required', 'string', 'in:EVENTO,CURSO'],
             'tipo' => ['sometimes', 'required', 'string', 'in:PRESENCIAL,ONLINE,EAD'],
             'publico_alvo' => ['sometimes', 'required', 'string', 'in:SERVIDORES,CIDADAOS'],
-            'inscricao_aprovacao_automatica' => ['nullable', 'boolean'],
+            'inscricao_aprovacao_automatica' => ['boolean'],
             'instrutor' => ['nullable', 'string', 'max:255'],
             'local' => ['nullable', 'string', 'max:255'],
             'data_inicio' => ['nullable', 'date'],

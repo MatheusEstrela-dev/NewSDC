@@ -48,7 +48,7 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
     require __DIR__ . '/treinamento-professor.php';
 
     // Antes do /{id} de proposito: senao o wildcard casaria com "create" primeiro.
-    Route::get('/create',TreinamentoCreateController::class)
+    Route::get('/create', TreinamentoCreateController::class)
         ->name('create')
         ->middleware('can:treinamento.cursos.create');
     // Tambem antes do /{id}, pelo mesmo motivo do /create.

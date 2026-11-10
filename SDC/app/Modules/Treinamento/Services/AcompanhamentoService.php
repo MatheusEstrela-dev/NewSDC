@@ -66,9 +66,6 @@ class AcompanhamentoService
     public function pendentes(Treinamento $treinamento): Collection
     {
         $entregas = $this->consultaPendentes($treinamento)
-            ->join('treinamento.inscricoes as i', 'i.id', '=', 'projeto_entregas.inscricao_id')
-            ->join('treinamento.modulo_itens as mi', 'mi.id', '=', 'projeto_entregas.modulo_item_id')
-            ->join('treinamento.modulos as m', 'm.id', '=', 'mi.modulo_id')
             ->orderBy('projeto_entregas.id')
             ->get([
                 'projeto_entregas.id',
@@ -117,9 +114,19 @@ class AcompanhamentoService
         );
     }
 
+    /**
+     * Entregas ENVIADA de itens e pastas ativos, ja unidas a inscricao, ao item
+     * e a pasta (aliases i, mi, m).
+     */
     private function consultaPendentes(Treinamento $treinamento): Builder
     {
-        return $this->entregasDoCurso($treinamento)->where('projeto_entregas.status', StatusEntrega::ENVIADA->value);
+        return $this->entregasDoCurso($treinamento)
+            ->where('projeto_entregas.status', StatusEntrega::ENVIADA->value)
+            ->join('treinamento.inscricoes as i', 'i.id', '=', 'projeto_entregas.inscricao_id')
+            ->join('treinamento.modulo_itens as mi', 'mi.id', '=', 'projeto_entregas.modulo_item_id')
+            ->join('treinamento.modulos as m', 'm.id', '=', 'mi.modulo_id')
+            ->whereNull('mi.deleted_at')
+            ->whereNull('m.deleted_at');
     }
 
     private function estaTravado(EstadoTrilha $estado): bool

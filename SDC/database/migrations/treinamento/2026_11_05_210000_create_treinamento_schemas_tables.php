@@ -17,6 +17,17 @@ use Illuminate\Support\Facades\DB;
  *
  *   php artisan migrate --database=pgsql_treinamento --path=database/migrations/treinamento
  *
+ * Reaplicar em banco ja migrado
+ * A migration e idempotente (SQL com IF NOT EXISTS / ADD COLUMN IF NOT EXISTS).
+ * Em ambiente onde ela ja consta como rodada (homolog, producao), a DDL nova
+ * so entra depois de apagar o registro dela no sdc_treinamento e rodar de novo:
+ *
+ *   DELETE FROM migrations WHERE migration = '2026_11_05_210000_create_treinamento_schemas_tables';
+ *   php artisan migrate --database=pgsql_treinamento --path=database/migrations/treinamento --force
+ *
+ * Fazer isso ANTES de subir o codigo novo: sem publico_alvo o catalogo do
+ * portal e as inscricoes quebram.
+ *
  * Schemas
  * - cadastro: cidadaos, cidadao_email_verificacoes, cidadao_password_reset_tokens
  *   (login e dado pessoal do cidadao, LGPD).

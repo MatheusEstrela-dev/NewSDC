@@ -134,7 +134,7 @@ onBeforeUnmount(enviarPendente);
         <div class="mt-auto flex items-center gap-3 border-t border-slate-200 px-5 py-3 text-xs dark:border-slate-700">
           <Button variant="outline" size="sm" :disabled="!anterior" @click="selecionar(anterior.id)">&lsaquo; Anterior</Button>
           <span class="flex-1 text-center text-slate-500 dark:text-slate-400">
-            <template v-if="!previa && itemAtual?.tipo === 'PDF'">Retoma na página em que você parou</template>
+            <template v-if="!previa && itemAtual?.tipo === 'PDF' && itemAtual.posicao > 1">Retoma na página em que você parou</template>
           </span>
           <Button size="sm" :disabled="!podeAvancar" @click="selecionar(proximo.id)">Próximo &rsaquo;</Button>
         </div>
