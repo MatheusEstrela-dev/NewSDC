@@ -113,6 +113,20 @@
 		import lb_homolog api_integracao
 	}
 
+	# Videos do EAD: o Caddy entrega do volume, o Octane so autoriza (204/403).
+	handle_path /videos/* {
+		forward_auth {
+			dynamic a {
+				name app
+				port 8000
+			}
+			uri /videos/auth
+		}
+		root * {$VIDEOS_HLS_ROOT:/srv/storage/treinamentos/hls}
+		header Cache-Control "private, max-age=3600"
+		file_server
+	}
+
 	reverse_proxy {
 		import lb_homolog app
 	}

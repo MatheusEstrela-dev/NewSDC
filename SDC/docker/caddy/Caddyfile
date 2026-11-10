@@ -13,6 +13,16 @@
 	@reverb path /app/*
 	reverse_proxy @reverb reverb:8080
 
+	# Videos do EAD: o Caddy entrega do volume, o Octane so autoriza (204/403).
+	handle_path /videos/* {
+		forward_auth app:8000 {
+			uri /videos/auth
+		}
+		root * {$VIDEOS_HLS_ROOT:/srv/storage/treinamentos/hls}
+		header Cache-Control "private, max-age=3600"
+		file_server
+	}
+
 	# Octane escuta na 8000 dentro da rede sdc_edge.
 	reverse_proxy app:8000 {
 		health_uri /health

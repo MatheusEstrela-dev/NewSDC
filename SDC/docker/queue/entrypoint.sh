@@ -23,4 +23,13 @@ fi
 # cada modulo no bind mount tem setgid www-data no host).
 umask 002
 
+# A imagem de queue e uma so; SUPERVISOR_PROFILE escolhe o conjunto de workers
+# que o supervisor sobe (o servico queue-videos usa o perfil videos).
+# videos = so o worker de transcodificacao; default = todos menos ele.
+if [ "${SUPERVISOR_PROFILE:-default}" = "videos" ]; then
+    find /etc/supervisor/conf.d -type f ! -name 'videos-worker.conf' -delete
+else
+    rm -f /etc/supervisor/conf.d/videos-worker.conf
+fi
+
 exec "$@"

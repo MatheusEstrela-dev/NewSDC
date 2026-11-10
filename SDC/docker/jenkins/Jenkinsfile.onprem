@@ -43,6 +43,7 @@ pipeline {
         QUEUE_IMAGE     = "${REGISTRY}/sdc-queue"
         APP_SERVICE     = "${STACK_NAME}_app"
         QUEUE_SERVICE   = "${STACK_NAME}_queue"
+        QUEUE_VIDEOS_SERVICE = "${STACK_NAME}_queue-videos"
         REVERB_SERVICE  = "${STACK_NAME}_reverb"
         // Arquivo de ambiente de producao na VM, montado read-only no container
         // do Jenkins (ver docker-compose.jenkins.yml)
@@ -352,6 +353,14 @@ pipeline {
                         --detach=false \
                         ${QUEUE_SERVICE}
                 '''
+                sh '''
+                    docker service update \
+                        --image ${QUEUE_IMAGE}:${IMAGE_TAG} \
+                        --update-order stop-first \
+                        --with-registry-auth \
+                        --detach=false \
+                        ${QUEUE_VIDEOS_SERVICE}
+                '''
             }
         }
 
@@ -400,6 +409,9 @@ pipeline {
                             docker service update --image ${env.PREV_QUEUE_IMAGE} \
                                 --update-order stop-first --with-registry-auth --detach=false \
                                 ${QUEUE_SERVICE} || true
+                            docker service update --image ${env.PREV_QUEUE_IMAGE} \
+                                --update-order stop-first --with-registry-auth --detach=false \
+                                ${QUEUE_VIDEOS_SERVICE} || true
                         """
                     }
                     notify('ROLLBACK', "Rollback executado para ${env.PREV_APP_IMAGE} | Build #${env.BUILD_NUMBER} | ${env.GIT_AUTHOR ?: ''}")

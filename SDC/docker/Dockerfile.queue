@@ -16,6 +16,7 @@ RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy" && { 
 # Instalar dependencias do sistema e extensoes PHP usadas pelos jobs Laravel.
 # session.upload_progress.enabled=0 cobre CVE-2026-115560 ate o proximo patch.
 # poppler-utils: pdftotext, extracao do texto dos PDFs de Notas Tecnicas.
+# ffmpeg: ffmpeg/ffprobe da transcodificacao HLS do Treinamento EAD (fila videos).
 RUN apk add --no-cache \
     bash \
     git \
@@ -31,6 +32,7 @@ RUN apk add --no-cache \
     libldap \
     icu-libs \
     poppler-utils \
+    ffmpeg \
     mysql-client \
     postgresql-client \
     supervisor \
@@ -96,6 +98,8 @@ COPY docker/supervisor/isolated-workers.conf /etc/supervisor/conf.d/isolated-wor
 # Worker dedicado do pipeline medalhao (fila propria, timeout maior).
 COPY docker/supervisor/medalhao-worker.conf /etc/supervisor/conf.d/medalhao-worker.conf
 COPY docker/supervisor/ranking-worker.conf /etc/supervisor/conf.d/ranking-worker.conf
+# Worker de transcodificacao de video (so ativo no perfil SUPERVISOR_PROFILE=videos).
+COPY docker/supervisor/videos-worker.conf /etc/supervisor/conf.d/videos-worker.conf
 
 # Entrypoint com a guarda de mount de anexos (mesma do app)
 COPY docker/queue/entrypoint.sh /entrypoint.sh

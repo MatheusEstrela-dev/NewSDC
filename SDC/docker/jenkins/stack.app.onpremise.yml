@@ -9,7 +9,8 @@
 # Zero downtime = healthcheck + update start-first + replicas >= 2 (app).
 #
 # ORCAMENTO (app em 2 replicas):
-#   app 2x (1.75 cpu / 2.25G) + queue 1/1.5G + reverb 0.5/512M + caddy 0.5/256M
+#   app 2x (1.75 cpu / 2.25G) + queue 1/1.5G + queue-videos 1.5/2G
+#   + reverb 0.5/512M + caddy 0.5/256M = 7 de 8 vCPUs
 #   transiente de update (start-first, parallelism 1): +1 app (~2.25G)
 #
 # Guardrail PG inclui a terceira replica temporaria durante o rolling update.
@@ -236,6 +237,98 @@ services:
           memory: 256M
 
   # ==========================================================================
+  # QUEUE-VIDEOS - mesma imagem do queue, perfil videos: so o worker de
+  # transcodificacao FFmpeg (fila videos). Servico proprio para o teto de CPU
+  # nao tirar fatia do app nem da fila de notificacao. stop-first com grace de
+  # 16m: o job interrompido no deploy volta a fila (tries=3).
+  # ==========================================================================
+  queue-videos:
+    image: ${REGISTRY:-127.0.0.1:5000}/sdc-queue:${VERSION:-latest}
+    hostname: queue-videos
+    stop_grace_period: 16m
+
+    environment:
+      APP_ENV: production
+      APP_KEY: ${APP_KEY}
+      SUPERVISOR_PROFILE: videos
+
+      # O worker PRECISA destas quatro, e a ausencia de cada uma falha calada:
+      #
+      # APP_URL   -- todo link gerado dentro de job ou e-mail sai daqui. Sem
+      #              ela, config/app.php cai em 'http://localhost' e o cidadao
+      #              recebe e-mail com link que nao abre. Quem gera o e-mail e
+      #              ESTE container, nao o app, entao a variavel do app nao
+      #              socorre.
+      # APP_NAME  -- vira o application_name das conexoes no Postgres
+      #              (config/database.php:214). Sem ela as sessoes da fila
+      #              aparecem como 'sdc-laravel' no pg_stat_activity, e fica
+      #              impossivel separar carga de fila de carga de request na
+      #              hora de diagnosticar.
+      # LOG_LEVEL -- config/logging.php usa 'debug' como padrao. A fila de
+      #              producao estava logando em nivel debug: volume desnecessario
+      #              e risco de gravar em log dado que nao deveria sair do
+      #              processo.
+      # LOG_CHANNEL -- para a fila escrever no mesmo destino que o app, em vez
+      #              do 'stack' padrao.
+      APP_NAME: ${APP_NAME:-SDC}
+      APP_URL: ${APP_URL}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_CLIENT: phpredis
+      REDIS_PREFIX: ${REDIS_PREFIX:-sdc_onprem_}
+      CACHE_PREFIX: ${CACHE_PREFIX:-sdc_onprem_cache_}
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: ${REVERB_APP_ID}
+      REVERB_APP_KEY: ${REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
+
+    volumes:
+      - app_storage:/var/www/storage/app
+
+    networks:
+      - sdc_internal
+
+    healthcheck:
+      test: ["CMD", "supervisorctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    deploy:
+      replicas: 1
+      update_config:
+        order: stop-first
+        parallelism: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 2G
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+
+  # ==========================================================================
   # REVERB - WebSocket (notificacoes em tempo real), atras do Caddy (sem porta
   # publicada no host). stop-first: clientes WS reconectam sozinhos.
   # ==========================================================================
@@ -322,8 +415,14 @@ services:
 
     volumes:
       - /opt/sdc/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Videos HLS do EAD servidos direto do volume (somente leitura). Se o R760
+      # usar ANEXOS_ROOT, trocar por ${ANEXOS_HOST_PATH}/TREINAMENTO:/srv/storage/treinamentos:ro
+      - app_storage:/srv/storage:ro
       - caddy_data:/data
       - caddy_config:/config
+
+    environment:
+      VIDEOS_HLS_ROOT: /srv/storage/treinamentos/hls
 
     networks:
       - sdc_edge
