@@ -26,10 +26,17 @@ umask 002
 # A imagem de queue e uma so; SUPERVISOR_PROFILE escolhe o conjunto de workers
 # que o supervisor sobe (o servico queue-videos usa o perfil videos).
 # videos = so o worker de transcodificacao; default = todos menos ele.
-if [ "${SUPERVISOR_PROFILE:-default}" = "videos" ]; then
-    find /etc/supervisor/conf.d -type f ! -name 'videos-worker.conf' -delete
-else
-    rm -f /etc/supervisor/conf.d/videos-worker.conf
-fi
+case "${SUPERVISOR_PROFILE:-default}" in
+    videos)
+        find /etc/supervisor/conf.d -type f ! -name 'videos-worker.conf' -delete
+        ;;
+    default)
+        rm -f /etc/supervisor/conf.d/videos-worker.conf
+        ;;
+    *)
+        echo "ERRO: SUPERVISOR_PROFILE='${SUPERVISOR_PROFILE}' invalido (use default ou videos)." >&2
+        exit 1
+        ;;
+esac
 
 exec "$@"

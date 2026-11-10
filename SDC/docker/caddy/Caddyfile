@@ -15,12 +15,19 @@
 
 	# Videos do EAD: o Caddy entrega do volume, o Octane so autoriza (204/403).
 	handle_path /videos/* {
-		forward_auth app:8000 {
-			uri /videos/auth
+		# route fixa a ordem: o Cache-Control so existe depois da autorizacao
+		# (sem route o header rodaria antes e o 403 sairia cacheavel por 1h).
+		route {
+			forward_auth app:8000 {
+				uri /videos/auth
+				header_up X-Forwarded-Uri {http.request.orig_uri}
+			}
+			root * {$VIDEOS_HLS_ROOT:/srv/storage/treinamentos/hls}
+			header Cache-Control "private, max-age=3600"
+			file_server {
+				hide .tmp-*
+			}
 		}
-		root * {$VIDEOS_HLS_ROOT:/srv/storage/treinamentos/hls}
-		header Cache-Control "private, max-age=3600"
-		file_server
 	}
 
 	# Octane escuta na 8000 dentro da rede sdc_edge.

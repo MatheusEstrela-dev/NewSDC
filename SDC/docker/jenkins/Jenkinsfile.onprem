@@ -353,13 +353,19 @@ pipeline {
                         --detach=false \
                         ${QUEUE_SERVICE}
                 '''
+                // O servico queue-videos so existe apos um docker stack deploy com a
+                // stack nova; ate la o update falharia e derrubaria o deploy inteiro.
                 sh '''
-                    docker service update \
-                        --image ${QUEUE_IMAGE}:${IMAGE_TAG} \
-                        --update-order stop-first \
-                        --with-registry-auth \
-                        --detach=false \
-                        ${QUEUE_VIDEOS_SERVICE}
+                    if docker service inspect ${QUEUE_VIDEOS_SERVICE} >/dev/null 2>&1; then
+                        docker service update \
+                            --image ${QUEUE_IMAGE}:${IMAGE_TAG} \
+                            --update-order stop-first \
+                            --with-registry-auth \
+                            --detach=false \
+                            ${QUEUE_VIDEOS_SERVICE}
+                    else
+                        echo "[WARN] Servico ${QUEUE_VIDEOS_SERVICE} ainda nao existe: reaplique o stack com docker stack deploy"
+                    fi
                 '''
             }
         }
@@ -409,9 +415,13 @@ pipeline {
                             docker service update --image ${env.PREV_QUEUE_IMAGE} \
                                 --update-order stop-first --with-registry-auth --detach=false \
                                 ${QUEUE_SERVICE} || true
-                            docker service update --image ${env.PREV_QUEUE_IMAGE} \
-                                --update-order stop-first --with-registry-auth --detach=false \
-                                ${QUEUE_VIDEOS_SERVICE} || true
+                            if docker service inspect ${QUEUE_VIDEOS_SERVICE} >/dev/null 2>&1; then
+                                docker service update --image ${env.PREV_QUEUE_IMAGE} \
+                                    --update-order stop-first --with-registry-auth --detach=false \
+                                    ${QUEUE_VIDEOS_SERVICE} || true
+                            else
+                                echo "[WARN] Servico ${QUEUE_VIDEOS_SERVICE} ainda nao existe: reaplique o stack com docker stack deploy"
+                            fi
                         """
                     }
                     notify('ROLLBACK', "Rollback executado para ${env.PREV_APP_IMAGE} | Build #${env.BUILD_NUMBER} | ${env.GIT_AUTHOR ?: ''}")
