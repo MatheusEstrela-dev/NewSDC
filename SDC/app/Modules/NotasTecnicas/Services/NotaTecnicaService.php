@@ -72,8 +72,11 @@ final class NotaTecnicaService
     /**
      * Publica (ou republica uma revogada). Exige PDF. Quem publica fica como
      * aprovador; a versao corrente ganha data de publicacao se ainda nao tinha.
+     *
+     * `$avisar = false` publica sem aviso aos leitores: carga em lote (importador
+     * dos guias de uso), em que um aviso por nota viraria spam no sino.
      */
-    public function publicar(NotaTecnica $nota, User $aprovador): NotaTecnica
+    public function publicar(NotaTecnica $nota, User $aprovador, bool $avisar = true): NotaTecnica
     {
         $atual = $nota->versaoAtual()->first();
 
@@ -81,7 +84,7 @@ final class NotaTecnicaService
             throw ValidationException::withMessages(['nota' => 'Envie um PDF antes de publicar a nota.']);
         }
 
-        DB::transaction(function () use ($nota, $atual, $aprovador): void {
+        DB::transaction(function () use ($nota, $atual, $aprovador, $avisar): void {
             $nota->update([
                 'status' => NotaTecnicaStatus::Publicada,
                 'aprovado_por' => $aprovador->id,
@@ -92,7 +95,9 @@ final class NotaTecnicaService
                 $atual->update(['publicada_em' => now(), 'publicada_por' => $aprovador->id]);
             }
 
-            $this->notificacao->avisarPublicacao($nota, $atual, $aprovador);
+            if ($avisar) {
+                $this->notificacao->avisarPublicacao($nota, $atual, $aprovador);
+            }
         });
 
         return $nota;
