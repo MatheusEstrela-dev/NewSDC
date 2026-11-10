@@ -55,20 +55,20 @@ class ModuloItem extends Model
         return $this->belongsTo(Video::class);
     }
 
-    public function temVideoPronto(): bool
+    public function temVideoPublicado(): bool
     {
-        return $this->tipo === TipoItem::VIDEO && $this->video?->estaPronto() === true;
+        return $this->tipo === TipoItem::VIDEO && $this->video?->temVersaoPublicada() === true;
     }
 
     /**
-     * Teto da posicao de progresso: paginas no PDF, segundos no video pronto;
+     * Teto da posicao de progresso: paginas no PDF, segundos no video com versao publicada;
      * null quando o item nao registra progresso por posicao.
      */
     public function totalProgresso(): ?int
     {
         return match ($this->tipo) {
             TipoItem::PDF => max(1, (int) $this->total_paginas),
-            TipoItem::VIDEO => $this->temVideoPronto() ? $this->video->duracao_segundos : null,
+            TipoItem::VIDEO => $this->temVideoPublicado() ? $this->video->duracao_segundos : null,
             default => null,
         };
     }

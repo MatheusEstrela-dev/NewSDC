@@ -67,6 +67,12 @@ class Video extends Model
         return $this->status->estaPronto();
     }
 
+    /** Ha versao HLS publicada: o video pode ser assistido e vinculado. */
+    public function temVersaoPublicada(): bool
+    {
+        return $this->hls_versao !== null;
+    }
+
     /** Existe item nao excluido apontando para este video. */
     public function emUso(): bool
     {

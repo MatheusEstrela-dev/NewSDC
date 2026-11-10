@@ -5,19 +5,19 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services\Video;
 
 use App\Models\User;
-use App\Modules\Notificacoes\Enums\AcaoTrilha;
-use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Treinamento\Enums\TipoItem;
 use App\Modules\Treinamento\Enums\VideoStatus;
-use App\Modules\Treinamento\Models\Modulo;
+use App\Modules\Treinamento\Exceptions\OperacaoDeVideoInvalida;
 use App\Modules\Treinamento\Models\ModuloItem;
-use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Models\Video;
+use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class VideoBibliotecaService
 {
     private const POR_PAGINA = 20;
+
+    public function __construct(private readonly AuditoriaDeVideo $auditoria) {}
 
     /**
      * @return LengthAwarePaginator<int, array<string, mixed>>
@@ -26,8 +26,8 @@ class VideoBibliotecaService
     {
         $pagina = Video::query()
             ->withExists('itens as em_uso')
-            ->when($q !== null && $q !== '', fn ($query) => $query->where('titulo', 'ilike', '%'.$q.'%'))
-            ->when($somenteProntos, fn ($query) => $query->where('status', VideoStatus::PRONTO->value))
+            ->when($q !== null && $q !== '', fn ($query) => $query->where('titulo', 'ilike', '%'.addcslashes($q, '%_\\').'%'))
+            ->when($somenteProntos, fn ($query) => $query->whereNotNull('hls_versao'))
             ->orderByDesc('id')
             ->paginate(self::POR_PAGINA);
 
@@ -71,17 +71,24 @@ class VideoBibliotecaService
     public function vincular(ModuloItem $item, Video $video): ModuloItem
     {
         if ($item->tipo !== TipoItem::VIDEO) {
-            throw new \DomainException('Apenas itens do tipo video recebem um video.');
-        }
-        if ($video->trashed()) {
-            throw new \DomainException('O video foi excluido da biblioteca.');
-        }
-        if (! $video->estaPronto()) {
-            throw new \DomainException('O video ainda nao esta pronto para uso.');
+            throw new OperacaoDeVideoInvalida('Apenas itens do tipo video recebem um video.');
         }
 
-        $item->update(['video_id' => $video->id]);
-        $this->auditar($item, "video \"{$video->titulo}\" vinculado ao item");
+        // Linha travada: um vinculo e uma exclusao do mesmo video nao se intercalam.
+        ConexaoTreinamento::transacao(function () use ($item, $video) {
+            $atual = Video::withTrashed()->lockForUpdate()->find($video->id);
+
+            if ($atual === null || $atual->trashed()) {
+                throw new OperacaoDeVideoInvalida('O video foi excluido da biblioteca.');
+            }
+            if (! $atual->temVersaoPublicada()) {
+                throw new OperacaoDeVideoInvalida('O video ainda nao esta pronto para uso.');
+            }
+
+            $item->update(['video_id' => $atual->id]);
+        });
+
+        $this->auditoria->noCursoDoItem($item, "video \"{$video->titulo}\" vinculado ao item");
 
         return $item;
     }
@@ -90,32 +97,23 @@ class VideoBibliotecaService
     public function desvincular(ModuloItem $item): ModuloItem
     {
         $item->update(['video_id' => null]);
-        $this->auditar($item, 'video desvinculado do item');
+        $this->auditoria->noCursoDoItem($item, 'video desvinculado do item');
 
         return $item;
     }
 
     public function excluir(Video $video): void
     {
-        $usos = $video->itens()->count();
+        ConexaoTreinamento::transacao(function () use ($video) {
+            $atual = Video::query()->lockForUpdate()->findOrFail($video->id);
+            $usos = $atual->itens()->count();
 
-        if ($usos > 0) {
-            throw new \DomainException("Video em uso por {$usos} itens");
-        }
+            if ($usos > 0) {
+                throw new OperacaoDeVideoInvalida("Video em uso por {$usos} itens");
+            }
 
-        // A remocao de HLS e original entra com o processamento.
-        $video->delete();
-    }
-
-    private function auditar(ModuloItem $item, string $detalhe): void
-    {
-        $treinamentoId = Modulo::withTrashed()->whereKey($item->modulo_id)->value('treinamento_id');
-
-        app(RegistroDeAcao::class)->registrarNoProtocolo(
-            Treinamento::class,
-            $treinamentoId,
-            AcaoTrilha::Relacionado,
-            $detalhe,
-        );
+            // A remocao de HLS e original entra com o processamento.
+            $atual->delete();
+        });
     }
 }

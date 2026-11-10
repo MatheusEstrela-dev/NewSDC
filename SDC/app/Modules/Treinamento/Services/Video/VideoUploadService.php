@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services\Video;
 
 use App\Modules\Treinamento\Enums\VideoStatus;
+use App\Modules\Treinamento\Exceptions\OperacaoDeVideoInvalida;
 use App\Modules\Treinamento\Jobs\ProcessarVideoJob;
 use App\Modules\Treinamento\Models\Video;
 use App\Modules\Treinamento\Models\VideoUpload;
@@ -28,20 +29,22 @@ class VideoUploadService
 
     private const TRAVA_ESPERA = 5;
 
+    public function __construct(private readonly AuditoriaDeVideo $auditoria) {}
+
     public function abrir(Video $video, int $userId, string $nome, int $tamanhoTotal, string $mime): VideoUpload
     {
         if ($tamanhoTotal > (int) config('treinamento.video.tamanho_maximo_bytes')) {
-            throw new \DomainException('O arquivo excede o tamanho maximo permitido.');
+            throw new OperacaoDeVideoInvalida('O arquivo excede o tamanho maximo permitido.');
         }
         if (! in_array($mime, config('treinamento.video.mimes'), true)) {
-            throw new \DomainException('Formato de video nao aceito.');
+            throw new OperacaoDeVideoInvalida('Formato de video nao aceito.');
         }
 
         return $this->comTrava("video-upload-abrir:{$video->id}", function () use ($video, $userId, $nome, $tamanhoTotal, $mime) {
             $video->refresh();
 
             if ($video->status->emProcessamento()) {
-                throw new \DomainException('O video esta em processamento; aguarde antes de enviar outro arquivo.');
+                throw new OperacaoDeVideoInvalida('O video esta em processamento; aguarde antes de enviar outro arquivo.');
             }
 
             return ConexaoTreinamento::transacao(function () use ($video, $userId, $nome, $tamanhoTotal, $mime) {
@@ -63,10 +66,9 @@ class VideoUploadService
                     'expira_em' => now()->addHours((int) config('treinamento.video.upload_expira_horas')),
                 ]);
 
-                // Video PRONTO continua servindo a versao atual ate o novo ficar pronto.
-                if ($video->status === VideoStatus::SEM_VIDEO || $video->status === VideoStatus::FALHOU) {
-                    $video->update(['status' => VideoStatus::UPLOAD_ABERTO]);
-                }
+                // Status e so o estado do processamento; a versao publicada (hls_versao)
+                // continua sendo servida ate a troca atomica.
+                $video->update(['status' => VideoStatus::UPLOAD_ABERTO]);
 
                 return $upload;
             });
@@ -79,13 +81,13 @@ class VideoUploadService
             $upload->refresh();
 
             if (! $upload->estaAberto()) {
-                throw new \DomainException('Este upload nao esta aberto.');
+                throw new OperacaoDeVideoInvalida('Este upload nao esta aberto.');
             }
             if ($n < 1 || $n > $upload->total_partes) {
-                throw new \DomainException('Numero de parte fora da faixa.');
+                throw new OperacaoDeVideoInvalida('Numero de parte fora da faixa.');
             }
             if ($parte->getSize() !== $this->tamanhoEsperado($upload, $n)) {
-                throw new \DomainException('Tamanho da parte diferente do esperado.');
+                throw new OperacaoDeVideoInvalida('Tamanho da parte diferente do esperado.');
             }
 
             $parte->storeAs(CaminhosVideo::partes($upload->id), "{$n}.part", 'treinamentos');
@@ -109,28 +111,33 @@ class VideoUploadService
             $upload->refresh();
             $video = $upload->video;
 
-            // Segunda chamada (ou outra replica): ja despachado.
+            // Segunda chamada (ou outra replica). Se o video ainda esta ENVIADO, o
+            // despacho anterior pode ter se perdido: repete (o job e unico por video,
+            // entao um job ja na fila descarta o duplicado).
             if ($upload->status === VideoUpload::COMPLETO) {
+                if ($video->status === VideoStatus::ENVIADO) {
+                    ProcessarVideoJob::dispatch($video->id, $upload->id);
+                }
+
                 return $video;
             }
             if (! $upload->estaAberto()) {
-                throw new \DomainException('Este upload nao esta aberto.');
+                throw new OperacaoDeVideoInvalida('Este upload nao esta aberto.');
             }
             if (! $upload->completo()) {
-                throw new \DomainException('Ainda faltam partes para concluir o envio.');
+                throw new OperacaoDeVideoInvalida('Ainda faltam partes para concluir o envio.');
             }
 
             ConexaoTreinamento::transacao(function () use ($upload, $video) {
                 $upload->update(['status' => VideoUpload::COMPLETO]);
 
-                // Com versao anterior publicada o video segue PRONTO ate o novo processar.
-                $video->update($video->hls_versao !== null
-                    ? ['erro' => null]
-                    : ['status' => VideoStatus::ENVIADO, 'erro' => null]);
+                // hls_versao intacta: o aluno segue na versao atual ate a troca.
+                $video->update(['status' => VideoStatus::ENVIADO, 'erro' => null]);
             });
 
             // Depois do commit e ainda sob a trava: um unico despacho por upload.
             ProcessarVideoJob::dispatch($video->id, $upload->id);
+            $this->auditoria->nosCursosQueUsam($video, 'video enviado para processamento');
 
             return $video;
         });
@@ -142,7 +149,7 @@ class VideoUploadService
             $upload->refresh();
 
             if ($upload->status !== VideoUpload::ABERTO) {
-                throw new \DomainException('Apenas um upload aberto pode ser cancelado.');
+                throw new OperacaoDeVideoInvalida('Apenas um upload aberto pode ser cancelado.');
             }
 
             ConexaoTreinamento::transacao(function () use ($upload) {
@@ -185,7 +192,7 @@ class VideoUploadService
         try {
             $trava->block(self::TRAVA_ESPERA);
         } catch (LockTimeoutException) {
-            throw new \DomainException('Outra operacao deste video esta em andamento; tente novamente.');
+            throw new OperacaoDeVideoInvalida('Outra operacao deste video esta em andamento; tente novamente.');
         }
 
         try {
