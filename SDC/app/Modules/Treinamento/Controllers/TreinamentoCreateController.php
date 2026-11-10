@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Enums\CategoriaTreinamento;
+use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,6 +20,7 @@ class TreinamentoCreateController extends Controller
                 'tipos' => TipoTreinamento::toSelectArray(),
                 'categorias' => CategoriaTreinamento::toSelectArray(),
             ],
+            'publicos' => PublicoAlvo::toSelectArray(),
         ]);
     }
 }

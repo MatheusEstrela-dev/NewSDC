@@ -8,10 +8,11 @@ use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Modulo extends Model
 {
-    use UsaConexaoDeTreinamento;
+    use SoftDeletes, UsaConexaoDeTreinamento;
 
     protected $table = 'treinamento.modulos';
 
@@ -35,6 +36,11 @@ class Modulo extends Model
     public function treinamento(): BelongsTo
     {
         return $this->belongsTo(Treinamento::class);
+    }
+
+    public function itens(): HasMany
+    {
+        return $this->hasMany(ModuloItem::class)->orderBy('ordem');
     }
 
     public function frequencias(): HasMany

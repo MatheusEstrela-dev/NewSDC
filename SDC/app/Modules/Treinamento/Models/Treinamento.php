@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Notificacoes\Contracts\Rastreavel;
 use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Treinamento\Enums\CategoriaTreinamento;
+use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Support\Database\UsaConexaoDeTreinamento;
@@ -29,6 +30,8 @@ class Treinamento extends Model implements Rastreavel
         'carga_horaria',
         'categoria',
         'tipo',
+        'publico_alvo',
+        'inscricao_aprovacao_automatica',
         'status',
         'instrutor',
         'local',
@@ -50,6 +53,8 @@ class Treinamento extends Model implements Rastreavel
     protected $casts = [
         'categoria' => CategoriaTreinamento::class,
         'tipo' => TipoTreinamento::class,
+        'publico_alvo' => PublicoAlvo::class,
+        'inscricao_aprovacao_automatica' => 'boolean',
         'status' => StatusTreinamento::class,
         'data_inicio' => 'date',
         'data_fim' => 'date',
@@ -71,6 +76,11 @@ class Treinamento extends Model implements Rastreavel
     public function modulos(): HasMany
     {
         return $this->hasMany(Modulo::class)->orderBy('ordem');
+    }
+
+    public function professores(): HasMany
+    {
+        return $this->hasMany(TreinamentoProfessor::class);
     }
 
     public function inscricoes(): HasMany
@@ -111,6 +121,11 @@ class Treinamento extends Model implements Rastreavel
         }
 
         return true;
+    }
+
+    public function isEad(): bool
+    {
+        return $this->tipo === TipoTreinamento::EAD;
     }
 
     public function estaCheio(): bool
@@ -193,6 +208,11 @@ class Treinamento extends Model implements Rastreavel
     public function scopeConcluidos($query)
     {
         return $query->where('status', StatusTreinamento::CONCLUIDO->value);
+    }
+
+    public function scopeParaPublico($query, PublicoAlvo $publico)
+    {
+        return $query->where('publico_alvo', $publico->value);
     }
 
     public function scopePublicado($query)
