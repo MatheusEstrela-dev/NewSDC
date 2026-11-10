@@ -1,6 +1,9 @@
 <script setup>
+import { markRaw } from 'vue';
+import { ArrowPathIcon } from '@heroicons/vue/24/outline';
+import { route } from 'ziggy-js';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
 
 const props = defineProps({
   certificados: {
@@ -11,6 +14,26 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['reemitir']);
+
+const ReemitirIcon = markRaw(ArrowPathIcon);
+
+// Permissao ja decidida pelo back (disponivel / canReemitir): `allowed` explicito
+// sem module/resource, para o ActionButton nao montar um slug que nao existe.
+const acoes = (certificado) => [
+  {
+    action: 'print',
+    label: 'Ver / Imprimir certificado',
+    allowed: Boolean(certificado.disponivel),
+    handler: () => window.open(route('treinamentos.certificados.imprimir', certificado.id), '_blank', 'noopener'),
+  },
+  {
+    action: 'edit',
+    label: 'Reemitir certificado',
+    icon: ReemitirIcon,
+    allowed: props.canReemitir,
+    handler: () => emit('reemitir', certificado),
+  },
+];
 </script>
 
 <template>
@@ -30,23 +53,8 @@ const emit = defineEmits(['reemitir']);
           <td class="px-4 py-2.5"><Badge :color="certificado.status_color">{{ certificado.status_label }}</Badge></td>
           <td class="px-4 py-2.5">{{ certificado.emitido_em ? new Date(certificado.emitido_em).toLocaleDateString('pt-BR') : '—' }}</td>
           <td class="px-4 py-2.5">
-            <div class="flex items-center justify-end gap-3">
-              <a
-                v-if="certificado.disponivel"
-                :href="route('treinamentos.certificados.imprimir', certificado.id)"
-                target="_blank"
-                class="text-xs font-medium text-blue-600 hover:underline"
-              >
-                Ver / Imprimir
-              </a>
-              <button
-                v-if="canReemitir"
-                type="button"
-                class="text-xs font-medium text-amber-600 hover:underline"
-                @click="emit('reemitir', certificado)"
-              >
-                Reemitir
-              </button>
+            <div class="flex justify-end">
+              <ActionButton size="sm" :actions="acoes(certificado)" />
             </div>
           </td>
         </tr>

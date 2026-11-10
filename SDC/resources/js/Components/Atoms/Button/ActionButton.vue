@@ -4,7 +4,7 @@
     <ButtonIcon
       v-for="(item, idx) in visibleInlineActions"
       :key="`inline-${idx}-${item.action}`"
-      :icon="ActionIcons[item.action]"
+      :icon="item.icon ?? ActionIcons[item.action]"
       :variant="item.variant ?? ActionIconVariants[item.action] ?? 'secondary'"
       :size="size"
       :title="item.label ?? ActionLabels[item.action] ?? item.action"
@@ -36,7 +36,7 @@
           @click="item.handler"
         >
           <component
-            :is="ActionIcons[item.action]"
+            :is="item.icon ?? ActionIcons[item.action]"
             :class="['w-4 h-4 flex-shrink-0', item.iconClass ?? ActionMenuIconClasses[item.action] ?? 'text-slate-400']"
           />
           <span>{{ item.label ?? ActionLabels[item.action] ?? item.action }}</span>
@@ -107,6 +107,9 @@
  *   undo        = desfazer/reverter algo ja aplicado (vermelho, sem o laranja do delete)
  *   send        = enviar a sistema externo (informativo)
  *   ticket      = chamado de suporte (violeta, cor que nenhuma outra acao usa)
+ *
+ * No modo grupo, `icon` no item troca o icone da acao quando nenhum do catalogo
+ * serve (ex.: reemitir certificado); cor, rotulo e permissao seguem a `action`.
  */
 import { markRaw } from 'vue';
 import {
