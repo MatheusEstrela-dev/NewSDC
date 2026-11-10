@@ -15,13 +15,18 @@ const { abrirDocumento, renderizarPagina } = usePdf();
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 2.4;
 const ZOOM_PASSO = 0.2;
+const ZOOM_BASE = 1.2;
 
 const canvas = ref(null);
 const carregando = ref(true);
 const erro = ref(false);
-const zoom = ref(1.2);
+const zoom = ref(ZOOM_BASE);
 const total = ref(Math.max(1, props.totalPaginas));
 const pagina = ref(Math.min(Math.max(1, props.posicaoInicial), total.value));
+
+const zoomPercentual = computed(() => Math.round((zoom.value / ZOOM_BASE) * 100));
+const temAnterior = computed(() => pagina.value > 1);
+const temProxima = computed(() => pagina.value < total.value);
 
 let documento = null;
 let tarefa = null;

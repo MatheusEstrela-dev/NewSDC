@@ -26,27 +26,31 @@ const props = defineProps({
 const { show: toast } = useToast();
 const { contarPaginas } = usePdf();
 
-// Copia local: o vuedraggable reordena esta lista; o servidor e a fonte de verdade.
-const lista = ref(structuredClone(props.pastas));
-watch(() => props.pastas, (novas) => { lista.value = structuredClone(novas); });
+// Copia local (JSON: as props chegam como proxy reativo, que o structuredClone nao aceita): o vuedraggable reordena esta lista; o servidor e a fonte de verdade.
+const copiar = (valor) => JSON.parse(JSON.stringify(valor));
+const lista = ref(copiar(props.pastas));
+watch(() => props.pastas, (novas) => { lista.value = copiar(novas); });
 
 const totalItens = computed(() => lista.value.reduce((soma, p) => soma + p.itens.length, 0));
 
 
 function avisarErro(erros) {
   toast(Object.values(erros)[0] || 'Nao foi possivel concluir a acao.', 'error');
-  lista.value = structuredClone(props.pastas);
+  lista.value = copiar(props.pastas);
 }
 
 // ---- Pastas -------------------------------------------------------------
 
 const pastaAberta = ref(false);
 const pastaEmEdicao = ref(null);
-const formPasta = useForm({ titulo: '', descricao: '', carga_horaria: 0 });
+const PASTA_VAZIA = { titulo: '', descricao: '', carga_horaria: 0 };
+const formPasta = useForm({ ...PASTA_VAZIA });
 
 function abrirPasta(pasta = null) {
   pastaEmEdicao.value = pasta;
-  formPasta.reset();
+  // Apos um envio com sucesso o Inertia assume os valores enviados como defaults:
+  // fixa os vazios antes de resetar.
+  formPasta.defaults({ ...PASTA_VAZIA }).reset();
   formPasta.clearErrors();
   if (pasta) {
     formPasta.titulo = pasta.titulo;
@@ -89,22 +93,26 @@ const itemAberto = ref(false);
 const pastaDoItem = ref(null);
 const itemEmEdicao = ref(null);
 const lendoPdf = ref(false);
-const formItem = useForm({
+const ITEM_VAZIO = {
   tipo: 'PDF',
   titulo: '',
   descricao: '',
   obrigatorio: true,
   total_paginas: '',
   arquivo: null,
-});
+};
+const formItem = useForm({ ...ITEM_VAZIO });
+// Troca a chave para recriar o input file e descartar o arquivo escolhido antes.
+const chaveArquivo = ref(0);
 
 const ehPdf = computed(() => (itemEmEdicao.value?.tipo ?? formItem.tipo) === 'PDF');
 
 function abrirItem(pasta, item = null) {
   pastaDoItem.value = pasta;
   itemEmEdicao.value = item;
-  formItem.reset();
+  formItem.defaults({ ...ITEM_VAZIO }).reset();
   formItem.clearErrors();
+  chaveArquivo.value++;
   if (item) {
     formItem.tipo = item.tipo;
     formItem.titulo = item.titulo;
@@ -314,7 +322,7 @@ function publicar() {
           <label class="mb-1 block text-sm font-medium">
             {{ ehPdf ? 'Arquivo PDF' : 'Arquivo de apoio (opcional)' }}
           </label>
-          <input type="file" :accept="ehPdf ? 'application/pdf' : undefined" class="w-full text-sm" @change="escolherArquivo">
+          <input :key="chaveArquivo" type="file" :accept="ehPdf ? 'application/pdf' : undefined" class="w-full text-sm" @change="escolherArquivo">
           <Text v-if="lendoPdf" size="xs" color="muted">Lendo o PDF...</Text>
           <Text v-else-if="ehPdf && formItem.total_paginas" size="xs" color="muted">{{ formItem.total_paginas }} pagina(s)</Text>
           <Text v-if="itemEmEdicao?.arquivo_nome && !formItem.arquivo" size="xs" color="muted">Atual: {{ itemEmEdicao.arquivo_nome }}</Text>

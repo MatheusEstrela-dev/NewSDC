@@ -13,9 +13,13 @@ defineProps({
     type: Object,
     default: () => ({ tipos: [], categorias: [] }),
   },
+  publicos: {
+    type: Array,
+    default: () => [],
+  },
 });
 </script>
 
 <template>
-  <TreinamentoEditTemplate :treinamento="treinamento" :filter-options="filterOptions" />
+  <TreinamentoEditTemplate :treinamento="treinamento" :filter-options="filterOptions" :publicos="publicos" />
 </template>
