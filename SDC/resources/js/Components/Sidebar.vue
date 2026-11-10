@@ -317,11 +317,29 @@
         <NavItem
           v-if="canSeeTreinamento && _routes.hasTreinamentos"
           :href="route('treinamentos.index')"
-          :active="isRouteActive('treinamentos.*')"
+          :active="isRouteActive('treinamentos.*') && !isRouteActive('treinamentos.aluno.*') && !isRouteActive('treinamentos.professor.*')"
           icon="academic"
           :collapsed="isCollapsed"
         >
           Treinamento
+        </NavItem>
+        <NavItem
+          v-if="canSeeTreinamentoAluno && _routes.hasTreinamentoAluno"
+          :href="route('treinamentos.aluno.index')"
+          :active="isRouteActive('treinamentos.aluno.*')"
+          icon="book"
+          :collapsed="isCollapsed"
+        >
+          Meus cursos EAD
+        </NavItem>
+        <NavItem
+          v-if="canSeeTreinamentoProfessor && _routes.hasTreinamentoProfessor"
+          :href="route('treinamentos.professor.index')"
+          :active="isRouteActive('treinamentos.professor.*')"
+          icon="document-check"
+          :collapsed="isCollapsed"
+        >
+          Area do professor
         </NavItem>
 
         <NavItem
@@ -1019,6 +1037,8 @@ const _routes = {
   hasEstoqueKits: route().has('estoque.kits.index'),
   hasEstoqueMovimentacoes: route().has('estoque.movimentacoes.index'),
   hasTreinamentos: route().has('treinamentos.index'),
+  hasTreinamentoAluno: route().has('treinamentos.aluno.index'),
+  hasTreinamentoProfessor: route().has('treinamentos.professor.index'),
   hasRanking: route().has('ranking.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
@@ -1106,6 +1126,8 @@ const _activeRoutes = computed(() => {
     'estoque.kits.*': route().current('estoque.kits.*'),
     'estoque.movimentacoes.*': route().current('estoque.movimentacoes.*'),
     'treinamentos.*': route().current('treinamentos.*'),
+    'treinamentos.aluno.*': route().current('treinamentos.aluno.*'),
+    'treinamentos.professor.*': route().current('treinamentos.professor.*'),
     'plancon.*': route().current('plancon.*'),
     // isRouteActive so consulta ESTE mapa: sem a linha abaixo o item de
     // Ranking nasceria permanentemente apagado, mesmo dentro do modulo.
@@ -1294,6 +1316,12 @@ const canSeeEstoqueExport = computed(() => {
 });
 const canSeeTreinamento = computed(() => {
   return hasPermission(['treinamento.cursos.view']);
+});
+const canSeeTreinamentoAluno = computed(() => {
+  return hasPermission(['treinamento.cursos.view']);
+});
+const canSeeTreinamentoProfessor = computed(() => {
+  return hasPermission(['treinamento.professor.acessar']);
 });
 
 const canSeePlanCon = computed(() => {

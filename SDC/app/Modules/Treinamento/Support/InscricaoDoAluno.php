@@ -18,12 +18,13 @@ use Illuminate\Database\Eloquent\Model;
 final class InscricaoDoAluno
 {
     /**
-     * 404 se o curso nao e EAD ou o publico nao aceita o inscrito (nao revela
-     * a existencia do curso do outro escopo); 403 se nao ha inscricao APROVADA.
+     * 404 se o curso nao e EAD, nao esta publicado ou o publico nao aceita o
+     * inscrito (nao revela a existencia do curso do outro escopo); 403 se nao
+     * ha inscricao APROVADA.
      */
     public static function aprovada(Treinamento $treinamento, ?Model $inscrito): Inscricao
     {
-        abort_if($inscrito === null || ! $treinamento->isEad() || ! $treinamento->publico_alvo->aceita($inscrito), 404);
+        abort_if($inscrito === null || ! $treinamento->isEad() || ! $treinamento->estaPublicado() || ! $treinamento->publico_alvo->aceita($inscrito), 404);
 
         $inscricao = Inscricao::query()
             ->porTreinamento($treinamento->id)

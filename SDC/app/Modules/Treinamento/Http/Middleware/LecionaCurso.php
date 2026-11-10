@@ -28,9 +28,11 @@ class LecionaCurso
 
         $userId = $request->user()?->getKey();
 
+        // A area do professor e so do EAD: um curso de outro tipo nem existe aqui.
+        abort_unless($treinamento instanceof Treinamento && $treinamento->isEad(), 404);
+
         abort_unless(
-            $treinamento instanceof Treinamento
-                && $userId !== null
+            $userId !== null
                 && $this->professorService->leciona((int) $userId, $treinamento),
             403
         );

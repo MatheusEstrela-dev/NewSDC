@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Services;
 
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Treinamento\Enums\TipoItem;
 use App\Modules\Treinamento\Models\Modulo;
 use App\Modules\Treinamento\Models\ModuloItem;
@@ -167,6 +169,13 @@ class ConteudoCursoService
         }
 
         $this->treinamentos->publicar($treinamento);
+
+        app(RegistroDeAcao::class)->registrarNoProtocolo(
+            Treinamento::class,
+            $treinamento->id,
+            AcaoTrilha::Relacionado,
+            'curso publicado',
+        );
     }
 
     private function diretorio(Modulo $modulo, ModuloItem $item): string

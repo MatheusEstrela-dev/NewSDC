@@ -44,6 +44,12 @@ const tabConfig = computed(() => [
   { id: 'inscricao', label: 'Inscrição', icon: UsersIcon },
 ]);
 
+// Servidor so se inscreve em curso para servidores; EAD ainda nao publicado nao aceita inscricao.
+const destinadoAoServidor = computed(() => props.treinamento.publico_alvo === 'SERVIDORES');
+const podeInscreverServidor = computed(() => destinadoAoServidor.value
+  && props.treinamento.pode_receber_inscricao
+  && (props.treinamento.tipo !== 'EAD' || props.treinamento.esta_publicado));
+
 const formatDate = (dateValue) => {
   if (!dateValue) return null;
   const str = String(dateValue).trim();
@@ -252,6 +258,13 @@ function copiarLinkPublico() {
               >
                 Confirmar minha presença
               </Button>
+              <Link
+                v-if="treinamento.tipo === 'EAD' && minhaInscricao.status === 'APROVADA'"
+                :href="route('treinamentos.aluno.sala', treinamento.id)"
+                class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Abrir sala
+              </Link>
               <a
                 v-if="minhaInscricao.certificado_disponivel"
                 :href="route('treinamentos.certificados.imprimir', minhaInscricao.certificado_id)"
@@ -261,9 +274,10 @@ function copiarLinkPublico() {
                 Ver / imprimir certificado
               </a>
             </div>
-            <Button v-else-if="treinamento.pode_receber_inscricao" variant="primary" @click="inscreverSe">
+            <Button v-else-if="podeInscreverServidor" variant="primary" @click="inscreverSe">
               Inscrever-se
             </Button>
+            <Text v-else-if="!destinadoAoServidor" size="sm" color="muted">Este treinamento é destinado ao público do Portal do Cidadão.</Text>
             <Text v-else size="sm" color="muted">Este treinamento não está recebendo inscrições no momento.</Text>
           </div>
         </template>

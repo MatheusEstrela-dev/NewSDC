@@ -17,6 +17,10 @@ class ProfessorService
 
     public function designar(Treinamento $treinamento, int $userId): TreinamentoProfessor
     {
+        if (!$treinamento->isEad()) {
+            throw new \DomainException('So cursos EAD tem professor designado.');
+        }
+
         $user = User::query()->find($userId);
 
         if ($user === null || !$user->can(self::PERMISSAO)) {

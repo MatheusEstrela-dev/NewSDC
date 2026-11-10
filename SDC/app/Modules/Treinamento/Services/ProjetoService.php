@@ -116,6 +116,13 @@ class ProjetoService
             return $inscricao;
         });
 
+        app(RegistroDeAcao::class)->registrarNoProtocolo(
+            Treinamento::class,
+            $inscricao->treinamento_id,
+            AcaoTrilha::Relacionado,
+            $aprovar ? 'entrega de projeto aprovada' : 'entrega de projeto devolvida',
+        );
+
         $this->avisarAluno($inscricao, $entrega, $aprovar);
     }
 

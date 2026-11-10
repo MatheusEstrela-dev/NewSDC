@@ -39,6 +39,10 @@ class InscricaoService extends BaseService
      */
     public function inscrever(Treinamento $treinamento, Model $inscrito): Inscricao
     {
+        if ($treinamento->isEad() && !$treinamento->estaPublicado()) {
+            throw new \DomainException('Este curso ainda nao foi publicado.');
+        }
+
         if (!$treinamento->podeReceberInscricao()) {
             throw new \DomainException('Este treinamento nao esta recebendo inscricoes no momento.');
         }
@@ -95,6 +99,16 @@ class InscricaoService extends BaseService
         );
 
         return $inscricao;
+    }
+
+    /**
+     * Texto do aviso apos inscrever: a inscricao pode ja nascer aprovada.
+     */
+    public function mensagemDeSucesso(Inscricao $inscricao): string
+    {
+        return $inscricao->status === StatusInscricao::APROVADA
+            ? 'Inscricao realizada e aprovada!'
+            : 'Inscricao realizada! Aguarde a aprovacao.';
     }
 
     public function aprovar(Inscricao $inscricao, User $aprovador, ?string $observacoes = null): void
