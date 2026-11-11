@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento;
 
 use App\Modules\Treinamento\Console\CopiarParaBancoCommand;
+use App\Modules\Treinamento\Http\Middleware\GerenciaVideo;
 use App\Modules\Treinamento\Http\Middleware\LecionaCurso;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,6 +32,7 @@ class TreinamentoServiceProvider extends ServiceProvider
         // Rotas carregadas via routes/web.php -> routes/modules/treinamento.php
 
         $this->app['router']->aliasMiddleware('leciona.curso', LecionaCurso::class);
+        $this->app['router']->aliasMiddleware('gerencia.video', GerenciaVideo::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([CopiarParaBancoCommand::class]);

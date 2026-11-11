@@ -54,6 +54,7 @@
         "@vueuse/core": "^14.2.0",
         "apexcharts": "^5.3.6",
         "dexie": "^3.2.4",
+        "hls.js": "1.7.4",
         "idb": "^8.0.3",
         "idb-keyval": "^6.2.1",
         "laravel-echo": "^2.3.4",

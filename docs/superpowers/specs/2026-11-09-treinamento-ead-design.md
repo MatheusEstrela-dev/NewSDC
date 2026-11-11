@@ -4,7 +4,7 @@
 **Autor:** Matheus Estrela (com assistência Claude)
 **Status:** Proposto, aguardando revisão
 **Módulo:** `App\Modules\Treinamento`
-**Relacionado:** [2026-05-28-treinamento-pipeline-video-design.md](2026-05-28-treinamento-pipeline-video-design.md) (base técnica da Fase 3)
+**Relacionado:** [2026-11-10-treinamento-video-onprem-design.md](2026-11-10-treinamento-video-onprem-design.md) (base técnica da Fase 2, vídeo on-premise; substitui o spec de 2026-05-28, que era para Azure)
 **Mockups do brainstorming:** `.claude/.superpowers/brainstorm/1324-1794234776/content/` (`sala-de-aula.html`, `prova-e-certificado.html`, `area-professor.html`)
 
 Legenda: **[decidido]** = decidido pelo Matheus no brainstorming. **[escolha do design]** = decisão tomada no design, pode ser revista. Sem marca = contexto ou fato do código.
@@ -29,7 +29,7 @@ O conteúdo começa com **PDFs e projetos** [decidido]. Vídeo vem depois, com u
 - Dois escopos de rota já existem:
   - `routes/modules/treinamento.php`: área interna (guard `web`, servidores), permissões `treinamento.cursos.*`, `treinamento.inscricoes.*`, `treinamento.presencas.registrar`, `treinamento.certificados.*`.
   - `routes/modules/treinamento-portal.php`: portal do cidadão (guard `cidadao`), cadastro com código por e-mail, catálogo, minhas inscrições, certificados. Acesso pelo link "Cadastre-se para participar de cursos e eventos" no `/login`.
-- Infra: `$azureOrLocal` em `config/filesystems.php` (Azure em produção, disco local em dev); `spatie/laravel-medialibrary` e `azure-oss/storage-blob-flysystem` instalados; `GeradorQrCodeService` existe; Swoole com `upload_max_filesize=64M` (`docker/swoole/Dockerfile`).
+- Infra: `$azureOrLocal` em `config/filesystems.php` (sem `AZURE_STORAGE_CONNECTION_STRING` cai em `ANEXOS_ROOT/{MODULO}` ou `storage/app`; produção é **on-premise**, R760 com Swarm de um nó, decidido em 2026-11-10); `spatie/laravel-medialibrary` instalado; `GeradorQrCodeService` existe; Swoole com `upload_max_filesize=64M` (`docker/swoole/Dockerfile`) e `package_max_length` do Octane no padrão de 10 MB (não definido em `config/octane.php`).
 
 ## 3. Objetivos
 
@@ -84,7 +84,7 @@ Referência visual: mockups citados no cabeçalho.
   - **PDF**: visualizador dentro da plataforma, com paginação e zoom; guarda a página atual para retomar; conta como concluído ao chegar na última página [escolha do design]. Botão de baixar o PDF [escolha do design].
   - **Projeto**: enunciado + envio de arquivo + comentário; estado "enviado / aprovado / devolvido com parecer". Conta como concluído quando o professor aprova.
   - **Prova**: regras visíveis (nº de questões, nota mínima, tentativa X de Y), uma questão por vez, respostas salvas automaticamente; resultado ao fim (aprovado libera a próxima pasta; reprovado mostra tentativas restantes e "Revisar conteúdo").
-  - **Vídeo** (Fase 3): ocupa o mesmo lugar do visualizador de PDF.
+  - **Vídeo** (Fase 2): ocupa o mesmo lugar do visualizador de PDF; retoma pelo segundo salvo.
 - **Meus certificados**: lista com imprimir/baixar e o código de verificação.
 
 ### 7.2 Professor (só no SDC)
@@ -166,8 +166,8 @@ Cada acesso tem rotas e endpoints próprios; a lógica é única.
 - `inscricoes`: + `concluido_em`, + `aproveitamento` (conclusão congelada, 8.7).
 - `treinamento_professores`: `treinamento_id`, `user_id` (vínculo professor x curso).
 - `modulos` (pastas): sem mudança estrutural obrigatória.
-- `modulo_itens`: `modulo_id`, `tipo` (`PDF` | `PROJETO` | `PROVA` | `VIDEO`), `titulo`, `descricao`, `ordem`, `obrigatorio`, metadados do tipo (ex.: nº de páginas do PDF). Arquivos via medialibrary. Campos de vídeo do spec de maio passam a morar aqui, não em `modulos`.
-- `progresso_itens`: `inscricao_id`, `modulo_item_id`, `status`, `posicao` (página do PDF; segundo do vídeo na Fase 3), `concluido_em`; único por (inscrição, item).
+- `modulo_itens`: `modulo_id`, `tipo` (`PDF` | `PROJETO` | `PROVA` | `VIDEO`), `titulo`, `descricao`, `ordem`, `obrigatorio`, metadados do tipo (ex.: nº de páginas do PDF). Campos de vídeo (status, versão HLS, duração) moram aqui, não em `modulos`; detalhe no spec de vídeo on-prem.
+- `progresso_itens`: `inscricao_id`, `modulo_item_id`, `status`, `posicao` (página do PDF; segundo do vídeo na Fase 2), `concluido_em`; único por (inscrição, item).
 - `provas` (1:1 com item PROVA): `nota_minima`, `max_tentativas`; `prova_questoes`; `prova_alternativas` (com `correta`); `prova_tentativas` (`inscricao_id`, `numero`, `iniciada_em`, `finalizada_em`, `nota`); `prova_respostas`; `prova_liberacoes` (tentativas extras: quantidade, autor, data).
 - `projeto_entregas`: `inscricao_id`, `modulo_item_id`, arquivo, comentário, `status` (`ENVIADA` | `APROVADA` | `DEVOLVIDA`), parecer, `corrigido_por`, `corrigido_em`.
 - `certificados`: + `codigo_verificacao` (único), + `aproveitamento` (nullable), status ganha `CANCELADO`.
@@ -175,21 +175,21 @@ Cada acesso tem rotas e endpoints próprios; a lógica é única.
 **Migrations:** seguir a regra de ouro do projeto: alterações em tabelas existentes são consolidadas na migration principal da tabela que está sendo editada; tabelas novas ganham sua migration de criação.
 
 ### 9.3 Arquivos
-- Novo disco `treinamentos` via `$azureOrLocal` (container Azure próprio em produção, local em dev).
-- PDFs e entregas de projeto servidos por URL temporária assinada, só para quem tem inscrição aprovada no curso (ou professor/admin do curso). Nunca URL pública permanente.
-- PDFs e entregas cabem no limite atual de 64 MB do Swoole; limite exato por tipo é do builder.
+- Novo disco `treinamentos` via `$azureOrLocal` (on-prem: `ANEXOS_ROOT/TREINAMENTOS` ou `storage/app/treinamentos`, o mesmo volume para `app`, `queue` e, para o HLS, `caddy`; local em dev).
+- PDFs e entregas de projeto servidos por stream do Laravel em endpoint autorizado, só para quem tem inscrição aprovada no curso (ou professor/admin do curso). Nunca URL pública permanente.
+- PDFs e entregas cabem no limite atual de 64 MB do php.ini, mas o `package_max_length` do Octane (10 MB por padrão) precisa ser definido explicitamente para isso valer; limite exato por tipo é do builder.
 
-### 9.4 Vídeo e Swoole (Fase 3)
-- O Swoole **não** recebe nem serve bytes de vídeo: segura o corpo da requisição em memória e o limite é 64 MB. Upload vai **direto do navegador para o Azure** com URL SAS de escrita; em dev (disco local), upload em partes abaixo de 64 MB.
-- Conversão para HLS (480p/720p/1080p) com FFmpeg em **container worker de fila dedicado** (mesma imagem + FFmpeg, fila própria), nunca dentro do Octane.
-- Reprodução por HLS com URLs assinadas de leitura; progresso = segundo assistido em `progresso_itens.posicao`.
-- Reaproveitar o spec de 2026-05-28 (máquina de estados de processamento, jobs, limpeza), atualizando FrankenPHP para Swoole e movendo os campos de `modulos` para `modulo_itens` (vídeo é um item).
+### 9.4 Vídeo e Swoole (Fase 2) [decidido em 2026-11-10: on-premise como alvo único]
+- O Swoole **não** recebe o vídeo inteiro nem serve bytes de vídeo. Upload em **partes de 8 MB** gravadas no disco `treinamentos` compartilhado; o job da fila monta o original.
+- Conversão para HLS (480p/720p; 1080p por config) com FFmpeg no **worker de fila do container `queue`** (supervisor, fila `videos`, timeout próprio), nunca em worker HTTP nem task worker do Swoole.
+- Entrega pelo **Caddy** (`file_server` do volume compartilhado) com `forward_auth` para um endpoint leve do Octane que valida sessão + inscrição aprovada + item liberado, com cache de 5 min; progresso = maior segundo alcançado em `progresso_itens.posicao`.
+- Sem Azure, SAS, MinIO ou Nginx. Detalhe completo em [2026-11-10-treinamento-video-onprem-design.md](2026-11-10-treinamento-video-onprem-design.md).
 
-## 10. Fases de entrega [escolha do design, aprovada no brainstorming]
+## 10. Fases de entrega [escolha do design, aprovada no brainstorming; ordem revista em 2026-11-10, decidido]
 
 1. **Base**: `publico_alvo` + filtro dos catálogos; tipo EAD; pastas e itens PDF/projeto; progresso e retomada; sala de aula nos dois escopos; área do professor (vínculo, conteúdo, publicação, alunos, correções).
-2. **Comprovação**: provas por pasta e final, tentativas e liberação pelo professor, trava de progressão por prova; conclusão por trilha; certificado com código, QR, aproveitamento e página pública de validação (inclusive para certificados de eventos).
-3. **Vídeo**: upload direto, worker FFmpeg/HLS, player e progresso por tempo.
+2. **Vídeo**: upload em partes, worker FFmpeg/HLS na fila, entrega pelo Caddy com `forward_auth`, player e progresso por tempo.
+3. **Comprovação**: provas por pasta e final, tentativas e liberação pelo professor, trava de progressão por prova; conclusão por trilha; certificado com código, QR, aproveitamento e página pública de validação (inclusive para certificados de eventos).
 
 ## 11. Restrições
 

@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Treinamento\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Modules\Treinamento\Services\Video\AutorizacaoVideoService;
+use App\Modules\Treinamento\Support\CaminhosVideo;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+
+/**
+ * So desenvolvimento local: em producao quem entrega os arquivos HLS e o
+ * Caddy (apos o forward_auth), nunca o app.
+ */
+class VideoArquivoDevController extends Controller
+{
+    // Mesmos valores do Caddy (docker/caddy/Caddyfile*). "private" porque o
+    // conteudo depende de login; o segmento nunca muda dentro de uma versao.
+    private const CACHE_SEGMENTO = 'private, max-age=31536000, immutable';
+
+    private const CACHE_PLAYLIST = 'private, max-age=3600';
+
+    public function __construct(private readonly AutorizacaoVideoService $autorizacao) {}
+
+    public function __invoke(int $videoId, string $versao, string $arquivo): BinaryFileResponse|Response
+    {
+        abort_if(app()->isProduction() || ! config('treinamento.video.servir_pelo_app'), 404);
+
+        if (! $this->autorizacao->autorizarUri("/videos/{$videoId}/{$versao}/{$arquivo}")) {
+            return response('', 403)->header('Cache-Control', 'no-store');
+        }
+
+        $disco = Storage::disk(config('treinamento.video.disco'));
+        $caminho = CaminhosVideo::hlsVersao($videoId, $versao).'/'.$arquivo;
+        abort_unless($disco->exists($caminho), 404);
+
+        $playlist = str_ends_with($arquivo, '.m3u8');
+
+        $resposta = response()->file($disco->path($caminho), [
+            'Content-Type' => $playlist ? 'application/vnd.apple.mpegurl' : 'video/MP2T',
+        ]);
+        // Depois de criada: response()->file() marca a resposta como "public".
+        $resposta->headers->set('Cache-Control', $playlist ? self::CACHE_PLAYLIST : self::CACHE_SEGMENTO);
+
+        return $resposta;
+    }
+}

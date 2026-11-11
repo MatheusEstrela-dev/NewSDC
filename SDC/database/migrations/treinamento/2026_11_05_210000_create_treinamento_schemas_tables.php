@@ -67,6 +67,7 @@ return new class extends Migration
         $this->criarCadastro();
         $this->criarTreinamento();
         $this->criarEad();
+        $this->criarVideo();
         $this->ajustarTabelasExistentes();
     }
 
@@ -394,6 +395,79 @@ return new class extends Migration
             'projeto_entregas_inscricao_id_modulo_item_id_index' => 'inscricao_id, modulo_item_id',
             'projeto_entregas_corrigido_por_fkidx' => 'corrigido_por',
         ]);
+    }
+
+    /**
+     * Biblioteca de videos on-premise: o video e um registro proprio (reusavel
+     * em varios cursos); o item do curso apenas aponta para ele.
+     */
+    private function criarVideo(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.videos (
+                id bigserial PRIMARY KEY,
+                titulo varchar(255) NOT NULL,
+                user_id bigint NOT NULL,
+                status varchar(20) NOT NULL DEFAULT 'SEM_VIDEO',
+                original_path varchar(500),
+                tamanho_bytes bigint,
+                hls_versao varchar(40),
+                duracao_segundos integer,
+                largura integer,
+                altura integer,
+                processado_em timestamp(0),
+                erro text,
+                tentativas smallint NOT NULL DEFAULT 0,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                deleted_at timestamp(0),
+                CONSTRAINT videos_status_check
+                    CHECK (status IN ('SEM_VIDEO', 'UPLOAD_ABERTO', 'ENVIADO', 'PROCESSANDO', 'PRONTO', 'FALHOU'))
+            )
+            SQL);
+        $this->indices('treinamento.videos', [
+            'videos_user_id_fkidx' => 'user_id',
+            'videos_status_index' => 'status',
+        ]);
+
+        $this->exec('ALTER TABLE treinamento.modulo_itens ADD COLUMN IF NOT EXISTS video_id bigint');
+        $this->exec('ALTER TABLE treinamento.modulo_itens DROP CONSTRAINT IF EXISTS modulo_itens_video_id_foreign');
+        $this->exec(<<<'SQL'
+            ALTER TABLE treinamento.modulo_itens ADD CONSTRAINT modulo_itens_video_id_foreign
+                FOREIGN KEY (video_id) REFERENCES treinamento.videos (id) ON DELETE RESTRICT
+            SQL);
+        $this->indices('treinamento.modulo_itens', [
+            'modulo_itens_video_id_idx' => 'video_id',
+        ]);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.video_uploads (
+                id uuid PRIMARY KEY,
+                video_id bigint NOT NULL,
+                user_id bigint NOT NULL,
+                nome_original varchar(255),
+                mime varchar(100),
+                tamanho_total bigint NOT NULL,
+                tamanho_parte integer NOT NULL,
+                total_partes integer NOT NULL,
+                partes_recebidas integer NOT NULL DEFAULT 0,
+                tamanho_recebido bigint NOT NULL DEFAULT 0,
+                status varchar(20) NOT NULL DEFAULT 'ABERTO',
+                expira_em timestamp(0) NOT NULL,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT video_uploads_status_check CHECK (status IN ('ABERTO', 'COMPLETO', 'CANCELADO')),
+                CONSTRAINT video_uploads_video_id_foreign
+                    FOREIGN KEY (video_id) REFERENCES treinamento.videos (id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.video_uploads', [
+            'video_uploads_user_id_fkidx' => 'user_id',
+        ]);
+        $this->exec(<<<'SQL'
+            CREATE UNIQUE INDEX IF NOT EXISTS video_uploads_um_aberto_por_video
+                ON treinamento.video_uploads (video_id) WHERE status = 'ABERTO'
+            SQL);
     }
 
     /**

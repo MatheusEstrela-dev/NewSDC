@@ -210,6 +210,10 @@ class SecurityHeaders
             'img-src ' . implode(' ', array_unique($imgSrc)),
             'font-src ' . implode(' ', array_unique($fontSrc)),
             'connect-src ' . implode(' ', array_unique($connectSrc)),
+            // Player de video (hls.js) entrega a midia ao <video> por MediaSource,
+            // cujo endereco e um blob:. Sem media-src o navegador cai no
+            // default-src 'self', recusa o blob e o video nunca sai do carregamento.
+            "media-src 'self' blob:",
             "object-src 'none'",
             "form-action 'self'",
             "frame-ancestors 'self'",

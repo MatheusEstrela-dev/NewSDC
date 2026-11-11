@@ -161,6 +161,9 @@ export default defineConfig({
                         // calendario passou a ser baixado ate por quem nunca
                         // abre a escala.
                         //
+                        // hls.js (player de video do Treinamento) idem: so baixa
+                        // quando um item VIDEO abre, via import() dinamico.
+                        //
                         // pusher-js e laravel-echo entram aqui porque o
                         // manualChunks GANHA do code-splitting: o initEcho os
                         // importa por import() dinamico, mas nomear o chunk
@@ -174,7 +177,8 @@ export default defineConfig({
                             id.includes('leaflet') ||
                             id.includes('fullcalendar') ||
                             id.includes('vuedraggable') || id.includes('sortablejs') ||
-                            id.includes('pusher-js') || id.includes('laravel-echo')
+                            id.includes('pusher-js') || id.includes('laravel-echo') ||
+                            id.includes('hls.js')
                         ) {
                             return undefined;
                         }

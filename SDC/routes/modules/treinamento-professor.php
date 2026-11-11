@@ -20,6 +20,18 @@ use App\Modules\Treinamento\Controllers\Professor\PastaStoreController;
 use App\Modules\Treinamento\Controllers\Professor\PastaUpdateController;
 use App\Modules\Treinamento\Controllers\Professor\PreviaController;
 use App\Modules\Treinamento\Controllers\Professor\PublicarController;
+use App\Modules\Treinamento\Controllers\Professor\Video\ItemVideoDesvincularController;
+use App\Modules\Treinamento\Controllers\Professor\Video\ItemVideoVincularController;
+use App\Modules\Treinamento\Controllers\Professor\Video\ReprocessarController;
+use App\Modules\Treinamento\Controllers\Professor\Video\StatusController;
+use App\Modules\Treinamento\Controllers\Professor\Video\UploadAbrirController;
+use App\Modules\Treinamento\Controllers\Professor\Video\UploadCancelarController;
+use App\Modules\Treinamento\Controllers\Professor\Video\UploadFinalizarController;
+use App\Modules\Treinamento\Controllers\Professor\Video\UploadParteController;
+use App\Modules\Treinamento\Controllers\Professor\Video\VideoDestroyController;
+use App\Modules\Treinamento\Controllers\Professor\Video\VideoIndexController;
+use App\Modules\Treinamento\Controllers\Professor\Video\VideoStoreController;
+use App\Modules\Treinamento\Controllers\Professor\Video\VideoUpdateController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -32,6 +44,24 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('professor')->name('professor.')->middleware('can:treinamento.professor.acessar')->group(function () {
     Route::get('/', MeusCursosController::class)->name('index');
+
+    // Biblioteca de videos: declarada antes das rotas com /{treinamento}.
+    Route::get('/videos', VideoIndexController::class)->name('videos.index');
+    Route::post('/videos', VideoStoreController::class)->name('videos.store');
+
+    Route::middleware('gerencia.video')->prefix('/videos/{video}')->scopeBindings()->group(function () {
+        Route::put('/', VideoUpdateController::class)->name('videos.update');
+        Route::delete('/', VideoDestroyController::class)->name('videos.destroy');
+        Route::get('/status', StatusController::class)->name('videos.status');
+        Route::post('/reprocessar', ReprocessarController::class)->name('videos.reprocessar');
+        Route::post('/upload', UploadAbrirController::class)->name('videos.upload.abrir');
+        Route::put('/upload/{upload}/partes/{n}', UploadParteController::class)
+            ->whereUuid('upload')->whereNumber('n')->name('videos.upload.parte');
+        Route::post('/upload/{upload}/finalizar', UploadFinalizarController::class)
+            ->whereUuid('upload')->name('videos.upload.finalizar');
+        Route::delete('/upload/{upload}', UploadCancelarController::class)
+            ->whereUuid('upload')->name('videos.upload.cancelar');
+    });
 
     Route::middleware('leciona.curso')->group(function () {
         Route::get('/{treinamento}/conteudo', ConteudoController::class)->name('conteudo');
@@ -52,6 +82,8 @@ Route::prefix('professor')->name('professor.')->middleware('can:treinamento.prof
         Route::post('/{treinamento}/itens/{item}', ItemUpdateController::class)->name('itens.update');
         Route::delete('/{treinamento}/itens/{item}', ItemDestroyController::class)->name('itens.destroy');
         Route::get('/{treinamento}/itens/{item}/arquivo', ItemArquivoController::class)->name('itens.arquivo');
+        Route::put('/{treinamento}/itens/{item}/video', ItemVideoVincularController::class)->name('itens.video.vincular');
+        Route::delete('/{treinamento}/itens/{item}/video', ItemVideoDesvincularController::class)->name('itens.video.desvincular');
     });
 });
 

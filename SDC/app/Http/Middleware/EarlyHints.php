@@ -40,7 +40,7 @@ class EarlyHints
             return false;
         }
 
-        if ($request->is('api/*', 'build/*', 'storage/*', 'imgs/*', 'favicon.ico')) {
+        if ($request->is('api/*', 'build/*', 'storage/*', 'imgs/*', 'videos/*', 'favicon.ico')) {
             return false;
         }
 

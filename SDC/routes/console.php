@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Treinamento\Jobs\LimparVideosOrfaosJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -175,3 +176,6 @@ Schedule::command('acessos:diretorio:reconciliar')
     ->onOneServer()
     ->withoutOverlapping(10)
     ->runInBackground();
+
+// Treinamento EAD: uploads vencidos, originais ja processados e versoes HLS antigas.
+Schedule::job(new LimparVideosOrfaosJob)->dailyAt('03:30')->onOneServer();

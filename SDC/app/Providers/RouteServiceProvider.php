@@ -104,6 +104,9 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
+            Route::middleware('video')
+                ->group(base_path('routes/video.php'));
+
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
         });

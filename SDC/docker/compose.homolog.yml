@@ -177,6 +177,8 @@ services:
       - "8090:80"
     volumes:
       - ./caddy/Caddyfile.homolog:/etc/caddy/Caddyfile:ro
+      # Videos HLS do EAD: o Caddy serve do mesmo volume em que o worker grava.
+      - homolog_storage:/srv/storage:ro
     networks:
       - homolog
     depends_on:
@@ -583,6 +585,44 @@ services:
     environment:
       <<: [*homolog-worker-env, *ranking-env]
       APP_NAME: "SDC Homologacao Queue Ranking"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      - homolog_storage:/var/www/storage/app
+      - homolog_logs:/var/www/storage/logs
+    networks:
+      - homolog
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
+  # Worker de transcodificacao de video (FFmpeg) do Treinamento EAD. Espelha o
+  # servico queue-videos de producao: mesma imagem de queue (Dockerfile.queue,
+  # com ffmpeg), perfil videos do supervisor (so videos-worker.conf) e fila
+  # propria, para que a transcodificacao nunca dispute CPU nem worker com a
+  # notificacao. O supervisor sobe o `queue:work redis-videos`.
+  # --------------------------------------------------------------------------
+  queue_videos:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.queue
+    image: newsdc-queue-dev:latest
+    container_name: newsdc_homolog_queue_videos
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1.5
+    stop_grace_period: 16m
+    environment:
+      <<: *homolog-worker-env
+      APP_NAME: "SDC Homologacao Queue Videos"
+      SUPERVISOR_PROFILE: videos
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
       interval: 30s
