@@ -32,7 +32,6 @@ class ProcessadorDeVideo
         $inicio = microtime(true);
         $disco = Storage::disk('treinamentos');
         $originalAnterior = $video->original_path;
-        $versaoAnterior = $video->hls_versao;
 
         $video->update(['status' => VideoStatus::PROCESSANDO]);
 
@@ -51,12 +50,17 @@ class ProcessadorDeVideo
             ));
 
             $versao = $this->etapa($video, 'publicacao', fn () => $this->publicador->publicar($video, $temporario));
-        } catch (FalhaDeVideo $e) {
+        } catch (\Throwable $e) {
             $this->publicador->removerTemporarios($video);
-            $this->registrarFalha($video, $e->getMessage());
+            $this->registrarTentativa($video, $e->getMessage());
+
+            // Falha definitiva fecha o estado agora; as demais mantem PROCESSANDO ate
+            // o proximo retry ou ate o job esgotar as tentativas (failed()).
+            if ($e instanceof FalhaDeVideo && $e->definitiva) {
+                $this->registrarFalha($video, $e->getMessage());
+            }
             $this->metricas->registrarProcessamento(false, (int) round(microtime(true) - $inicio), 0);
 
-            // A decisao de tentar de novo (definitiva ou nao) e do job.
             throw $e;
         }
 
@@ -75,9 +79,8 @@ class ProcessadorDeVideo
             'tentativas' => 0,
         ]);
 
-        if ($versaoAnterior !== null) {
-            $this->publicador->removerVersao($video, $versaoAnterior);
-        }
+        // A versao anterior fica no disco: o aluno com a playlist antiga ainda busca
+        // segmentos dela. A limpeza diaria remove o que nao e a versao atual.
         if (! $manterOriginal) {
             $disco->delete($original);
         }
@@ -88,16 +91,21 @@ class ProcessadorDeVideo
         $this->metricas->registrarProcessamento(true, (int) round(microtime(true) - $inicio), $this->bytesDaVersao($video, $versao));
     }
 
+    /** Guarda o erro da tentativa sem mexer no status (o video segue PROCESSANDO). */
+    public function registrarTentativa(Video $video, string $mensagem): void
+    {
+        $video->update(['erro' => $mensagem, 'tentativas' => $video->tentativas + 1]);
+    }
+
     /**
-     * Registra a falha no estado do video: sem versao publicada vai a FALHOU; com
-     * versao, volta a PRONTO mantendo a que os alunos ja assistem.
+     * Estado final de uma falha: sem versao publicada vai a FALHOU; com versao,
+     * volta a PRONTO mantendo a que os alunos ja assistem.
      */
     public function registrarFalha(Video $video, string $mensagem): void
     {
         $video->update([
             'status' => $video->temVersaoPublicada() ? VideoStatus::PRONTO : VideoStatus::FALHOU,
             'erro' => $mensagem,
-            'tentativas' => $video->tentativas + 1,
         ]);
     }
 

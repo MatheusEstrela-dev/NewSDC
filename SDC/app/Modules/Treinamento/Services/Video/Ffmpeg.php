@@ -34,6 +34,7 @@ class Ffmpeg
             (int) ceil((float) ($dados['format']['duration'] ?? $video['duration'] ?? 0)),
             (int) ($video['width'] ?? 0),
             (int) ($video['height'] ?? 0),
+            collect($dados['streams'])->contains('codec_type', 'audio'),
         );
     }
 
@@ -65,11 +66,13 @@ class Ffmpeg
         $filtros = ["[0:v]split={$total}{$rotulos}"];
         foreach ($nomes as $i => $nome) {
             $n = $i + 1;
-            $filtros[] = "[v{$n}]scale=w={$renditions[$nome]['largura']}:h={$renditions[$nome]['altura']}[v{$n}out]";
+            // Proporcao preservada, dimensoes pares e sem ampliar a origem.
+            $altura = $renditions[$nome]['altura'];
+            $filtros[] = "[v{$n}]scale=w=-2:h='trunc(min(ih,{$altura})/2)*2'[v{$n}out]";
         }
 
         $comando = [
-            'nice', '-n', (string) $cfg['nice'], $cfg['binario'], '-y', '-i', $origemAbs,
+            'nice', '-n', (string) $cfg['nice'], $cfg['binario'], '-y', '-nostats', '-loglevel', 'warning', '-i', $origemAbs,
             '-threads', (string) $cfg['threads'], '-filter_complex', implode(';', $filtros),
         ];
 
@@ -81,14 +84,18 @@ class Ffmpeg
                 $comando,
                 '-map', "[v{$n}out]", "-c:v:{$i}", 'libx264', '-preset', $cfg['preset'], '-crf', (string) $cfg['crf'],
                 "-maxrate:v:{$i}", $bitrate, "-bufsize:v:{$i}", $this->dobro($bitrate), '-pix_fmt', 'yuv420p',
-                '-map', 'a:0?', "-c:a:{$i}", 'aac', "-b:a:{$i}", $cfg['audio_bitrate'],
             );
-            $mapa[] = "v:{$i},a:{$i},name:{$nome}";
+            if ($sondagem->temAudio) {
+                array_push($comando, '-map', 'a:0', "-c:a:{$i}", 'aac', "-b:a:{$i}", $cfg['audio_bitrate']);
+            }
+            $mapa[] = ($sondagem->temAudio ? "v:{$i},a:{$i}" : "v:{$i}").",name:{$nome}";
         }
 
         array_push(
             $comando,
+            '-force_key_frames', 'expr:gte(t,n_forced*'.$cfg['hls_time'].')', '-sc_threshold', '0',
             '-f', 'hls', '-hls_time', (string) $cfg['hls_time'], '-hls_playlist_type', 'vod', '-hls_segment_type', 'mpegts',
+            '-hls_flags', 'independent_segments',
             '-hls_segment_filename', $destinoAbs.'/%v/%05d.ts', '-master_pl_name', 'master.m3u8',
             '-var_stream_map', implode(' ', $mapa), $destinoAbs.'/%v/index.m3u8',
         );

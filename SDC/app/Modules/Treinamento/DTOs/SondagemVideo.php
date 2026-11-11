@@ -10,5 +10,6 @@ final readonly class SondagemVideo
         public int $duracaoSegundos,
         public int $largura,
         public int $altura,
+        public bool $temAudio = true,
     ) {}
 }

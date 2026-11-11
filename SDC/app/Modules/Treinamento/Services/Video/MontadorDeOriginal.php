@@ -38,13 +38,16 @@ class MontadorDeOriginal
 
         try {
             for ($n = 1; $n <= $upload->total_partes; $n++) {
-                $entrada = fopen($disco->path(CaminhosVideo::parte($upload->id, $n)), 'rb');
-                if ($entrada === false) {
+                $caminhoParte = $disco->path(CaminhosVideo::parte($upload->id, $n));
+                if (! is_file($caminhoParte) || ($entrada = fopen($caminhoParte, 'rb')) === false) {
                     throw new FalhaDeVideo("Parte {$n} do upload ausente.", true);
                 }
                 try {
                     while (! feof($entrada)) {
-                        fwrite($saida, (string) fread($entrada, self::BLOCO));
+                        $bloco = (string) fread($entrada, self::BLOCO);
+                        if (fwrite($saida, $bloco) !== strlen($bloco)) {
+                            throw new FalhaDeVideo('Falha ao gravar o original (disco cheio?).');
+                        }
                     }
                 } finally {
                     fclose($entrada);

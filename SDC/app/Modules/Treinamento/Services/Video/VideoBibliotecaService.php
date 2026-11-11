@@ -123,6 +123,10 @@ class VideoBibliotecaService
                 throw new OperacaoDeVideoInvalida("Video em uso por {$usos} itens");
             }
 
+            if ($atual->status->emProcessamento()) {
+                throw new OperacaoDeVideoInvalida('Video em processamento; aguarde a conclusao para excluir.');
+            }
+
             $abertos = $atual->uploads()->where('status', VideoUpload::ABERTO)->pluck('id');
             $atual->delete();
 

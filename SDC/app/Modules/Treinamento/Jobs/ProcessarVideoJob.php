@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Jobs;
 
+use App\Modules\Treinamento\Enums\VideoStatus;
 use App\Modules\Treinamento\Exceptions\FalhaDeVideo;
 use App\Modules\Treinamento\Models\Video;
 use App\Modules\Treinamento\Models\VideoUpload;
@@ -47,6 +48,7 @@ class ProcessarVideoJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(ProcessadorDeVideo $processador): void
     {
+        // find() ignora video excluido (soft delete): nada a processar.
         $video = Video::query()->find($this->videoId);
         $upload = VideoUpload::query()
             ->whereKey($this->uploadId)
@@ -54,7 +56,7 @@ class ProcessarVideoJob implements ShouldBeUnique, ShouldQueue
             ->where('status', VideoUpload::COMPLETO)
             ->first();
 
-        if ($video === null || $upload === null) {
+        if ($video === null || $upload === null || $this->jaAtendido($video, $upload)) {
             return;
         }
 
@@ -68,6 +70,24 @@ class ProcessarVideoJob implements ShouldBeUnique, ShouldQueue
 
             $this->fail($e);
         }
+    }
+
+    /**
+     * Execucao repetida ou superada e no-op: ha upload completo mais novo, ou o
+     * video ja ficou PRONTO depois deste upload ser finalizado.
+     */
+    private function jaAtendido(Video $video, VideoUpload $upload): bool
+    {
+        $maisRecente = $video->uploads()->where('status', VideoUpload::COMPLETO)
+            ->orderByDesc('created_at')->orderByDesc('id')->value('id');
+
+        if ($maisRecente !== $upload->id) {
+            return true;
+        }
+
+        return $video->status === VideoStatus::PRONTO
+            && $video->processado_em !== null
+            && $video->processado_em->greaterThanOrEqualTo($upload->updated_at);
     }
 
     /** Timeout, kill ou esgotamento das tentativas: o video nunca fica preso em processamento. */
