@@ -14,6 +14,8 @@ class PublicadorHls
 {
     private const JANELA_TROCA_SEGUNDOS = 600;
 
+    public function __construct(private readonly VideoMetrics $metricas) {}
+
     /** @return string versao publicada */
     public function publicar(Video $video, string $tmpRelativo): string
     {
@@ -36,7 +38,7 @@ class PublicadorHls
 
     public function removerVersao(Video $video, string $versao): void
     {
-        Storage::disk('treinamentos')->deleteDirectory(CaminhosVideo::hlsVersao($video->id, $versao));
+        $this->removerDiretorio(CaminhosVideo::hlsVersao($video->id, $versao));
     }
 
     public function removerTemporarios(Video $video): void
@@ -52,7 +54,28 @@ class PublicadorHls
 
     public function removerTudo(Video $video): void
     {
-        Storage::disk('treinamentos')->deleteDirectory(CaminhosVideo::hlsRaiz($video->id));
+        $this->removerDiretorio(CaminhosVideo::hlsRaiz($video->id));
         Cache::forget("video_versao_anterior:{$video->id}");
+    }
+
+    /** Mede antes de apagar e abate do gauge; falha de metrica nunca impede a remocao. */
+    private function removerDiretorio(string $relativo): void
+    {
+        $disco = Storage::disk('treinamentos');
+        $bytes = 0;
+
+        try {
+            foreach ($disco->allFiles($relativo) as $arquivo) {
+                $bytes += $disco->size($arquivo);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $disco->deleteDirectory($relativo);
+
+        if ($bytes > 0) {
+            $this->metricas->registrarRemocao($bytes);
+        }
     }
 }
