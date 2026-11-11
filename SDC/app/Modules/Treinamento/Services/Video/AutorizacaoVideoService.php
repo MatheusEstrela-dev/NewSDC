@@ -102,8 +102,9 @@ class AutorizacaoVideoService
     }
 
     /**
-     * Mesma regra do middleware CheckUserActive, que nao roda nas rotas de
-     * video: conta ativa e versao de sessao igual a gravada no login.
+     * Mesmas regras dos middlewares CheckUserActive e EnsurePasswordChanged,
+     * que nao rodam nas rotas de video: conta ativa, versao de sessao igual a
+     * gravada no login e senha provisoria ja trocada.
      */
     private function servidorDaSessao(): ?Authenticatable
     {
@@ -112,20 +113,29 @@ class AutorizacaoVideoService
             return $servidor;
         }
 
-        $valido = $servidor->canAuthenticate() && $this->versoes->matches(session()->driver(), $servidor);
+        $valido = $servidor->canAuthenticate()
+            && ! $servidor->must_change_password
+            && $this->versoes->matches(session()->driver(), $servidor);
 
         return $valido ? $servidor : null;
     }
 
     /**
      * Quem a sessao diz que esta logado. O cookie "lembrar-me" nao vale aqui:
-     * ele recriaria a sessao, e a destas rotas e somente leitura.
+     * ele recriaria a sessao, e a destas rotas e somente leitura. Por isso a
+     * busca vai direto ao provider, sem `$guard->user()`, que cai no cookie
+     * quando o id da sessao nao existe mais.
      */
     private function logadoNaSessao(string $guard): ?Authenticatable
     {
         $guard = Auth::guard($guard);
+        if ($guard->hasUser()) {
+            return $guard->user();
+        }
 
-        return $guard->hasUser() || session()->has($guard->getName()) ? $guard->user() : null;
+        $id = session()->get($guard->getName());
+
+        return $id === null ? null : $guard->getProvider()->retrieveById($id);
     }
 
     /**
