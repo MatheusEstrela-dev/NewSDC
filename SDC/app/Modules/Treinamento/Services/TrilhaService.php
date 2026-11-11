@@ -37,7 +37,6 @@ class TrilhaService
 
         foreach ($this->percorrer($inscricao) as $p) {
             $estadoItens = [];
-            $p['itens']->load('video');
             foreach ($p['itens'] as $item) {
                 $progresso = $p['progressos']->get($item->id);
                 $concluido = $progresso?->status === StatusProgresso::CONCLUIDO;
@@ -52,7 +51,7 @@ class TrilhaService
                 }
 
                 $estadoItens[] = new EstadoItem(
-                    $item, $p['liberada'], $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item),
+                    $item, $p['liberada'], $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item, $p['liberada']),
                 );
             }
             $pastas[] = new EstadoPasta($p['modulo'], $p['liberada'], $p['concluida'], $estadoItens);
@@ -79,7 +78,7 @@ class TrilhaService
             foreach ($modulo->itens as $item) {
                 $total += $item->obrigatorio ? 1 : 0;
                 $proximo ??= $item->id;
-                $itens[] = new EstadoItem($item, true, null, 0, null, null, $this->estadoVideo($item));
+                $itens[] = new EstadoItem($item, true, null, 0, null, null, $this->estadoVideo($item, true));
             }
             $pastas[] = new EstadoPasta($modulo, true, false, $itens);
         }
@@ -90,11 +89,12 @@ class TrilhaService
     /**
      * Dados do video do item para o player; null fora de itens VIDEO. A URL do
      * master existe sempre que ha versao publicada, inclusive durante a troca
-     * do arquivo (o aluno segue na versao atual).
+     * do arquivo (o aluno segue na versao atual). Item ainda bloqueado para a
+     * inscricao nao recebe a URL (o /videos/auth ja a negaria).
      *
      * @return array{status: string, status_label: string, duracao_segundos: ?int, url_master: ?string}|null
      */
-    private function estadoVideo(ModuloItem $item): ?array
+    private function estadoVideo(ModuloItem $item, bool $liberado): ?array
     {
         if ($item->tipo !== TipoItem::VIDEO) {
             return null;
@@ -114,7 +114,7 @@ class TrilhaService
             'status' => $video->status->value,
             'status_label' => $video->status->getLabel(),
             'duracao_segundos' => $video->duracao_segundos,
-            'url_master' => $video->temVersaoPublicada() ? CaminhosVideo::urlMaster($video->id, $video->hls_versao) : null,
+            'url_master' => $liberado && $video->temVersaoPublicada() ? CaminhosVideo::urlMaster($video->id, $video->hls_versao) : null,
         ];
     }
 
@@ -165,7 +165,7 @@ class TrilhaService
         $pastas = Modulo::query()
             ->porTreinamento($inscricao->treinamento_id)
             ->ordenados()
-            ->with('itens')
+            ->with('itens.video')
             ->get();
 
         $progressos = ProgressoItem::query()->where('inscricao_id', $inscricao->id)->get()->keyBy('modulo_item_id');

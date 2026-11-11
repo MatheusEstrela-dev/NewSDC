@@ -11,6 +11,7 @@ use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\TreinamentoProfessor;
 use App\Modules\Treinamento\Models\Video;
 use App\Modules\Treinamento\Services\TrilhaService;
+use App\Modules\Treinamento\Support\PermissaoDeVideo;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -25,9 +26,10 @@ use Illuminate\Support\Facades\Cache;
  */
 class AutorizacaoVideoService
 {
-    public const PERMISSAO_EDITAR = 'treinamento.cursos.edit';
-
-    public function __construct(private readonly TrilhaService $trilha) {}
+    public function __construct(
+        private readonly TrilhaService $trilha,
+        private readonly PermissaoDeVideo $permissao,
+    ) {}
 
     /**
      * Aceita o caminho original da requisicao (`/videos/{id}/{versao}/...`,
@@ -67,7 +69,7 @@ class AutorizacaoVideoService
             return false;
         }
 
-        if ($servidor instanceof User && ($servidor->id === $video->user_id || $servidor->can(self::PERMISSAO_EDITAR))) {
+        if ($servidor instanceof User && $this->permissao->podeGerenciar($video, $servidor)) {
             return true;
         }
 

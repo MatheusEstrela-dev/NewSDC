@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Services\Video\AutorizacaoVideoService;
 use App\Modules\Treinamento\Support\CaminhosVideo;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -18,11 +19,13 @@ class VideoArquivoDevController extends Controller
 {
     public function __construct(private readonly AutorizacaoVideoService $autorizacao) {}
 
-    public function __invoke(int $videoId, string $versao, string $arquivo): BinaryFileResponse
+    public function __invoke(int $videoId, string $versao, string $arquivo): BinaryFileResponse|Response
     {
         abort_if(app()->isProduction() || ! config('treinamento.video.servir_pelo_app'), 404);
 
-        abort_unless($this->autorizacao->autorizarUri("/videos/{$videoId}/{$versao}/{$arquivo}"), 403);
+        if (! $this->autorizacao->autorizarUri("/videos/{$videoId}/{$versao}/{$arquivo}")) {
+            return response('', 403)->header('Cache-Control', 'no-store');
+        }
 
         $disco = Storage::disk(config('treinamento.video.disco'));
         $caminho = CaminhosVideo::hlsVersao($videoId, $versao).'/'.$arquivo;
