@@ -111,33 +111,27 @@ class VideoUploadService
             $upload->refresh();
             $video = $upload->video;
 
-            // Segunda chamada (ou outra replica). Se o video ainda esta ENVIADO, o
-            // despacho anterior pode ter se perdido: repete (o job e unico por video,
-            // entao um job ja na fila descarta o duplicado).
+            // Segunda chamada (ou outra replica). Se o video ainda esta ENVIADO e este
+            // e o upload vigente, o despacho anterior pode ter se perdido: repete (o job
+            // e unico por video, entao um job ja na fila descarta o duplicado). Um upload
+            // antigo, superado por outro mais novo, nunca e redespachado.
             if ($upload->status === VideoUpload::COMPLETO) {
-                if ($video->status === VideoStatus::ENVIADO) {
+                if ($video->status === VideoStatus::ENVIADO && $this->ehUploadCompletoVigente($upload)) {
                     ProcessarVideoJob::dispatch($video->id, $upload->id);
                 }
 
                 return $video;
             }
-            if (! $upload->estaAberto()) {
-                throw new OperacaoDeVideoInvalida('Este upload nao esta aberto.');
-            }
-            if (! $upload->completo()) {
-                throw new OperacaoDeVideoInvalida('Ainda faltam partes para concluir o envio.');
-            }
 
-            ConexaoTreinamento::transacao(function () use ($upload, $video) {
-                $upload->update(['status' => VideoUpload::COMPLETO]);
+            // Ordem de aquisicao unica: trava do upload e depois a do video (abrir so
+            // usa a do video). A transicao e revalidada sob a trava do video para nao
+            // completar um upload que abrir esta cancelando.
+            $video = $this->comTrava("video-upload-abrir:{$upload->video_id}", fn () => $this->completar($upload));
 
-                // hls_versao intacta: o aluno segue na versao atual ate a troca.
-                $video->update(['status' => VideoStatus::ENVIADO, 'erro' => null]);
-            });
-
-            // Depois do commit e ainda sob a trava: um unico despacho por upload.
-            ProcessarVideoJob::dispatch($video->id, $upload->id);
+            // Auditoria antes do despacho: se a fila falhar, a transicao ja esta
+            // auditada e a retentativa (ramo COMPLETO) apenas redespacha.
             $this->auditoria->nosCursosQueUsam($video, 'video enviado para processamento');
+            ProcessarVideoJob::dispatch($video->id, $upload->id);
 
             return $video;
         });
@@ -161,6 +155,41 @@ class VideoUploadService
                 ]);
             });
         });
+    }
+
+    /** Transicao ABERTO -> COMPLETO do upload e ENVIADO do video, sob a trava do video. */
+    private function completar(VideoUpload $upload): Video
+    {
+        $upload->refresh();
+        $video = $upload->video;
+
+        if (! $upload->estaAberto()) {
+            throw new OperacaoDeVideoInvalida('Este upload nao esta aberto (foi cancelado ou substituido por um novo envio).');
+        }
+        if (! $upload->completo()) {
+            throw new OperacaoDeVideoInvalida('Ainda faltam partes para concluir o envio.');
+        }
+
+        ConexaoTreinamento::transacao(function () use ($upload, $video) {
+            $upload->update(['status' => VideoUpload::COMPLETO]);
+
+            // hls_versao intacta: o aluno segue na versao atual ate a troca.
+            $video->update(['status' => VideoStatus::ENVIADO, 'erro' => null]);
+        });
+
+        return $video;
+    }
+
+    private function ehUploadCompletoVigente(VideoUpload $upload): bool
+    {
+        $vigente = VideoUpload::query()
+            ->where('video_id', $upload->video_id)
+            ->where('status', VideoUpload::COMPLETO)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->value('id');
+
+        return $vigente === $upload->id;
     }
 
     /** Apaga as partes e marca o upload como cancelado. */
