@@ -73,8 +73,18 @@ function mostrarErro(mensagem = MENSAGEM_ERRO) {
   carregando.value = false;
 }
 
+// Com hls.js as falhas de midia chegam pelo evento ERROR dele. A excecao e a
+// fonte recusada pelo navegador antes de abrir (ex.: bloqueio de CSP): o
+// hls.js nao fica sabendo e o player ficaria carregando para sempre.
+function fonteRecusada() {
+  return carregando.value && video.value?.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED;
+}
+
 function aoFalharElemento() {
-  if (nativo) mostrarErro();
+  if (!nativo && !fonteRecusada()) return;
+
+  liberar();
+  mostrarErro();
 }
 
 function aoFalhar(_evento, dados) {
