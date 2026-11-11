@@ -29,7 +29,14 @@ class VideoMetrics
 
     public function registrarRemocao(int $bytes): void
     {
-        $this->tentar(fn ($redis) => $redis->decrby($this->chave('hls_bytes'), $bytes));
+        $this->tentar(function ($redis) use ($bytes) {
+            $restante = (int) $redis->decrby($this->chave('hls_bytes'), $bytes);
+
+            // O gauge nunca fica negativo (ex.: HLS publicado antes das metricas existirem).
+            if ($restante < 0) {
+                $redis->incrby($this->chave('hls_bytes'), -$restante);
+            }
+        });
     }
 
     /** @return list<string> linhas no formato texto do Prometheus */
