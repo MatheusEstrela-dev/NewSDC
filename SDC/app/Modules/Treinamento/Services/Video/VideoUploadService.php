@@ -175,9 +175,19 @@ class VideoUploadService
         try {
             dispatch($job);
         } catch (Throwable $e) {
-            (new UniqueLock(Cache::store()))->release($job);
+            $this->liberarTravaDoJob($job);
 
             throw $e;
+        }
+    }
+
+    /** Com o redis fora a liberacao tambem falha: registra e deixa a excecao do despacho prevalecer. */
+    private function liberarTravaDoJob(ProcessarVideoJob $job): void
+    {
+        try {
+            (new UniqueLock(Cache::store()))->release($job);
+        } catch (Throwable $falha) {
+            report($falha);
         }
     }
 
@@ -206,14 +216,7 @@ class VideoUploadService
 
     private function ehUploadCompletoVigente(VideoUpload $upload): bool
     {
-        $vigente = VideoUpload::query()
-            ->where('video_id', $upload->video_id)
-            ->where('status', VideoUpload::COMPLETO)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->value('id');
-
-        return $vigente === $upload->id;
+        return $upload->video->uploadVigente()?->id === $upload->id;
     }
 
     /** Apaga as partes e marca o upload como cancelado. */
