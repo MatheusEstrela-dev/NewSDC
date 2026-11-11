@@ -12,10 +12,12 @@ use App\Modules\Treinamento\Models\VideoUpload;
 use App\Modules\Treinamento\Support\CaminhosVideo;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use Closure;
+use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 /**
  * Upload em partes. Requisicoes consecutivas do mesmo upload caem em replicas
@@ -117,7 +119,7 @@ class VideoUploadService
             // antigo, superado por outro mais novo, nunca e redespachado.
             if ($upload->status === VideoUpload::COMPLETO) {
                 if ($video->status === VideoStatus::ENVIADO && $this->ehUploadCompletoVigente($upload)) {
-                    ProcessarVideoJob::dispatch($video->id, $upload->id);
+                    $this->despachar($video, $upload);
                 }
 
                 return $video;
@@ -131,7 +133,7 @@ class VideoUploadService
             // Auditoria antes do despacho: se a fila falhar, a transicao ja esta
             // auditada e a retentativa (ramo COMPLETO) apenas redespacha.
             $this->auditoria->nosCursosQueUsam($video, 'video enviado para processamento');
-            ProcessarVideoJob::dispatch($video->id, $upload->id);
+            $this->despachar($video, $upload);
 
             return $video;
         });
@@ -140,21 +142,43 @@ class VideoUploadService
     public function cancelar(VideoUpload $upload): void
     {
         $this->comTrava("video-upload:{$upload->id}", function () use ($upload) {
-            $upload->refresh();
+            // Mesma ordem de finalizar: trava do upload e depois a do video, para que
+            // abrir (que so usa a do video) nao troque o upload sob este cancelamento.
+            $this->comTrava("video-upload-abrir:{$upload->video_id}", function () use ($upload) {
+                $upload->refresh();
 
-            if ($upload->status !== VideoUpload::ABERTO) {
-                throw new OperacaoDeVideoInvalida('Apenas um upload aberto pode ser cancelado.');
-            }
+                if ($upload->status !== VideoUpload::ABERTO) {
+                    throw new OperacaoDeVideoInvalida('Apenas um upload aberto pode ser cancelado.');
+                }
 
-            ConexaoTreinamento::transacao(function () use ($upload) {
-                $this->encerrar($upload);
+                ConexaoTreinamento::transacao(function () use ($upload) {
+                    $this->encerrar($upload);
 
-                $video = $upload->video;
-                $video->update([
-                    'status' => $video->hls_versao !== null ? VideoStatus::PRONTO : VideoStatus::SEM_VIDEO,
-                ]);
+                    $video = $upload->video;
+                    $video->update([
+                        'status' => $video->hls_versao !== null ? VideoStatus::PRONTO : VideoStatus::SEM_VIDEO,
+                    ]);
+                });
             });
         });
+    }
+
+    /**
+     * Despacha o job de processamento. O job e unico por video: se o push falha
+     * (fila fora), a trava de unicidade ja tomada seria retida por horas e
+     * impediria qualquer nova tentativa; por isso e liberada antes de relancar.
+     */
+    private function despachar(Video $video, VideoUpload $upload): void
+    {
+        $job = new ProcessarVideoJob($video->id, $upload->id);
+
+        try {
+            dispatch($job);
+        } catch (Throwable $e) {
+            (new UniqueLock(Cache::store()))->release($job);
+
+            throw $e;
+        }
     }
 
     /** Transicao ABERTO -> COMPLETO do upload e ENVIADO do video, sob a trava do video. */
