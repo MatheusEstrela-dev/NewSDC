@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Database\ConnectionSemaphore;
 use App\Http\Controllers\Controller;
+use App\Modules\Treinamento\Services\Video\VideoMetrics;
 use App\Services\Database\DatabaseCircuitBreaker;
 use App\Support\Metrics\SwooleRuntimeMetrics;
 use Illuminate\Http\Request;
@@ -56,7 +57,7 @@ class MetricsController extends Controller
         ];
 
         // Runtime Swoole (workers ociosos, conexoes, fila de tasks, coroutines)
-        $linhas = array_merge($linhas, SwooleRuntimeMetrics::linhas());
+        $linhas = array_merge($linhas, SwooleRuntimeMetrics::linhas(), app(VideoMetrics::class)->linhas());
         $linhas[] = '';
 
         $body = implode("\n", $linhas);
