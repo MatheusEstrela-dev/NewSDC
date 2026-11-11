@@ -57,6 +57,7 @@ export function useUploadEmPartes({ videoId }) {
   const erro = ref(null);
   // Status do video devolvido por finalizar.
   const statusFinal = ref(null);
+  const rotuloFinal = ref(null);
 
   let controlador = null;
   let id = null;
@@ -97,6 +98,7 @@ export function useUploadEmPartes({ videoId }) {
     progresso.value = 0;
     erro.value = null;
     statusFinal.value = null;
+    rotuloFinal.value = null;
     estado.value = 'enviando';
 
     try {
@@ -115,6 +117,7 @@ export function useUploadEmPartes({ videoId }) {
       estado.value = 'finalizando';
       const { data: finalizado } = await comReenvio(() => window.axios.post(rota('finalizar', [id, uploadId]), null, { signal: controlador.signal }));
       statusFinal.value = finalizado.status;
+      rotuloFinal.value = finalizado.status_label ?? null;
       estado.value = 'enviado';
     } catch (e) {
       if (controlador.signal.aborted) return;
@@ -140,5 +143,5 @@ export function useUploadEmPartes({ videoId }) {
 
   onBeforeUnmount(cancelar);
 
-  return { enviar, cancelar, progresso, estado, erro, statusFinal };
+  return { enviar, cancelar, progresso, estado, erro, statusFinal, rotuloFinal };
 }

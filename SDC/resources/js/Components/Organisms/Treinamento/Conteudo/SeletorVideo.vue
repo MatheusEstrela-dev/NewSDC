@@ -30,24 +30,27 @@ const maisPaginas = ref(false);
 const carregando = ref(false);
 let debounce = null;
 let consulta = null;
+// Registro criado nesta sessao do modal; um reenvio so repete o vinculo.
+let videoCriadoId = null;
 
 async function carregar() {
   if (!props.show) return;
   consulta?.abort();
-  consulta = new AbortController();
+  const propria = new AbortController();
+  consulta = propria;
   carregando.value = true;
   try {
     const { data } = await window.axios.get(route('treinamentos.professor.videos.index'), {
       params: { q: busca.value || undefined, prontos: 1 },
-      signal: consulta.signal,
+      signal: propria.signal,
     });
     videos.value = data.data;
     maisPaginas.value = data.last_page > 1;
-    carregando.value = false;
   } catch (e) {
-    if (consulta.signal.aborted) return;
-    erro.value = mensagemDeErro(e);
-    carregando.value = false;
+    if (!propria.signal.aborted) erro.value = mensagemDeErro(e);
+  } finally {
+    // Abortada por uma consulta mais nova: ela e dona do flag.
+    if (consulta === propria) carregando.value = false;
   }
 }
 
@@ -79,8 +82,11 @@ async function criarNovo() {
   erro.value = null;
   ocupado.value = true;
   try {
-    const { data: criado } = await window.axios.post(route('treinamentos.professor.videos.store'), { titulo: props.item.titulo });
-    await vincular(criado.id);
+    if (videoCriadoId === null) {
+      const { data: criado } = await window.axios.post(route('treinamentos.professor.videos.store'), { titulo: props.item.titulo });
+      videoCriadoId = criado.id;
+    }
+    await vincular(videoCriadoId);
   } catch (e) {
     erro.value = mensagemDeErro(e);
     ocupado.value = false;
@@ -92,12 +98,13 @@ async function criarNovo() {
 function limpar() {
   clearTimeout(debounce);
   consulta?.abort();
+  carregando.value = false;
   aba.value = 'biblioteca';
   busca.value = '';
-  clearTimeout(debounce);
   videos.value = [];
   erro.value = null;
   ocupado.value = false;
+  videoCriadoId = null;
 }
 
 watch(() => props.show, (aberto) => {

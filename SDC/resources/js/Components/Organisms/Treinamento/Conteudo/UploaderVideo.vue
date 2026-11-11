@@ -16,7 +16,7 @@ const props = defineProps({
 
 const emit = defineEmits(['atualizado']);
 
-const { enviar, cancelar, progresso, estado, erro: erroEnvio, statusFinal } = useUploadEmPartes({ videoId: () => props.video.id });
+const { enviar, cancelar, progresso, estado, erro: erroEnvio, statusFinal, rotuloFinal } = useUploadEmPartes({ videoId: () => props.video.id });
 
 const erroArquivo = ref(null);
 const substituindo = ref(false);
@@ -85,8 +85,8 @@ watch(estado, (novo) => {
   if (novo !== 'enviado') return;
   substituindo.value = false;
   desistiuDeAcompanhar.value = false;
-  // Estado devolvido por finalizar, sem esperar a primeira consulta.
-  emit('atualizado', { ...props.video, status: statusFinal.value, status_label: props.video.status_label, erro: null });
+  // Estado devolvido por finalizar; sem rotulo na resposta, a consulta imediata traz o status.
+  if (rotuloFinal.value) emit('atualizado', { ...props.video, status: statusFinal.value, status_label: rotuloFinal.value, erro: null });
   consultar();
 });
 
