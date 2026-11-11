@@ -40,17 +40,6 @@ Route::get('/', function () {
 // internos). Continua dentro do grupo de middleware "web" global (sessao/CSRF).
 require __DIR__ . '/modules/treinamento-portal.php';
 
-// Entrega de video EAD: o Caddy chama /videos/auth (forward_auth) antes de
-// servir cada arquivo HLS. Fora do grupo "auth" de proposito: sem login a
-// resposta e 403, nunca redirect. A rota de arquivo so existe para dev local.
-Route::get('/videos/auth', \App\Modules\Treinamento\Controllers\VideoAuthController::class)
-    ->name('videos.auth');
-Route::get('/videos/{videoId}/{versao}/{arquivo}', \App\Modules\Treinamento\Controllers\VideoArquivoDevController::class)
-    ->whereNumber('videoId')
-    ->where('versao', '[A-Za-z0-9_\-]{1,40}')
-    ->where('arquivo', '[A-Za-z0-9_\-]+(/[A-Za-z0-9_\-]+)*\.(m3u8|ts)')
-    ->name('videos.arquivo-dev');
-
 // RF02 - imagem de divulgacao: publica de proposito (pensada pra ser
 // compartilhada/postada), so exige que o treinamento esteja publicado.
 Route::get('/treinamentos/{treinamento}/divulgacao.png', \App\Modules\Treinamento\Controllers\TreinamentoDivulgacaoImagemController::class)

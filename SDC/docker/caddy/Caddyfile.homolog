@@ -116,7 +116,7 @@
 	# Videos do EAD: o Caddy entrega do volume, o Octane so autoriza (204/403).
 	handle_path /videos/* {
 		# route fixa a ordem: o Cache-Control so existe depois da autorizacao
-		# (sem route o header rodaria antes e o 403 sairia cacheavel por 1h).
+		# (sem route o header rodaria antes e o 403 sairia cacheavel).
 		route {
 			forward_auth {
 				dynamic a {
@@ -127,7 +127,19 @@
 				header_up X-Forwarded-Uri {http.request.orig_uri}
 			}
 			root * {$VIDEOS_HLS_ROOT:/srv/storage/treinamentos/hls}
-			header Cache-Control "private, max-age=3600"
+			# Segmento nunca muda dentro de uma versao: cache longo no navegador.
+			# Playlist fica em 1h para a autorizacao valer a cada nova reproducao.
+			# "file" restringe o header a arquivo existente (404 nao e cacheado).
+			@segmento {
+				path *.ts
+				file
+			}
+			@playlist {
+				path *.m3u8
+				file
+			}
+			header @segmento Cache-Control "private, max-age=31536000, immutable"
+			header @playlist Cache-Control "private, max-age=3600"
 			file_server {
 				hide .tmp-*
 			}

@@ -17,6 +17,12 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class VideoArquivoDevController extends Controller
 {
+    // Mesmos valores do Caddy (docker/caddy/Caddyfile*). "private" porque o
+    // conteudo depende de login; o segmento nunca muda dentro de uma versao.
+    private const CACHE_SEGMENTO = 'private, max-age=31536000, immutable';
+
+    private const CACHE_PLAYLIST = 'private, max-age=3600';
+
     public function __construct(private readonly AutorizacaoVideoService $autorizacao) {}
 
     public function __invoke(int $videoId, string $versao, string $arquivo): BinaryFileResponse|Response
@@ -31,8 +37,14 @@ class VideoArquivoDevController extends Controller
         $caminho = CaminhosVideo::hlsVersao($videoId, $versao).'/'.$arquivo;
         abort_unless($disco->exists($caminho), 404);
 
-        return response()->file($disco->path($caminho), [
-            'Content-Type' => str_ends_with($arquivo, '.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/MP2T',
+        $playlist = str_ends_with($arquivo, '.m3u8');
+
+        $resposta = response()->file($disco->path($caminho), [
+            'Content-Type' => $playlist ? 'application/vnd.apple.mpegurl' : 'video/MP2T',
         ]);
+        // Depois de criada: response()->file() marca a resposta como "public".
+        $resposta->headers->set('Cache-Control', $playlist ? self::CACHE_PLAYLIST : self::CACHE_SEGMENTO);
+
+        return $resposta;
     }
 }

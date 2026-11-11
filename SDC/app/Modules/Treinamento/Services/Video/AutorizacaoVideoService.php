@@ -12,6 +12,7 @@ use App\Modules\Treinamento\Models\TreinamentoProfessor;
 use App\Modules\Treinamento\Models\Video;
 use App\Modules\Treinamento\Services\TrilhaService;
 use App\Modules\Treinamento\Support\PermissaoDeVideo;
+use App\Services\Auth\SessionVersionService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -29,6 +30,7 @@ class AutorizacaoVideoService
     public function __construct(
         private readonly TrilhaService $trilha,
         private readonly PermissaoDeVideo $permissao,
+        private readonly SessionVersionService $versoes,
     ) {}
 
     /**
@@ -39,6 +41,14 @@ class AutorizacaoVideoService
     {
         $partes = $this->interpretar($uri);
         if ($partes === null) {
+            return false;
+        }
+
+        // Antes do cache: sessao deslogada, conta desativada ou versao de
+        // sessao vencida perdem o acesso na hora, nao ao fim do TTL.
+        $servidor = $this->servidorDaSessao();
+        $cidadao = $this->logadoNaSessao('cidadao');
+        if ($servidor === null && $cidadao === null) {
             return false;
         }
 
@@ -54,7 +64,7 @@ class AutorizacaoVideoService
             return false;
         }
 
-        if (! $this->podeAssistir($video, Auth::guard()->user(), Auth::guard('cidadao')->user())) {
+        if (! $this->podeAssistir($video, $servidor, $cidadao)) {
             return false;
         }
 
@@ -89,6 +99,33 @@ class AutorizacaoVideoService
         }
 
         return false;
+    }
+
+    /**
+     * Mesma regra do middleware CheckUserActive, que nao roda nas rotas de
+     * video: conta ativa e versao de sessao igual a gravada no login.
+     */
+    private function servidorDaSessao(): ?Authenticatable
+    {
+        $servidor = $this->logadoNaSessao('web');
+        if (! $servidor instanceof User) {
+            return $servidor;
+        }
+
+        $valido = $servidor->canAuthenticate() && $this->versoes->matches(session()->driver(), $servidor);
+
+        return $valido ? $servidor : null;
+    }
+
+    /**
+     * Quem a sessao diz que esta logado. O cookie "lembrar-me" nao vale aqui:
+     * ele recriaria a sessao, e a destas rotas e somente leitura.
+     */
+    private function logadoNaSessao(string $guard): ?Authenticatable
+    {
+        $guard = Auth::guard($guard);
+
+        return $guard->hasUser() || session()->has($guard->getName()) ? $guard->user() : null;
     }
 
     /**

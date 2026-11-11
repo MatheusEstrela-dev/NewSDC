@@ -66,6 +66,15 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\LogSystemActivity::class, // Capture ALL API requests too (audit)
             \App\Http\Middleware\CheckUserActive::class,
         ],
+
+        // Arquivos HLS do EAD e o forward_auth do Caddy: uma requisicao por
+        // segmento de video. Sessao so para leitura e nada do pipeline de
+        // pagina (Inertia, CSRF, tenant, auditoria por requisicao). Conta
+        // ativa e versao de sessao sao conferidas no AutorizacaoVideoService.
+        'video' => [
+            \App\Http\Middleware\EncryptCookies::class,
+            \App\Modules\Treinamento\Http\Middleware\SessaoSomenteLeitura::class,
+        ],
     ];
 
     /**
