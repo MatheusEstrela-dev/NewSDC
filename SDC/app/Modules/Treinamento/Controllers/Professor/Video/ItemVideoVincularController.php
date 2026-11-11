@@ -24,7 +24,7 @@ class ItemVideoVincularController extends VideoController
         $this->conteudo->garantirDoCurso($treinamento, $item);
 
         return $this->responder(function () use ($request, $item) {
-            $item = $this->biblioteca->vincular($item, Video::query()->findOrFail($request->validated('video_id')));
+            $item = $this->biblioteca->vincular($item, Video::query()->findOrFail($request->validated('video_id')), $request->user());
 
             return response()->json(['id' => $item->id, 'video_id' => $item->video_id]);
         });

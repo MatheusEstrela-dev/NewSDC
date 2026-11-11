@@ -84,6 +84,14 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        'treinamento' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/treinamento.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

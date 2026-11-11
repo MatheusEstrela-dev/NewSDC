@@ -20,9 +20,14 @@ final class CaminhosVideo
         return self::partes($uploadId).'/'.$n.'.part';
     }
 
+    public static function originais(int $videoId): string
+    {
+        return "originais/{$videoId}";
+    }
+
     public static function original(int $videoId, string $uuid): string
     {
-        return "originais/{$videoId}/{$uuid}.mp4";
+        return self::originais($videoId)."/{$uuid}.mp4";
     }
 
     public static function hlsRaiz(int $videoId): string

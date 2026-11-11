@@ -22,10 +22,13 @@ use App\Modules\Treinamento\Controllers\Professor\PreviaController;
 use App\Modules\Treinamento\Controllers\Professor\PublicarController;
 use App\Modules\Treinamento\Controllers\Professor\Video\ItemVideoDesvincularController;
 use App\Modules\Treinamento\Controllers\Professor\Video\ItemVideoVincularController;
+use App\Modules\Treinamento\Controllers\Professor\Video\ReprocessarController;
+use App\Modules\Treinamento\Controllers\Professor\Video\StatusController;
 use App\Modules\Treinamento\Controllers\Professor\Video\UploadAbrirController;
 use App\Modules\Treinamento\Controllers\Professor\Video\UploadCancelarController;
 use App\Modules\Treinamento\Controllers\Professor\Video\UploadFinalizarController;
 use App\Modules\Treinamento\Controllers\Professor\Video\UploadParteController;
+use App\Modules\Treinamento\Controllers\Professor\Video\VideoDestroyController;
 use App\Modules\Treinamento\Controllers\Professor\Video\VideoIndexController;
 use App\Modules\Treinamento\Controllers\Professor\Video\VideoStoreController;
 use App\Modules\Treinamento\Controllers\Professor\Video\VideoUpdateController;
@@ -48,6 +51,9 @@ Route::prefix('professor')->name('professor.')->middleware('can:treinamento.prof
 
     Route::middleware('gerencia.video')->prefix('/videos/{video}')->scopeBindings()->group(function () {
         Route::put('/', VideoUpdateController::class)->name('videos.update');
+        Route::delete('/', VideoDestroyController::class)->name('videos.destroy');
+        Route::get('/status', StatusController::class)->name('videos.status');
+        Route::post('/reprocessar', ReprocessarController::class)->name('videos.reprocessar');
         Route::post('/upload', UploadAbrirController::class)->name('videos.upload.abrir');
         Route::put('/upload/{upload}/partes/{n}', UploadParteController::class)
             ->whereUuid('upload')->whereNumber('n')->name('videos.upload.parte');

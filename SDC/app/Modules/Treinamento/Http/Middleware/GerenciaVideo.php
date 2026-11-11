@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Http\Middleware;
 
 use App\Modules\Treinamento\Models\Video;
+use App\Modules\Treinamento\Support\PermissaoDeVideo;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,6 +15,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class GerenciaVideo
 {
+    public function __construct(private readonly PermissaoDeVideo $permissao) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         $video = $request->route('video');
@@ -25,13 +28,7 @@ class GerenciaVideo
 
         abort_unless($video instanceof Video, 404);
 
-        $user = $request->user();
-
-        abort_unless(
-            $user !== null
-                && ((int) $video->user_id === (int) $user->getKey() || $user->can('treinamento.cursos.edit')),
-            403
-        );
+        abort_unless($this->permissao->podeGerenciar($video, $request->user()), 403);
 
         return $next($request);
     }
