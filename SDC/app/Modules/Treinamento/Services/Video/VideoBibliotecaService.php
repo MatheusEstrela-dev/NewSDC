@@ -149,7 +149,7 @@ class VideoBibliotecaService
             throw new OperacaoDeVideoInvalida('Apenas um video que falhou pode ser reprocessado.');
         }
 
-        $upload = $video->uploads()->where('status', VideoUpload::COMPLETO)->latest('created_at')->first();
+        $upload = $video->uploadVigente();
 
         if ($upload === null) {
             throw new OperacaoDeVideoInvalida('Nao ha arquivo enviado para reprocessar.');

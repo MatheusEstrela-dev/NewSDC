@@ -57,6 +57,16 @@ class Video extends Model
         return $this->hasOne(VideoUpload::class)->where('status', VideoUpload::ABERTO);
     }
 
+    /** Upload COMPLETO mais recente: o arquivo que o processamento deve publicar. */
+    public function uploadVigente(): ?VideoUpload
+    {
+        return $this->uploads()
+            ->where('status', VideoUpload::COMPLETO)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
     public function itens(): HasMany
     {
         return $this->hasMany(ModuloItem::class);

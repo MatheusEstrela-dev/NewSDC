@@ -50,11 +50,10 @@ class ProcessarVideoJob implements ShouldBeUnique, ShouldQueue
     {
         // find() ignora video excluido (soft delete): nada a processar.
         $video = Video::query()->find($this->videoId);
-        $upload = VideoUpload::query()
-            ->whereKey($this->uploadId)
-            ->where('video_id', $this->videoId)
-            ->where('status', VideoUpload::COMPLETO)
-            ->first();
+
+        // O despacho de um upload mais novo pode ter sido descartado pela unicidade do
+        // job: processa sempre o upload vigente, nunca um arquivo superado.
+        $upload = $video?->uploadVigente();
 
         if ($video === null || $upload === null || $this->jaAtendido($video, $upload)) {
             return;
@@ -73,18 +72,11 @@ class ProcessarVideoJob implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Execucao repetida ou superada e no-op: ha upload completo mais novo, ou o
-     * video ja ficou PRONTO depois deste upload ser finalizado.
+     * Execucao repetida e no-op: o video ja ficou PRONTO depois deste upload ser
+     * finalizado (o updated_at do upload nao se move depois de COMPLETO).
      */
     private function jaAtendido(Video $video, VideoUpload $upload): bool
     {
-        $maisRecente = $video->uploads()->where('status', VideoUpload::COMPLETO)
-            ->orderByDesc('created_at')->orderByDesc('id')->value('id');
-
-        if ($maisRecente !== $upload->id) {
-            return true;
-        }
-
         return $video->status === VideoStatus::PRONTO
             && $video->processado_em !== null
             && $video->processado_em->greaterThanOrEqualTo($upload->updated_at);
