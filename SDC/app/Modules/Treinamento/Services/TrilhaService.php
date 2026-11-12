@@ -28,8 +28,11 @@ use Illuminate\Support\Collection;
  */
 class TrilhaService
 {
+    public function __construct(private readonly SituacaoProvaService $provas) {}
+
     public function estado(Inscricao $inscricao): EstadoTrilha
     {
+        $situacoes = $this->provas->daInscricao($inscricao);
         $pastas = [];
         $total = 0;
         $concluidos = 0;
@@ -52,7 +55,7 @@ class TrilhaService
                 }
 
                 $estadoItens[] = new EstadoItem(
-                    $item, $liberado, $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item, $liberado),
+                    $item, $liberado, $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item, $liberado), ($situacoes[$item->id] ?? null)?->toArray(),
                 );
             }
             $pastas[] = new EstadoPasta($p['modulo'], $p['liberada'], $p['concluida'], $estadoItens);
@@ -227,15 +230,23 @@ class TrilhaService
     }
 
     /**
-     * Ponto unico de liberacao de um item dentro da pasta. Hoje todo item da
-     * pasta liberada esta aberto; a regra da prova (so abre depois dos demais
-     * obrigatorios da pasta, spec 8.2) entra aqui.
+     * Ponto unico de liberacao de um item dentro da pasta. Item comum abre com
+     * a pasta; a PROVA so abre depois dos demais itens obrigatorios da pasta
+     * concluidos (projeto so conta aprovado, spec 8.2). A pasta seguinte so
+     * abre com a prova aprovada porque a prova e obrigatoria e so conclui ao
+     * aprovar.
      *
      * @param  Collection<int, ModuloItem>  $itensDaPasta
      * @param  Collection<int, ProgressoItem>  $progressos  por modulo_item_id
      */
     private function itemAbertoNaPasta(ModuloItem $item, Collection $itensDaPasta, Collection $progressos, bool $pastaLiberada): bool
     {
-        return $pastaLiberada;
+        if (! $pastaLiberada || $item->tipo !== TipoItem::PROVA) {
+            return $pastaLiberada;
+        }
+
+        return ! $itensDaPasta
+            ->filter(fn (ModuloItem $i) => $i->obrigatorio && $i->tipo !== TipoItem::PROVA)
+            ->contains(fn (ModuloItem $i) => $progressos->get($i->id)?->status !== StatusProgresso::CONCLUIDO);
     }
 }
