@@ -23,6 +23,7 @@ class MeusCursosController extends Controller
                 'id' => $t->id,
                 'titulo' => $t->titulo,
                 'publico_alvo_label' => $t->publico_alvo?->getLabel(),
+                'status' => $t->status->value,
                 'status_label' => $t->status->getLabel(),
                 'publicado' => $t->estaPublicado(),
                 'alunos' => (int) $t->inscricoes_aprovadas_count,

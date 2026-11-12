@@ -6,7 +6,11 @@ const MAX_RETENTATIVAS = 3;
 
 const tentativaEncerrada = (erro) => erro?.response?.status === 422;
 
+const MENSAGEM_LIMITE = 'Muitas ações em pouco tempo. Aguarde um instante e tente novamente.';
+
 function mensagemDe(erro, padrao) {
+  if (erro?.response?.status === 429) return MENSAGEM_LIMITE;
+
   return erro?.response?.data?.message ?? padrao;
 }
 
