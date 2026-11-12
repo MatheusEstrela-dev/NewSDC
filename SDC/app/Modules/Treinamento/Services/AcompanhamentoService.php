@@ -13,6 +13,7 @@ use App\Modules\Treinamento\Enums\TipoItem;
 use App\Modules\Treinamento\Models\Cidadao;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\ModuloItem;
+use App\Modules\Treinamento\Models\Prova;
 use App\Modules\Treinamento\Models\ProjetoEntrega;
 use App\Modules\Treinamento\Models\Treinamento;
 use Illuminate\Database\Eloquent\Builder;
@@ -48,10 +49,12 @@ class AcompanhamentoService
         $provas = $this->situacoesDeProva->porInscricoes($treinamento->id, $inscricoes->modelKeys());
         $titulos = $this->titulosDasProvas($provas);
 
+        $estados = $this->trilha->estadosEmLote($treinamento, $inscricoes, $provas);
+
         return $inscricoes
-            ->map(function (Inscricao $inscricao) use ($nomes, $provas, $titulos) {
-                $estado = $this->trilha->estado($inscricao);
+            ->map(function (Inscricao $inscricao) use ($nomes, $provas, $titulos, $estados) {
                 $situacoes = $provas[$inscricao->id] ?? [];
+                $estado = $estados[$inscricao->id];
 
                 return [
                     'inscricao_id' => $inscricao->id,
@@ -167,6 +170,7 @@ class AcompanhamentoService
                 'prova_id' => $s->provaId,
                 'item_id' => $itemId,
                 'titulo' => $titulos[$itemId] ?? '-',
+                'escala_nota' => Prova::ESCALA_NOTA,
                 'nota_final' => $s->notaFinal,
                 'aprovada' => $s->aprovada,
                 'tentativas_enviadas' => $s->tentativasEnviadas,

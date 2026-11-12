@@ -40,14 +40,44 @@ class SituacaoProvaService
      */
     public function porInscricoes(int $treinamentoId, array $inscricaoIds): array
     {
-        $provas = Prova::query()
+        return $this->montar($this->provasDoCurso($treinamentoId), $inscricaoIds);
+    }
+
+    /**
+     * Regras das provas do curso sem inscricao (previa do professor): mesmas
+     * chaves de SituacaoProva, sem tentativas, nota nem liberacoes.
+     *
+     * @return array<int, SituacaoProva> por modulo_item_id
+     */
+    public function regrasDoCurso(int $treinamentoId): array
+    {
+        $regras = [];
+        foreach ($this->provasDoCurso($treinamentoId) as $prova) {
+            $regras[$prova->modulo_item_id] = new SituacaoProva(
+                provaId: $prova->id,
+                moduloItemId: $prova->modulo_item_id,
+                notaMinima: $prova->nota_minima,
+                totalQuestoes: (int) $prova->questoes_count,
+                tentativasPermitidas: $prova->max_tentativas,
+                tentativasEnviadas: 0,
+                tentativaAbertaId: null,
+                notaFinal: null,
+                aprovada: false,
+            );
+        }
+
+        return $regras;
+    }
+
+    /** @return Collection<int, Prova> */
+    private function provasDoCurso(int $treinamentoId): Collection
+    {
+        return Prova::query()
             ->withCount('questoes')
             ->whereIn('modulo_item_id', ModuloItem::query()
                 ->whereIn('modulo_id', Modulo::query()->where('treinamento_id', $treinamentoId)->select('id'))
                 ->select('id'))
             ->get();
-
-        return $this->montar($provas, $inscricaoIds);
     }
 
     public function daProva(Inscricao $inscricao, Prova $prova): SituacaoProva

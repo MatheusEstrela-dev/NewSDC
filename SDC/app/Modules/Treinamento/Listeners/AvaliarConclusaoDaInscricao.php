@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Listeners;
 
 use App\Modules\Treinamento\Events\ItemDaTrilhaConcluido;
-use App\Modules\Treinamento\Jobs\EmitirCertificadoDaInscricaoJob;
 use App\Modules\Treinamento\Models\Inscricao;
-use App\Modules\Treinamento\Services\ConclusaoService;
+use App\Modules\Treinamento\Services\ReavaliacaoDeConclusaoService;
 
 /**
  * Avalia se a inscricao concluiu o curso a cada item concluido (spec 8.4):
@@ -20,18 +19,14 @@ use App\Modules\Treinamento\Services\ConclusaoService;
  */
 final class AvaliarConclusaoDaInscricao
 {
-    public function __construct(private readonly ConclusaoService $conclusao) {}
+    public function __construct(private readonly ReavaliacaoDeConclusaoService $reavaliacao) {}
 
     public function handle(ItemDaTrilhaConcluido $evento): void
     {
         $inscricao = Inscricao::query()->with('treinamento')->find($evento->inscricaoId);
 
-        if ($inscricao === null || ! $inscricao->treinamento->isEad()) {
-            return;
-        }
-
-        if ($this->conclusao->registrar($inscricao) !== null) {
-            EmitirCertificadoDaInscricaoJob::dispatch($inscricao->id);
+        if ($inscricao !== null) {
+            $this->reavaliacao->avaliar($inscricao);
         }
     }
 }

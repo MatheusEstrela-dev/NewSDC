@@ -21,6 +21,9 @@ class Prova extends Model
 
     public const MAX_TENTATIVAS_PADRAO = 3;
 
+    /** Toda nota (nota_minima, nota_final, nota da tentativa, aproveitamento) e um percentual de 0 a ESCALA_NOTA. */
+    public const ESCALA_NOTA = 100;
+
     protected $table = 'treinamento.provas';
 
     protected $fillable = ['modulo_item_id', 'nota_minima', 'max_tentativas'];

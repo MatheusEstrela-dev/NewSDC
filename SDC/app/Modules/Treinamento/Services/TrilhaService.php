@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Services;
 use App\Modules\Treinamento\DTOs\EstadoItem;
 use App\Modules\Treinamento\DTOs\EstadoPasta;
 use App\Modules\Treinamento\DTOs\EstadoTrilha;
+use App\Modules\Treinamento\DTOs\SituacaoProva;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\StatusProgresso;
 use App\Modules\Treinamento\Enums\TipoItem;
@@ -30,15 +31,20 @@ class TrilhaService
 {
     public function __construct(private readonly SituacaoProvaService $provas) {}
 
-    public function estado(Inscricao $inscricao): EstadoTrilha
+    /**
+     * @param  array<int, SituacaoProva>|null  $situacoes  provas da inscricao por modulo_item_id, quando quem
+     *                                                      chama ja as carregou em lote; null consulta
+     * @param  array<string, mixed>|null  $lote  conteudo do curso e progresso ja carregados por estadosEmLote()
+     */
+    public function estado(Inscricao $inscricao, ?array $situacoes = null, ?array $lote = null): EstadoTrilha
     {
-        $situacoes = $this->provas->daInscricao($inscricao);
+        $situacoes ??= $this->provas->daInscricao($inscricao);
         $pastas = [];
         $total = 0;
         $concluidos = 0;
         $proximo = null;
 
-        foreach ($this->percorrer($inscricao) as $p) {
+        foreach ($this->percorrer($inscricao, $lote) as $p) {
             $estadoItens = [];
             foreach ($p['itens'] as $item) {
                 $progresso = $p['progressos']->get($item->id);
@@ -67,6 +73,33 @@ class TrilhaService
     }
 
     /**
+     * Estado de varias inscricoes do MESMO curso com consultas em numero fixo
+     * (pastas e itens uma vez; progresso, pastas gravadas e entregas em uma
+     * consulta cada), para a lista de alunos do professor.
+     *
+     * @param  Collection<int, Inscricao>  $inscricoes
+     * @param  array<int, array<int, SituacaoProva>>  $situacoesPorInscricao  de SituacaoProvaService::porInscricoes()
+     * @return array<int, EstadoTrilha> por inscricao_id
+     */
+    public function estadosEmLote(Treinamento $treinamento, Collection $inscricoes, array $situacoesPorInscricao): array
+    {
+        $ids = $inscricoes->modelKeys();
+        $lote = [
+            'pastas' => $this->pastasDoCurso($treinamento->id),
+            'progressos' => ProgressoItem::query()->whereIn('inscricao_id', $ids)->get()->groupBy('inscricao_id'),
+            'gravadas' => ProgressoPasta::query()->whereIn('inscricao_id', $ids)->get(['inscricao_id', 'modulo_id'])->groupBy('inscricao_id'),
+            'entregas' => ProjetoEntrega::query()->whereIn('inscricao_id', $ids)->orderByDesc('id')->get()->groupBy('inscricao_id'),
+        ];
+
+        $estados = [];
+        foreach ($inscricoes as $inscricao) {
+            $estados[$inscricao->id] = $this->estado($inscricao, $situacoesPorInscricao[$inscricao->id] ?? [], $lote);
+        }
+
+        return $estados;
+    }
+
+    /**
      * Previa do professor: tudo liberado, nada concluido, sem gravar progresso.
      */
     public function estadoPrevia(Treinamento $treinamento): EstadoTrilha
@@ -76,13 +109,14 @@ class TrilhaService
         $proximo = null;
 
         $modulos = Modulo::query()->porTreinamento($treinamento->id)->ordenados()->with('itens.video')->get();
+        $regras = $this->provas->regrasDoCurso($treinamento->id);
 
         foreach ($modulos as $modulo) {
             $itens = [];
             foreach ($modulo->itens as $item) {
                 $total += $item->obrigatorio ? 1 : 0;
                 $proximo ??= $item->id;
-                $itens[] = new EstadoItem($item, true, null, 0, null, null, $this->estadoVideo($item, true));
+                $itens[] = new EstadoItem($item, true, null, 0, null, null, $this->estadoVideo($item, true), ($regras[$item->id] ?? null)?->toArray());
             }
             $pastas[] = new EstadoPasta($modulo, true, false, $itens);
         }
@@ -183,22 +217,25 @@ class TrilhaService
     /**
      * Pastas e itens ativos em ordem, ja com liberacao e conclusao resolvidas.
      *
+     * @param  array<string, mixed>|null  $lote  de estadosEmLote(); null carrega so esta inscricao
      * @return list<array{modulo: Modulo, itens: Collection<int, ModuloItem>, progressos: Collection<int, ProgressoItem>, entregas: Collection<int, ProjetoEntrega>, gravada: bool, concluida: bool, liberada: bool, liberados: array<int, bool>}>
      */
-    private function percorrer(Inscricao $inscricao): array
+    private function percorrer(Inscricao $inscricao, ?array $lote = null): array
     {
-        $pastas = Modulo::query()
-            ->porTreinamento($inscricao->treinamento_id)
-            ->ordenados()
-            ->with('itens.video')
-            ->get();
+        $pastas = $lote['pastas'] ?? $this->pastasDoCurso($inscricao->treinamento_id);
 
-        $progressos = ProgressoItem::query()->where('inscricao_id', $inscricao->id)->get()->keyBy('modulo_item_id');
-        $gravadas = ProgressoPasta::query()->where('inscricao_id', $inscricao->id)->pluck('modulo_id')->all();
-        $entregas = ProjetoEntrega::query()
-            ->where('inscricao_id', $inscricao->id)
-            ->orderByDesc('id')
-            ->get()
+        // Em lote, quem nao tem linha nao aparece no groupBy: vazio, sem nova consulta.
+        $progressos = ($lote === null
+            ? ProgressoItem::query()->where('inscricao_id', $inscricao->id)->get()
+            : ($lote['progressos'][$inscricao->id] ?? collect()))
+            ->keyBy('modulo_item_id');
+        $gravadas = ($lote === null
+            ? ProgressoPasta::query()->where('inscricao_id', $inscricao->id)->get(['inscricao_id', 'modulo_id'])
+            : ($lote['gravadas'][$inscricao->id] ?? collect()))
+            ->pluck('modulo_id')->all();
+        $entregas = ($lote === null
+            ? ProjetoEntrega::query()->where('inscricao_id', $inscricao->id)->orderByDesc('id')->get()
+            : ($lote['entregas'][$inscricao->id] ?? collect()))
             ->unique('modulo_item_id')
             ->keyBy('modulo_item_id');
 
@@ -227,6 +264,12 @@ class TrilhaService
         }
 
         return $resultado;
+    }
+
+    /** @return Collection<int, Modulo> pastas ativas em ordem, com os itens ativos e o video de cada um */
+    private function pastasDoCurso(int $treinamentoId): Collection
+    {
+        return Modulo::query()->porTreinamento($treinamentoId)->ordenados()->with('itens.video')->get();
     }
 
     /**
