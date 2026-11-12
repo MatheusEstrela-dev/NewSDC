@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Treinamento\Controllers\Admin\CertificadoCancelarController;
 use App\Modules\Treinamento\Controllers\Admin\CertificadoIndexController;
 use App\Modules\Treinamento\Controllers\Admin\CertificadoReemitirController;
 use App\Modules\Treinamento\Controllers\Admin\InscricaoAprovarController;
@@ -123,4 +124,7 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
     Route::post('/certificados/{certificado}/reemitir', CertificadoReemitirController::class)
         ->name('certificados.reemitir')
         ->middleware('can:treinamento.certificados.reemitir');
+    Route::post('/certificados/{certificado}/cancelar', CertificadoCancelarController::class)
+        ->name('certificados.cancelar')
+        ->middleware('can:treinamento.certificados.cancelar');
 });

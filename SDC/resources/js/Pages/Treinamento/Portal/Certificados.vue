@@ -43,6 +43,9 @@ function irParaPagina(page) {
           <Text size="xs" color="muted">
             {{ certificado.emitido_em ? new Date(certificado.emitido_em).toLocaleDateString('pt-BR') : 'Aguardando emissão' }}
           </Text>
+          <Text v-if="certificado.codigo_verificacao" size="xs" color="muted">
+            Código de verificação: <span class="font-mono font-medium">{{ certificado.codigo_verificacao }}</span>
+          </Text>
         </div>
         <div class="flex items-center gap-3">
           <Badge :color="certificado.status_color">{{ certificado.status_label }}</Badge>
