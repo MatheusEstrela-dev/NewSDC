@@ -9,6 +9,7 @@ use App\Modules\Notificacoes\Contracts\Rastreavel;
 use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Treinamento\Enums\CategoriaTreinamento;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
+use App\Modules\Treinamento\Enums\SituacaoCurso;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Support\Database\UsaConexaoDeTreinamento;
@@ -56,6 +57,8 @@ class Treinamento extends Model implements Rastreavel
         'publico_alvo' => PublicoAlvo::class,
         'inscricao_aprovacao_automatica' => 'boolean',
         'status' => StatusTreinamento::class,
+        'situacao' => SituacaoCurso::class,
+        'situacao_alterada_em' => 'datetime',
         'data_inicio' => 'date',
         'data_fim' => 'date',
         'percentual_frequencia_minimo' => 'decimal:2',
@@ -112,6 +115,16 @@ class Treinamento extends Model implements Rastreavel
 
     public function podeReceberInscricao(): bool
     {
+        return $this->situacaoEfetiva()->recebeInscricao() && $this->aceitaInscricaoAlemDaSituacao();
+    }
+
+    /**
+     * Status e vagas permitem inscricao, sem considerar pausa: e o que o
+     * catalogo usa para listar um curso pausado como "Pausado" em vez de
+     * esconde-lo.
+     */
+    public function aceitaInscricaoAlemDaSituacao(): bool
+    {
         if (!$this->status->podeReceberInscricoes()) {
             return false;
         }
@@ -135,6 +148,21 @@ class Treinamento extends Model implements Rastreavel
         }
 
         return $this->inscricoesAprovadas()->count() >= $this->numero_vagas;
+    }
+
+    /** Linhas anteriores a coluna (ou lidas sem ela) contam como ATIVO. */
+    public function situacaoEfetiva(): SituacaoCurso
+    {
+        return $this->situacao ?? SituacaoCurso::ATIVO;
+    }
+
+    /**
+     * Ponto unico de "o aluno pode usar este curso agora" (sala, itens,
+     * arquivos, progresso, entregas, prova e video, nos dois escopos).
+     */
+    public function alunoAcessaAgora(): bool
+    {
+        return $this->isEad() && $this->estaPublicado() && $this->situacaoEfetiva()->permiteAcessoDoAluno();
     }
 
     public function estaPublicado(): bool
@@ -218,6 +246,20 @@ class Treinamento extends Model implements Rastreavel
     public function scopePublicado($query)
     {
         return $query->whereNotNull('link_publico_slug')->whereNotNull('publicado_em');
+    }
+
+    /** Publicado e nao desativado: o que os catalogos (interno e portal) listam. */
+    public function scopeNoCatalogo($query)
+    {
+        return $query->publicado()->where(
+            fn ($q) => $q->whereNull('situacao')->orWhereIn('situacao', SituacaoCurso::valoresNoCatalogo())
+        );
+    }
+
+    /** Cursos que ainda podem concluir alunos e emitir certificado. */
+    public function scopeAtivo($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('situacao')->orWhere('situacao', SituacaoCurso::ATIVO->value));
     }
 
     // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────

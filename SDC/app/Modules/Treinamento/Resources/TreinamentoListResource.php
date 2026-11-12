@@ -35,6 +35,9 @@ class TreinamentoListResource extends JsonResource
             'total_modulos' => $this->whenLoaded('modulos', fn () => $this->modulos->count(), 0),
             'link_publico_slug' => $this->link_publico_slug,
             'esta_publicado' => $this->estaPublicado(),
+            'situacao' => $this->situacaoEfetiva()->value,
+            'situacao_label' => $this->situacaoEfetiva()->getLabel(),
+            'situacao_variant' => $this->situacaoEfetiva()->getVariant(),
             'pode_receber_inscricao' => $this->podeReceberInscricao(),
         ];
     }

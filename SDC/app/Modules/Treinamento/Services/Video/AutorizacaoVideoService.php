@@ -27,6 +27,8 @@ use Illuminate\Support\Facades\Cache;
  */
 class AutorizacaoVideoService
 {
+    private const CHAVE_EPOCA = 'video_auth_epoca';
+
     public function __construct(
         private readonly TrilhaService $trilha,
         private readonly PermissaoDeVideo $permissao,
@@ -175,9 +177,20 @@ class AutorizacaoVideoService
             || $versao === Cache::get("video_versao_anterior:{$video->id}");
     }
 
+    /**
+     * Descarta, de uma vez, as autorizacoes ja em cache: a chave carrega uma
+     * epoca, e mudar a epoca faz cada sessao reavaliar o acesso na proxima
+     * requisicao (pausar ou desativar um curso corta o video na hora, nao ao
+     * fim do TTL). Chamado so quando um curso sai do ar.
+     */
+    public function revogarAutorizacoesEmCache(): void
+    {
+        Cache::increment(self::CHAVE_EPOCA);
+    }
+
     private function chaveCache(int $videoId, string $versao): string
     {
-        return 'video_auth:'.session()->getId().":{$videoId}:{$versao}";
+        return 'video_auth:'.(int) Cache::get(self::CHAVE_EPOCA, 0).':'.session()->getId().":{$videoId}:{$versao}";
     }
 
     /**
@@ -210,7 +223,7 @@ class AutorizacaoVideoService
         $elegiveis = $itens->filter(function (ModuloItem $item) use ($inscrito) {
             $curso = $item->modulo->treinamento;
 
-            return $curso->isEad() && $curso->estaPublicado() && $curso->publico_alvo->aceita($inscrito);
+            return $curso->alunoAcessaAgora() && $curso->publico_alvo->aceita($inscrito);
         });
         if ($elegiveis->isEmpty()) {
             return false;

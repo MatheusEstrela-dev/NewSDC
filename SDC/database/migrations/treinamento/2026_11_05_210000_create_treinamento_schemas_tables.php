@@ -75,6 +75,7 @@ return new class extends Migration
         $this->criarVideo();
         $this->ajustarTabelasExistentes();
         $this->criarComprovacao();
+        $this->criarCicloDoCurso();
     }
 
     public function down(): void
@@ -672,6 +673,29 @@ return new class extends Migration
             'prova_liberacoes_prova_id_inscricao_id_index' => 'prova_id, inscricao_id',
             'prova_liberacoes_inscricao_id_fkidx' => 'inscricao_id',
             'prova_liberacoes_liberado_por_fkidx' => 'liberado_por',
+        ]);
+    }
+
+    /**
+     * Ciclo de vida do curso EAD (pausar/retomar, desativar/reativar). Autocontido
+     * e idempotente.
+     *
+     * - situacao: ATIVO (padrao) | PAUSADO | DESATIVADO. Ortogonal a publicacao
+     *   (publicado_em) e ao status (fluxo de eventos): nenhuma delas e alterada,
+     *   entao reativar devolve o curso ao catalogo como estava.
+     * - situacao_alterada_em / situacao_alterada_por: ultima mudanca (users.id do
+     *   sdc, sem FK, como os demais autores).
+     */
+    private function criarCicloDoCurso(): void
+    {
+        $this->exec("ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS situacao varchar(12) NOT NULL DEFAULT 'ATIVO'");
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS situacao_alterada_em timestamp(0)');
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS situacao_alterada_por bigint');
+        $this->exec('ALTER TABLE treinamento.treinamentos DROP CONSTRAINT IF EXISTS treinamentos_situacao_check');
+        $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_situacao_check CHECK (situacao IN ('ATIVO', 'PAUSADO', 'DESATIVADO'))");
+        $this->indices('treinamento.treinamentos', [
+            'treinamentos_situacao_index' => 'situacao',
+            'treinamentos_situacao_alterada_por_fkidx' => 'situacao_alterada_por',
         ]);
     }
 

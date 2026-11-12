@@ -36,7 +36,7 @@ class ReavaliacaoDeConclusaoService
         }
 
         $inscricao->loadMissing('treinamento');
-        if (! $inscricao->treinamento->isEad()) {
+        if (! $inscricao->treinamento->isEad() || ! $inscricao->treinamento->situacaoEfetiva()->permiteConclusao()) {
             return false;
         }
 
@@ -93,7 +93,7 @@ class ReavaliacaoDeConclusaoService
             ->aprovadas()
             ->whereNull('concluido_em')
             ->whereHas('treinamento', fn ($q) => $q->where('tipo', TipoTreinamento::EAD->value)
-                ->whereNotNull('link_publico_slug')->whereNotNull('publicado_em'))
+                ->publicado()->ativo())
             ->when($treinamentoId !== null, fn ($q) => $q->porTreinamento($treinamentoId))
             ->with('treinamento')
             ->chunkById(self::LOTE, function ($lote) use (&$concluidas) {
@@ -124,7 +124,7 @@ class ReavaliacaoDeConclusaoService
             ->aprovadas()
             ->whereNotNull('concluido_em')
             ->whereDoesntHave('certificado')
-            ->whereHas('treinamento', fn ($q) => $q->where('tipo', TipoTreinamento::EAD->value))
+            ->whereHas('treinamento', fn ($q) => $q->where('tipo', TipoTreinamento::EAD->value)->ativo())
             ->when($treinamentoId !== null, fn ($q) => $q->porTreinamento($treinamentoId))
             ->chunkById(self::LOTE, function ($lote) use (&$enfileiradas) {
                 foreach ($lote as $inscricao) {

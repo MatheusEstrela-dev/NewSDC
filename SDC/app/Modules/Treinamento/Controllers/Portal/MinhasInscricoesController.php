@@ -47,7 +47,7 @@ class MinhasInscricoesController extends Controller
     private function salas(Collection $inscricoes): array
     {
         return $inscricoes
-            ->filter(fn (Inscricao $i) => $i->status === StatusInscricao::APROVADA && $i->treinamento?->isEad())
+            ->filter(fn (Inscricao $i) => $i->status === StatusInscricao::APROVADA && $i->treinamento?->isEad() && $i->treinamento->situacaoEfetiva()->permiteAcessoDoAluno())
             ->mapWithKeys(fn (Inscricao $i) => [$i->id => [
                 'percentual' => $this->trilha->estado($i)->percentual,
                 'sala_url' => route('portal.treinamento.cursos.sala', $i->treinamento->link_publico_slug),

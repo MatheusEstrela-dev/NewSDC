@@ -7,6 +7,10 @@ use App\Modules\Treinamento\Controllers\Professor\AlunosController;
 use App\Modules\Treinamento\Controllers\Professor\ConteudoController;
 use App\Modules\Treinamento\Controllers\Professor\CorrecaoStoreController;
 use App\Modules\Treinamento\Controllers\Professor\CorrecoesController;
+use App\Modules\Treinamento\Controllers\Professor\CursoDesativarController;
+use App\Modules\Treinamento\Controllers\Professor\CursoPausarController;
+use App\Modules\Treinamento\Controllers\Professor\CursoReativarController;
+use App\Modules\Treinamento\Controllers\Professor\CursoRetomarController;
 use App\Modules\Treinamento\Controllers\Professor\EntregaArquivoController;
 use App\Modules\Treinamento\Controllers\Professor\ItemArquivoController;
 use App\Modules\Treinamento\Controllers\Professor\ItemDestroyController;
@@ -101,6 +105,14 @@ Route::prefix('professor')->name('professor.')->middleware('can:treinamento.prof
         Route::put('/{treinamento}/itens/{item}/video', ItemVideoVincularController::class)->name('itens.video.vincular');
         Route::delete('/{treinamento}/itens/{item}/video', ItemVideoDesvincularController::class)->name('itens.video.desvincular');
     });
+});
+
+// Ciclo do curso: professor designado ou admin (que nao precisa da area do professor).
+Route::prefix('professor')->name('professor.')->middleware('gerencia.ciclo.curso')->group(function () {
+    Route::post('/{treinamento}/pausar', CursoPausarController::class)->name('pausar');
+    Route::post('/{treinamento}/retomar', CursoRetomarController::class)->name('retomar');
+    Route::post('/{treinamento}/desativar', CursoDesativarController::class)->name('desativar');
+    Route::post('/{treinamento}/reativar', CursoReativarController::class)->name('reativar');
 });
 
 // Designacao de professores (administracao do curso).

@@ -26,10 +26,16 @@ class MeusCursosController extends Controller
                 'status' => $t->status->value,
                 'status_label' => $t->status->getLabel(),
                 'publicado' => $t->estaPublicado(),
+                'situacao' => $t->situacaoEfetiva()->value,
+                'situacao_label' => $t->situacaoEfetiva()->getLabel(),
                 'alunos' => (int) $t->inscricoes_aprovadas_count,
             ])
             ->values();
 
-        return Inertia::render('Treinamento/Professor/MeusCursos', ['cursos' => $cursos]);
+        return Inertia::render('Treinamento/Professor/MeusCursos', [
+            'cursos' => $cursos,
+            // Abrir curso e so de quem ja cria treinamento (admin); o backend recusa os demais.
+            'pode_abrir' => (bool) $request->user()->can('treinamento.cursos.create'),
+        ]);
     }
 }

@@ -54,7 +54,12 @@ const formatDate = (dateValue) => {
               <span v-if="inscricao.treinamento_local"> · {{ inscricao.treinamento_local }}</span>
             </Text>
           </div>
-          <Badge :color="inscricao.status_color">{{ inscricao.status_label }}</Badge>
+          <div class="flex flex-wrap items-center justify-end gap-2">
+            <Badge v-if="inscricao.treinamento_situacao && inscricao.treinamento_situacao !== 'ATIVO'" :variant="inscricao.treinamento_situacao_variant" size="sm">
+              {{ inscricao.treinamento_situacao === 'DESATIVADO' ? 'Encerrado' : inscricao.treinamento_situacao_label }}
+            </Badge>
+            <Badge :color="inscricao.status_color">{{ inscricao.status_label }}</Badge>
+          </div>
         </div>
 
         <div class="mt-3 flex items-center gap-4">

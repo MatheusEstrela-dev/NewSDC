@@ -135,6 +135,7 @@ function confirmarPresenca() {
         <Button v-else-if="treinamento.pode_receber_inscricao" variant="primary" @click="inscreverSe">
           Inscrever-se
         </Button>
+        <Text v-else-if="treinamento.situacao === 'PAUSADO'" size="sm" color="muted">Este curso está pausado e não recebe inscrições no momento.</Text>
         <Text v-else size="sm" color="muted">Este treinamento não está recebendo inscrições no momento.</Text>
       </div>
     </CardBase>
