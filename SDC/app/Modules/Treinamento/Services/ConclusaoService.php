@@ -26,6 +26,11 @@ class ConclusaoService
         return ConexaoTreinamento::transacao(function () use ($inscricao) {
             $travada = Inscricao::query()->with('treinamento')->lockForUpdate()->findOrFail($inscricao->id);
 
+            // Curso pausado ou desativado nao conclui ninguem novo; quem ja concluiu segue com o resultado congelado e o certificado.
+            if ($travada->concluido_em === null && ! $travada->treinamento->situacaoEfetiva()->permiteConclusao()) {
+                return null;
+            }
+
             $resultado = $this->criterios->para($travada->treinamento)->avaliar($travada);
             if ($resultado === null) {
                 return null;

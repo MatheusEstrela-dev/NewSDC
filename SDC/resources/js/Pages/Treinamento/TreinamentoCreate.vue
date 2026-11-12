@@ -9,6 +9,10 @@ defineProps({
     type: Object,
     default: () => ({ tipos: [], categorias: [] }),
   },
+  padroes: {
+    type: Object,
+    default: () => ({}),
+  },
   publicos: {
     type: Array,
     default: () => [],
@@ -17,5 +21,5 @@ defineProps({
 </script>
 
 <template>
-  <TreinamentoCreateTemplate :filter-options="filterOptions" :publicos="publicos" />
+  <TreinamentoCreateTemplate :filter-options="filterOptions" :publicos="publicos" :padroes="padroes" />
 </template>

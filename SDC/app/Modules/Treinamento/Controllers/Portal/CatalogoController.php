@@ -20,7 +20,7 @@ class CatalogoController extends Controller
     {
         $filters = $request->only(['search', 'categoria']);
 
-        $query = Treinamento::query()->publicado()->paraPublico(PublicoAlvo::CIDADAOS)->with('modulos');
+        $query = Treinamento::query()->noCatalogo()->paraPublico(PublicoAlvo::CIDADAOS)->with('modulos');
 
         if (!empty($filters['search'])) {
             $query->where('titulo', 'like', "%{$filters['search']}%");
@@ -41,7 +41,7 @@ class CatalogoController extends Controller
     public function show(string $slug): Response
     {
         $treinamento = Treinamento::query()
-            ->publicado()
+            ->noCatalogo()
             ->paraPublico(PublicoAlvo::CIDADAOS)
             ->where('link_publico_slug', $slug)
             ->with('modulos')

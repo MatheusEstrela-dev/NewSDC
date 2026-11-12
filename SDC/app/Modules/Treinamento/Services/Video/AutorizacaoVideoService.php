@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Services\Video;
 use App\Models\User;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Models\Inscricao;
+use App\Modules\Treinamento\Models\Modulo;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\TreinamentoProfessor;
 use App\Modules\Treinamento\Models\Video;
@@ -175,9 +176,31 @@ class AutorizacaoVideoService
             || $versao === Cache::get("video_versao_anterior:{$video->id}");
     }
 
+    /**
+     * Descarta as autorizacoes em cache dos videos de um curso: a chave carrega
+     * a epoca do video, e mudar a epoca faz cada sessao reavaliar o acesso na
+     * proxima requisicao (pausar ou desativar um curso corta o video na hora,
+     * nao ao fim do TTL). Video compartilhado com outro curso tambem e
+     * reavaliado, o que e correto: so quem ainda tem acesso volta a passar.
+     */
+    public function revogarAutorizacoesDoCurso(int $treinamentoId): void
+    {
+        ModuloItem::query()
+            ->whereNotNull('video_id')
+            ->whereIn('modulo_id', Modulo::query()->where('treinamento_id', $treinamentoId)->select('id'))
+            ->distinct()
+            ->pluck('video_id')
+            ->each(fn ($videoId) => Cache::increment(self::chaveEpoca((int) $videoId)));
+    }
+
+    private static function chaveEpoca(int $videoId): string
+    {
+        return "video_auth_epoca:{$videoId}";
+    }
+
     private function chaveCache(int $videoId, string $versao): string
     {
-        return 'video_auth:'.session()->getId().":{$videoId}:{$versao}";
+        return 'video_auth:'.(int) Cache::get(self::chaveEpoca($videoId), 0).':'.session()->getId().":{$videoId}:{$versao}";
     }
 
     /**
@@ -210,7 +233,7 @@ class AutorizacaoVideoService
         $elegiveis = $itens->filter(function (ModuloItem $item) use ($inscrito) {
             $curso = $item->modulo->treinamento;
 
-            return $curso->isEad() && $curso->estaPublicado() && $curso->publico_alvo->aceita($inscrito);
+            return $curso->alunoAcessaAgora() && $curso->publico_alvo->aceita($inscrito);
         });
         if ($elegiveis->isEmpty()) {
             return false;

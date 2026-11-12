@@ -43,6 +43,10 @@ class InscricaoService extends BaseService
             throw new \DomainException('Este curso ainda nao foi publicado.');
         }
 
+        if (!$treinamento->situacaoEfetiva()->recebeInscricao()) {
+            throw new \DomainException('Este curso esta '.mb_strtolower($treinamento->situacaoEfetiva()->getLabel()).' e nao recebe inscricoes.');
+        }
+
         if (!$treinamento->podeReceberInscricao()) {
             throw new \DomainException('Este treinamento nao esta recebendo inscricoes no momento.');
         }

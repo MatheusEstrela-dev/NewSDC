@@ -34,6 +34,7 @@ final class InscricaoDoAluno
             ->first();
 
         abort_if($inscricao === null, 403, 'Inscricao nao aprovada neste curso.');
+        abort_unless($treinamento->situacaoEfetiva()->permiteAcessoDoAluno(), 403, $treinamento->situacaoEfetiva()->mensagemDeBloqueio());
 
         return $inscricao;
     }

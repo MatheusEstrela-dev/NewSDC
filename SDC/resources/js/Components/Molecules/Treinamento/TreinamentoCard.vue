@@ -50,7 +50,10 @@ const vagasText = computed(() => {
           {{ treinamento.titulo }}
         </Heading>
       </div>
-      <TreinamentoStatusBadge :status="treinamento.status" :label="treinamento.status_label" class="ml-2" />
+      <Badge v-if="treinamento.situacao && treinamento.situacao !== 'ATIVO'" :variant="treinamento.situacao_variant" size="sm" class="ml-2">
+        {{ treinamento.situacao_label }}
+      </Badge>
+      <TreinamentoStatusBadge v-else :status="treinamento.status" :label="treinamento.status_label" class="ml-2" />
     </div>
 
     <!-- Descrição -->

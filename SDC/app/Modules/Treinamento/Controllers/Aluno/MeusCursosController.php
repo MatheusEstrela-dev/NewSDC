@@ -64,6 +64,7 @@ class MeusCursosController extends Controller
     private function curso(Inscricao $inscricao): array
     {
         $aprovada = $inscricao->status === StatusInscricao::APROVADA;
+        $situacao = $inscricao->treinamento->situacaoEfetiva();
 
         return [
             'id' => $inscricao->treinamento_id,
@@ -74,7 +75,10 @@ class MeusCursosController extends Controller
             'status_label' => $inscricao->status->getLabel(),
             'aprovada' => $aprovada,
             'percentual' => $aprovada ? $this->trilha->estado($inscricao)->percentual : 0,
-            'sala_url' => $aprovada ? route('treinamentos.aluno.sala', $inscricao->treinamento_id) : null,
+            'sala_url' => $aprovada && $situacao->permiteAcessoDoAluno() ? route('treinamentos.aluno.sala', $inscricao->treinamento_id) : null,
+            'situacao' => $situacao->value,
+            'situacao_label' => $situacao->getLabel(),
+            'situacao_variant' => $situacao->getVariant(),
         ];
     }
 
@@ -92,17 +96,21 @@ class MeusCursosController extends Controller
         return Treinamento::query()
             ->where('tipo', TipoTreinamento::EAD->value)
             ->paraPublico(PublicoAlvo::SERVIDORES)
-            ->publicado()
+            ->noCatalogo()
             ->whereNotIn('id', array_merge($inscritos, $leciona))
             ->orderBy('titulo')
             ->get()
-            ->filter(fn (Treinamento $t) => $t->podeReceberInscricao())
+            ->filter(fn (Treinamento $t) => $t->aceitaInscricaoAlemDaSituacao())
             ->map(fn (Treinamento $t) => [
                 'id' => $t->id,
                 'titulo' => $t->titulo,
                 'carga_horaria' => $t->carga_horaria,
                 'descricao' => $t->descricao,
                 'instrutor' => $t->instrutor,
+                'situacao' => $t->situacaoEfetiva()->value,
+                'situacao_label' => $t->situacaoEfetiva()->getLabel(),
+                'situacao_variant' => $t->situacaoEfetiva()->getVariant(),
+                'pausado' => ! $t->situacaoEfetiva()->recebeInscricao(),
             ])
             ->values()
             ->all();

@@ -13,6 +13,10 @@ const props = defineProps({
     type: Object,
     default: () => ({ tipos: [], categorias: [] }),
   },
+  padroes: {
+    type: Object,
+    default: () => ({}),
+  },
   publicos: {
     type: Array,
     default: () => [],
@@ -25,8 +29,8 @@ const form = useForm({
   titulo: '',
   descricao: '',
   carga_horaria: '',
-  categoria: 'CURSO',
-  tipo: 'PRESENCIAL',
+  categoria: props.padroes.categoria ?? 'CURSO',
+  tipo: props.padroes.tipo ?? 'PRESENCIAL',
   publico_alvo: '',
   inscricao_aprovacao_automatica: false,
   instrutor: '',
