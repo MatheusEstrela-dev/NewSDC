@@ -90,7 +90,9 @@ async function salvarQuestao(corpo) {
 }
 
 async function excluirQuestao(questao) {
-  const aviso = 'Excluir esta questao? Se alunos ja responderam, a questao deixa de valer para novas tentativas, mas as respostas antigas continuam registradas.';
+  const aviso = questao.tem_respostas
+    ? 'Excluir esta questao? Alunos ja responderam: ela deixa de valer para novas tentativas, mas as respostas antigas continuam registradas.'
+    : 'Excluir esta questao?';
   if (!window.confirm(aviso)) return;
   try {
     await api.excluirQuestao(props.provaId, questao.id);

@@ -27,15 +27,13 @@ export function useProvaApi(treinamentoId) {
 }
 
 /**
- * O backend devolve a trava de publicacao como um texto unico: "O curso nao pode
- * ser publicado. " + uma frase por pendencia. Quebra em itens para a tela.
+ * Pendencias da trava de publicacao: o backend devolve `errors['pendencias.0']`,
+ * `errors['pendencias.1']`, ... (uma frase por pendencia, na ordem).
  */
-export function separarPendencias(texto) {
-  if (!texto) return [];
-
-  return texto
-    .replace(/^O curso nao pode ser publicado\.\s*/, '')
-    .split(/(?<=\.)\s+(?=A pasta |Pasta )/)
-    .map((p) => p.trim())
+export function pendenciasDe(erros) {
+  return Object.keys(erros ?? {})
+    .filter((chave) => chave.startsWith('pendencias.'))
+    .sort((a, b) => Number(a.slice(11)) - Number(b.slice(11)))
+    .map((chave) => erros[chave])
     .filter(Boolean);
 }

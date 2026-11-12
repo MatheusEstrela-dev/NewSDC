@@ -8,6 +8,7 @@ import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import MenuCurso from '@/Components/Organisms/Treinamento/Professor/MenuCurso.vue';
 import ProvaEditor from '@/Components/Organisms/Treinamento/Professor/ProvaEditor.vue';
+import { formatarNota } from '@/Composables/treinamento/formatarNota';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -68,6 +69,7 @@ function atualizarResumos() {
               <span class="block truncate text-xs text-slate-500 dark:text-slate-400">{{ prova.pasta }}</span>
               <span class="mt-1 flex flex-wrap gap-1">
                 <Badge :variant="prova.total_questoes > 0 ? 'neutral' : 'warning'" size="sm">{{ prova.total_questoes }} questao(oes)</Badge>
+                <Badge variant="neutral" size="sm">minimo {{ formatarNota(prova.nota_minima, prova.escala_nota) }}</Badge>
                 <Badge v-if="prova.travados > 0" variant="danger" size="sm">{{ prova.travados }} travado(s)</Badge>
               </span>
             </button>

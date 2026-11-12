@@ -6,6 +6,7 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import IndicadorSalvamentoProva from '@/Components/Molecules/Treinamento/Sala/IndicadorSalvamentoProva.vue';
 import QuestaoProva from '@/Components/Molecules/Treinamento/Sala/QuestaoProva.vue';
 import ResultadoProva from '@/Components/Molecules/Treinamento/Sala/ResultadoProva.vue';
+import { formatarNota } from '@/Composables/treinamento/formatarNota';
 import { useProvaSala } from '@/Composables/treinamento/useProvaSala';
 
 const props = defineProps({
@@ -193,7 +194,7 @@ onMounted(() => {
           </div>
           <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
             <dt class="text-xs text-slate-500 dark:text-slate-400">Nota mínima</dt>
-            <dd class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ situacao.nota_minima }}</dd>
+            <dd class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ formatarNota(situacao.nota_minima, situacao.escala_nota) }}</dd>
           </div>
           <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
             <dt class="text-xs text-slate-500 dark:text-slate-400">Tentativa</dt>
@@ -208,10 +209,10 @@ onMounted(() => {
         </dl>
 
         <Text v-if="situacao.aprovada" size="sm" color="success">
-          Você foi aprovado nesta prova<template v-if="situacao.nota_final != null"> com nota {{ situacao.nota_final }}</template>.
+          Você foi aprovado nesta prova<template v-if="situacao.nota_final != null"> com nota {{ formatarNota(situacao.nota_final, situacao.escala_nota) }}</template>.
         </Text>
         <Text v-else-if="ultimoResultado" size="sm" color="muted">
-          Última tentativa ({{ ultimoResultado.numero }}): nota {{ ultimoResultado.nota }},
+          Última tentativa ({{ ultimoResultado.numero }}): nota {{ formatarNota(ultimoResultado.nota, ultimoResultado.escala_nota ?? situacao.escala_nota) }},
           {{ ultimoResultado.acertos }} de {{ ultimoResultado.total }} corretas.
         </Text>
 

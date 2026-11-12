@@ -39,7 +39,7 @@ watch(() => props.pastas, (novas) => { lista.value = copiar(novas); });
 const totalItens = computed(() => lista.value.reduce((soma, p) => soma + p.itens.length, 0));
 
 
-const erroPublicacao = computed(() => usePage().props.errors?.publicar ?? '');
+const errosPublicacao = computed(() => usePage().props.errors ?? {});
 
 function avisarErro(erros) {
   toast(Object.values(erros)[0] || 'Nao foi possivel concluir a acao.', 'error');
@@ -119,14 +119,13 @@ const ehPdf = computed(() => tipoDoItem.value === 'PDF');
 const ehVideo = computed(() => tipoDoItem.value === 'VIDEO');
 const ehProva = computed(() => tipoDoItem.value === 'PROVA');
 
-// Prova e sempre obrigatoria. Nota minima e tentativas so seguem na criacao: o
-// payload do conteudo nao traz os valores atuais, entao editar o item nao os
-// sobrescreve (a configuracao fica na aba Provas). Nos demais tipos nao seguem.
+// Prova e sempre obrigatoria e envia nota minima e tentativas (na edicao vem
+// pre-preenchidas com os valores do item). Nos demais tipos nao seguem.
 formItem.transform((dados) => {
   const { nota_minima: notaMinima, max_tentativas: maxTentativas, ...resto } = dados;
   if (!ehProva.value) return resto;
   const base = { ...resto, obrigatorio: true };
-  return itemEmEdicao.value ? base : { ...base, nota_minima: notaMinima, max_tentativas: maxTentativas };
+  return { ...base, nota_minima: notaMinima, max_tentativas: maxTentativas };
 });
 
 function abrirItem(pasta, item = null) {
@@ -141,6 +140,10 @@ function abrirItem(pasta, item = null) {
     formItem.descricao = item.descricao ?? '';
     formItem.obrigatorio = item.obrigatorio;
     formItem.total_paginas = item.total_paginas ?? '';
+    if (item.tipo === 'PROVA') {
+      formItem.nota_minima = item.nota_minima ?? ITEM_VAZIO.nota_minima;
+      formItem.max_tentativas = item.max_tentativas ?? ITEM_VAZIO.max_tentativas;
+    }
   }
   itemAberto.value = true;
 }
@@ -262,7 +265,7 @@ function publicar() {
           </div>
         </div>
 
-        <PendenciasPublicacao :mensagem="erroPublicacao" :href-provas="route('treinamentos.professor.provas', curso.id)" />
+        <PendenciasPublicacao :erros="errosPublicacao" :href-provas="route('treinamentos.professor.provas', curso.id)" />
 
         <CardBase v-if="lista.length === 0">
           <Text color="muted">Nenhuma pasta ainda. Crie a primeira com "+ Nova pasta".</Text>

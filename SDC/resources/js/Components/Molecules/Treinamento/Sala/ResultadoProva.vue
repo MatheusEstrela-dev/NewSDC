@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import { formatarNota } from '@/Composables/treinamento/formatarNota';
 
 const props = defineProps({
   resultado: { type: Object, required: true },
@@ -21,7 +22,7 @@ const podeNovaTentativa = computed(() => !props.resultado.aprovada && props.situ
     <Badge :variant="resultado.aprovada ? 'success' : 'danger'">{{ resultado.aprovada ? 'Aprovado' : 'Reprovado' }}</Badge>
 
     <div>
-      <p class="text-3xl font-bold text-slate-800 dark:text-slate-100">{{ resultado.nota }}</p>
+      <p class="text-3xl font-bold text-slate-800 dark:text-slate-100">{{ formatarNota(resultado.nota, resultado.escala_nota ?? situacao?.escala_nota) }}</p>
       <Text size="sm" color="muted">
         {{ resultado.acertos }} de {{ resultado.total }} questões corretas (tentativa {{ resultado.numero }})
       </Text>

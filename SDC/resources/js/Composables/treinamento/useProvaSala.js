@@ -4,6 +4,8 @@ import axios from 'axios';
 const ATRASO_RETENTATIVA_MS = 3000;
 const MAX_RETENTATIVAS = 3;
 
+const tentativaEncerrada = (erro) => erro?.response?.status === 422;
+
 function mensagemDe(erro, padrao) {
   return erro?.response?.data?.message ?? padrao;
 }
@@ -91,6 +93,12 @@ export function useProvaSala({ urls, situacaoInicial, aoAtualizarEstado }) {
     }
   }
 
+  async function recarregarAposConflito() {
+    resultado.value = null;
+    await carregar();
+    if (!erro.value) erro.value = 'Esta prova foi alterada em outra janela. Os dados foram atualizados.';
+  }
+
   function agendarRetentativa(questaoId) {
     tentativasDeSalvar[questaoId] = (tentativasDeSalvar[questaoId] ?? 0) + 1;
     if (tentativasDeSalvar[questaoId] > MAX_RETENTATIVAS) return;
@@ -117,9 +125,15 @@ export function useProvaSala({ urls, situacaoInicial, aoAtualizarEstado }) {
       sujas.delete(questaoId);
       tentativasDeSalvar[questaoId] = 0;
       salvouAlgo = true;
-    } catch {
-      sujas.add(questaoId);
-      agendarRetentativa(questaoId);
+    } catch (e) {
+      if (tentativaEncerrada(e)) {
+        // Tentativa ja enviada (outra aba) ou invalida: ressincroniza em vez de retentar.
+        sujas.clear();
+        await recarregarAposConflito();
+      } else {
+        sujas.add(questaoId);
+        agendarRetentativa(questaoId);
+      }
     } finally {
       emVoo.delete(questaoId);
     }
@@ -162,14 +176,18 @@ export function useProvaSala({ urls, situacaoInicial, aoAtualizarEstado }) {
         return false;
       }
 
+      if (!tentativa.value) return false;
+
       const { data } = await axios.post(urls.enviar(tentativa.value.id));
       resultado.value = data.resultado;
+      ultimoResultado.value = data.resultado;
       situacao.value = data.situacao ?? situacao.value;
       tentativa.value = null;
       aoAtualizarEstado?.(data.estado);
 
       return true;
     } catch (e) {
+      if (tentativaEncerrada(e)) await recarregarAposConflito();
       erro.value = mensagemDe(e, 'Não foi possível enviar a prova agora.');
 
       return false;

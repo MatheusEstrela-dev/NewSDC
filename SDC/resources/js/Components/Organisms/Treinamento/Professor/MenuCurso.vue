@@ -35,10 +35,22 @@ function classes(chave) {
 
 const { show: toast } = useToast();
 
+const urlPublicar = () => route('treinamentos.professor.publicar', props.curso.id);
+
+// As pendencias so chegam na resposta do publicar e somem ao navegar: fora do
+// Conteudo, leva o professor para la e repete a tentativa (bloqueada de novo) para
+// que a lista apareca onde ela e exibida.
 function publicar() {
-  router.post(route('treinamentos.professor.publicar', props.curso.id), {}, {
+  router.post(urlPublicar(), {}, {
     preserveScroll: true,
-    onError: () => toast('O curso nao pode ser publicado ainda. Veja as pendencias na aba Conteúdo.', 'error'),
+    onError: () => {
+      toast('O curso nao pode ser publicado ainda. Veja as pendencias na aba Conteúdo.', 'error');
+      if (props.ativo === 'conteudo') return;
+
+      router.visit(route('treinamentos.professor.conteudo', props.curso.id), {
+        onSuccess: () => router.post(urlPublicar(), {}, { preserveScroll: true }),
+      });
+    },
   });
 }
 </script>

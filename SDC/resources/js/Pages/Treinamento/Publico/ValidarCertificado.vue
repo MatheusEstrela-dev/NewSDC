@@ -71,7 +71,7 @@ function buscar() {
     <Text v-if="form.errors.codigo" size="xs" class="mt-1 text-red-600">{{ form.errors.codigo }}</Text>
 
     <div v-if="resultado && situacao" class="mt-6" data-testid="resultado-validacao">
-      <Badge :color="situacao.color">{{ situacao.label }}</Badge>
+      <Badge :cor="situacao.color">{{ situacao.label }}</Badge>
       <dl class="mt-4 space-y-2">
         <div v-for="[rotulo, valor] in linhas" :key="rotulo">
           <dt class="text-xs text-slate-500 dark:text-slate-400">{{ rotulo }}</dt>

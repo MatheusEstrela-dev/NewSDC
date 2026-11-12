@@ -94,10 +94,10 @@ const campo = 'w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:
       <Heading :level="3" class="text-lg font-semibold">{{ questao ? 'Editar questao' : 'Nova questao' }}</Heading>
 
       <div
-        v-if="questao"
+        v-if="questao?.tem_respostas"
         class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
       >
-        Se alunos ja responderam esta questao, alterar o gabarito nao reavalia as tentativas ja enviadas.
+        Alunos ja responderam esta questao: alterar o gabarito nao reavalia as tentativas ja enviadas.
         Alternativas removidas continuam registradas nas respostas antigas.
       </div>
 
