@@ -5,6 +5,7 @@ use App\Modules\Treinamento\Controllers\Aluno\ItemArquivoController;
 use App\Modules\Treinamento\Controllers\Aluno\MeusCursosController;
 use App\Modules\Treinamento\Controllers\Aluno\ProgressoController;
 use App\Modules\Treinamento\Controllers\Aluno\SalaDeAulaController;
+use App\Modules\Treinamento\Controllers\SessaoPulsoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,6 +15,11 @@ use Illuminate\Support\Facades\Route;
 | Incluido de dentro do grupo prefix('treinamentos')->name('treinamentos.')
 | de routes/modules/treinamento.php, antes do wildcard /{id}.
 */
+
+// Pulso do player de video: renova a sessao (as rotas /videos/* so leem a sessao).
+Route::post('/sessao/pulso', SessaoPulsoController::class)
+    ->middleware('throttle:30,1')
+    ->name('sessao.pulso');
 
 Route::prefix('aluno')->name('aluno.')->middleware('can:treinamento.cursos.view')->group(function () {
     Route::get('/', MeusCursosController::class)->name('index');
