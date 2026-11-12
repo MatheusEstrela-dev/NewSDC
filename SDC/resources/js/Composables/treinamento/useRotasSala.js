@@ -3,18 +3,21 @@ const ROTAS = {
     arquivo: 'treinamentos.aluno.itens.arquivo',
     progresso: 'treinamentos.aluno.itens.progresso',
     entrega: 'treinamentos.aluno.itens.entregas',
+    pulso: 'treinamentos.sessao.pulso',
     fechar: ['treinamentos.aluno.index', false],
   },
   portal: {
     arquivo: 'portal.treinamento.cursos.itens.arquivo',
     progresso: 'portal.treinamento.cursos.itens.progresso',
     entrega: 'portal.treinamento.cursos.itens.entregas',
+    pulso: 'portal.treinamento.sessao.pulso',
     fechar: ['portal.treinamento.inscricoes.index', false],
   },
   previa: {
     arquivo: 'treinamentos.professor.itens.arquivo',
     progresso: null,
     entrega: null,
+    pulso: 'treinamentos.sessao.pulso',
     fechar: ['treinamentos.professor.conteudo', true],
   },
 };
@@ -36,6 +39,8 @@ export function useRotasSala(escopo, chave) {
     },
     progresso: (itemId) => montar(nomes.progresso, itemId),
     entrega: (itemId) => montar(nomes.entrega, itemId),
+    // A rota do pulso pode nao estar no manifesto Ziggy ainda: sem ela, null.
+    pulso: () => (nomes.pulso && route().has(nomes.pulso) ? route(nomes.pulso) : null),
     fechar: () => (nomes.fechar[1] ? route(nomes.fechar[0], chave) : route(nomes.fechar[0])),
   };
 }

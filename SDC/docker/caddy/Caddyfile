@@ -5,7 +5,12 @@
 # ============================================================================
 
 {$APP_DOMAIN} {
-	encode zstd gzip
+	# Segmento .ts ja e video comprimido: gzip/zstd gasta CPU sem ganho. O
+	# mailcap do Alpine ainda tipa .ts como text/vnd.trolltech.linguist (text/*
+	# entra na compressao por padrao), por isso a exclusao e explicita.
+	# A playlist .m3u8 segue comprimivel.
+	@comprimivel not path *.ts
+	encode @comprimivel zstd gzip
 
 	# Reverb (websocket) atras do Caddy, sem porta extra publicada no host.
 	# Reverb nao usa prefixo de path (REVERB_SERVER_PATH vazio), entao o
@@ -36,6 +41,10 @@
 			}
 			header @segmento Cache-Control "private, max-age=31536000, immutable"
 			header @playlist Cache-Control "private, max-age=3600"
+			# Content-Type explicito: o mime.types do Alpine tipa .ts como
+			# text/vnd.trolltech.linguist. O file_server so tipa se nao houver header.
+			header @segmento Content-Type "video/mp2t"
+			header @playlist Content-Type "application/vnd.apple.mpegurl"
 			file_server {
 				hide .tmp-*
 			}

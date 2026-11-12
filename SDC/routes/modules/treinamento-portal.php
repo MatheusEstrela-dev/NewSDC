@@ -13,6 +13,7 @@ use App\Modules\Treinamento\Controllers\Portal\SalaEntregaStoreController;
 use App\Modules\Treinamento\Controllers\Portal\SalaItemArquivoController;
 use App\Modules\Treinamento\Controllers\Portal\SalaProgressoController;
 use App\Modules\Treinamento\Controllers\Portal\VerificarEmailController;
+use App\Modules\Treinamento\Controllers\SessaoPulsoController;
 use App\Modules\Treinamento\Http\Middleware\DisableDebugbarOnPortal;
 use App\Modules\Treinamento\Http\Middleware\ShareCidadaoInertiaData;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +53,11 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
     Route::post('/verificar-email/reenviar', [VerificarEmailController::class, 'resend'])
         ->name('verificar-email.reenviar')
         ->middleware('throttle:portal-registro');
+
+    // Pulso do player de video: sem ShareCidadaoInertiaData, a resposta e 204 sem corpo.
+    Route::post('/sessao/pulso', SessaoPulsoController::class)
+        ->middleware(['auth:cidadao', 'throttle:30,1'])
+        ->name('sessao.pulso');
 
     Route::middleware(['auth:cidadao', ShareCidadaoInertiaData::class])->group(function () {
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
