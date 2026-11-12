@@ -11,6 +11,10 @@ use App\Modules\Treinamento\Models\Cidadao;
 /**
  * Dados do certificado expostos na validacao publica (spec 8.6): nome
  * completo e CPF mascarado, nada alem disso de dado pessoal.
+ *
+ * A exclusao logica da inscricao ou do treinamento (8.7: historico preservado)
+ * nao invalida um certificado ja emitido: ele segue validando com os dados
+ * preservados, e o cancelamento e o unico caminho para invalida-lo.
  */
 final class ValidacaoDeCertificado
 {
@@ -24,16 +28,21 @@ final class ValidacaoDeCertificado
     public function buscar(string $codigo): ?array
     {
         $certificado = Certificado::query()
-            ->with(['inscricao.inscrito', 'treinamento'])
+            ->with([
+                'inscricao' => fn ($q) => $q->withTrashed(),
+                'inscricao.inscrito',
+                'treinamento' => fn ($q) => $q->withTrashed(),
+            ])
             ->where('codigo_verificacao', $codigo)
             ->first();
 
-        if ($certificado === null || $certificado->emitido_em === null) {
+        $inscricao = $certificado?->inscricao;
+        $treinamento = $certificado?->treinamento;
+
+        if ($certificado === null || $certificado->emitido_em === null || $inscricao === null || $treinamento === null) {
             return null;
         }
 
-        $inscricao = $certificado->inscricao;
-        $treinamento = $certificado->treinamento;
         $inscrito = $inscricao->inscrito;
         $conclusao = $treinamento->isEad() ? ($inscricao->concluido_em ?? $certificado->emitido_em) : $certificado->emitido_em;
 

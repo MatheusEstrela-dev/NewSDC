@@ -110,8 +110,11 @@ class CertificadoService
 
     /**
      * Atribui o codigo de verificacao se ainda nao houver (e so entao: o codigo
-     * de um certificado nunca muda). Sorteio com nova tentativa quando o banco
-     * recusa por colisao no UNIQUE, cada tentativa num savepoint.
+     * de um certificado nunca muda). A gravacao e um UPDATE condicionado a
+     * codigo nulo: se outra requisicao ou o comando retroativo gravou antes,
+     * nenhuma linha muda e devolve-se o codigo que ja esta no banco. Sorteio
+     * com nova tentativa quando o banco recusa por colisao no UNIQUE, cada
+     * tentativa num savepoint.
      */
     public function garantirCodigo(Certificado $certificado): Certificado
     {
@@ -123,13 +126,20 @@ class CertificadoService
             $codigo = CodigoVerificacao::gerar();
 
             try {
-                ConexaoTreinamento::transacao(
-                    fn () => $certificado->forceFill(['codigo_verificacao' => $codigo])->save()
+                $gravou = ConexaoTreinamento::transacao(
+                    fn () => Certificado::query()
+                        ->whereKey($certificado->id)
+                        ->whereNull('codigo_verificacao')
+                        ->update(['codigo_verificacao' => $codigo])
                 );
-
-                return $certificado;
             } catch (UniqueConstraintViolationException) {
-                $certificado->codigo_verificacao = null;
+                continue;
+            }
+
+            $certificado->refresh();
+
+            if ($gravou === 1 || $certificado->codigo_verificacao !== null) {
+                return $certificado;
             }
         }
 
