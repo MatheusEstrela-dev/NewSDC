@@ -41,10 +41,10 @@ final readonly class SituacaoProva
         return ! $this->aprovada && $this->tentativaAbertaId === null && $this->tentativasRestantes() === 0;
     }
 
-    /** Pode abrir uma tentativa nova (a aberta, se houver, e retomada). */
+    /** Pode abrir uma tentativa nova (a aberta, se houver, e retomada); prova sem questao sorteavel nao abre. */
     public function podeIniciar(): bool
     {
-        return ! $this->aprovada && $this->tentativaAbertaId === null && $this->tentativasRestantes() > 0;
+        return ! $this->aprovada && $this->totalQuestoes > 0 && $this->tentativaAbertaId === null && $this->tentativasRestantes() > 0;
     }
 
     /**
@@ -66,6 +66,7 @@ final readonly class SituacaoProva
             'aprovada' => $this->aprovada,
             'travada' => $this->travada(),
             'pode_iniciar' => $this->podeIniciar(),
+            'em_preparacao' => $this->totalQuestoes === 0,
         ];
     }
 }

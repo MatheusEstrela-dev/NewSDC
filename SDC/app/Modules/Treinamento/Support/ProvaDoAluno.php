@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Support;
 
+use App\Modules\Treinamento\Exceptions\TentativaEncerrada;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\Prova;
@@ -149,6 +150,8 @@ final class ProvaDoAluno
     {
         try {
             return $acao();
+        } catch (TentativaEncerrada $e) {
+            return response()->json(['message' => $e->getMessage(), 'codigo' => TentativaEncerrada::CODIGO], 422);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

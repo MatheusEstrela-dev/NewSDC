@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services;
 
 use App\Modules\Treinamento\Enums\TipoItem;
+use App\Modules\Treinamento\Exceptions\TentativaEncerrada;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\Prova;
@@ -104,7 +105,7 @@ class ProvaService
         ConexaoTreinamento::transacao(function () use ($inscricao, $prova, $tentativaId, $questaoId, $alternativaId) {
             $tentativa = $this->tentativaTravada($inscricao, $prova, $tentativaId);
             if (! $tentativa->estaAberta()) {
-                throw new \DomainException('Esta tentativa ja foi enviada.');
+                throw new TentativaEncerrada();
             }
 
             $questao = collect($tentativa->ordem)->firstWhere('questao_id', $questaoId);
@@ -136,7 +137,7 @@ class ProvaService
         return ConexaoTreinamento::transacao(function () use ($inscricao, $item, $prova, $tentativaId) {
             $tentativa = $this->tentativaTravada($inscricao, $prova, $tentativaId);
             if (! $tentativa->estaAberta()) {
-                throw new \DomainException('Esta tentativa ja foi enviada.');
+                throw new TentativaEncerrada();
             }
 
             $respostas = ProvaResposta::query()->where('prova_tentativa_id', $tentativa->id)->get();

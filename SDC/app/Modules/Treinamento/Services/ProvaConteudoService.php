@@ -105,11 +105,19 @@ class ProvaConteudoService
             $ativas = ProvaAlternativa::query()->where('prova_questao_id', $questao->id)->pluck('id')->all();
             $mantidas = array_filter(array_column($dados['alternativas'], 'id'));
 
+            if (count($mantidas) !== count(array_unique($mantidas))) {
+                throw ValidationException::withMessages(['alternativas' => 'A mesma alternativa foi enviada mais de uma vez.']);
+            }
+
             if (array_diff($mantidas, $ativas) !== []) {
                 throw ValidationException::withMessages(['alternativas' => 'Alternativa nao pertence a esta questao.']);
             }
 
-            ProvaAlternativa::query()->whereKey(array_diff($ativas, $mantidas))->delete();
+            // A removida deixa de ser gabarito na mesma escrita: tentativa aberta que a
+            // congelou nao pode ficar com duas corretas.
+            $removidas = array_diff($ativas, $mantidas);
+            ProvaAlternativa::query()->whereKey($removidas)->update(['correta' => false]);
+            ProvaAlternativa::query()->whereKey($removidas)->delete();
             ProvaAlternativa::query()->where('prova_questao_id', $questao->id)->update(['correta' => false]);
 
             foreach (array_values($dados['alternativas']) as $posicao => $alternativa) {
@@ -122,8 +130,21 @@ class ProvaConteudoService
         });
     }
 
+    /**
+     * Curso publicado nao esvazia a prova: a prova que ja foi exigida dos alunos
+     * nao volta a "em preparacao" (a publicacao ja exige questoes).
+     */
     public function excluirQuestao(ProvaQuestao $questao): void
     {
+        $prova = $questao->prova;
+        $ultima = ProvaQuestao::query()->where('prova_id', $prova->id)->count() <= 1;
+
+        if ($ultima && $prova->item->modulo->treinamento->estaPublicado()) {
+            throw ValidationException::withMessages([
+                'questao' => 'A prova de um curso publicado precisa de ao menos uma questao. Edite a questao em vez de exclui-la.',
+            ]);
+        }
+
         $questao->delete();
     }
 

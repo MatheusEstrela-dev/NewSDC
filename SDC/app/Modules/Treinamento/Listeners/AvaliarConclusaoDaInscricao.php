@@ -14,6 +14,10 @@ use App\Modules\Treinamento\Services\ReavaliacaoDeConclusaoService;
  * certificado. Idempotente: a conclusao grava uma vez e o certificado e unico
  * por inscricao, entao o evento repetido nao duplica nada.
  *
+ * Falha na avaliacao ou na emissao e reportada e engolida: o item ja foi
+ * concluido na requisicao que disparou o evento. O comando
+ * treinamento:avaliar-conclusoes recupera a conclusao e o certificado pendentes.
+ *
  * Registrado em App\Providers\EventServiceProvider (o provider do modulo nao
  * registra listeners).
  */
@@ -26,7 +30,7 @@ final class AvaliarConclusaoDaInscricao
         $inscricao = Inscricao::query()->with('treinamento')->find($evento->inscricaoId);
 
         if ($inscricao !== null) {
-            $this->reavaliacao->avaliar($inscricao);
+            $this->reavaliacao->avaliarSemDerrubar($inscricao);
         }
     }
 }

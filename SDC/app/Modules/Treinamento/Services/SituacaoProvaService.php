@@ -69,11 +69,21 @@ class SituacaoProvaService
         return $regras;
     }
 
+    /**
+     * Provas com o total de questoes que o sorteio realmente usa: so as que tem
+     * alternativa ativa (ProvaService::sortear descarta as demais).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<Prova>
+     */
+    private function provasComQuestoes(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Prova::query()->withCount(['questoes' => fn ($q) => $q->whereHas('alternativas')]);
+    }
+
     /** @return Collection<int, Prova> */
     private function provasDoCurso(int $treinamentoId): Collection
     {
-        return Prova::query()
-            ->withCount('questoes')
+        return $this->provasComQuestoes()
             ->whereIn('modulo_item_id', ModuloItem::query()
                 ->whereIn('modulo_id', Modulo::query()->where('treinamento_id', $treinamentoId)->select('id'))
                 ->select('id'))
@@ -82,7 +92,7 @@ class SituacaoProvaService
 
     public function daProva(Inscricao $inscricao, Prova $prova): SituacaoProva
     {
-        $provas = Prova::query()->withCount('questoes')->whereKey($prova->id)->get();
+        $provas = $this->provasComQuestoes()->whereKey($prova->id)->get();
 
         return $this->montar($provas, [$inscricao->id])[$inscricao->id][$prova->modulo_item_id];
     }

@@ -47,6 +47,7 @@ const numeroTentativa = computed(() => (tentativa.value
 const motivoBloqueio = computed(() => {
   if (!props.item.liberado) return 'Conclua antes os demais itens obrigatórios desta pasta para liberar a prova.';
   if (situacao.value?.aprovada) return null;
+  if (situacao.value?.em_preparacao && !temAberta.value) return 'O professor ainda está preparando as questões desta prova. Ela não é exigida até ficar pronta.';
   if (situacao.value?.travada) return 'Suas tentativas acabaram. O professor precisa liberar uma nova tentativa para você continuar.';
 
   return null;
@@ -56,6 +57,7 @@ const rotuloSituacao = computed(() => {
   if (situacao.value?.aprovada) return { variant: 'success', texto: 'Aprovado' };
   if (situacao.value?.travada) return { variant: 'danger', texto: 'Tentativas esgotadas' };
   if (temAberta.value) return { variant: 'info', texto: 'Em andamento' };
+  if (situacao.value?.em_preparacao) return { variant: 'warning', texto: 'Em preparação' };
 
   return { variant: 'default', texto: 'Não realizada' };
 });

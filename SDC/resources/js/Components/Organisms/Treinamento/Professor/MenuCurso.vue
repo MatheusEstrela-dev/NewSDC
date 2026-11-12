@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import { useToast } from '@/Composables/useToast';
+import { pendenciasDe } from '@/Composables/treinamento/useProvaApi';
 
 /**
  * Menu lateral do curso na area do professor (rascunho 3, P1). Compartilhado
@@ -38,12 +39,18 @@ const { show: toast } = useToast();
 const urlPublicar = () => route('treinamentos.professor.publicar', props.curso.id);
 
 // As pendencias so chegam na resposta do publicar e somem ao navegar: fora do
-// Conteudo, leva o professor para la e repete a tentativa (bloqueada de novo) para
-// que a lista apareca onde ela e exibida.
+// Conteudo, e so quando o erro traz pendencias, leva o professor para la e repete a
+// tentativa uma unica vez (bloqueada de novo) para a lista aparecer onde e exibida.
 function publicar() {
   router.post(urlPublicar(), {}, {
     preserveScroll: true,
-    onError: () => {
+    onError: (erros) => {
+      if (pendenciasDe(erros).length === 0) {
+        toast(erros?.publicar ?? 'Nao foi possivel publicar o curso.', 'error');
+
+        return;
+      }
+
       toast('O curso nao pode ser publicado ainda. Veja as pendencias na aba Conteúdo.', 'error');
       if (props.ativo === 'conteudo') return;
 

@@ -9,11 +9,14 @@ use App\Models\User;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
+use App\Modules\Treinamento\Models\Certificado;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Models\TreinamentoProfessor;
+use App\Modules\Treinamento\Resources\CertificadoResource;
 use App\Modules\Treinamento\Services\TrilhaService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,8 +38,24 @@ class MeusCursosController extends Controller
 
         return Inertia::render('Treinamento/Aluno/MeusCursos', [
             'meus_cursos' => $inscricoes->map(fn (Inscricao $i) => $this->curso($i))->values(),
+            'certificados' => CertificadoResource::collection($this->certificados($inscricoes->pluck('id')->all()))->resolve(),
             'disponiveis' => $this->disponiveis($userId, $inscricoes->pluck('treinamento_id')->all()),
         ]);
+    }
+
+    /**
+     * Certificados do proprio servidor, dos mais recentes aos mais antigos.
+     *
+     * @param  list<int>  $inscricaoIds
+     * @return Collection<int, Certificado>
+     */
+    private function certificados(array $inscricaoIds): Collection
+    {
+        return Certificado::query()
+            ->whereIn('inscricao_id', $inscricaoIds)
+            ->with('treinamento')
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     /**

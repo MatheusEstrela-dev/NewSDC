@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento;
 
 use App\Modules\Treinamento\Console\CopiarParaBancoCommand;
+use App\Modules\Treinamento\Console\GerarCodigosCertificadosCommand;
+use App\Modules\Treinamento\Console\ReavaliarConclusoesCommand;
 use App\Modules\Treinamento\Http\Middleware\GerenciaVideo;
 use App\Modules\Treinamento\Http\Middleware\LecionaCurso;
 use Illuminate\Support\ServiceProvider;
@@ -35,7 +37,11 @@ class TreinamentoServiceProvider extends ServiceProvider
         $this->app['router']->aliasMiddleware('gerencia.video', GerenciaVideo::class);
 
         if ($this->app->runningInConsole()) {
-            $this->commands([CopiarParaBancoCommand::class]);
+            $this->commands([
+                CopiarParaBancoCommand::class,
+                GerarCodigosCertificadosCommand::class,
+                ReavaliarConclusoesCommand::class,
+            ]);
         }
     }
 }

@@ -24,11 +24,12 @@ class SalaDeAulaController extends Controller
     {
         $treinamento = InscricaoDoAluno::cursoPublicado($slug);
         $inscricao = InscricaoDoAluno::aprovada($treinamento, Auth::guard('cidadao')->user());
-        $this->reavaliacao->aoAbrirSala($inscricao);
+        $estado = $this->trilha->estado($inscricao);
+        $this->reavaliacao->avaliarSeTrilhaCompleta($inscricao, $estado);
 
         return Inertia::render(
             'Treinamento/Portal/SalaDeAula',
-            SalaDeAulaProps::de($treinamento, $this->trilha->estado($inscricao), 'portal'),
+            SalaDeAulaProps::de($treinamento, $estado, 'portal'),
         );
     }
 }
