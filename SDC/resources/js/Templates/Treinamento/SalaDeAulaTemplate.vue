@@ -13,6 +13,8 @@ import { useRotasSala } from '@/Composables/treinamento/useRotasSala';
 import { useToast } from '@/Composables/useToast';
 
 const ATRASO_PROGRESSO_MS = 1000;
+const ATRASO_RETENTATIVA_MS = 3000;
+const MAX_RETENTATIVAS = 3;
 
 const props = defineProps({
   curso: { type: Object, required: true },
@@ -47,6 +49,17 @@ const podeAvancar = computed(() => proximo.value?.liberado === true);
 let temporizador = null;
 let pendente = null;
 let falhou = false;
+let retentativas = 0;
+
+// Falha de rede nao pode perder o progresso (principalmente o da conclusao): reenfileira
+// com recuo, a menos que ja exista um valor mais novo esperando.
+function reenfileirar(url, posicao) {
+  if (pendente || retentativas >= MAX_RETENTATIVAS) return;
+
+  retentativas++;
+  pendente = { url, posicao };
+  temporizador = setTimeout(enviarPendente, ATRASO_RETENTATIVA_MS * retentativas);
+}
 
 async function enviarPendente() {
   clearTimeout(temporizador);
@@ -60,9 +73,11 @@ async function enviarPendente() {
     const { data } = await axios.post(url, { posicao });
     estadoLocal.value = data;
     falhou = false;
+    retentativas = 0;
   } catch {
     if (!falhou) toast('Não foi possível salvar seu progresso agora. Você pode continuar lendo.', 'warning');
     falhou = true;
+    reenfileirar(url, posicao);
   }
 }
 
@@ -135,6 +150,8 @@ onBeforeUnmount(enviarPendente);
             :url-master="itemAtual.video.url_master"
             :posicao-inicial="itemAtual.posicao"
             :concluido="itemAtual.status === 'CONCLUIDO'"
+            :url-progresso="rotas.progresso(itemAtual.id) ?? ''"
+            :url-pulso="rotas.pulso() ?? ''"
             @posicao="progressoVideo.aoPosicao"
             @terminou="progressoVideo.aoTerminar"
           />
