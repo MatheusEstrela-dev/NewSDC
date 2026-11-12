@@ -124,7 +124,7 @@ class ReavaliacaoDeConclusaoService
             ->aprovadas()
             ->whereNotNull('concluido_em')
             ->whereDoesntHave('certificado')
-            ->whereHas('treinamento', fn ($q) => $q->where('tipo', TipoTreinamento::EAD->value)->ativo())
+            ->whereHas('treinamento', fn ($q) => $q->where('tipo', TipoTreinamento::EAD->value))
             ->when($treinamentoId !== null, fn ($q) => $q->porTreinamento($treinamentoId))
             ->chunkById(self::LOTE, function ($lote) use (&$enfileiradas) {
                 foreach ($lote as $inscricao) {

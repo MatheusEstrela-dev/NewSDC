@@ -1,16 +1,13 @@
 <script setup>
-import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import CursoSelos from '@/Components/Molecules/Treinamento/CursoSelos.vue';
+import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesCicloCurso.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
-import { useConfirmacao } from '@/Composables/core/useConfirmacao';
-import { useToast } from '@/Composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -20,25 +17,8 @@ defineProps({
   pode_abrir: { type: Boolean, default: false },
 });
 
-const { show: toast } = useToast();
-const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 
-function executar(rota, curso) {
-  router.post(route(rota, curso.id), {}, {
-    preserveScroll: true,
-    onError: (errors) => toast(errors.ciclo || 'Nao foi possivel alterar o curso.', 'error'),
-  });
-}
 
-function desativar(curso) {
-  pedirConfirmacao({
-    title: 'Desativar curso',
-    message: `Desativar "${curso.titulo}"?`,
-    description: 'O curso sai do catalogo e os alunos perdem o acesso a sala. Quem ja concluiu mantem o certificado, e voce pode reativar o curso depois.',
-    variant: 'danger',
-    confirmText: 'Desativar',
-  }, () => executar('treinamentos.professor.desativar', curso));
-}
 </script>
 
 <template>
@@ -72,19 +52,10 @@ function desativar(curso) {
         <div class="mt-4 flex flex-wrap gap-2">
           <Button size="sm" :href="route('treinamentos.professor.conteudo', curso.id)">Conteudo</Button>
           <Button size="sm" variant="outline" :href="route('treinamentos.professor.previa', curso.id)">Previa</Button>
-          <Button v-if="curso.situacao === 'ATIVO'" size="sm" variant="warning" @click="executar('treinamentos.professor.pausar', curso)">Pausar</Button>
-          <Button v-if="curso.situacao === 'PAUSADO'" size="sm" variant="success" @click="executar('treinamentos.professor.retomar', curso)">Retomar</Button>
-          <Button v-if="curso.situacao !== 'DESATIVADO'" size="sm" variant="danger" @click="desativar(curso)">Desativar</Button>
-          <Button v-else size="sm" variant="success" @click="executar('treinamentos.professor.reativar', curso)">Reativar</Button>
+          <AcoesCicloCurso :curso="curso" />
         </div>
       </CardBase>
     </div>
 
-    <ConfirmDialog
-      :is-open="confirmacao.aberto"
-      v-bind="confirmacao.opcoes"
-      @confirm="confirmar"
-      @cancel="cancelar"
-    />
   </div>
 </template>

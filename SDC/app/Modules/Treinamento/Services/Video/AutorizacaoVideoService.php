@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Services\Video;
 use App\Models\User;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Models\Inscricao;
+use App\Modules\Treinamento\Models\Modulo;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\TreinamentoProfessor;
 use App\Modules\Treinamento\Models\Video;
@@ -27,8 +28,6 @@ use Illuminate\Support\Facades\Cache;
  */
 class AutorizacaoVideoService
 {
-    private const CHAVE_EPOCA = 'video_auth_epoca';
-
     public function __construct(
         private readonly TrilhaService $trilha,
         private readonly PermissaoDeVideo $permissao,
@@ -178,19 +177,30 @@ class AutorizacaoVideoService
     }
 
     /**
-     * Descarta, de uma vez, as autorizacoes ja em cache: a chave carrega uma
-     * epoca, e mudar a epoca faz cada sessao reavaliar o acesso na proxima
-     * requisicao (pausar ou desativar um curso corta o video na hora, nao ao
-     * fim do TTL). Chamado so quando um curso sai do ar.
+     * Descarta as autorizacoes em cache dos videos de um curso: a chave carrega
+     * a epoca do video, e mudar a epoca faz cada sessao reavaliar o acesso na
+     * proxima requisicao (pausar ou desativar um curso corta o video na hora,
+     * nao ao fim do TTL). Video compartilhado com outro curso tambem e
+     * reavaliado, o que e correto: so quem ainda tem acesso volta a passar.
      */
-    public function revogarAutorizacoesEmCache(): void
+    public function revogarAutorizacoesDoCurso(int $treinamentoId): void
     {
-        Cache::increment(self::CHAVE_EPOCA);
+        ModuloItem::query()
+            ->whereNotNull('video_id')
+            ->whereIn('modulo_id', Modulo::query()->where('treinamento_id', $treinamentoId)->select('id'))
+            ->distinct()
+            ->pluck('video_id')
+            ->each(fn ($videoId) => Cache::increment(self::chaveEpoca((int) $videoId)));
+    }
+
+    private static function chaveEpoca(int $videoId): string
+    {
+        return "video_auth_epoca:{$videoId}";
     }
 
     private function chaveCache(int $videoId, string $versao): string
     {
-        return 'video_auth:'.(int) Cache::get(self::CHAVE_EPOCA, 0).':'.session()->getId().":{$videoId}:{$versao}";
+        return 'video_auth:'.(int) Cache::get(self::chaveEpoca($videoId), 0).':'.session()->getId().":{$videoId}:{$versao}";
     }
 
     /**

@@ -4,24 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Controllers\Professor;
 
-use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Services\CicloDoCursoService;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
-class CursoRetomarController extends Controller
+class CursoRetomarController extends CursoCicloController
 {
-    public function __construct(private readonly CicloDoCursoService $ciclo) {}
-
-    public function __invoke(Request $request, Treinamento $treinamento): RedirectResponse
+    protected function executar(CicloDoCursoService $ciclo, Treinamento $treinamento, User $por): void
     {
-        try {
-            $this->ciclo->retomar($treinamento, $request->user());
-        } catch (\DomainException $e) {
-            return back()->withErrors(['ciclo' => $e->getMessage()]);
-        }
+        $ciclo->retomar($treinamento, $por);
+    }
 
-        return back()->with('success', 'Curso retomado.');
+    protected function mensagem(): string
+    {
+        return 'Curso retomado.';
     }
 }

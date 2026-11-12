@@ -50,11 +50,11 @@ const icone = computed(() => {
 const concluido = computed(() => props.modo === 'inscrito' && props.curso.aprovada && Math.round(props.curso.percentual) >= 100);
 
 const selo = computed(() => {
+  if (concluido.value) return { texto: 'Concluído', classe: 'bg-emerald-500 text-white' };
   if (props.curso.situacao === 'PAUSADO') return { texto: 'Pausado', classe: 'bg-amber-400 text-slate-900' };
   if (props.curso.situacao === 'DESATIVADO') return { texto: 'Encerrado', classe: 'bg-slate-500 text-white' };
   if (props.modo === 'disponivel') return { texto: 'Inscrições abertas', classe: 'bg-emerald-500 text-white' };
   if (!props.curso.aprovada) return { texto: props.curso.status_label || 'Pendente', classe: 'bg-amber-400 text-slate-900' };
-  if (concluido.value) return { texto: 'Concluído', classe: 'bg-emerald-500 text-white' };
   return { texto: 'Em andamento', classe: 'bg-sky-500 text-white' };
 });
 </script>

@@ -3,6 +3,8 @@ import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import CursoSelos from '@/Components/Molecules/Treinamento/CursoSelos.vue';
+import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesCicloCurso.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
@@ -140,6 +142,10 @@ function copiarLinkPublico() {
 
       <!-- Ações de fluxo (admin) -->
       <div class="mb-6 flex flex-wrap gap-2">
+        <template v-if="treinamento.tipo === 'EAD' && can('treinamento.cursos.edit')">
+          <CursoSelos :publicado="treinamento.esta_publicado" :situacao="treinamento.situacao" :situacao-label="treinamento.situacao_label" />
+          <AcoesCicloCurso :curso="treinamento" />
+        </template>
         <Button v-if="can('treinamento.cursos.edit') && !treinamento.esta_publicado" variant="secondary" size="sm" @click="publicar">
           Publicar no Portal
         </Button>
