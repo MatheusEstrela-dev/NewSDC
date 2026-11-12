@@ -5,6 +5,8 @@ import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import TreinamentoStatusBadge from '@/Components/Molecules/Treinamento/TreinamentoStatusBadge.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -29,11 +31,17 @@ defineProps({
 
     <div v-else class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <CardBase v-for="curso in cursos" :key="curso.id">
-        <Heading :level="3" class="text-base font-semibold">{{ curso.titulo }}</Heading>
+        <div class="flex flex-wrap items-center gap-2">
+          <TreinamentoStatusBadge :status="curso.status" :label="curso.status_label" size="sm" />
+          <Badge :variant="curso.publicado ? 'success' : 'neutral'" size="sm">
+            {{ curso.publicado ? 'Publicado' : 'Não publicado' }}
+          </Badge>
+        </div>
+
+        <Heading :level="3" class="mt-2 text-base font-semibold">{{ curso.titulo }}</Heading>
 
         <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
           <Text size="xs" color="muted">Publico: {{ curso.publico_alvo_label }}</Text>
-          <Text size="xs" color="muted">Status: {{ curso.status_label }}{{ curso.publicado ? ' (publicado)' : '' }}</Text>
           <Text size="xs" color="muted">{{ curso.alunos }} aluno(s)</Text>
         </div>
 
