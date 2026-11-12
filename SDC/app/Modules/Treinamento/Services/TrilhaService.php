@@ -257,7 +257,7 @@ class TrilhaService
                 'concluida' => $concluida,
                 'liberada' => $liberada,
                 'liberados' => $modulo->itens
-                    ->mapWithKeys(fn (ModuloItem $i) => [$i->id => $this->itemAbertoNaPasta($i, $modulo->itens, $progressos, $liberada)])
+                    ->mapWithKeys(fn (ModuloItem $i) => [$i->id => $this->itemAbertoNaPasta($i, $modulo->itens, $progressos, $liberada, $gravada)])
                     ->all(),
             ];
             $liberada = $liberada && $concluida;
@@ -277,14 +277,15 @@ class TrilhaService
      * a pasta; a PROVA so abre depois dos demais itens obrigatorios da pasta
      * concluidos (projeto so conta aprovado, spec 8.2). A pasta seguinte so
      * abre com a prova aprovada porque a prova e obrigatoria e so conclui ao
-     * aprovar.
+     * aprovar. Pasta ja gravada como concluida, ou prova ja concluida, nao volta
+     * a travar quando um item obrigatorio novo entra depois.
      *
      * @param  Collection<int, ModuloItem>  $itensDaPasta
      * @param  Collection<int, ProgressoItem>  $progressos  por modulo_item_id
      */
-    private function itemAbertoNaPasta(ModuloItem $item, Collection $itensDaPasta, Collection $progressos, bool $pastaLiberada): bool
+    private function itemAbertoNaPasta(ModuloItem $item, Collection $itensDaPasta, Collection $progressos, bool $pastaLiberada, bool $pastaGravada): bool
     {
-        if (! $pastaLiberada || $item->tipo !== TipoItem::PROVA) {
+        if (! $pastaLiberada || $item->tipo !== TipoItem::PROVA || $pastaGravada || $progressos->get($item->id)?->status === StatusProgresso::CONCLUIDO) {
             return $pastaLiberada;
         }
 

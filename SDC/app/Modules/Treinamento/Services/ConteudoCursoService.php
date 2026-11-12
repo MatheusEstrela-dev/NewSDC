@@ -90,6 +90,10 @@ class ConteudoCursoService
         }
         $this->exigirPaginas($tipo, $dados);
 
+        if ($tipo === TipoItem::PROVA && $modulo->treinamento->estaPublicado()) {
+            throw new \DomainException('Nao e possivel adicionar uma prova a um curso publicado: ela nasce sem questoes e trava quem esta na pasta. Despublique o curso, monte a prova e publique de novo.');
+        }
+
         return ConexaoTreinamento::transacao(function () use ($modulo, $tipo, $dados, $arquivo) {
             $ultimo = ModuloItem::query()->where('modulo_id', $modulo->id)->max('ordem');
 

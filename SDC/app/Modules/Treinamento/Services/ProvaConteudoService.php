@@ -105,6 +105,10 @@ class ProvaConteudoService
             $ativas = ProvaAlternativa::query()->where('prova_questao_id', $questao->id)->pluck('id')->all();
             $mantidas = array_filter(array_column($dados['alternativas'], 'id'));
 
+            if (count($mantidas) !== count(array_unique($mantidas))) {
+                throw ValidationException::withMessages(['alternativas' => 'A mesma alternativa foi enviada mais de uma vez.']);
+            }
+
             if (array_diff($mantidas, $ativas) !== []) {
                 throw ValidationException::withMessages(['alternativas' => 'Alternativa nao pertence a esta questao.']);
             }
@@ -122,8 +126,21 @@ class ProvaConteudoService
         });
     }
 
+    /**
+     * Curso publicado nao fica com prova vazia: a prova e obrigatoria e sem
+     * questao trava na hora quem esta na pasta (a publicacao ja exige questoes).
+     */
     public function excluirQuestao(ProvaQuestao $questao): void
     {
+        $prova = $questao->prova;
+        $ultima = ProvaQuestao::query()->where('prova_id', $prova->id)->count() <= 1;
+
+        if ($ultima && $prova->item->modulo->treinamento->estaPublicado()) {
+            throw ValidationException::withMessages([
+                'questao' => 'A prova de um curso publicado precisa de ao menos uma questao. Despublique o curso para esvazia-la.',
+            ]);
+        }
+
         $questao->delete();
     }
 
