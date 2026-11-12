@@ -24,11 +24,21 @@ class Certificado extends Model
         'status',
         'emitido_em',
         'criado_por',
+        'codigo_verificacao',
+        'aproveitamento',
+        'reemitido_em',
+        'cancelado_em',
+        'cancelado_por',
+        'cancelamento_motivo',
     ];
 
     protected $casts = [
         'status' => StatusCertificado::class,
         'emitido_em' => 'datetime',
+        'aproveitamento' => 'float',
+        'reemitido_em' => 'datetime',
+        'cancelado_em' => 'datetime',
+        'cancelado_por' => 'integer',
     ];
 
     public function inscricao(): BelongsTo
@@ -44,6 +54,16 @@ class Certificado extends Model
     public function criadoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'criado_por');
+    }
+
+    public function canceladoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelado_por');
+    }
+
+    public function estaCancelado(): bool
+    {
+        return $this->status === StatusCertificado::CANCELADO;
     }
 
     public function marcarComoGerado(): void

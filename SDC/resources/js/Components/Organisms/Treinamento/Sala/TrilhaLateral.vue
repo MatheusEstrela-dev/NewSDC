@@ -85,6 +85,16 @@ function selecionar(item) {
             <span v-if="item.tipo === 'PROJETO'" class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
               {{ item.entrega_label ?? 'PROJETO' }}
             </span>
+            <span
+              v-else-if="item.tipo === 'PROVA'"
+              class="inline-flex flex-none items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold"
+              :class="item.prova?.travada ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'"
+            >
+              <svg v-if="estadoDoItem(item) === 'bloqueado'" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-label="Prova bloqueada">
+                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+              </svg>
+              {{ item.prova?.travada ? 'TRAVADA' : 'PROVA' }}
+            </span>
           </button>
         </li>
       </ul>

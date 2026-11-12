@@ -8,12 +8,14 @@ enum StatusCertificado: string
 {
     case PENDENTE = 'PENDENTE';
     case GERADO = 'GERADO';
+    case CANCELADO = 'CANCELADO';
 
     public function getLabel(): string
     {
         return match ($this) {
             self::PENDENTE => 'Pendente',
             self::GERADO => 'Disponivel',
+            self::CANCELADO => 'Cancelado',
         };
     }
 
@@ -22,6 +24,7 @@ enum StatusCertificado: string
         return match ($this) {
             self::PENDENTE => 'yellow',
             self::GERADO => 'green',
+            self::CANCELADO => 'red',
         };
     }
 

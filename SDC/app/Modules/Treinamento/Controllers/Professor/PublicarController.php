@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Controllers\Professor;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Treinamento\Exceptions\PublicacaoBloqueada;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Services\ConteudoCursoService;
 
@@ -16,6 +17,8 @@ class PublicarController extends Controller
     {
         try {
             $this->conteudo->publicar($treinamento);
+        } catch (PublicacaoBloqueada $e) {
+            return back()->withErrors($e->comoErros());
         } catch (\DomainException $e) {
             return back()->withErrors(['publicar' => $e->getMessage()]);
         }

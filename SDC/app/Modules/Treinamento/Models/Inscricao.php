@@ -12,6 +12,7 @@ use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -40,6 +41,10 @@ class Inscricao extends Model
         'status' => StatusInscricao::class,
         'data_inscricao' => 'datetime',
         'data_aprovacao' => 'datetime',
+        // Conclusao congelada do EAD (spec 8.7): gravada uma vez, fora do
+        // $fillable de proposito (so o servico de conclusao escreve, com forceFill).
+        'concluido_em' => 'datetime',
+        'aproveitamento' => 'float',
     ];
 
     // Relationships
@@ -66,6 +71,16 @@ class Inscricao extends Model
     public function certificado(): HasOne
     {
         return $this->hasOne(Certificado::class);
+    }
+
+    public function provaTentativas(): HasMany
+    {
+        return $this->hasMany(ProvaTentativa::class);
+    }
+
+    public function estaConcluida(): bool
+    {
+        return $this->concluido_em !== null;
     }
 
     // Business Logic

@@ -119,6 +119,7 @@ class Kernel extends ConsoleKernel
         // chama commands(), aquela chamada seria recursao infinita.
         $this->load(base_path('app/Modules/Notificacoes/Console'));
         $this->load(base_path('app/Modules/Plantao/Console'));
+        $this->load(base_path('app/Modules/Treinamento/Console'));
 
         require base_path('routes/console.php');
     }

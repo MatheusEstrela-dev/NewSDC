@@ -40,6 +40,9 @@ Route::get('/', function () {
 // internos). Continua dentro do grupo de middleware "web" global (sessao/CSRF).
 require __DIR__ . '/modules/treinamento-portal.php';
 
+// Validacao publica de certificado (sem login, com throttle).
+require __DIR__ . '/modules/treinamento-validacao.php';
+
 // RF02 - imagem de divulgacao: publica de proposito (pensada pra ser
 // compartilhada/postada), so exige que o treinamento esteja publicado.
 Route::get('/treinamentos/{treinamento}/divulgacao.png', \App\Modules\Treinamento\Controllers\TreinamentoDivulgacaoImagemController::class)

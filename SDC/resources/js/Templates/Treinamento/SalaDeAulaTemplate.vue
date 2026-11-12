@@ -5,6 +5,7 @@ import axios from 'axios';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import ItemProjeto from '@/Components/Organisms/Treinamento/Sala/ItemProjeto.vue';
+import ItemProva from '@/Components/Organisms/Treinamento/Sala/ItemProva.vue';
 import PlayerVideo from '@/Components/Organisms/Treinamento/Sala/PlayerVideo.vue';
 import TrilhaLateral from '@/Components/Organisms/Treinamento/Sala/TrilhaLateral.vue';
 import VisualizadorPdf from '@/Components/Organisms/Treinamento/Sala/VisualizadorPdf.vue';
@@ -158,6 +159,14 @@ onBeforeUnmount(enviarPendente);
           <p v-else-if="itemAtual.tipo === 'VIDEO'" class="p-6 text-sm text-slate-500">
             Vídeo em preparação<template v-if="itemAtual.video?.status_label">: {{ itemAtual.video.status_label }}</template>
           </p>
+          <ItemProva
+            v-else-if="itemAtual.tipo === 'PROVA'"
+            :key="itemAtual.id"
+            :item="itemAtual"
+            :urls="rotas.prova(itemAtual.id)"
+            @estado="estadoLocal = $event"
+            @revisar="anterior && selecionar(anterior.id)"
+          />
           <ItemProjeto
             v-else-if="itemAtual.tipo === 'PROJETO'"
             :key="itemAtual.id"

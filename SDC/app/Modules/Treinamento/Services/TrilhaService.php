@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Services;
 use App\Modules\Treinamento\DTOs\EstadoItem;
 use App\Modules\Treinamento\DTOs\EstadoPasta;
 use App\Modules\Treinamento\DTOs\EstadoTrilha;
+use App\Modules\Treinamento\DTOs\SituacaoProva;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\StatusProgresso;
 use App\Modules\Treinamento\Enums\TipoItem;
@@ -28,30 +29,39 @@ use Illuminate\Support\Collection;
  */
 class TrilhaService
 {
-    public function estado(Inscricao $inscricao): EstadoTrilha
+    public function __construct(private readonly SituacaoProvaService $provas) {}
+
+    /**
+     * @param  array<int, SituacaoProva>|null  $situacoes  provas da inscricao por modulo_item_id, quando quem
+     *                                                      chama ja as carregou em lote; null consulta
+     * @param  array<string, mixed>|null  $lote  conteudo do curso e progresso ja carregados por estadosEmLote()
+     */
+    public function estado(Inscricao $inscricao, ?array $situacoes = null, ?array $lote = null): EstadoTrilha
     {
+        $situacoes ??= $this->provas->daInscricao($inscricao);
         $pastas = [];
         $total = 0;
         $concluidos = 0;
         $proximo = null;
 
-        foreach ($this->percorrer($inscricao) as $p) {
+        foreach ($this->percorrer($inscricao, $lote) as $p) {
             $estadoItens = [];
             foreach ($p['itens'] as $item) {
                 $progresso = $p['progressos']->get($item->id);
                 $concluido = $progresso?->status === StatusProgresso::CONCLUIDO;
                 $entrega = $p['entregas']->get($item->id);
+                $liberado = $p['liberados'][$item->id];
 
                 if ($item->obrigatorio) {
                     $total++;
                     $concluidos += ($concluido || $p['gravada']) ? 1 : 0;
                 }
-                if ($proximo === null && $p['liberada'] && ! $concluido) {
+                if ($proximo === null && $liberado && ! $concluido) {
                     $proximo = $item->id;
                 }
 
                 $estadoItens[] = new EstadoItem(
-                    $item, $p['liberada'], $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item, $p['liberada']),
+                    $item, $liberado, $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item, $liberado), ($situacoes[$item->id] ?? null)?->toArray(),
                 );
             }
             $pastas[] = new EstadoPasta($p['modulo'], $p['liberada'], $p['concluida'], $estadoItens);
@@ -60,6 +70,33 @@ class TrilhaService
         $percentual = $total === 0 ? 0.0 : round(100 * $concluidos / $total, 1);
 
         return new EstadoTrilha($percentual, $proximo, $concluidos, $total, $pastas);
+    }
+
+    /**
+     * Estado de varias inscricoes do MESMO curso com consultas em numero fixo
+     * (pastas e itens uma vez; progresso, pastas gravadas e entregas em uma
+     * consulta cada), para a lista de alunos do professor.
+     *
+     * @param  Collection<int, Inscricao>  $inscricoes
+     * @param  array<int, array<int, SituacaoProva>>  $situacoesPorInscricao  de SituacaoProvaService::porInscricoes()
+     * @return array<int, EstadoTrilha> por inscricao_id
+     */
+    public function estadosEmLote(Treinamento $treinamento, Collection $inscricoes, array $situacoesPorInscricao): array
+    {
+        $ids = $inscricoes->modelKeys();
+        $lote = [
+            'pastas' => $this->pastasDoCurso($treinamento->id),
+            'progressos' => ProgressoItem::query()->whereIn('inscricao_id', $ids)->get()->groupBy('inscricao_id'),
+            'gravadas' => ProgressoPasta::query()->whereIn('inscricao_id', $ids)->get(['inscricao_id', 'modulo_id'])->groupBy('inscricao_id'),
+            'entregas' => ProjetoEntrega::query()->whereIn('inscricao_id', $ids)->orderByDesc('id')->get()->groupBy('inscricao_id'),
+        ];
+
+        $estados = [];
+        foreach ($inscricoes as $inscricao) {
+            $estados[$inscricao->id] = $this->estado($inscricao, $situacoesPorInscricao[$inscricao->id] ?? [], $lote);
+        }
+
+        return $estados;
     }
 
     /**
@@ -72,13 +109,14 @@ class TrilhaService
         $proximo = null;
 
         $modulos = Modulo::query()->porTreinamento($treinamento->id)->ordenados()->with('itens.video')->get();
+        $regras = $this->provas->regrasDoCurso($treinamento->id);
 
         foreach ($modulos as $modulo) {
             $itens = [];
             foreach ($modulo->itens as $item) {
                 $total += $item->obrigatorio ? 1 : 0;
                 $proximo ??= $item->id;
-                $itens[] = new EstadoItem($item, true, null, 0, null, null, $this->estadoVideo($item, true));
+                $itens[] = new EstadoItem($item, true, null, 0, null, null, $this->estadoVideo($item, true), ($regras[$item->id] ?? null)?->toArray());
             }
             $pastas[] = new EstadoPasta($modulo, true, false, $itens);
         }
@@ -121,12 +159,33 @@ class TrilhaService
     public function itemLiberado(Inscricao $inscricao, ModuloItem $item): bool
     {
         foreach ($this->percorrer($inscricao) as $p) {
-            if ($p['itens']->contains('id', $item->id)) {
-                return $p['liberada'];
+            if (array_key_exists($item->id, $p['liberados'])) {
+                return $p['liberados'][$item->id];
             }
         }
 
         return false;
+    }
+
+    /**
+     * Trilha inteira cumprida: inscricao aprovada, curso com ao menos um item
+     * obrigatorio e todas as pastas ativas concluidas (pasta gravada em
+     * progresso_pastas segue concluida mesmo com item novo, spec 8.7). Base do
+     * criterio de conclusao por trilha.
+     */
+    public function concluida(Inscricao $inscricao): bool
+    {
+        $pastas = $this->percorrer($inscricao);
+        $temObrigatorio = false;
+
+        foreach ($pastas as $p) {
+            if (! $p['liberada'] || ! $p['concluida']) {
+                return false;
+            }
+            $temObrigatorio = $temObrigatorio || $p['itens']->contains('obrigatorio', true);
+        }
+
+        return $temObrigatorio;
     }
 
     /**
@@ -158,22 +217,25 @@ class TrilhaService
     /**
      * Pastas e itens ativos em ordem, ja com liberacao e conclusao resolvidas.
      *
-     * @return list<array{modulo: Modulo, itens: Collection<int, ModuloItem>, progressos: Collection<int, ProgressoItem>, entregas: Collection<int, ProjetoEntrega>, gravada: bool, concluida: bool, liberada: bool}>
+     * @param  array<string, mixed>|null  $lote  de estadosEmLote(); null carrega so esta inscricao
+     * @return list<array{modulo: Modulo, itens: Collection<int, ModuloItem>, progressos: Collection<int, ProgressoItem>, entregas: Collection<int, ProjetoEntrega>, gravada: bool, concluida: bool, liberada: bool, liberados: array<int, bool>}>
      */
-    private function percorrer(Inscricao $inscricao): array
+    private function percorrer(Inscricao $inscricao, ?array $lote = null): array
     {
-        $pastas = Modulo::query()
-            ->porTreinamento($inscricao->treinamento_id)
-            ->ordenados()
-            ->with('itens.video')
-            ->get();
+        $pastas = $lote['pastas'] ?? $this->pastasDoCurso($inscricao->treinamento_id);
 
-        $progressos = ProgressoItem::query()->where('inscricao_id', $inscricao->id)->get()->keyBy('modulo_item_id');
-        $gravadas = ProgressoPasta::query()->where('inscricao_id', $inscricao->id)->pluck('modulo_id')->all();
-        $entregas = ProjetoEntrega::query()
-            ->where('inscricao_id', $inscricao->id)
-            ->orderByDesc('id')
-            ->get()
+        // Em lote, quem nao tem linha nao aparece no groupBy: vazio, sem nova consulta.
+        $progressos = ($lote === null
+            ? ProgressoItem::query()->where('inscricao_id', $inscricao->id)->get()
+            : ($lote['progressos'][$inscricao->id] ?? collect()))
+            ->keyBy('modulo_item_id');
+        $gravadas = ($lote === null
+            ? ProgressoPasta::query()->where('inscricao_id', $inscricao->id)->get(['inscricao_id', 'modulo_id'])
+            : ($lote['gravadas'][$inscricao->id] ?? collect()))
+            ->pluck('modulo_id')->all();
+        $entregas = ($lote === null
+            ? ProjetoEntrega::query()->where('inscricao_id', $inscricao->id)->orderByDesc('id')->get()
+            : ($lote['entregas'][$inscricao->id] ?? collect()))
             ->unique('modulo_item_id')
             ->keyBy('modulo_item_id');
 
@@ -194,10 +256,40 @@ class TrilhaService
                 'gravada' => $gravada,
                 'concluida' => $concluida,
                 'liberada' => $liberada,
+                'liberados' => $modulo->itens
+                    ->mapWithKeys(fn (ModuloItem $i) => [$i->id => $this->itemAbertoNaPasta($i, $modulo->itens, $progressos, $liberada)])
+                    ->all(),
             ];
             $liberada = $liberada && $concluida;
         }
 
         return $resultado;
+    }
+
+    /** @return Collection<int, Modulo> pastas ativas em ordem, com os itens ativos e o video de cada um */
+    private function pastasDoCurso(int $treinamentoId): Collection
+    {
+        return Modulo::query()->porTreinamento($treinamentoId)->ordenados()->with('itens.video')->get();
+    }
+
+    /**
+     * Ponto unico de liberacao de um item dentro da pasta. Item comum abre com
+     * a pasta; a PROVA so abre depois dos demais itens obrigatorios da pasta
+     * concluidos (projeto so conta aprovado, spec 8.2). A pasta seguinte so
+     * abre com a prova aprovada porque a prova e obrigatoria e so conclui ao
+     * aprovar.
+     *
+     * @param  Collection<int, ModuloItem>  $itensDaPasta
+     * @param  Collection<int, ProgressoItem>  $progressos  por modulo_item_id
+     */
+    private function itemAbertoNaPasta(ModuloItem $item, Collection $itensDaPasta, Collection $progressos, bool $pastaLiberada): bool
+    {
+        if (! $pastaLiberada || $item->tipo !== TipoItem::PROVA) {
+            return $pastaLiberada;
+        }
+
+        return ! $itensDaPasta
+            ->filter(fn (ModuloItem $i) => $i->obrigatorio && $i->tipo !== TipoItem::PROVA)
+            ->contains(fn (ModuloItem $i) => $progressos->get($i->id)?->status !== StatusProgresso::CONCLUIDO);
     }
 }

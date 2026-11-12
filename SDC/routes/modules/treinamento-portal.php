@@ -12,6 +12,10 @@ use App\Modules\Treinamento\Controllers\Portal\SalaDeAulaController;
 use App\Modules\Treinamento\Controllers\Portal\SalaEntregaStoreController;
 use App\Modules\Treinamento\Controllers\Portal\SalaItemArquivoController;
 use App\Modules\Treinamento\Controllers\Portal\SalaProgressoController;
+use App\Modules\Treinamento\Controllers\Portal\SalaProvaEnviarController;
+use App\Modules\Treinamento\Controllers\Portal\SalaProvaIniciarController;
+use App\Modules\Treinamento\Controllers\Portal\SalaProvaResponderController;
+use App\Modules\Treinamento\Controllers\Portal\SalaProvaShowController;
 use App\Modules\Treinamento\Controllers\Portal\VerificarEmailController;
 use App\Modules\Treinamento\Controllers\SessaoPulsoController;
 use App\Modules\Treinamento\Http\Middleware\DisableDebugbarOnPortal;
@@ -83,6 +87,16 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
         Route::post('/cursos/{slug}/itens/{item}/entregas', SalaEntregaStoreController::class)
             ->middleware('throttle:10,1')
             ->name('cursos.itens.entregas');
+        Route::prefix('/cursos/{slug}/itens/{item}/prova')->name('cursos.itens.prova')->group(function () {
+            Route::get('/', SalaProvaShowController::class);
+            Route::post('/tentativas', SalaProvaIniciarController::class)->name('.iniciar');
+            Route::put('/tentativas/{tentativa}/respostas', SalaProvaResponderController::class)
+                ->middleware('throttle:120,1')
+                ->name('.responder');
+            Route::post('/tentativas/{tentativa}/enviar', SalaProvaEnviarController::class)
+                ->middleware('throttle:10,1')
+                ->name('.enviar');
+        });
 
         Route::get('/certificados', CertificadoController::class)->name('certificados.index');
         Route::get('/certificados/{certificado}/imprimir', CertificadoImprimirController::class)->name('certificados.imprimir');

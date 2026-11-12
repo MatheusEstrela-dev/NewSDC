@@ -1,5 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
@@ -7,16 +8,37 @@ import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import MenuCurso from '@/Components/Organisms/Treinamento/Professor/MenuCurso.vue';
+import LiberarTentativaModal from '@/Components/Organisms/Treinamento/Professor/LiberarTentativaModal.vue';
+import NotasProvasCell from '@/Components/Molecules/Treinamento/NotasProvasCell.vue';
+import { useToast } from '@/Composables/useToast';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 
-defineProps({
+const props = defineProps({
   curso: { type: Object, required: true },
   alunos: { type: Array, default: () => [] },
   travados: { type: Boolean, default: false },
   pendentes: { type: Number, default: 0 },
 });
+
+const { show: toast } = useToast();
+
+const alvo = ref({ aluno: null, prova: null });
+const modalAberto = ref(false);
+
+function abrirLiberacao(aluno, prova) {
+  alvo.value = { aluno, prova };
+  modalAberto.value = true;
+}
+
+// A linha vem do servidor: recarrega so os alunos para refletir a trava e as tentativas.
+function aposLiberar() {
+  toast('Tentativa liberada.');
+  router.reload({ only: ['alunos'], preserveScroll: true });
+}
+
+const temProvaTravada = (aluno) => (aluno.notas ?? []).some((n) => n.travada);
 </script>
 
 <template>
@@ -33,7 +55,7 @@ defineProps({
 
       <div class="min-w-0 space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <Text color="muted">{{ alunos.length }} aluno(s){{ travados ? ' aguardando correção' : '' }}</Text>
+          <Text color="muted">{{ alunos.length }} aluno(s){{ travados ? ' travado(s)' : '' }}</Text>
           <Button
             size="sm"
             :variant="travados ? 'primary' : 'outline'"
@@ -44,7 +66,7 @@ defineProps({
         </div>
 
         <CardBase v-if="alunos.length === 0">
-          <Text color="muted">{{ travados ? 'Nenhum aluno aguardando correção.' : 'Nenhum aluno aprovado neste curso ainda.' }}</Text>
+          <Text color="muted">{{ travados ? 'Nenhum aluno travado.' : 'Nenhum aluno aprovado neste curso ainda.' }}</Text>
         </CardBase>
 
         <div v-else class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
@@ -55,6 +77,7 @@ defineProps({
                 <th class="px-4 py-2 font-medium">Origem</th>
                 <th class="px-4 py-2 font-medium">Progresso</th>
                 <th class="px-4 py-2 font-medium">Onde está</th>
+                <th class="px-4 py-2 font-medium">Provas</th>
                 <th class="px-4 py-2 text-right font-medium">Situação</th>
               </tr>
             </thead>
@@ -73,9 +96,13 @@ defineProps({
                   </div>
                 </td>
                 <td class="px-4 py-2.5">{{ aluno.onde_esta }}</td>
+                <td class="px-4 py-2.5">
+                  <NotasProvasCell :notas="aluno.notas ?? []" @liberar="(prova) => abrirLiberacao(aluno, prova)" />
+                </td>
                 <td class="px-4 py-2.5 text-right">
+                  <Badge v-if="temProvaTravada(aluno)" variant="danger">Prova travada</Badge>
                   <Link
-                    v-if="aluno.travado"
+                    v-else-if="aluno.travado"
                     :href="route('treinamentos.professor.correcoes', curso.id)"
                     class="inline-flex"
                   >
@@ -88,5 +115,14 @@ defineProps({
         </div>
       </div>
     </div>
+
+    <LiberarTentativaModal
+      :show="modalAberto"
+      :treinamento-id="curso.id"
+      :aluno="alvo.aluno"
+      :prova="alvo.prova"
+      @fechar="modalAberto = false"
+      @liberado="aposLiberar"
+    />
   </div>
 </template>

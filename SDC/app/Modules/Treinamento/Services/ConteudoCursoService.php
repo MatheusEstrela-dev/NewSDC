@@ -7,10 +7,13 @@ namespace App\Modules\Treinamento\Services;
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Treinamento\Enums\TipoItem;
+use App\Modules\Treinamento\Exceptions\PublicacaoBloqueada;
+use App\Modules\Treinamento\Jobs\ReavaliarConclusoesDoCursoJob;
 use App\Modules\Treinamento\Models\Modulo;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
+use App\Modules\Treinamento\Support\Ordenacao;
 use Illuminate\Http\UploadedFile;
 
 /**
@@ -21,6 +24,8 @@ class ConteudoCursoService
     public function __construct(
         private readonly ArquivoCursoService $arquivos,
         private readonly TreinamentoService $treinamentos,
+        private readonly ProvaConteudoService $provas,
+        private readonly VerificacaoPublicacaoService $verificacao,
     ) {}
 
     /**
@@ -60,6 +65,7 @@ class ConteudoCursoService
         ConexaoTreinamento::transacao(function () use ($modulo) {
             $modulo->itens()->delete();
             $modulo->delete();
+            $this->reavaliarConclusoes($modulo->treinamento_id);
         });
     }
 
@@ -69,11 +75,11 @@ class ConteudoCursoService
     public function reordenarPastas(Treinamento $treinamento, array $ids): void
     {
         $ativos = Modulo::query()->porTreinamento($treinamento->id)->pluck('id')->all();
-        $this->aplicarOrdem(Modulo::class, $ativos, $ids);
+        Ordenacao::aplicar(Modulo::class, $ativos, $ids);
     }
 
     /**
-     * @param  array<string, mixed>  $dados  tipo, titulo, descricao?, obrigatorio, total_paginas?
+     * @param  array<string, mixed>  $dados  tipo, titulo, descricao?, obrigatorio, total_paginas?, nota_minima?, max_tentativas?
      */
     public function criarItem(Modulo $modulo, array $dados, ?UploadedFile $arquivo): ModuloItem
     {
@@ -92,10 +98,14 @@ class ConteudoCursoService
                 'tipo' => $tipo,
                 'titulo' => $dados['titulo'],
                 'descricao' => $dados['descricao'] ?? null,
-                'obrigatorio' => (bool) ($dados['obrigatorio'] ?? true),
+                'obrigatorio' => $tipo === TipoItem::PROVA || (bool) ($dados['obrigatorio'] ?? true),
                 'total_paginas' => $tipo === TipoItem::PDF ? (int) $dados['total_paginas'] : null,
                 'ordem' => ((int) $ultimo) + 1,
             ]);
+
+            if ($tipo === TipoItem::PROVA) {
+                $this->provas->criarParaItem($item, $dados);
+            }
 
             if ($arquivo !== null) {
                 $item->update($this->arquivos->guardar($arquivo, $this->diretorio($modulo, $item)));
@@ -121,12 +131,20 @@ class ConteudoCursoService
         $item->update($novo + [
             'titulo' => $dados['titulo'],
             'descricao' => $dados['descricao'] ?? null,
-            'obrigatorio' => (bool) ($dados['obrigatorio'] ?? $item->obrigatorio),
+            'obrigatorio' => $item->tipo === TipoItem::PROVA || (bool) ($dados['obrigatorio'] ?? $item->obrigatorio),
             'total_paginas' => $item->tipo === TipoItem::PDF ? (int) $dados['total_paginas'] : null,
         ]);
 
+        if ($item->tipo === TipoItem::PROVA && $item->prova !== null) {
+            $this->provas->configurar($item->prova, $dados);
+        }
+
         if ($arquivo !== null) {
             $this->arquivos->apagar($anterior);
+        }
+
+        if ($item->wasChanged('obrigatorio') && ! $item->obrigatorio) {
+            $this->reavaliarConclusoes($item->modulo->treinamento_id);
         }
 
         return $item;
@@ -135,6 +153,7 @@ class ConteudoCursoService
     public function excluirItem(ModuloItem $item): void
     {
         $item->delete();
+        $this->reavaliarConclusoes(Modulo::withTrashed()->whereKey($item->modulo_id)->value('treinamento_id'));
     }
 
     /**
@@ -143,7 +162,7 @@ class ConteudoCursoService
     public function reordenarItens(Modulo $modulo, array $ids): void
     {
         $ativos = ModuloItem::query()->where('modulo_id', $modulo->id)->pluck('id')->all();
-        $this->aplicarOrdem(ModuloItem::class, $ativos, $ids);
+        Ordenacao::aplicar(ModuloItem::class, $ativos, $ids);
     }
 
     /**
@@ -165,7 +184,12 @@ class ConteudoCursoService
             ->exists();
 
         if (! $temItem) {
-            throw new \DomainException('Adicione ao menos um item ao curso antes de publicar.');
+            throw new PublicacaoBloqueada('Adicione ao menos um item ao curso antes de publicar.', ['Adicione ao menos um item ao curso antes de publicar.']);
+        }
+
+        $problemas = $this->verificacao->problemas($treinamento);
+        if ($problemas !== []) {
+            throw new PublicacaoBloqueada('O curso nao pode ser publicado. '.implode(' ', $problemas), $problemas);
         }
 
         $this->treinamentos->publicar($treinamento);
@@ -176,6 +200,15 @@ class ConteudoCursoService
             AcaoTrilha::Relacionado,
             'curso publicado',
         );
+    }
+
+    /**
+     * A trilha pode ter ficado completa sem nenhuma transicao de item: os alunos
+     * que faltavam so por isso concluem agora (job idempotente, depois do commit).
+     */
+    private function reavaliarConclusoes(int $treinamentoId): void
+    {
+        ReavaliarConclusoesDoCursoJob::dispatch($treinamentoId)->afterCommit();
     }
 
     private function diretorio(Modulo $modulo, ModuloItem $item): string
@@ -191,33 +224,5 @@ class ConteudoCursoService
         if ($tipo === TipoItem::PDF && (int) ($dados['total_paginas'] ?? 0) < 1) {
             throw new \DomainException('Informe o total de paginas do PDF.');
         }
-    }
-
-    /**
-     * Grava ordem 1..n na sequencia recebida; a lista tem de ser exatamente o
-     * conjunto de ids ativos.
-     *
-     * @param  class-string<Modulo|ModuloItem>  $model
-     * @param  list<int|string>  $ativos
-     * @param  list<int|string>  $ids
-     */
-    private function aplicarOrdem(string $model, array $ativos, array $ids): void
-    {
-        $ativos = array_map('intval', $ativos);
-        $ids = array_map('intval', $ids);
-
-        $igual = count($ids) === count($ativos)
-            && count(array_unique($ids)) === count($ids)
-            && array_diff($ids, $ativos) === [];
-
-        if (! $igual) {
-            throw new \DomainException('A lista de ordenacao nao corresponde aos itens atuais.');
-        }
-
-        ConexaoTreinamento::transacao(function () use ($model, $ids) {
-            foreach ($ids as $posicao => $id) {
-                $model::query()->whereKey($id)->update(['ordem' => $posicao + 1]);
-            }
-        });
     }
 }

@@ -22,6 +22,10 @@ class CertificadoResource extends JsonResource
             'status_color' => $this->status->getBadgeColor(),
             'disponivel' => $this->status->value === 'GERADO',
             'emitido_em' => $this->emitido_em?->toIso8601String(),
+            'codigo_verificacao' => $this->codigo_verificacao,
+            'aproveitamento' => $this->aproveitamento,
+            'cancelado' => $this->estaCancelado(),
+            'url_validacao' => $this->codigo_verificacao ? route('certificados.validar', $this->codigo_verificacao) : null,
         ];
     }
 }

@@ -8,6 +8,7 @@ enum TipoItem: string
 {
     case PDF = 'PDF';
     case PROJETO = 'PROJETO';
+    case PROVA = 'PROVA';
     case VIDEO = 'VIDEO';
 
     public function getLabel(): string
@@ -15,6 +16,7 @@ enum TipoItem: string
         return match ($this) {
             self::PDF => 'Material em PDF',
             self::PROJETO => 'Projeto',
+            self::PROVA => 'Prova',
             self::VIDEO => 'Vídeo',
         };
     }

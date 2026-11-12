@@ -144,6 +144,17 @@
             color: #2b2b2b;
         }
 
+        .verificacao {
+            display: flex;
+            align-items: center;
+            gap: 4mm;
+            margin-top: 6mm;
+            font-size: 8pt;
+            line-height: 1.4;
+            color: #2b2b2b;
+        }
+        .verificacao img { width: 22mm; height: 22mm; }
+
         .print-btn {
             position: fixed;
             bottom: 24px;
@@ -196,7 +207,7 @@
                 <strong>&ldquo;{{ $treinamento->titulo }}&rdquo;</strong>, realizado no período de
                 <strong>{{ optional($treinamento->data_inicio)->format('d/m/Y') ?? '—' }}</strong> a
                 <strong>{{ optional($treinamento->data_fim)->format('d/m/Y') ?? optional($treinamento->data_inicio)->format('d/m/Y') ?? '—' }}</strong>,
-                com carga horária de <strong>{{ $treinamento->carga_horaria }} horas</strong>, promovido no âmbito
+                com carga horária de <strong>{{ $treinamento->carga_horaria }} horas</strong>@if ($aproveitamento !== null) e aproveitamento de <strong>{{ number_format($aproveitamento, 1, ',', '.') }}%</strong>@endif, promovido no âmbito
                 das ações de fortalecimento das capacidades institucionais e de desenvolvimento de competências em
                 Proteção e Defesa Civil.
             </p>
@@ -224,7 +235,15 @@
             </div>
         </div>
 
-        <div class="local-data" style="margin-top: 8mm;">
+        <div class="verificacao">
+            <img src="{{ $qrValidacao }}" alt="QR Code de validação">
+            <div>
+                Código de verificação: <strong>{{ $codigoVerificacao }}</strong><br>
+                Valide este certificado em<br>{{ $urlValidacao }}
+            </div>
+        </div>
+
+        <div class="local-data" style="margin-top: 4mm;">
             Belo Horizonte, {{ $emitidoEm }}
         </div>
     </div>

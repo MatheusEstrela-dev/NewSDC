@@ -30,6 +30,7 @@ class ConteudoController extends Controller
             ->with([
                 'itens.video' => fn ($query) => $query->withCount('itens as usos'),
                 'itens.video.uploadAberto',
+                'itens.prova',
             ])
             ->get()
             ->map(fn (Modulo $m) => [
@@ -48,6 +49,9 @@ class ConteudoController extends Controller
                     'tem_arquivo' => $i->temArquivo(),
                     'arquivo_nome' => $i->arquivo_nome,
                     'video' => $i->video ? $this->videoDoItem($i->video, $request) : null,
+                    'prova_id' => $i->prova?->id,
+                    'nota_minima' => $i->prova?->nota_minima,
+                    'max_tentativas' => $i->prova?->max_tentativas,
                 ])->values(),
             ])
             ->values();

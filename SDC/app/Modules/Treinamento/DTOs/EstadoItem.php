@@ -18,6 +18,7 @@ final readonly class EstadoItem
         public ?StatusEntrega $entrega,
         public ?string $parecer,
         public ?array $video = null,
+        public ?array $prova = null,
     ) {}
 
     /**
@@ -40,6 +41,7 @@ final readonly class EstadoItem
             'entrega_label' => $this->entrega?->getLabel(),
             'parecer' => $this->parecer,
             'video' => $this->video,
+            'prova' => $this->prova,
         ];
     }
 }

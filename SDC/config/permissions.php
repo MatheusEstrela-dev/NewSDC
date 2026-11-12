@@ -355,6 +355,7 @@ return [
             'Certificados' => [
                 'view' => 'treinamento.certificados.view',
                 'reemitir' => 'treinamento.certificados.reemitir',
+                'cancelar' => 'treinamento.certificados.cancelar',
                 'download' => 'treinamento.certificados.download',
             ],
             'Professor' => [
