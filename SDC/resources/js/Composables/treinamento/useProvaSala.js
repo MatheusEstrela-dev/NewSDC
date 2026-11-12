@@ -4,7 +4,9 @@ import axios from 'axios';
 const ATRASO_RETENTATIVA_MS = 3000;
 const MAX_RETENTATIVAS = 3;
 
-const tentativaEncerrada = (erro) => erro?.response?.status === 422;
+// So o 422 com este codigo (backend: TentativaEncerrada) significa tentativa ja enviada.
+const tentativaEncerrada = (erro) => erro?.response?.status === 422 && erro.response.data?.codigo === 'tentativa_encerrada';
+const limiteExcedido = (erro) => erro?.response?.status === 429;
 
 const MENSAGEM_LIMITE = 'Muitas ações em pouco tempo. Aguarde um instante e tente novamente.';
 
@@ -136,7 +138,9 @@ export function useProvaSala({ urls, situacaoInicial, aoAtualizarEstado }) {
         await recarregarAposConflito();
       } else {
         sujas.add(questaoId);
-        agendarRetentativa(questaoId);
+        if (limiteExcedido(e)) erro.value = MENSAGEM_LIMITE;
+        if (e?.response?.status !== 422) agendarRetentativa(questaoId);
+        else erro.value = mensagemDe(e, 'Não foi possível salvar a resposta.');
       }
     } finally {
       emVoo.delete(questaoId);
@@ -192,7 +196,7 @@ export function useProvaSala({ urls, situacaoInicial, aoAtualizarEstado }) {
       return true;
     } catch (e) {
       if (tentativaEncerrada(e)) await recarregarAposConflito();
-      erro.value = mensagemDe(e, 'Não foi possível enviar a prova agora.');
+      else erro.value = mensagemDe(e, 'Não foi possível enviar a prova agora.');
 
       return false;
     } finally {
