@@ -45,6 +45,8 @@ class CertificadoService
                 ['treinamento_id' => $inscricao->treinamento_id]
             );
 
+            $certificado = $this->travar($certificado);
+
             if ($certificado->estaCancelado()) {
                 return $certificado;
             }
@@ -64,17 +66,22 @@ class CertificadoService
      */
     public function reemitir(Certificado $certificado): Certificado
     {
-        if ($certificado->estaCancelado()) {
-            throw new DomainException('Certificado cancelado nao pode ser reemitido.');
-        }
+        $certificado = ConexaoTreinamento::transacao(function () use ($certificado) {
+            $certificado = $this->travar($certificado);
 
-        $certificado->forceFill([
-            'status' => StatusCertificado::GERADO,
-            'emitido_em' => $certificado->emitido_em ?? now(),
-            'reemitido_em' => now(),
-        ])->save();
+            if ($certificado->estaCancelado()) {
+                throw new DomainException('Certificado cancelado nao pode ser reemitido.');
+            }
 
-        $this->garantirCodigo($certificado);
+            // So e reemissao quando ja houve emissao: num PENDENTE esta e a primeira.
+            $certificado->forceFill([
+                'status' => StatusCertificado::GERADO,
+                'reemitido_em' => $certificado->emitido_em !== null ? now() : null,
+                'emitido_em' => $certificado->emitido_em ?? now(),
+            ])->save();
+
+            return $this->garantirCodigo($certificado);
+        });
 
         // So a reemissao entra na trilha. A emissao automatica (emitirSeElegivel)
         // roda na fila, sem usuario autenticado: RegistroDeAcao::autor() volta
@@ -91,18 +98,22 @@ class CertificadoService
      */
     public function cancelar(Certificado $certificado, User $autor, string $motivo): Certificado
     {
-        if ($certificado->estaCancelado()) {
-            throw new DomainException('Certificado ja esta cancelado.');
-        }
+        $certificado = ConexaoTreinamento::transacao(function () use ($certificado, $autor, $motivo) {
+            $certificado = $this->travar($certificado);
 
-        $certificado->forceFill([
-            'status' => StatusCertificado::CANCELADO,
-            'cancelado_em' => now(),
-            'cancelado_por' => $autor->id,
-            'cancelamento_motivo' => $motivo,
-        ])->save();
+            if ($certificado->estaCancelado()) {
+                throw new DomainException('Certificado ja esta cancelado.');
+            }
 
-        $this->garantirCodigo($certificado);
+            $certificado->forceFill([
+                'status' => StatusCertificado::CANCELADO,
+                'cancelado_em' => now(),
+                'cancelado_por' => $autor->id,
+                'cancelamento_motivo' => $motivo,
+            ])->save();
+
+            return $this->garantirCodigo($certificado);
+        });
         $this->registrarNaTrilha($certificado, 'certificado cancelado');
 
         return $certificado;
@@ -144,6 +155,16 @@ class CertificadoService
         }
 
         throw new DomainException('Nao foi possivel gerar um codigo de verificacao unico.');
+    }
+
+    /**
+     * Linha do certificado travada para escrita, com o estado atual do banco:
+     * emissao, cancelamento e reemissao simultaneos se serializam e quem chega
+     * depois decide sobre o que de fato esta gravado.
+     */
+    private function travar(Certificado $certificado): Certificado
+    {
+        return Certificado::query()->whereKey($certificado->id)->lockForUpdate()->firstOrFail();
     }
 
     private function registrarNaTrilha(Certificado $certificado, string $descricao): void

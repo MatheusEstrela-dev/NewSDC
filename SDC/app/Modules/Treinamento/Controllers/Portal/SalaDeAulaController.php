@@ -24,7 +24,7 @@ class SalaDeAulaController extends Controller
     {
         $treinamento = InscricaoDoAluno::cursoPublicado($slug);
         $inscricao = InscricaoDoAluno::aprovada($treinamento, Auth::guard('cidadao')->user());
-        $this->reavaliacao->aoAbrirSala($inscricao);
+        $this->reavaliacao->avaliarSemDerrubar($inscricao);
 
         return Inertia::render(
             'Treinamento/Portal/SalaDeAula',

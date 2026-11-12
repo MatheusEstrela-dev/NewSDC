@@ -24,7 +24,7 @@ class SalaDeAulaController extends Controller
     public function __invoke(Request $request, Treinamento $treinamento): Response
     {
         $inscricao = InscricaoDoAluno::aprovada($treinamento, $request->user());
-        $this->reavaliacao->aoAbrirSala($inscricao);
+        $this->reavaliacao->avaliarSemDerrubar($inscricao);
 
         return Inertia::render(
             'Treinamento/Aluno/SalaDeAula',

@@ -47,9 +47,12 @@ class ReavaliacaoDeConclusaoService
     }
 
     /**
-     * Ao abrir a sala: a reavaliacao nunca pode derrubar a pagina do aluno.
+     * Para quem reage a outra acao (abrir a sala, enviar a prova, concluir item):
+     * falhar aqui nunca pode derrubar a requisicao que ja gravou o fato. A
+     * avaliacao e idempotente e o comando treinamento:avaliar-conclusoes refaz
+     * o que ficou para tras.
      */
-    public function aoAbrirSala(Inscricao $inscricao): void
+    public function avaliarSemDerrubar(Inscricao $inscricao): void
     {
         try {
             $this->avaliar($inscricao);
@@ -80,5 +83,32 @@ class ReavaliacaoDeConclusaoService
             });
 
         return $concluidas;
+    }
+
+    /**
+     * Inscricoes EAD ja concluidas, mas sem certificado (a emissao falhou ou
+     * nao chegou a ser enfileirada depois da conclusao): reenfileira a emissao,
+     * que e idempotente. Certificado cancelado conta como existente.
+     *
+     * @return int quantas emissoes foram enfileiradas
+     */
+    public function emissoesPendentes(?int $treinamentoId = null): int
+    {
+        $enfileiradas = 0;
+
+        Inscricao::query()
+            ->aprovadas()
+            ->whereNotNull('concluido_em')
+            ->whereDoesntHave('certificado')
+            ->whereHas('treinamento', fn ($q) => $q->where('tipo', TipoTreinamento::EAD->value))
+            ->when($treinamentoId !== null, fn ($q) => $q->porTreinamento($treinamentoId))
+            ->chunkById(self::LOTE, function ($lote) use (&$enfileiradas) {
+                foreach ($lote as $inscricao) {
+                    EmitirCertificadoDaInscricaoJob::dispatch($inscricao->id);
+                    $enfileiradas++;
+                }
+            });
+
+        return $enfileiradas;
     }
 }
