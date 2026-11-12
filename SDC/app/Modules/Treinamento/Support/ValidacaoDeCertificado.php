@@ -14,7 +14,9 @@ use App\Modules\Treinamento\Models\Cidadao;
  *
  * A exclusao logica da inscricao ou do treinamento (8.7: historico preservado)
  * nao invalida um certificado ja emitido: ele segue validando com os dados
- * preservados, e o cancelamento e o unico caminho para invalida-lo.
+ * preservados, e o cancelamento e o unico caminho para invalida-lo. Titular
+ * que nao existe mais (usuario ou cidadao excluido) responde como nao encontrado
+ * (8.5/8.7): nao se valida um certificado sem dizer de quem e.
  */
 final class ValidacaoDeCertificado
 {
@@ -39,7 +41,7 @@ final class ValidacaoDeCertificado
         $inscricao = $certificado?->inscricao;
         $treinamento = $certificado?->treinamento;
 
-        if ($certificado === null || $certificado->emitido_em === null || $inscricao === null || $treinamento === null) {
+        if ($certificado === null || $certificado->emitido_em === null || $inscricao === null || $treinamento === null || $inscricao->inscrito === null) {
             return null;
         }
 

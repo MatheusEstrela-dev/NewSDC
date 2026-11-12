@@ -60,7 +60,7 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
 
     // Pulso do player de video: sem ShareCidadaoInertiaData, a resposta e 204 sem corpo.
     Route::post('/sessao/pulso', SessaoPulsoController::class)
-        ->middleware(['auth:cidadao', 'throttle:30,1,ead-pulso'])
+        ->middleware(['auth:cidadao', 'throttle:30,1,portal-ead-pulso'])
         ->name('sessao.pulso');
 
     Route::middleware(['auth:cidadao', ShareCidadaoInertiaData::class])->group(function () {
@@ -70,7 +70,7 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
         Route::get('/eventos/{slug}', [CatalogoController::class, 'show'])->name('eventos.show');
         Route::post('/eventos/{slug}/inscricoes', [InscricaoController::class, 'store'])
             ->name('inscricoes.store')
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:10,1,portal-ead-inscricao');
 
         // Autoconfirmacao de presenca (sem QR) - so para treinamentos ONLINE.
         Route::post('/inscricoes/{inscricao}/presenca', [PresencaAutoconfirmacaoController::class, 'store'])
@@ -82,19 +82,19 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
         Route::get('/cursos/{slug}', SalaDeAulaController::class)->name('cursos.sala');
         Route::get('/cursos/{slug}/itens/{item}/arquivo', SalaItemArquivoController::class)->name('cursos.itens.arquivo');
         Route::post('/cursos/{slug}/itens/{item}/progresso', SalaProgressoController::class)
-            ->middleware('throttle:120,1,ead-progresso')
+            ->middleware('throttle:120,1,portal-ead-progresso')
             ->name('cursos.itens.progresso');
         Route::post('/cursos/{slug}/itens/{item}/entregas', SalaEntregaStoreController::class)
-            ->middleware('throttle:10,1,ead-entrega')
+            ->middleware('throttle:10,1,portal-ead-entrega')
             ->name('cursos.itens.entregas');
         Route::prefix('/cursos/{slug}/itens/{item}/prova')->name('cursos.itens.prova')->group(function () {
             Route::get('/', SalaProvaShowController::class);
             Route::post('/tentativas', SalaProvaIniciarController::class)->name('.iniciar');
             Route::put('/tentativas/{tentativa}/respostas', SalaProvaResponderController::class)
-                ->middleware('throttle:120,1,ead-prova-resposta')
+                ->middleware('throttle:120,1,portal-ead-prova-resposta')
                 ->name('.responder');
             Route::post('/tentativas/{tentativa}/enviar', SalaProvaEnviarController::class)
-                ->middleware('throttle:10,1,ead-prova-envio')
+                ->middleware('throttle:10,1,portal-ead-prova-envio')
                 ->name('.enviar');
         });
 
