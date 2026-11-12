@@ -6,11 +6,13 @@ namespace App\Modules\Treinamento\Services;
 
 use App\Models\User;
 use App\Modules\Treinamento\DTOs\EstadoTrilha;
+use App\Modules\Treinamento\DTOs\SituacaoProva;
 use App\Modules\Treinamento\Enums\StatusEntrega;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\TipoItem;
 use App\Modules\Treinamento\Models\Cidadao;
 use App\Modules\Treinamento\Models\Inscricao;
+use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\ProjetoEntrega;
 use App\Modules\Treinamento\Models\Treinamento;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,10 +28,13 @@ class AcompanhamentoService
 
     public const ORIGEM_CIDADAO = 'Cidadão';
 
-    public function __construct(private readonly TrilhaService $trilha) {}
+    public function __construct(
+        private readonly TrilhaService $trilha,
+        private readonly SituacaoProvaService $situacoesDeProva,
+    ) {}
 
     /**
-     * @return Collection<int, array{inscricao_id: int, nome: string, origem: string, percentual: float, onde_esta: string, travado: bool}>
+     * @return Collection<int, array{inscricao_id: int, nome: string, origem: string, percentual: float, onde_esta: string, travado: bool, notas: list<array<string, mixed>>}>
      */
     public function alunos(Treinamento $treinamento, bool $soTravados = false): Collection
     {
@@ -40,10 +45,13 @@ class AcompanhamentoService
             ->get();
 
         $nomes = $this->nomesDosInscritos($inscricoes);
+        $provas = $this->situacoesDeProva->porInscricoes($treinamento->id, $inscricoes->modelKeys());
+        $titulos = $this->titulosDasProvas($provas);
 
         return $inscricoes
-            ->map(function (Inscricao $inscricao) use ($nomes) {
+            ->map(function (Inscricao $inscricao) use ($nomes, $provas, $titulos) {
                 $estado = $this->trilha->estado($inscricao);
+                $situacoes = $provas[$inscricao->id] ?? [];
 
                 return [
                     'inscricao_id' => $inscricao->id,
@@ -51,7 +59,8 @@ class AcompanhamentoService
                     'origem' => $inscricao->inscrito_type === User::class ? self::ORIGEM_SERVIDOR : self::ORIGEM_CIDADAO,
                     'percentual' => $estado->percentual,
                     'onde_esta' => $this->ondeEsta($estado),
-                    'travado' => $this->estaTravado($estado),
+                    'travado' => $this->estaTravado($estado) || $this->travadoNaProva($situacoes),
+                    'notas' => $this->notas($situacoes, $titulos),
                 ];
             })
             ->when($soTravados, fn (Collection $c) => $c->filter(fn (array $a) => $a['travado']))
@@ -127,6 +136,57 @@ class AcompanhamentoService
             ->join('treinamento.modulos as m', 'm.id', '=', 'mi.modulo_id')
             ->whereNull('mi.deleted_at')
             ->whereNull('m.deleted_at');
+    }
+
+    /**
+     * @param  array<int, SituacaoProva>  $situacoes
+     */
+    private function travadoNaProva(array $situacoes): bool
+    {
+        foreach ($situacoes as $situacao) {
+            if ($situacao->travada()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Uma linha por prova do curso, so com o que o professor precisa ver.
+     *
+     * @param  array<int, SituacaoProva>  $situacoes
+     * @param  array<int, string>  $titulos  por modulo_item_id
+     * @return list<array<string, mixed>>
+     */
+    private function notas(array $situacoes, array $titulos): array
+    {
+        $linhas = [];
+        foreach ($situacoes as $itemId => $s) {
+            $linhas[] = [
+                'prova_id' => $s->provaId,
+                'item_id' => $itemId,
+                'titulo' => $titulos[$itemId] ?? '-',
+                'nota_final' => $s->notaFinal,
+                'aprovada' => $s->aprovada,
+                'tentativas_enviadas' => $s->tentativasEnviadas,
+                'tentativas_permitidas' => $s->tentativasPermitidas,
+                'travada' => $s->travada(),
+            ];
+        }
+
+        return $linhas;
+    }
+
+    /**
+     * @param  array<int, array<int, SituacaoProva>>  $provas
+     * @return array<int, string> titulo por modulo_item_id
+     */
+    private function titulosDasProvas(array $provas): array
+    {
+        $itemIds = $provas === [] ? [] : array_keys(reset($provas));
+
+        return $itemIds === [] ? [] : ModuloItem::query()->whereIn('id', $itemIds)->pluck('titulo', 'id')->all();
     }
 
     private function estaTravado(EstadoTrilha $estado): bool

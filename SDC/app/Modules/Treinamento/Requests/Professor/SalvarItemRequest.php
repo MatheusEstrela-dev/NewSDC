@@ -39,6 +39,11 @@ class SalvarItemRequest extends FormRequest
                 : ['nullable', 'file', 'max:'.self::MAX_KB],
         ];
 
+        if ($tipo === TipoItem::PROVA->value) {
+            $regras['nota_minima'] = ['sometimes', 'numeric', 'between:0,100'];
+            $regras['max_tentativas'] = ['sometimes', 'integer', 'between:1,20'];
+        }
+
         if (! $edicao) {
             $regras['tipo'] = ['required', 'in:'.implode(',', array_column(TipoItem::cases(), 'value'))];
         }
