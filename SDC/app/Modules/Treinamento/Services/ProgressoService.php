@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services;
 
 use App\Modules\Treinamento\Enums\StatusProgresso;
+use App\Modules\Treinamento\Events\ItemDaTrilhaConcluido;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\ProgressoItem;
@@ -50,13 +51,23 @@ class ProgressoService
     /**
      * Upsert na chave unica (inscricao, item): dois POSTs concorrentes caem
      * na mesma linha, a posicao so cresce e CONCLUIDO nunca volta atras.
+     * A passagem a CONCLUIDO dispara ItemDaTrilhaConcluido (apos o commit).
      */
     private function gravar(Inscricao $inscricao, ModuloItem $item, int $posicao, bool $concluido): ProgressoItem
     {
         $agora = now();
         $status = $concluido ? StatusProgresso::CONCLUIDO : StatusProgresso::EM_ANDAMENTO;
 
-        return ConexaoTreinamento::transacao(function () use ($inscricao, $item, $posicao, $concluido, $agora, $status) {
+        [$progresso, $acabouDeConcluir] = ConexaoTreinamento::transacao(function () use ($inscricao, $item, $posicao, $concluido, $agora, $status) {
+            // Trava a linha existente: so um de dois POSTs simultaneos ve a
+            // transicao. Sem linha ainda os dois podem ve-la; por isso quem
+            // ouve o evento precisa ser idempotente.
+            $antes = ProgressoItem::query()
+                ->where('inscricao_id', $inscricao->id)
+                ->where('modulo_item_id', $item->id)
+                ->lockForUpdate()
+                ->value('status');
+
             ConexaoTreinamento::conexao()->statement(<<<'SQL'
                 INSERT INTO treinamento.progresso_itens
                     (inscricao_id, modulo_item_id, status, posicao, concluido_em, created_at, updated_at)
@@ -80,10 +91,18 @@ class ProgressoService
 
             $this->trilha->atualizarPastas($inscricao);
 
-            return ProgressoItem::query()
+            $progresso = ProgressoItem::query()
                 ->where('inscricao_id', $inscricao->id)
                 ->where('modulo_item_id', $item->id)
                 ->firstOrFail();
+
+            return [$progresso, $concluido && $antes !== StatusProgresso::CONCLUIDO];
         });
+
+        if ($acabouDeConcluir) {
+            ItemDaTrilhaConcluido::dispatch($inscricao->id, $item->id);
+        }
+
+        return $progresso;
     }
 }

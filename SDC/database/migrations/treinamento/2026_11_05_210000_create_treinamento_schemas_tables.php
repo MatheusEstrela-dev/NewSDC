@@ -31,12 +31,17 @@ use Illuminate\Support\Facades\DB;
  * Schemas
  * - cadastro: cidadaos, cidadao_email_verificacoes, cidadao_password_reset_tokens
  *   (login e dado pessoal do cidadao, LGPD).
- * - treinamento: treinamentos, modulos, inscricoes, frequencias, certificados.
+ * - treinamento: treinamentos, modulos, inscricoes, frequencias, certificados;
+ *   do EAD: modulo_itens, treinamento_professores, progresso_itens,
+ *   progresso_pastas, projeto_entregas, videos, video_uploads, provas,
+ *   prova_questoes, prova_alternativas, prova_tentativas, prova_respostas,
+ *   prova_liberacoes.
  *
  * POR QUE NAO HA FK PARA users
  * users vive no sdc (outro banco). treinamentos.created_by,
  * treinamentos.presenca_liberada_por, inscricoes.aprovado_por_id,
- * frequencias.registrado_por_id e certificados.criado_por ficam como bigint
+ * frequencias.registrado_por_id, certificados.criado_por,
+ * certificados.cancelado_por e prova_liberacoes.liberado_por ficam como bigint
  * indexado; o nome do usuario e buscado numa segunda consulta. Pela mesma razao
  * inscricoes.inscrito_id e polimorfico (User no sdc ou Cidadao aqui) e nunca
  * teve FK. As FKs internas ao banco seguem como no sdc.
@@ -69,6 +74,7 @@ return new class extends Migration
         $this->criarEad();
         $this->criarVideo();
         $this->ajustarTabelasExistentes();
+        $this->criarComprovacao();
     }
 
     public function down(): void
@@ -486,6 +492,187 @@ return new class extends Migration
         $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_tipo_check CHECK (tipo IN ('PRESENCIAL', 'ONLINE', 'EAD'))");
 
         $this->exec('ALTER TABLE treinamento.modulos ADD COLUMN IF NOT EXISTS deleted_at timestamp(0)');
+    }
+
+    /**
+     * Comprovacao do EAD: provas por item, conclusao congelada na inscricao e
+     * certificado verificavel. Autocontido e idempotente.
+     *
+     * - provas: 1:1 com o modulo_item do tipo PROVA (o tipo e garantido pela
+     *   aplicacao). O item e excluido logicamente; a prova fica com ele.
+     * - prova_questoes / prova_alternativas: exclusao logica (historico das
+     *   tentativas). No maximo uma alternativa correta ativa por questao.
+     * - prova_tentativas: so conta depois de enviada (finalizada_em). Uma aberta
+     *   por (prova, inscricao). `ordem` guarda a ordem embaralhada sorteada ao
+     *   iniciar: [{"questao_id": 7, "alternativas": [31, 29, 30]}, ...]; nota e
+     *   aprovada sao gravadas no envio e nunca recalculadas (spec 8.7).
+     * - prova_respostas: uma por (tentativa, questao); a alternativa precisa ser
+     *   da questao (FK composta). `correta` e gravada na correcao.
+     * - prova_liberacoes: tentativas extras dadas pelo professor (users.id do
+     *   sdc, sem FK, como os demais autores).
+     * - inscricoes: concluido_em + aproveitamento congelam a conclusao.
+     * - certificados: codigo_verificacao (unico; nulo ate o comando de codigo
+     *   retroativo), aproveitamento, reemissao e cancelamento.
+     */
+    private function criarComprovacao(): void
+    {
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD COLUMN IF NOT EXISTS concluido_em timestamp(0)');
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD COLUMN IF NOT EXISTS aproveitamento numeric(5,2)');
+        $this->exec('ALTER TABLE treinamento.inscricoes DROP CONSTRAINT IF EXISTS inscricoes_aproveitamento_check');
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD CONSTRAINT inscricoes_aproveitamento_check CHECK (aproveitamento BETWEEN 0 AND 100)');
+
+        $this->exec('ALTER TABLE treinamento.certificados ADD COLUMN IF NOT EXISTS codigo_verificacao varchar(20)');
+        $this->exec('ALTER TABLE treinamento.certificados ADD COLUMN IF NOT EXISTS aproveitamento numeric(5,2)');
+        $this->exec('ALTER TABLE treinamento.certificados ADD COLUMN IF NOT EXISTS reemitido_em timestamp(0)');
+        $this->exec('ALTER TABLE treinamento.certificados ADD COLUMN IF NOT EXISTS cancelado_em timestamp(0)');
+        $this->exec('ALTER TABLE treinamento.certificados ADD COLUMN IF NOT EXISTS cancelado_por bigint');
+        $this->exec('ALTER TABLE treinamento.certificados ADD COLUMN IF NOT EXISTS cancelamento_motivo text');
+        $this->exec('ALTER TABLE treinamento.certificados DROP CONSTRAINT IF EXISTS certificados_codigo_verificacao_unique');
+        $this->exec('ALTER TABLE treinamento.certificados ADD CONSTRAINT certificados_codigo_verificacao_unique UNIQUE (codigo_verificacao)');
+        $this->exec('ALTER TABLE treinamento.certificados DROP CONSTRAINT IF EXISTS certificados_aproveitamento_check');
+        $this->exec('ALTER TABLE treinamento.certificados ADD CONSTRAINT certificados_aproveitamento_check CHECK (aproveitamento BETWEEN 0 AND 100)');
+        $this->exec('ALTER TABLE treinamento.certificados DROP CONSTRAINT IF EXISTS certificados_status_check');
+        $this->exec("ALTER TABLE treinamento.certificados ADD CONSTRAINT certificados_status_check CHECK (status IN ('PENDENTE', 'GERADO', 'CANCELADO'))");
+        $this->exec('ALTER TABLE treinamento.certificados DROP CONSTRAINT IF EXISTS certificados_cancelado_check');
+        $this->exec("ALTER TABLE treinamento.certificados ADD CONSTRAINT certificados_cancelado_check CHECK (status <> 'CANCELADO' OR cancelado_em IS NOT NULL)");
+        $this->indices('treinamento.certificados', [
+            'certificados_cancelado_por_fkidx' => 'cancelado_por',
+        ]);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.provas (
+                id bigserial PRIMARY KEY,
+                modulo_item_id bigint NOT NULL,
+                nota_minima numeric(5,2) NOT NULL DEFAULT 70,
+                max_tentativas smallint NOT NULL DEFAULT 3,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT provas_modulo_item_id_unique UNIQUE (modulo_item_id),
+                CONSTRAINT provas_nota_minima_check CHECK (nota_minima BETWEEN 0 AND 100),
+                CONSTRAINT provas_max_tentativas_check CHECK (max_tentativas >= 1),
+                CONSTRAINT provas_modulo_item_id_foreign
+                    FOREIGN KEY (modulo_item_id) REFERENCES treinamento.modulo_itens (id) ON DELETE CASCADE
+            )
+            SQL);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.prova_questoes (
+                id bigserial PRIMARY KEY,
+                prova_id bigint NOT NULL,
+                enunciado text NOT NULL,
+                ordem integer NOT NULL DEFAULT 0,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                deleted_at timestamp(0),
+                CONSTRAINT prova_questoes_prova_id_foreign
+                    FOREIGN KEY (prova_id) REFERENCES treinamento.provas (id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.prova_questoes', [
+            'prova_questoes_prova_id_ordem_index' => 'prova_id, ordem',
+        ]);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.prova_alternativas (
+                id bigserial PRIMARY KEY,
+                prova_questao_id bigint NOT NULL,
+                texto text NOT NULL,
+                correta boolean NOT NULL DEFAULT false,
+                ordem integer NOT NULL DEFAULT 0,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                deleted_at timestamp(0),
+                CONSTRAINT prova_alternativas_id_prova_questao_id_unique UNIQUE (id, prova_questao_id),
+                CONSTRAINT prova_alternativas_prova_questao_id_foreign
+                    FOREIGN KEY (prova_questao_id) REFERENCES treinamento.prova_questoes (id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.prova_alternativas', [
+            'prova_alternativas_prova_questao_id_ordem_index' => 'prova_questao_id, ordem',
+        ]);
+        $this->exec(<<<'SQL'
+            CREATE UNIQUE INDEX IF NOT EXISTS prova_alternativas_uma_correta_por_questao
+                ON treinamento.prova_alternativas (prova_questao_id) WHERE correta AND deleted_at IS NULL
+            SQL);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.prova_tentativas (
+                id bigserial PRIMARY KEY,
+                prova_id bigint NOT NULL,
+                inscricao_id bigint NOT NULL,
+                numero smallint NOT NULL,
+                ordem jsonb NOT NULL DEFAULT '[]'::jsonb,
+                iniciada_em timestamp(0) NOT NULL,
+                finalizada_em timestamp(0),
+                nota numeric(5,2),
+                aprovada boolean,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT prova_tentativas_prova_id_inscricao_id_numero_unique UNIQUE (prova_id, inscricao_id, numero),
+                CONSTRAINT prova_tentativas_numero_check CHECK (numero >= 1),
+                CONSTRAINT prova_tentativas_nota_check CHECK (nota BETWEEN 0 AND 100),
+                CONSTRAINT prova_tentativas_envio_check CHECK (
+                    (finalizada_em IS NULL AND nota IS NULL AND aprovada IS NULL)
+                    OR (finalizada_em IS NOT NULL AND nota IS NOT NULL AND aprovada IS NOT NULL)
+                ),
+                CONSTRAINT prova_tentativas_prova_id_foreign
+                    FOREIGN KEY (prova_id) REFERENCES treinamento.provas (id) ON DELETE CASCADE,
+                CONSTRAINT prova_tentativas_inscricao_id_foreign
+                    FOREIGN KEY (inscricao_id) REFERENCES treinamento.inscricoes (id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.prova_tentativas', [
+            'prova_tentativas_inscricao_id_fkidx' => 'inscricao_id',
+        ]);
+        $this->exec(<<<'SQL'
+            CREATE UNIQUE INDEX IF NOT EXISTS prova_tentativas_uma_aberta
+                ON treinamento.prova_tentativas (prova_id, inscricao_id) WHERE finalizada_em IS NULL
+            SQL);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.prova_respostas (
+                id bigserial PRIMARY KEY,
+                prova_tentativa_id bigint NOT NULL,
+                prova_questao_id bigint NOT NULL,
+                prova_alternativa_id bigint NOT NULL,
+                correta boolean,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT prova_respostas_tentativa_questao_unique UNIQUE (prova_tentativa_id, prova_questao_id),
+                CONSTRAINT prova_respostas_prova_tentativa_id_foreign
+                    FOREIGN KEY (prova_tentativa_id) REFERENCES treinamento.prova_tentativas (id) ON DELETE CASCADE,
+                CONSTRAINT prova_respostas_prova_questao_id_foreign
+                    FOREIGN KEY (prova_questao_id) REFERENCES treinamento.prova_questoes (id) ON DELETE CASCADE,
+                CONSTRAINT prova_respostas_alternativa_da_questao_foreign
+                    FOREIGN KEY (prova_alternativa_id, prova_questao_id)
+                    REFERENCES treinamento.prova_alternativas (id, prova_questao_id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.prova_respostas', [
+            'prova_respostas_prova_questao_id_fkidx' => 'prova_questao_id',
+            'prova_respostas_alternativa_fkidx' => 'prova_alternativa_id, prova_questao_id',
+        ]);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.prova_liberacoes (
+                id bigserial PRIMARY KEY,
+                prova_id bigint NOT NULL,
+                inscricao_id bigint NOT NULL,
+                quantidade smallint NOT NULL DEFAULT 1,
+                liberado_por bigint NOT NULL,
+                created_at timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT prova_liberacoes_quantidade_check CHECK (quantidade >= 1),
+                CONSTRAINT prova_liberacoes_prova_id_foreign
+                    FOREIGN KEY (prova_id) REFERENCES treinamento.provas (id) ON DELETE CASCADE,
+                CONSTRAINT prova_liberacoes_inscricao_id_foreign
+                    FOREIGN KEY (inscricao_id) REFERENCES treinamento.inscricoes (id) ON DELETE CASCADE
+            )
+            SQL);
+        $this->indices('treinamento.prova_liberacoes', [
+            'prova_liberacoes_prova_id_inscricao_id_index' => 'prova_id, inscricao_id',
+            'prova_liberacoes_inscricao_id_fkidx' => 'inscricao_id',
+            'prova_liberacoes_liberado_por_fkidx' => 'liberado_por',
+        ]);
     }
 
     /**

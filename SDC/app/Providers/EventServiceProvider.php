@@ -9,6 +9,8 @@ use App\Models\Role;
 use App\Models\User;
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Observers\RatOcorrenciaObserver;
+use App\Modules\Treinamento\Events\ItemDaTrilhaConcluido;
+use App\Modules\Treinamento\Listeners\AvaliarConclusaoDaInscricao;
 use App\Observers\RoleObserver;
 use App\Observers\UserObserver;
 use App\Services\Logging\ActivityLogger;
@@ -38,6 +40,9 @@ class EventServiceProvider extends ServiceProvider
         RatOcorrencia::observe(RatOcorrenciaObserver::class);
 
         Event::listen(Registered::class, SendEmailVerificationNotification::class);
+
+        // Conclusao do curso EAD a cada item concluido da trilha.
+        Event::listen(ItemDaTrilhaConcluido::class, AvaliarConclusaoDaInscricao::class);
 
         Event::subscribe(PermissionEventSubscriber::class);
         Event::subscribe(SessionVersionSubscriber::class);

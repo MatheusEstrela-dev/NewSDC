@@ -8,6 +8,7 @@ use App\Modules\Treinamento\Enums\TipoItem;
 use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ModuloItem extends Model
@@ -43,6 +44,12 @@ class ModuloItem extends Model
     public function modulo(): BelongsTo
     {
         return $this->belongsTo(Modulo::class);
+    }
+
+    /** Configuracao da prova; existe so em itens PROVA. */
+    public function prova(): HasOne
+    {
+        return $this->hasOne(Prova::class);
     }
 
     public function temArquivo(): bool

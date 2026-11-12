@@ -41,17 +41,18 @@ class TrilhaService
                 $progresso = $p['progressos']->get($item->id);
                 $concluido = $progresso?->status === StatusProgresso::CONCLUIDO;
                 $entrega = $p['entregas']->get($item->id);
+                $liberado = $p['liberados'][$item->id];
 
                 if ($item->obrigatorio) {
                     $total++;
                     $concluidos += ($concluido || $p['gravada']) ? 1 : 0;
                 }
-                if ($proximo === null && $p['liberada'] && ! $concluido) {
+                if ($proximo === null && $liberado && ! $concluido) {
                     $proximo = $item->id;
                 }
 
                 $estadoItens[] = new EstadoItem(
-                    $item, $p['liberada'], $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item, $p['liberada']),
+                    $item, $liberado, $progresso?->status, $progresso?->posicao ?? 0, $entrega?->status, $entrega?->parecer, $this->estadoVideo($item, $liberado),
                 );
             }
             $pastas[] = new EstadoPasta($p['modulo'], $p['liberada'], $p['concluida'], $estadoItens);
@@ -121,12 +122,33 @@ class TrilhaService
     public function itemLiberado(Inscricao $inscricao, ModuloItem $item): bool
     {
         foreach ($this->percorrer($inscricao) as $p) {
-            if ($p['itens']->contains('id', $item->id)) {
-                return $p['liberada'];
+            if (array_key_exists($item->id, $p['liberados'])) {
+                return $p['liberados'][$item->id];
             }
         }
 
         return false;
+    }
+
+    /**
+     * Trilha inteira cumprida: inscricao aprovada, curso com ao menos um item
+     * obrigatorio e todas as pastas ativas concluidas (pasta gravada em
+     * progresso_pastas segue concluida mesmo com item novo, spec 8.7). Base do
+     * criterio de conclusao por trilha.
+     */
+    public function concluida(Inscricao $inscricao): bool
+    {
+        $pastas = $this->percorrer($inscricao);
+        $temObrigatorio = false;
+
+        foreach ($pastas as $p) {
+            if (! $p['liberada'] || ! $p['concluida']) {
+                return false;
+            }
+            $temObrigatorio = $temObrigatorio || $p['itens']->contains('obrigatorio', true);
+        }
+
+        return $temObrigatorio;
     }
 
     /**
@@ -158,7 +180,7 @@ class TrilhaService
     /**
      * Pastas e itens ativos em ordem, ja com liberacao e conclusao resolvidas.
      *
-     * @return list<array{modulo: Modulo, itens: Collection<int, ModuloItem>, progressos: Collection<int, ProgressoItem>, entregas: Collection<int, ProjetoEntrega>, gravada: bool, concluida: bool, liberada: bool}>
+     * @return list<array{modulo: Modulo, itens: Collection<int, ModuloItem>, progressos: Collection<int, ProgressoItem>, entregas: Collection<int, ProjetoEntrega>, gravada: bool, concluida: bool, liberada: bool, liberados: array<int, bool>}>
      */
     private function percorrer(Inscricao $inscricao): array
     {
@@ -194,10 +216,26 @@ class TrilhaService
                 'gravada' => $gravada,
                 'concluida' => $concluida,
                 'liberada' => $liberada,
+                'liberados' => $modulo->itens
+                    ->mapWithKeys(fn (ModuloItem $i) => [$i->id => $this->itemAbertoNaPasta($i, $modulo->itens, $progressos, $liberada)])
+                    ->all(),
             ];
             $liberada = $liberada && $concluida;
         }
 
         return $resultado;
+    }
+
+    /**
+     * Ponto unico de liberacao de um item dentro da pasta. Hoje todo item da
+     * pasta liberada esta aberto; a regra da prova (so abre depois dos demais
+     * obrigatorios da pasta, spec 8.2) entra aqui.
+     *
+     * @param  Collection<int, ModuloItem>  $itensDaPasta
+     * @param  Collection<int, ProgressoItem>  $progressos  por modulo_item_id
+     */
+    private function itemAbertoNaPasta(ModuloItem $item, Collection $itensDaPasta, Collection $progressos, bool $pastaLiberada): bool
+    {
+        return $pastaLiberada;
     }
 }
