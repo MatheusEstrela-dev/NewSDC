@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import CertificadoItem from '@/Components/Molecules/Treinamento/CertificadoItem.vue';
 import CursoEadCard from '@/Components/Molecules/Treinamento/CursoEadCard.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
@@ -15,6 +16,7 @@ defineOptions({ layout: AuthenticatedLayout });
 defineProps({
   meus_cursos: { type: Array, default: () => [] },
   disponiveis: { type: Array, default: () => [] },
+  certificados: { type: Array, default: () => [] },
 });
 
 const { show: toast } = useToast();
@@ -49,6 +51,19 @@ function inscrever(curso) {
 
       <div v-else class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
         <CursoEadCard v-for="curso in meus_cursos" :key="curso.id" :curso="curso" modo="inscrito" />
+      </div>
+    </section>
+
+    <section v-if="certificados.length" class="mt-8">
+      <Heading :level="2" class="mb-3 text-lg font-semibold">Meus certificados</Heading>
+
+      <div class="space-y-4">
+        <CertificadoItem
+          v-for="certificado in certificados"
+          :key="certificado.id"
+          :certificado="certificado"
+          :imprimir-url="route('treinamentos.certificados.imprimir', certificado.id)"
+        />
       </div>
     </section>
 

@@ -24,6 +24,7 @@ class CertificadoResource extends JsonResource
             'emitido_em' => $this->emitido_em?->toIso8601String(),
             'codigo_verificacao' => $this->codigo_verificacao,
             'aproveitamento' => $this->aproveitamento,
+            'reemitido' => $this->reemitido_em !== null,
             'cancelado' => $this->estaCancelado(),
             'url_validacao' => $this->codigo_verificacao ? route('certificados.validar', $this->codigo_verificacao) : null,
         ];

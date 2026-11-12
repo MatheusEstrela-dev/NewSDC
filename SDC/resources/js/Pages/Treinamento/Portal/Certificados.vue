@@ -2,8 +2,8 @@
 import { computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import CertificadoItem from '@/Components/Molecules/Treinamento/CertificadoItem.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
@@ -37,28 +37,12 @@ function irParaPagina(page) {
     <Heading :level="1" class="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6">Meus Certificados</Heading>
 
     <div class="space-y-4">
-      <CardBase v-for="certificado in certificados.data" :key="certificado.id" class="p-5 flex items-center justify-between">
-        <div>
-          <Text size="base" class="font-semibold">{{ certificado.treinamento_titulo }}</Text>
-          <Text size="xs" color="muted">
-            {{ certificado.emitido_em ? new Date(certificado.emitido_em).toLocaleDateString('pt-BR') : 'Aguardando emissão' }}
-          </Text>
-          <Text v-if="certificado.codigo_verificacao" size="xs" color="muted">
-            Código de verificação: <span class="font-mono font-medium">{{ certificado.codigo_verificacao }}</span>
-          </Text>
-        </div>
-        <div class="flex items-center gap-3">
-          <Badge :color="certificado.status_color">{{ certificado.status_label }}</Badge>
-          <a
-            v-if="certificado.disponivel"
-            :href="route('portal.treinamento.certificados.imprimir', certificado.id)"
-            target="_blank"
-            class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-          >
-            Ver / Imprimir
-          </a>
-        </div>
-      </CardBase>
+      <CertificadoItem
+        v-for="certificado in certificados.data"
+        :key="certificado.id"
+        :certificado="certificado"
+        :imprimir-url="route('portal.treinamento.certificados.imprimir', certificado.id)"
+      />
 
       <CardBase v-if="certificados.data.length === 0" class="p-8 text-center">
         <Text size="sm" color="muted">Nenhum certificado disponível ainda. Conclua um curso ou evento para receber o seu.</Text>
