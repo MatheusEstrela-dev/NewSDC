@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\DTOs;
 
+use App\Modules\Treinamento\Models\Prova;
+
 /**
  * Onde uma inscricao esta numa prova. Leitura pura, montada pelo
  * SituacaoProvaService; quem grava tentativas e liberacoes sao os servicos
@@ -53,6 +55,7 @@ final readonly class SituacaoProva
         return [
             'prova_id' => $this->provaId,
             'item_id' => $this->moduloItemId,
+            'escala_nota' => Prova::ESCALA_NOTA,
             'nota_minima' => $this->notaMinima,
             'total_questoes' => $this->totalQuestoes,
             'tentativas_permitidas' => $this->tentativasPermitidas,

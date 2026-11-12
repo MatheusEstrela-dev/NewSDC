@@ -54,6 +54,7 @@ class ProvasDoCursoService
                 'item_id' => $item->id,
                 'pasta' => $pasta->titulo,
                 'titulo' => $item->titulo,
+                'escala_nota' => Prova::ESCALA_NOTA,
                 'nota_minima' => $prova->nota_minima,
                 'max_tentativas' => $prova->max_tentativas,
                 'total_questoes' => (int) $prova->questoes_count,

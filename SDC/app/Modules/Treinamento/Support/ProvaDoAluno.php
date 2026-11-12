@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Support;
 
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\ModuloItem;
+use App\Modules\Treinamento\Models\Prova;
 use App\Modules\Treinamento\Models\ProvaAlternativa;
 use App\Modules\Treinamento\Models\ProvaQuestao;
 use App\Modules\Treinamento\Models\ProvaResposta;
@@ -118,6 +119,7 @@ final class ProvaDoAluno
         return [
             'numero' => $tentativa->numero,
             'nota' => $tentativa->nota,
+            'escala_nota' => Prova::ESCALA_NOTA,
             'aprovada' => $tentativa->aprovada,
             'acertos' => ProvaResposta::query()->where('prova_tentativa_id', $tentativa->id)->where('correta', true)->count(),
             'total' => count($tentativa->ordem),
