@@ -18,6 +18,7 @@ use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\ProgressoItem;
 use App\Modules\Treinamento\Models\ProgressoPasta;
 use App\Modules\Treinamento\Models\ProjetoEntrega;
+use App\Modules\Treinamento\Models\Prova;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Support\CaminhosVideo;
 use Illuminate\Support\Collection;
@@ -52,7 +53,7 @@ class TrilhaService
                 $entrega = $p['entregas']->get($item->id);
                 $liberado = $p['liberados'][$item->id];
 
-                if ($item->obrigatorio) {
+                if (isset($p['exigidos'][$item->id])) {
                     $total++;
                     $concluidos += ($concluido || $p['gravada']) ? 1 : 0;
                 }
@@ -84,8 +85,10 @@ class TrilhaService
     public function estadosEmLote(Treinamento $treinamento, Collection $inscricoes, array $situacoesPorInscricao): array
     {
         $ids = $inscricoes->modelKeys();
+        $pastas = $this->pastasDoCurso($treinamento->id);
         $lote = [
-            'pastas' => $this->pastasDoCurso($treinamento->id),
+            'pastas' => $pastas,
+            'em_preparacao' => $this->provasEmPreparacao($pastas),
             'progressos' => ProgressoItem::query()->whereIn('inscricao_id', $ids)->get()->groupBy('inscricao_id'),
             'gravadas' => ProgressoPasta::query()->whereIn('inscricao_id', $ids)->get(['inscricao_id', 'modulo_id'])->groupBy('inscricao_id'),
             'entregas' => ProjetoEntrega::query()->whereIn('inscricao_id', $ids)->orderByDesc('id')->get()->groupBy('inscricao_id'),
@@ -182,7 +185,7 @@ class TrilhaService
             if (! $p['liberada'] || ! $p['concluida']) {
                 return false;
             }
-            $temObrigatorio = $temObrigatorio || $p['itens']->contains('obrigatorio', true);
+            $temObrigatorio = $temObrigatorio || $p['exigidos'] !== [];
         }
 
         return $temObrigatorio;
@@ -218,11 +221,12 @@ class TrilhaService
      * Pastas e itens ativos em ordem, ja com liberacao e conclusao resolvidas.
      *
      * @param  array<string, mixed>|null  $lote  de estadosEmLote(); null carrega so esta inscricao
-     * @return list<array{modulo: Modulo, itens: Collection<int, ModuloItem>, progressos: Collection<int, ProgressoItem>, entregas: Collection<int, ProjetoEntrega>, gravada: bool, concluida: bool, liberada: bool, liberados: array<int, bool>}>
+     * @return list<array{modulo: Modulo, itens: Collection<int, ModuloItem>, exigidos: array<int, ModuloItem>, progressos: Collection<int, ProgressoItem>, entregas: Collection<int, ProjetoEntrega>, gravada: bool, concluida: bool, liberada: bool, liberados: array<int, bool>}>
      */
     private function percorrer(Inscricao $inscricao, ?array $lote = null): array
     {
         $pastas = $lote['pastas'] ?? $this->pastasDoCurso($inscricao->treinamento_id);
+        $emPreparacao = $lote['em_preparacao'] ?? $this->provasEmPreparacao($pastas);
 
         // Em lote, quem nao tem linha nao aparece no groupBy: vazio, sem nova consulta.
         $progressos = ($lote === null
@@ -244,7 +248,10 @@ class TrilhaService
 
         foreach ($pastas as $modulo) {
             $gravada = in_array($modulo->id, $gravadas, true);
-            $obrigatoriosPendentes = $modulo->itens->where('obrigatorio', true)
+            $exigidos = $modulo->itens
+                ->filter(fn (ModuloItem $i) => $i->obrigatorio && ! in_array($i->id, $emPreparacao, true))
+                ->keyBy('id');
+            $obrigatoriosPendentes = $exigidos
                 ->contains(fn (ModuloItem $i) => $progressos->get($i->id)?->status !== StatusProgresso::CONCLUIDO);
             $concluida = $gravada || ! $obrigatoriosPendentes;
 
@@ -253,6 +260,7 @@ class TrilhaService
                 'itens' => $modulo->itens,
                 'progressos' => $progressos,
                 'entregas' => $entregas,
+                'exigidos' => $exigidos->all(),
                 'gravada' => $gravada,
                 'concluida' => $concluida,
                 'liberada' => $liberada,
@@ -264,6 +272,34 @@ class TrilhaService
         }
 
         return $resultado;
+    }
+
+    /**
+     * Provas dos itens ativos que ainda nao tem questao sorteavel (com
+     * alternativa ativa): o professor acabou de acrescenta-las a um curso ja
+     * publicado. Prova assim nao e exigida (nao trava pasta nem conclusao) ate
+     * ganhar questao, para o aluno nunca ficar preso numa prova que nao abre.
+     *
+     * @param  Collection<int, Modulo>  $pastas
+     * @return list<int> ids de modulo_itens
+     */
+    private function provasEmPreparacao(Collection $pastas): array
+    {
+        $ids = $pastas->flatMap(fn (Modulo $m) => $m->itens)
+            ->filter(fn (ModuloItem $i) => $i->tipo === TipoItem::PROVA)
+            ->pluck('id')
+            ->all();
+        if ($ids === []) {
+            return [];
+        }
+
+        $comQuestao = Prova::query()
+            ->whereIn('modulo_item_id', $ids)
+            ->whereHas('questoes', fn ($q) => $q->whereHas('alternativas'))
+            ->pluck('modulo_item_id')
+            ->all();
+
+        return array_values(array_diff($ids, $comQuestao));
     }
 
     /** @return Collection<int, Modulo> pastas ativas em ordem, com os itens ativos e o video de cada um */

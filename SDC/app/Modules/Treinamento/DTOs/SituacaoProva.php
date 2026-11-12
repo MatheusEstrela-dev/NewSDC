@@ -66,6 +66,7 @@ final readonly class SituacaoProva
             'aprovada' => $this->aprovada,
             'travada' => $this->travada(),
             'pode_iniciar' => $this->podeIniciar(),
+            'em_preparacao' => $this->totalQuestoes === 0,
         ];
     }
 }

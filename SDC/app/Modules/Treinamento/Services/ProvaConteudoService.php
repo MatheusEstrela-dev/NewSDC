@@ -113,7 +113,11 @@ class ProvaConteudoService
                 throw ValidationException::withMessages(['alternativas' => 'Alternativa nao pertence a esta questao.']);
             }
 
-            ProvaAlternativa::query()->whereKey(array_diff($ativas, $mantidas))->delete();
+            // A removida deixa de ser gabarito na mesma escrita: tentativa aberta que a
+            // congelou nao pode ficar com duas corretas.
+            $removidas = array_diff($ativas, $mantidas);
+            ProvaAlternativa::query()->whereKey($removidas)->update(['correta' => false]);
+            ProvaAlternativa::query()->whereKey($removidas)->delete();
             ProvaAlternativa::query()->where('prova_questao_id', $questao->id)->update(['correta' => false]);
 
             foreach (array_values($dados['alternativas']) as $posicao => $alternativa) {
@@ -127,8 +131,8 @@ class ProvaConteudoService
     }
 
     /**
-     * Curso publicado nao fica com prova vazia: a prova e obrigatoria e sem
-     * questao trava na hora quem esta na pasta (a publicacao ja exige questoes).
+     * Curso publicado nao esvazia a prova: a prova que ja foi exigida dos alunos
+     * nao volta a "em preparacao" (a publicacao ja exige questoes).
      */
     public function excluirQuestao(ProvaQuestao $questao): void
     {
@@ -137,7 +141,7 @@ class ProvaConteudoService
 
         if ($ultima && $prova->item->modulo->treinamento->estaPublicado()) {
             throw ValidationException::withMessages([
-                'questao' => 'A prova de um curso publicado precisa de ao menos uma questao. Despublique o curso para esvazia-la.',
+                'questao' => 'A prova de um curso publicado precisa de ao menos uma questao. Edite a questao em vez de exclui-la.',
             ]);
         }
 
