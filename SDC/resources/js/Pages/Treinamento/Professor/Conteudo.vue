@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -11,6 +11,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import PendenciasPublicacao from '@/Components/Molecules/Treinamento/PendenciasPublicacao.vue';
 import MenuCurso from '@/Components/Organisms/Treinamento/Professor/MenuCurso.vue';
 import UploaderVideo from '@/Components/Organisms/Treinamento/Conteudo/UploaderVideo.vue';
 import SeletorVideo from '@/Components/Organisms/Treinamento/Conteudo/SeletorVideo.vue';
@@ -37,6 +38,8 @@ watch(() => props.pastas, (novas) => { lista.value = copiar(novas); });
 
 const totalItens = computed(() => lista.value.reduce((soma, p) => soma + p.itens.length, 0));
 
+
+const erroPublicacao = computed(() => usePage().props.errors?.publicar ?? '');
 
 function avisarErro(erros) {
   toast(Object.values(erros)[0] || 'Nao foi possivel concluir a acao.', 'error');
@@ -104,6 +107,8 @@ const ITEM_VAZIO = {
   obrigatorio: true,
   total_paginas: '',
   arquivo: null,
+  nota_minima: 70,
+  max_tentativas: 3,
 };
 const formItem = useForm({ ...ITEM_VAZIO });
 // Troca a chave para recriar o input file e descartar o arquivo escolhido antes.
@@ -112,6 +117,17 @@ const chaveArquivo = ref(0);
 const tipoDoItem = computed(() => itemEmEdicao.value?.tipo ?? formItem.tipo);
 const ehPdf = computed(() => tipoDoItem.value === 'PDF');
 const ehVideo = computed(() => tipoDoItem.value === 'VIDEO');
+const ehProva = computed(() => tipoDoItem.value === 'PROVA');
+
+// Prova e sempre obrigatoria. Nota minima e tentativas so seguem na criacao: o
+// payload do conteudo nao traz os valores atuais, entao editar o item nao os
+// sobrescreve (a configuracao fica na aba Provas). Nos demais tipos nao seguem.
+formItem.transform((dados) => {
+  const { nota_minima: notaMinima, max_tentativas: maxTentativas, ...resto } = dados;
+  if (!ehProva.value) return resto;
+  const base = { ...resto, obrigatorio: true };
+  return itemEmEdicao.value ? base : { ...base, nota_minima: notaMinima, max_tentativas: maxTentativas };
+});
 
 function abrirItem(pasta, item = null) {
   pastaDoItem.value = pasta;
@@ -219,7 +235,6 @@ function avisoDoVideo(video) {
 function publicar() {
   router.post(route('treinamentos.professor.publicar', props.curso.id), {}, {
     preserveScroll: true,
-    onError: avisarErro,
   });
 }
 </script>
@@ -246,6 +261,8 @@ function publicar() {
             </Button>
           </div>
         </div>
+
+        <PendenciasPublicacao :mensagem="erroPublicacao" :href-provas="route('treinamentos.professor.provas', curso.id)" />
 
         <CardBase v-if="lista.length === 0">
           <Text color="muted">Nenhuma pasta ainda. Crie a primeira com "+ Nova pasta".</Text>
@@ -300,6 +317,12 @@ function publicar() {
                         rel="noopener"
                         class="text-sm text-sky-600 hover:underline"
                       >Abrir</a>
+                      <Button
+                        v-if="item.tipo === 'PROVA'"
+                        size="sm"
+                        variant="outline"
+                        :href="route('treinamentos.professor.provas', { treinamento: curso.id, item: item.id })"
+                      >Questões</Button>
                       <Button size="sm" variant="outline" @click="abrirItem(pasta, item)">Editar</Button>
                       <Button size="sm" variant="danger" @click="excluirItem(item)">Excluir</Button>
                     </div>
@@ -374,6 +397,7 @@ function publicar() {
             <option value="PDF">Material em PDF</option>
             <option value="PROJETO">Projeto</option>
             <option value="VIDEO">Vídeo</option>
+            <option value="PROVA">Prova</option>
           </select>
           <p v-if="formItem.errors.tipo" class="mt-1 text-sm text-red-600">{{ formItem.errors.tipo }}</p>
         </div>
@@ -388,7 +412,7 @@ function publicar() {
           <textarea v-model="formItem.descricao" rows="3" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800" />
         </div>
 
-        <div v-if="!ehVideo">
+        <div v-if="!ehVideo && !ehProva">
           <label class="mb-1 block text-sm font-medium">
             {{ ehPdf ? 'Arquivo PDF' : 'Arquivo de apoio (opcional)' }}
           </label>
@@ -402,7 +426,23 @@ function publicar() {
 
         <Text v-if="ehVideo && !itemEmEdicao" size="xs" color="muted">O vídeo é escolhido na biblioteca depois que o item for criado.</Text>
 
-        <label class="flex items-center gap-2 text-sm">
+        <div v-if="ehProva && !itemEmEdicao" class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="item-nota-minima" class="mb-1 block text-sm font-medium">Nota minima (0 a 100)</label>
+            <TextInput id="item-nota-minima" v-model="formItem.nota_minima" type="number" min="0" max="100" class="w-full" />
+            <p v-if="formItem.errors.nota_minima" class="mt-1 text-sm text-red-600">{{ formItem.errors.nota_minima }}</p>
+          </div>
+          <div>
+            <label for="item-max-tentativas" class="mb-1 block text-sm font-medium">Maximo de tentativas</label>
+            <TextInput id="item-max-tentativas" v-model="formItem.max_tentativas" type="number" min="1" max="20" class="w-full" />
+            <p v-if="formItem.errors.max_tentativas" class="mt-1 text-sm text-red-600">{{ formItem.errors.max_tentativas }}</p>
+          </div>
+        </div>
+        <Text v-if="ehProva" size="xs" color="muted">
+          A prova e sempre obrigatoria. As questoes e a configuracao ficam na aba Provas{{ itemEmEdicao ? '' : ', depois que o item for criado' }}.
+        </Text>
+
+        <label v-else class="flex items-center gap-2 text-sm">
           <input v-model="formItem.obrigatorio" type="checkbox">
           Obrigatorio para concluir a pasta
         </label>

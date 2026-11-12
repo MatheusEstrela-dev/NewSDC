@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import { useToast } from '@/Composables/useToast';
 
 /**
  * Menu lateral do curso na area do professor (rascunho 3, P1). Compartilhado
@@ -15,6 +16,7 @@ const props = defineProps({
 
 const entradas = computed(() => [
   { chave: 'conteudo', rotulo: 'Conteúdo', href: route('treinamentos.professor.conteudo', props.curso.id) },
+  { chave: 'provas', rotulo: 'Provas', href: route('treinamentos.professor.provas', props.curso.id) },
   { chave: 'alunos', rotulo: 'Alunos', href: route('treinamentos.professor.alunos', props.curso.id) },
   { chave: 'correcoes', rotulo: 'Correções', href: route('treinamentos.professor.correcoes', props.curso.id), contador: props.pendentes },
   { chave: 'previa', rotulo: 'Prévia', href: route('treinamentos.professor.previa', props.curso.id) },
@@ -31,8 +33,13 @@ function classes(chave) {
   ];
 }
 
+const { show: toast } = useToast();
+
 function publicar() {
-  router.post(route('treinamentos.professor.publicar', props.curso.id), {}, { preserveScroll: true });
+  router.post(route('treinamentos.professor.publicar', props.curso.id), {}, {
+    preserveScroll: true,
+    onError: () => toast('O curso nao pode ser publicado ainda. Veja as pendencias na aba Conteúdo.', 'error'),
+  });
 }
 </script>
 
