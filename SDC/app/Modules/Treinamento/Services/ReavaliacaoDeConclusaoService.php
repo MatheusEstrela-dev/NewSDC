@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Services;
 
+use App\Modules\Treinamento\DTOs\EstadoTrilha;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Jobs\EmitirCertificadoDaInscricaoJob;
 use App\Modules\Treinamento\Models\Inscricao;
@@ -23,7 +24,10 @@ class ReavaliacaoDeConclusaoService
 
     /**
      * Avalia uma inscricao e, se concluiu agora, enfileira a emissao do
-     * certificado. Devolve true so quando a conclusao foi gravada nesta chamada.
+     * certificado (uma vez: quem perde a corrida pela gravacao nao enfileira).
+     * Devolve true so quando a conclusao foi gravada nesta chamada. Se o
+     * enfileiramento falhar depois da gravacao, o certificado fica pendente e
+     * o comando treinamento:avaliar-conclusoes o recupera (emissoesPendentes).
      */
     public function avaliar(Inscricao $inscricao): bool
     {
@@ -37,7 +41,7 @@ class ReavaliacaoDeConclusaoService
         }
 
         $resultado = $this->conclusao->registrar($inscricao);
-        if ($resultado === null) {
+        if ($resultado === null || ! $resultado->gravadaAgora) {
             return false;
         }
 
@@ -62,7 +66,22 @@ class ReavaliacaoDeConclusaoService
     }
 
     /**
-     * Inscricoes aprovadas e ainda sem conclusao dos cursos EAD (todos ou um).
+     * Ao abrir a sala: so avalia quando o estado da trilha ja calculado indica
+     * trilha completa e a conclusao ainda nao foi gravada. Visita normal nao
+     * gasta consulta nem transacao.
+     */
+    public function avaliarSeTrilhaCompleta(Inscricao $inscricao, EstadoTrilha $estado): void
+    {
+        if ($inscricao->concluido_em === null && $estado->total > 0 && $estado->concluidos >= $estado->total) {
+            $this->avaliarSemDerrubar($inscricao);
+        }
+    }
+
+    /**
+     * Inscricoes aprovadas e ainda sem conclusao dos cursos EAD publicados
+     * (todos ou um). Curso fora do ar nao conclui ninguem: a conclusao congela
+     * e emite certificado, irreversivel. Uma inscricao com erro nao impede as
+     * demais (o erro e reportado).
      *
      * @return int quantas inscricoes concluiram nesta passada
      */
@@ -73,12 +92,17 @@ class ReavaliacaoDeConclusaoService
         Inscricao::query()
             ->aprovadas()
             ->whereNull('concluido_em')
-            ->whereHas('treinamento', fn ($q) => $q->where('tipo', TipoTreinamento::EAD->value))
+            ->whereHas('treinamento', fn ($q) => $q->where('tipo', TipoTreinamento::EAD->value)
+                ->whereNotNull('link_publico_slug')->whereNotNull('publicado_em'))
             ->when($treinamentoId !== null, fn ($q) => $q->porTreinamento($treinamentoId))
             ->with('treinamento')
             ->chunkById(self::LOTE, function ($lote) use (&$concluidas) {
                 foreach ($lote as $inscricao) {
-                    $concluidas += $this->avaliar($inscricao) ? 1 : 0;
+                    try {
+                        $concluidas += $this->avaliar($inscricao) ? 1 : 0;
+                    } catch (Throwable $e) {
+                        report($e);
+                    }
                 }
             });
 

@@ -31,13 +31,14 @@ class ConclusaoService
                 return null;
             }
 
+            $gravadaAgora = false;
             if ($travada->concluido_em === null) {
                 // Update direto: nao dispara a trilha de acoes do model nem passa
                 // pelo $fillable (a conclusao so se escreve aqui).
-                Inscricao::query()->whereKey($travada->id)->whereNull('concluido_em')->update([
+                $gravadaAgora = Inscricao::query()->whereKey($travada->id)->whereNull('concluido_em')->update([
                     'concluido_em' => $resultado->concluidoEm,
                     'aproveitamento' => $resultado->aproveitamento,
-                ]);
+                ]) === 1;
                 $travada->refresh();
             }
 
@@ -46,7 +47,7 @@ class ConclusaoService
                 'aproveitamento' => $travada->aproveitamento,
             ])->syncOriginalAttributes(['concluido_em', 'aproveitamento']);
 
-            return new ResultadoConclusao($travada->concluido_em, $travada->aproveitamento);
+            return new ResultadoConclusao($travada->concluido_em, $travada->aproveitamento, $gravadaAgora);
         });
     }
 }
