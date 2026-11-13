@@ -106,6 +106,10 @@ class Ffmpeg
     /**
      * Renditions ativas que nao ampliam o original; sempre ao menos a menor.
      *
+     * Original entre duas renditions (ex.: gravacao de tela 1920x1032) ganha
+     * tambem a de cima, que sai na altura do original (o scale nunca amplia):
+     * sem ela o video ficaria preso no 720p e o texto da tela ilegivel.
+     *
      * @return array<string, array<string, mixed>>
      */
     private function renditions(SondagemVideo $sondagem): array
@@ -113,7 +117,17 @@ class Ffmpeg
         $ativas = collect(config('treinamento.video.renditions'))->where('ativa', true)->sortBy('altura');
         $cabem = $ativas->filter(fn (array $r) => $r['altura'] <= $sondagem->altura);
 
-        return ($cabem->isEmpty() ? $ativas->take(1) : $cabem)->all();
+        if ($cabem->isEmpty()) {
+            return $ativas->take(1)->all();
+        }
+
+        $nomeAcima = $ativas->filter(fn (array $r) => $r['altura'] > $sondagem->altura)->keys()->first();
+
+        if ($nomeAcima !== null && $sondagem->altura > (int) $cabem->max('altura')) {
+            $cabem->put($nomeAcima, $ativas->get($nomeAcima));
+        }
+
+        return $cabem->all();
     }
 
     private function dobro(string $bitrate): string

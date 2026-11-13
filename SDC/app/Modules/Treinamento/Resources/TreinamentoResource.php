@@ -38,6 +38,7 @@ class TreinamentoResource extends JsonResource
             'total_inscricoes' => $this->total_inscricoes,
             'percentual_frequencia_minimo' => (float) $this->percentual_frequencia_minimo,
             'link_publico_slug' => $this->link_publico_slug,
+            'capa_url' => $this->isEad() ? $this->capaUrl() : null,
             'esta_publicado' => $this->estaPublicado(),
             'situacao' => $this->situacaoEfetiva()->value,
             'situacao_label' => $this->situacaoEfetiva()->getLabel(),

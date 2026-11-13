@@ -2,6 +2,7 @@
 
 use App\Modules\Treinamento\Controllers\CertificadoImprimirController;
 use App\Modules\Treinamento\Controllers\Portal\AuthenticatedSessionController;
+use App\Modules\Treinamento\Controllers\Portal\CapaController;
 use App\Modules\Treinamento\Controllers\Portal\CatalogoController;
 use App\Modules\Treinamento\Controllers\Portal\CertificadoController;
 use App\Modules\Treinamento\Controllers\Portal\InscricaoController;
@@ -75,6 +76,11 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
         // Autoconfirmacao de presenca (sem QR) - so para treinamentos ONLINE.
         Route::post('/inscricoes/{inscricao}/presenca', [PresencaAutoconfirmacaoController::class, 'store'])
             ->name('inscricoes.presenca');
+
+        // Capa do curso: so de curso publicado para cidadaos (404 nos demais casos).
+        Route::get('/capas/{treinamento}', CapaController::class)
+            ->whereNumber('treinamento')
+            ->name('capa');
 
         Route::get('/minhas-inscricoes', MinhasInscricoesController::class)->name('inscricoes.index');
         // Sala de aula do EAD (cidadao): o acesso a cada conteudo e decidido no

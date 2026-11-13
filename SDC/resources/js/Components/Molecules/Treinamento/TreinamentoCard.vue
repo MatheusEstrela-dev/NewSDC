@@ -43,6 +43,15 @@ const vagasText = computed(() => {
 
 <template>
   <CardBase class="treinamento-card hover:shadow-lg transition-all cursor-pointer" @click="emit('view', treinamento.id)">
+    <!-- Capa (curso EAD com imagem propria; sem ela o card segue sem faixa) -->
+    <img
+      v-if="treinamento.capa_url"
+      :src="treinamento.capa_url"
+      :alt="`Capa do curso: ${treinamento.titulo}`"
+      class="-mx-4 -mt-4 mb-3 h-32 w-[calc(100%+2rem)] max-w-none rounded-t-lg object-cover"
+      loading="lazy"
+    />
+
     <!-- Header com Badges -->
     <div class="flex justify-between items-start mb-3">
       <div class="flex-1">

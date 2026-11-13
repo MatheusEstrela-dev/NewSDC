@@ -55,7 +55,14 @@ function confirmarPresenca() {
 <template>
   <div class="max-w-2xl mx-auto">
     <img
-      v-if="treinamento.esta_publicado"
+      v-if="treinamento.capa_url"
+      :src="treinamento.capa_url"
+      :alt="`Capa do curso: ${treinamento.titulo}`"
+      class="mb-4 aspect-[16/6] w-full rounded-lg border border-slate-200 object-cover dark:border-slate-700"
+      loading="lazy"
+    />
+    <img
+      v-else-if="treinamento.esta_publicado"
       :src="route('treinamentos.divulgacao', treinamento.id)"
       :alt="`Imagem de divulgação: ${treinamento.titulo}`"
       class="w-full rounded-lg border border-slate-200 dark:border-slate-700 mb-4"

@@ -15,7 +15,7 @@ class ProfessorService
 {
     public const PERMISSAO = 'treinamento.professor.acessar';
 
-    /** Quem edita cursos gerencia qualquer curso EAD, sem precisar ser designado. */
+    /** Quem edita cursos (treinamento.cursos.edit) gerencia qualquer curso EAD, sem precisar ser designado. */
     public const PERMISSAO_ADMIN = 'treinamento.cursos.edit';
 
     public function designar(Treinamento $treinamento, int $userId): TreinamentoProfessor

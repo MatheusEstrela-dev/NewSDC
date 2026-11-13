@@ -11,6 +11,9 @@ const BUFFER_ATRAS_SEGUNDOS = 90;
 // qualidade que cabe no player, e o ABR so desce se a rede nao sustentar.
 const BANDA_INICIAL_BPS = 5_000_000;
 const TIPO_HLS_NATIVO = 'application/vnd.apple.mpegurl';
+// Altura escolhida pelo aluno (ex.: 720), lembrada entre aulas. Ausente = automatico.
+const CHAVE_QUALIDADE = 'treinamento.video.qualidade';
+const AUTOMATICO = -1;
 const MENSAGEM_ERRO = 'Não foi possível reproduzir este vídeo. Tente novamente em instantes.';
 const MENSAGEM_SEM_SUPORTE = 'Este navegador não consegue reproduzir este vídeo.';
 const MENSAGEM_SESSAO = 'Sua sessão expirou. Recarregue a página ou entre novamente para continuar.';
@@ -30,6 +33,11 @@ const emit = defineEmits(['posicao', 'terminou']);
 const video = ref(null);
 const carregando = ref(true);
 const erro = ref('');
+// Qualidades do manifesto ({ indice, altura }, da maior para a menor), a escolha
+// (indice do hls.js ou AUTOMATICO) e a altura que esta tocando agora.
+const qualidades = ref([]);
+const escolha = ref(AUTOMATICO);
+const alturaAtual = ref(null);
 
 const pulso = usePulsoSessao(() => props.urlPulso);
 
@@ -154,7 +162,57 @@ function aoFalhar(_evento, dados) {
   }
 }
 
+function lerAlturaPreferida() {
+  try {
+    return Number(window.localStorage.getItem(CHAVE_QUALIDADE)) || null;
+  } catch {
+    return null;
+  }
+}
+
+function gravarAlturaPreferida(altura) {
+  try {
+    if (altura) window.localStorage.setItem(CHAVE_QUALIDADE, String(altura));
+    else window.localStorage.removeItem(CHAVE_QUALIDADE);
+  } catch {
+    // Sem armazenamento (aba anonima, bloqueio): a escolha vale so para esta aula.
+  }
+}
+
+// Escolha manual ignora o limite pelo tamanho do player: quem pede 1080p numa
+// gravacao de tela quer ler o texto, mesmo com o player menor que o video.
+function aplicarEscolha(indice) {
+  escolha.value = indice;
+  if (hls) hls.currentLevel = indice;
+}
+
+function escolherQualidade(evento) {
+  const indice = Number(evento.target.value);
+  aplicarEscolha(indice);
+  gravarAlturaPreferida(qualidades.value.find((q) => q.indice === indice)?.altura ?? null);
+}
+
+function aoLerManifesto(_evento, dados) {
+  qualidades.value = dados.levels
+    .map((nivel, indice) => ({ indice, altura: nivel.height }))
+    .sort((a, b) => b.altura - a.altura);
+
+  const preferida = qualidades.value.find((q) => q.altura === lerAlturaPreferida());
+  if (preferida) aplicarEscolha(preferida.indice);
+}
+
+function aoTrocarNivel(_evento, dados) {
+  alturaAtual.value = hls?.levels[dados.level]?.height ?? null;
+}
+
+function rotuloAutomatico() {
+  return alturaAtual.value ? `Auto (${alturaAtual.value}p)` : 'Auto';
+}
+
 function liberarHls() {
+  qualidades.value = [];
+  alturaAtual.value = null;
+  escolha.value = AUTOMATICO;
   if (!hls) return;
 
   hls.stopLoad();
@@ -209,6 +267,8 @@ async function carregar() {
       hls = new Hls(configuracaoHls());
       hls.on(Hls.Events.ERROR, aoFalhar);
       hls.on(Hls.Events.FRAG_BUFFERED, aoRecuperar);
+      hls.on(Hls.Events.MANIFEST_PARSED, aoLerManifesto);
+      hls.on(Hls.Events.LEVEL_SWITCHED, aoTrocarNivel);
       hls.loadSource(props.urlMaster);
       hls.attachMedia(video.value);
     } else if (video.value.canPlayType(TIPO_HLS_NATIVO)) {
@@ -259,6 +319,20 @@ onBeforeUnmount(() => {
       @error="aoFalharElemento"
       @ended="aoTerminar"
     />
+    <label
+      v-if="qualidades.length > 1 && !erro"
+      class="absolute right-3 top-3 flex items-center gap-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur"
+    >
+      <span>Qualidade</span>
+      <select
+        :value="escolha"
+        class="rounded border-0 bg-transparent py-0 pl-1 pr-6 text-xs font-semibold text-white focus:ring-1 focus:ring-white/60"
+        @change="escolherQualidade"
+      >
+        <option :value="AUTOMATICO" class="text-slate-900">{{ rotuloAutomatico() }}</option>
+        <option v-for="q in qualidades" :key="q.indice" :value="q.indice" class="text-slate-900">{{ q.altura }}p</option>
+      </select>
+    </label>
     <p v-if="carregando && !erro" class="absolute text-sm text-white">Carregando o vídeo...</p>
     <p v-if="erro" role="alert" class="p-6 text-center text-sm text-white">{{ erro }}</p>
   </div>

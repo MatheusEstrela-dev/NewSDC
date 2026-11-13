@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Cidadao;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Models\Inscricao;
-use App\Modules\Treinamento\Resources\InscricaoResource;
+use App\Modules\Treinamento\Resources\PortalInscricaoResource;
 use App\Modules\Treinamento\Services\TrilhaService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +33,7 @@ class MinhasInscricoesController extends Controller
         $salas = $this->salas($inscricoes->getCollection());
 
         return Inertia::render('Treinamento/Portal/MinhasInscricoes', [
-            'inscricoes' => InscricaoResource::collection($inscricoes),
+            'inscricoes' => PortalInscricaoResource::collection($inscricoes),
             'salas' => $salas,
         ]);
     }
