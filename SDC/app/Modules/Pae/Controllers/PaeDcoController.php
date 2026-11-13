@@ -10,6 +10,7 @@ use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Requests\AvaliarDcoRequest;
 use App\Modules\Pae\Requests\RegistrarDcoRequest;
 use App\Modules\Pae\Services\PaeDcoService;
+use App\Modules\Pae\Support\PastaProtocolo;
 use App\Modules\Pae\Support\PaeArquivoPdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -27,12 +28,7 @@ final class PaeDcoController extends Controller
     public function show(Request $request, PaeProtocolo $paeProtocolo): Response
     {
         return Inertia::render('PaeDco', [
-            'protocolo' => [
-                'id' => $paeProtocolo->id,
-                'num_protocolo' => $paeProtocolo->num_protocolo,
-                'status' => $paeProtocolo->status->value,
-                'arquivado' => $paeProtocolo->arquivado,
-            ],
+            'protocolo' => PastaProtocolo::props($paeProtocolo),
             'resumo' => $this->dco->resumo($paeProtocolo, CarbonImmutable::today()),
             'can_validar' => $request->user()?->can('pae.protocolos.validar') && ! $paeProtocolo->arquivado,
             'can_view' => $request->user()?->can('pae.protocolos.view'),

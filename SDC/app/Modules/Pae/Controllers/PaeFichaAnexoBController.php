@@ -9,6 +9,7 @@ use App\Models\Municipio;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Requests\SalvarFichaAnexoBRequest;
 use App\Modules\Pae\Services\PaeFichaAnexoBService;
+use App\Modules\Pae\Support\PastaProtocolo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,12 +28,7 @@ final class PaeFichaAnexoBController extends Controller
 
         return Inertia::render('PaeFichaAnexoB', [
             ...$resumo,
-            'protocolo' => [
-                'id' => $paeProtocolo->id,
-                'num_protocolo' => $paeProtocolo->num_protocolo,
-                'status' => $paeProtocolo->status->value,
-                'arquivado' => $paeProtocolo->arquivado,
-            ],
+            'protocolo' => PastaProtocolo::props($paeProtocolo),
             'municipios_disponiveis' => Municipio::catalogo(),
             'can_edit' => $request->user()?->can('pae.protocolos.edit')
                 && ! $paeProtocolo->arquivado && ! $resumo['historica'],

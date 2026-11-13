@@ -8,7 +8,7 @@
               <ClockIcon class="w-5 h-5 text-slate-200" />
             </div>
             <div class="min-w-0">
-              <h3 class="text-lg font-semibold text-white truncate">Série Histórica do Protocolo</h3>
+              <h3 class="text-lg font-semibold text-white truncate">Acompanhamento do Protocolo</h3>
               <p class="text-sm text-slate-200/80 truncate">
                 Protocolo
                 <span class="font-mono">{{ protocolo?.protocoloNumero || '—' }}</span>
@@ -16,14 +16,23 @@
             </div>
           </div>
 
-          <button
-            type="button"
-            class="p-2 rounded-lg text-slate-200/80 hover:text-white hover:bg-white/10 transition-all"
-            title="Fechar"
-            @click="$emit('close')"
-          >
-            <XMarkIcon class="w-5 h-5" />
-          </button>
+          <div class="flex items-center gap-2">
+            <Link
+              v-if="protocolo?.id && !externalView"
+              :href="route('pae.index', { protocolo_id: protocolo.id })"
+              class="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg text-xs text-slate-200/90 border border-white/20 hover:bg-white/10 hover:text-white transition-all"
+            >
+              Abrir pasta
+            </Link>
+            <button
+              type="button"
+              class="p-2 rounded-lg text-slate-200/80 hover:text-white hover:bg-white/10 transition-all"
+              title="Fechar"
+              @click="$emit('close')"
+            >
+              <XMarkIcon class="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div class="tira-rolavel mt-4 items-center gap-4 border-b border-slate-700/40 sm:gap-6">
@@ -34,7 +43,7 @@
             :class="{ 'is-ativa': activeTab === 'timeline' }"
             @click="activeTab = 'timeline'"
           >
-            Timeline
+            Acompanhamento
             <Badge v-if="timelineCount" variant="info" size="sm">{{ timelineCount }}</Badge>
           </button>
           <button
@@ -86,7 +95,17 @@
 
       <div class="flex-1 min-h-0 overflow-y-auto p-4 pb-8 md:p-6">
         <!-- Timeline -->
-        <div v-if="activeTab === 'timeline'">
+        <div v-if="activeTab === 'timeline'" class="space-y-6">
+          <PaeAcompanhamentoPainel
+            :acompanhamento="historico?.acompanhamento"
+            :notificacoes="historico?.notificacoes || []"
+            :prazos="historico?.prazos"
+          />
+
+          <h4 v-if="timelineCount" class="text-sm font-semibold modal-serie-titulo -mb-2">
+            Fluxo do protocolo
+            <span class="font-normal modal-serie-apoio">({{ timelineCount }} evento(s))</span>
+          </h4>
           <ol v-if="timelineCount" class="modal-serie-trilho relative ml-5 space-y-6">
             <li v-for="event in historico.timeline" :key="event.id" class="ml-8 relative">
               <span
@@ -191,6 +210,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { Link } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
@@ -201,6 +221,7 @@ import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import BellIcon from '@/Components/Icons/BellIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
+import PaeAcompanhamentoPainel from '@/Components/Organisms/Pae/Protocolos/PaeAcompanhamentoPainel.vue';
 import PaePrazosPainel from '@/Components/Organisms/Pae/Protocolos/PaePrazosPainel.vue';
 import PaeAdmissibilidadePainel from '@/Components/Organisms/Pae/Protocolos/PaeAdmissibilidadePainel.vue';
 import PaeComunicacoesPainel from '@/Components/Organisms/Pae/Protocolos/PaeComunicacoesPainel.vue';
@@ -267,6 +288,7 @@ function eventLabel(tipo) {
     criacao: 'Criação',
     alerta: 'Alerta',
     status: 'Status',
+    atribuicao: 'Atribuição',
   };
   return map[tipo] || 'Evento';
 }

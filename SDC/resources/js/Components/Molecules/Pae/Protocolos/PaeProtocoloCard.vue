@@ -66,10 +66,6 @@
           { action: 'archive',       handler: () => $emit('archive', protocolo.id),       allowed: canDelete },
           { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo.id),  allowed: canCheck },
           { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo.id),    allowed: canPdf },
-          { action: 'ficha',  placement: 'menu', aliasOverride: 'view', handler: () => $emit('ficha', protocolo.id) },
-          { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'DCO', handler: () => $emit('dco', protocolo.id) },
-          { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'Evacuação', handler: () => $emit('evacuacao', protocolo.id) },
-          { action: 'ficha',  placement: 'menu', aliasOverride: 'view', label: 'Simulados', handler: () => $emit('simulado', protocolo.id) },
           { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo.id), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
           { action: 'relate', placement: 'menu', handler: () => $emit('relate', protocolo.id), allowed: canCreate },
         ]"
@@ -124,5 +120,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'check', 'pdf', 'ficha', 'dco', 'evacuacao', 'simulado', 'archive', 'options', 'assign', 'relate']);
+defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'check', 'pdf', 'archive', 'options', 'assign', 'relate']);
 </script>

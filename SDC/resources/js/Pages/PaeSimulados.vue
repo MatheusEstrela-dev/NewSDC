@@ -3,6 +3,7 @@
 
   <PaeTelaLayout
     v-model:aba="aba"
+    pasta="simulados"
     titulo="Simulados do Anexo C"
     subtitulo="Relatório anual do exercício simulado · Resolução GMG nº 83/2024"
     :icone="BellAlertIcon"

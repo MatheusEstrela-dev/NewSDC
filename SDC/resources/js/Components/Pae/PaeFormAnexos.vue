@@ -1,5 +1,5 @@
 <template>
-  <PaeCard title="4. Anexos">
+  <PaeCard :title="titulo">
     <div class="space-y-6">
       <div
         v-if="!canUpload"
@@ -8,79 +8,43 @@
         Salve as Informacoes Gerais ou abra um protocolo antes de adicionar anexos.
       </div>
 
-      <form v-if="!readOnly" class="space-y-4" @submit.prevent="handleSubmit">
-        <div
-          class="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-5"
-          :class="canUpload ? 'hover:border-blue-500/50' : 'opacity-60'"
-        >
-          <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400">
-              <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0-12l-4 4m4-4l4 4" />
-              </svg>
-            </div>
+      <PaeAnexosDropzone
+        v-if="!readOnly"
+        :categorias="categorias"
+        :categoria-padrao="categoriaAtiva"
+        :disabled="!canUpload"
+        :progress="progress"
+        @upload="$emit('upload', $event)"
+        @concluido="aoConcluirEnvio"
+      />
 
-            <div class="min-w-0 flex-1">
-              <label class="block text-sm font-semibold text-slate-900 dark:text-white">
-                Arquivo
-              </label>
-              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                PDF, JPG, JPEG ou PNG ate 50 MB.
-              </p>
-              <input
-                ref="fileInput"
-                type="file"
-                :disabled="!canUpload || saving"
-                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                class="mt-3 block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-500 disabled:cursor-not-allowed"
-                @change="onFileChange"
-              />
-              <p v-if="selectedFile" class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                Selecionado: {{ selectedFile.name }} ({{ formatSize(selectedFile.size) }})
-              </p>
-              <p v-if="visibleError" class="mt-2 text-xs font-medium text-red-500 dark:text-red-400">
-                {{ visibleError }}
-              </p>
-
-              <div v-if="showProgress" class="mt-3 space-y-1.5">
-                <div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                  <div
-                    class="h-full rounded-full bg-blue-500 transition-all duration-300"
-                    :style="{ width: `${progressWidth}%` }"
-                  />
-                </div>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
-                  {{ statusMessage || 'Processando anexo...' }}
-                </p>
-              </div>
-            </div>
+      <!-- Leitura do PDF: sugestao para o analista conferir; nada e gravado aqui. -->
+      <div v-if="leitura.estado !== 'ocioso'" class="rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">Dados lidos do PDF</p>
+            <p class="truncate text-xs text-slate-500 dark:text-slate-400" :title="leitura.nome">{{ leitura.nome }}</p>
           </div>
+          <button type="button" class="flex-shrink-0 text-xs font-semibold text-slate-500 hover:underline dark:text-slate-400" @click="leitura.estado = 'ocioso'">Fechar</button>
         </div>
 
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Descricao
-          </label>
-          <textarea
-            v-model="descricao"
-            :disabled="!canUpload || saving"
-            rows="2"
-            placeholder="Descricao opcional do anexo"
-            class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
-        </div>
-
-        <div class="flex justify-end">
-          <button
-            type="submit"
-            :disabled="!canUpload || !selectedFile || !!fileError || saving"
-            class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <span v-if="saving" class="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-            Adicionar Anexo
-          </button>
-        </div>
-      </form>
+        <p v-if="leitura.estado === 'lendo'" class="mt-3 text-sm text-slate-600 dark:text-slate-300">Lendo o documento...</p>
+        <p v-else-if="leitura.estado === 'vazio'" class="mt-3 text-sm text-amber-700 dark:text-amber-300">{{ leitura.mensagem }}</p>
+        <template v-else>
+          <dl class="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            <div v-for="linha in leitura.linhas" :key="linha.campo" class="min-w-0">
+              <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ linha.rotulo }}</dt>
+              <dd class="break-words text-slate-900 dark:text-slate-100">{{ linha.valor }}</dd>
+            </div>
+          </dl>
+          <div v-if="!readOnly && leitura.aplicaveis" class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Os dados já foram levados para os campos vazios das Informações Gerais e da Ficha cadastral (Anexo B). Abra cada uma, confira e salve.
+            </p>
+            <Button class="w-full sm:w-auto" variant="primary" size="sm" @click="usarNasInformacoesGerais">Abrir Informações Gerais</Button>
+          </div>
+        </template>
+      </div>
 
       <div
         v-if="visibleBackendError"
@@ -90,53 +54,70 @@
       </div>
 
       <div class="border-t border-slate-200 pt-5 dark:border-slate-700">
-        <div v-if="!items.length" class="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center dark:border-slate-700 dark:bg-slate-900/40">
-          <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Nenhum anexo cadastrado.</p>
+        <div v-if="!itensVisiveis.length" class="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center dark:border-slate-700 dark:bg-slate-900/40">
+          <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {{ categoriaAtiva ? `Nenhum anexo em ${rotuloCategoria(categoriaAtiva)}.` : 'Nenhum anexo cadastrado.' }}
+          </p>
           <p class="mt-1 text-xs text-slate-500 dark:text-slate-500">Os arquivos enviados aparecerao aqui.</p>
         </div>
 
-        <div v-else class="space-y-3">
-          <div
-            v-for="anexo in items"
-            :key="anexo.id"
-            class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/50 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                {{ anexo.nome_original }}
-              </p>
-              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {{ anexo.tamanho_formatado }} <span v-if="anexo.descricao">- {{ anexo.descricao }}</span>
-              </p>
-              <p v-if="anexo.local_armazenamento" class="mt-1 text-xs text-slate-500 dark:text-slate-500">
-                Local: {{ anexo.local_armazenamento }}
-              </p>
-            </div>
-
-            <div class="flex flex-shrink-0 gap-2">
-              <button
-                type="button"
-                class="rounded-lg border border-blue-500/40 px-3 py-2 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-500/10 dark:text-blue-300"
-                @click="$emit('view', anexo.id)"
-              >
-                Visualizar
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
-                @click="$emit('download', anexo.id)"
-              >
-                Baixar
-              </button>
-              <button
-                v-if="!readOnly"
-                type="button"
-                :disabled="saving"
-                class="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-500 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-                @click="$emit('remove', anexo.id)"
-              >
-                {{ saving ? 'Aguarde...' : 'Remover' }}
-              </button>
+        <div v-else class="space-y-5">
+          <div v-for="grupo in grupos" :key="grupo.categoria" class="space-y-3">
+            <h4 v-if="categorias.length && !categoriaAtiva" class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              {{ rotuloCategoria(grupo.categoria) }} <span class="font-normal">({{ grupo.itens.length }})</span>
+            </h4>
+            <div
+              v-for="anexo in grupo.itens"
+              :key="anexo.id"
+              class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/50 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                  {{ anexo.nome_original }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {{ anexo.tamanho_formatado }} <span v-if="anexo.descricao">- {{ anexo.descricao }}</span>
+                </p>
+                <p v-if="anexo.local_armazenamento" class="mt-1 text-xs text-slate-500 dark:text-slate-500">
+                  Local: {{ anexo.local_armazenamento }}
+                </p>
+              </div>
+  
+              <div class="flex flex-shrink-0 gap-2">
+                <button
+                  v-if="anexo.mime_type === 'application/pdf' && formularioId"
+                  type="button"
+                  class="rounded-lg border border-emerald-500/40 px-3 py-2 text-xs font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/10 dark:text-emerald-300"
+                  title="Ler os dados do PAE deste PDF"
+                  @click="lerPdf(anexo)"
+                >
+                  Ler PDF
+                </button>
+                <button
+                  v-if="visualizavel(anexo)"
+                  type="button"
+                  class="rounded-lg border border-blue-500/40 px-3 py-2 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-500/10 dark:text-blue-300"
+                  @click="$emit('view', anexo.id)"
+                >
+                  Visualizar
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                  @click="$emit('download', anexo.id)"
+                >
+                  Baixar
+                </button>
+                <button
+                  v-if="!readOnly"
+                  type="button"
+                  :disabled="saving"
+                  class="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-500 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  @click="$emit('remove', anexo.id)"
+                >
+                  {{ saving ? 'Aguarde...' : 'Remover' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -154,6 +135,7 @@
           >
             <div class="min-w-0">
               <span class="font-medium text-slate-800 dark:text-slate-200">{{ item.nome_original }}</span>
+              <span v-if="categorias.length" class="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{{ rotuloCategoria(item.categoria) }}</span>
               <span class="ml-2 text-slate-500 dark:text-slate-400">{{ item.tamanho_formatado }}</span>
             </div>
             <div class="flex items-center gap-3 text-slate-500 dark:text-slate-400">
@@ -174,7 +156,11 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import { guardarLeitura, leituraParaFicha, leituraParaInfoGerais, ROTULOS_LEITURA } from '@/utils/paeAnexos';
+import { router } from '@inertiajs/vue3';
+import { computed, nextTick, reactive } from 'vue';
+import PaeAnexosDropzone from './PaeAnexosDropzone.vue';
 import PaeCard from './PaeCard.vue';
 
 const props = defineProps({
@@ -214,86 +200,141 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Lista {value, label} das categorias (Anexo A..J e Outros); vazia mantem a lista simples.
+  categorias: {
+    type: Array,
+    default: () => [],
+  },
+  // Categoria aberta na pasta; null mostra todas, agrupadas.
+  categoriaAtiva: {
+    type: String,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['upload', 'remove', 'download', 'view']);
 
-const descricao = ref('');
-const selectedFile = ref(null);
-const fileInput = ref(null);
-const fileError = ref('');
-const hideBackendError = ref(false);
+const CATEGORIA_PADRAO = 'outros';
 
-const maxFileBytes = 50 * 1024 * 1024;
-
-const canUpload = computed(() => !!props.formularioId || !!props.protocoloId);
-const visibleBackendError = computed(() => props.errorMessage && !fileError.value && !hideBackendError.value);
-const visibleError = computed(() => fileError.value || (hideBackendError.value ? '' : props.errorMessage));
-const showProgress = computed(() => props.saving || props.progress > 0);
-const progressWidth = computed(() => {
-  if (props.progress > 0) {
-    return Math.max(8, Math.min(100, props.progress));
-  }
-
-  return props.saving ? 12 : 0;
-});
-
-watch(() => props.errorMessage, () => {
-  hideBackendError.value = false;
-});
-
-function onFileChange(event) {
-  fileError.value = '';
-  hideBackendError.value = true;
-  const file = event.target.files[0] ?? null;
-
-  if (!file) {
-    selectedFile.value = null;
-    return;
-  }
-
-  if (file.size > maxFileBytes) {
-    selectedFile.value = null;
-    fileError.value = 'Arquivo acima de 50 MB. Selecione um PDF, JPG, JPEG ou PNG menor.';
-    if (fileInput.value) {
-      fileInput.value.value = '';
-    }
-    return;
-  }
-
-  selectedFile.value = file;
+// O navegador so abre PDF e imagem; os demais formatos vao direto para download.
+function visualizavel(anexo) {
+  const mime = anexo.mime_type ?? '';
+  return mime === 'application/pdf' || mime.startsWith('image/');
 }
 
-function handleSubmit() {
-  if (!selectedFile.value) return;
+const titulo = computed(() => (props.categoriaAtiva ? `Anexos · ${rotuloCategoria(props.categoriaAtiva)}` : 'Anexos'));
 
-  if (selectedFile.value.size > maxFileBytes) {
-    fileError.value = 'Arquivo acima de 50 MB. Selecione um PDF, JPG, JPEG ou PNG menor.';
+const itensVisiveis = computed(() => (props.categoriaAtiva
+  ? props.items.filter((anexo) => (anexo.categoria ?? CATEGORIA_PADRAO) === props.categoriaAtiva)
+  : props.items));
+
+// Grupos na ordem das categorias; sem categorias, um grupo unico com tudo.
+const grupos = computed(() => {
+  if (!props.categorias.length) {
+    return [{ categoria: CATEGORIA_PADRAO, itens: itensVisiveis.value }];
+  }
+
+  return props.categorias
+    .map((opcao) => ({
+      categoria: opcao.value,
+      itens: itensVisiveis.value.filter((anexo) => (anexo.categoria ?? CATEGORIA_PADRAO) === opcao.value),
+    }))
+    .filter((grupo) => grupo.itens.length);
+});
+
+function rotuloCategoria(valor) {
+  return props.categorias.find((opcao) => opcao.value === (valor ?? CATEGORIA_PADRAO))?.label ?? 'Outros';
+}
+
+const canUpload = computed(() => !!props.formularioId || !!props.protocoloId);
+const visibleBackendError = computed(() => !!props.errorMessage);
+
+// Leitura do PDF (PaeLeituraPdfService): sugestoes para conferencia.
+const MOTIVOS_SEM_LEITURA = {
+  nao_pdf: 'Só é possível ler arquivos PDF.',
+  sem_texto: 'Este PDF é uma imagem escaneada, sem texto para ler.',
+  sem_campos: 'O texto do PDF não traz os dados básicos do PAE no formato esperado.',
+  indisponivel: 'Não foi possível ler o arquivo agora.',
+};
+
+const leitura = reactive({ estado: 'ocioso', nome: '', mensagem: '', linhas: [], aplicaveis: 0, valores: {} });
+
+async function buscarLeitura(anexo) {
+  try {
+    const resposta = await fetch(route('pae.formulario.anexos.leitura', [props.formularioId, anexo.id]), {
+      headers: { Accept: 'application/json' },
+    });
+    return resposta.ok ? await resposta.json() : { lido: false, motivo: 'indisponivel' };
+  } catch {
+    return { lido: false, motivo: 'indisponivel' };
+  }
+}
+
+/**
+ * Le um ou mais PDFs e junta o que encontrou (o primeiro valor de cada campo
+ * vence, entao o PAE principal deve vir na frente). O que couber nas
+ * Informacoes Gerais ja fica separado para o relatorio abrir preenchido.
+ */
+async function lerPdfs(anexos) {
+  if (!anexos.length || !props.formularioId) return;
+
+  const nome = anexos.length === 1 ? anexos[0].nome_original : `${anexos.length} PDFs enviados`;
+  Object.assign(leitura, { estado: 'lendo', nome, mensagem: '', linhas: [], aplicaveis: 0, valores: {} });
+
+  const junto = { campos: {}, municipio_id: null };
+  let motivo = 'sem_campos';
+  for (const anexo of anexos) {
+    const dados = await buscarLeitura(anexo);
+    if (!dados.lido) {
+      motivo = dados.motivo ?? motivo;
+      continue;
+    }
+    junto.campos = { ...dados.campos, ...junto.campos };
+    junto.municipio_id ??= dados.municipio_id;
+  }
+
+  if (!Object.keys(junto.campos).length) {
+    Object.assign(leitura, { estado: 'vazio', mensagem: MOTIVOS_SEM_LEITURA[motivo] ?? MOTIVOS_SEM_LEITURA.indisponivel });
     return;
   }
 
-  emit('upload', {
-    arquivo: selectedFile.value,
-    descricao: descricao.value,
-    onSuccess: resetForm,
-    onError: (message) => {
-      fileError.value = message;
-    },
+  const valores = leituraParaInfoGerais(junto);
+  const ficha = leituraParaFicha(junto);
+  if (!props.readOnly && props.protocoloId) {
+    guardarLeitura(props.protocoloId, 'relatorio', valores);
+    guardarLeitura(props.protocoloId, 'ficha', ficha);
+  }
+
+  Object.assign(leitura, {
+    estado: 'lido',
+    linhas: Object.entries(ROTULOS_LEITURA)
+      .filter(([campo]) => junto.campos[campo])
+      .map(([campo, rotulo]) => ({ campo, rotulo, valor: junto.campos[campo] })),
+    aplicaveis: Object.keys(valores).length + Object.keys(ficha).length,
+    valores,
   });
 }
 
-function resetForm() {
-  descricao.value = '';
-  selectedFile.value = null;
-  fileError.value = '';
-  if (fileInput.value) {
-    fileInput.value.value = '';
-  }
+function lerPdf(anexo) {
+  return lerPdfs([anexo]);
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+// Terminado o envio, le sozinho os PDFs enviados, com o PAE principal na frente.
+async function aoConcluirEnvio(enviados) {
+  await nextTick();
+
+  const pdfs = enviados
+    .filter((enviado) => enviado.nome.toLowerCase().endsWith('.pdf'))
+    .sort((x, y) => Number(y.categoria === 'anexo_b') - Number(x.categoria === 'anexo_b'))
+    .map((enviado) => props.items.find((item) => item.nome_original === enviado.nome && item.categoria === enviado.categoria))
+    .filter(Boolean);
+
+  lerPdfs(pdfs);
+}
+
+// A sugestao ja foi guardada na leitura; aqui so abre o relatorio para conferir.
+function usarNasInformacoesGerais() {
+  if (!props.protocoloId) return;
+  router.visit(route('pae.index', { protocolo_id: props.protocoloId }));
 }
 </script>

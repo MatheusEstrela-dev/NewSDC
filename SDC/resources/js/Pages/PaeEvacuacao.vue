@@ -3,6 +3,7 @@
 
   <PaeTelaLayout
     v-model:aba="aba"
+    pasta="evacuacao"
     titulo="Conferência de evacuação"
     subtitulo="Resolução GMG nº 83/2024 · Anexo E"
     :icone="UserGroupIcon"

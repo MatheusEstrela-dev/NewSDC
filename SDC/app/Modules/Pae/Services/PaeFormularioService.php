@@ -11,6 +11,7 @@ use App\Modules\Pae\DTOs\PaeFormAnexoDTO;
 use App\Modules\Pae\DTOs\PaeFormInfoGeraisDTO;
 use App\Modules\Pae\DTOs\PaeFormObjetivoDTO;
 use App\Modules\Pae\Domain\Events\FormularioValidadoV1;
+use App\Modules\Pae\Enums\CategoriaAnexo;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeForm;
 use App\Modules\Pae\Models\PaeFormAnexo;
@@ -93,7 +94,8 @@ class PaeFormularioService extends BaseService
     public function storeAnexo(PaeForm $form, PaeFormAnexoDTO $dto, User $user): PaeFormAnexo
     {
         $disk = 'pae';
-        $directory = $this->anexoDirectory($form);
+        // Estrutura padronizada: cada anexo fica na subpasta da sua categoria.
+        $directory = $this->anexoDirectory($form) . '/' . $dto->categoria->pastaNoServidor();
         $extension = mb_strtolower($dto->arquivo->getClientOriginalExtension());
         $nomeArquivo = (string) Str::uuid() . ($extension !== '' ? '.' . $extension : '');
         $path = null;
@@ -109,6 +111,7 @@ class PaeFormularioService extends BaseService
                 'path' => $path,
                 'disk' => $disk,
                 'descricao' => $dto->descricao,
+                'categoria' => $dto->categoria,
                 'uploaded_by' => $user->id,
             ]);
         } catch (Throwable $e) {
@@ -162,11 +165,16 @@ class PaeFormularioService extends BaseService
 
         abort_unless(Storage::disk($anexo->disk)->exists($anexo->path), 404);
 
+        // So PDF e imagem abrem no navegador; qualquer outro formato baixa,
+        // para que um arquivo enviado nunca seja interpretado como pagina.
+        $abreNoNavegador = $anexo->mime_type === 'application/pdf'
+            || str_starts_with((string) $anexo->mime_type, 'image/');
+
         return Storage::disk($anexo->disk)->response(
             $anexo->path,
             $anexo->nome_original,
-            ['Content-Type' => $anexo->mime_type],
-            'inline'
+            ['Content-Type' => $abreNoNavegador ? $anexo->mime_type : 'application/octet-stream'],
+            $abreNoNavegador ? 'inline' : 'attachment'
         );
     }
 
@@ -340,6 +348,7 @@ class PaeFormularioService extends BaseService
                 'tamanho_bytes' => $anexo->tamanho_bytes,
                 'tamanho_formatado' => $anexo->tamanho_formatado,
                 'descricao' => $anexo->descricao,
+                'categoria' => $anexo->categoria?->value ?? CategoriaAnexo::Outros->value,
                 'disk' => $anexo->disk,
                 'local_armazenamento' => dirname($anexo->path),
                 'created_at' => $anexo->created_at?->format('Y-m-d H:i:s'),
@@ -357,6 +366,7 @@ class PaeFormularioService extends BaseService
                 'nome_original'     => $anexo->nome_original,
                 'tamanho_formatado' => $anexo->tamanho_formatado,
                 'descricao'         => $anexo->descricao,
+                'categoria'         => $anexo->categoria?->value ?? CategoriaAnexo::Outros->value,
                 'enviado_por'       => $anexo->uploader?->name,
                 'created_at'        => $anexo->created_at?->format('d/m/Y H:i'),
                 'removido'          => $anexo->trashed(),

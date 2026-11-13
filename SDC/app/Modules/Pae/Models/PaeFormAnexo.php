@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Pae\Models;
 
 use App\Models\User;
+use App\Modules\Pae\Enums\CategoriaAnexo;
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use Illuminate\Database\Eloquent\Model;
@@ -28,11 +29,13 @@ class PaeFormAnexo extends Model
         'path',
         'disk',
         'descricao',
+        'categoria',
         'uploaded_by',
     ];
 
     protected $casts = [
         'tamanho_bytes' => 'integer',
+        'categoria' => CategoriaAnexo::class,
     ];
 
     public function form(): BelongsTo

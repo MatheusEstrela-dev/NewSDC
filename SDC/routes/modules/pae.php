@@ -2,6 +2,7 @@
 
 use App\Modules\Pae\Controllers\PaeFormularioController;
 use App\Modules\Pae\Controllers\PaeFichaAnexoBController;
+use App\Modules\Pae\Controllers\PaeLeituraPdfController;
 use App\Modules\Pae\Controllers\PaeAdmissibilidadeController;
 use App\Modules\Pae\Controllers\PaeComunicacaoController;
 use App\Modules\Pae\Controllers\PaeDcoController;
@@ -64,6 +65,10 @@ Route::prefix('pae')->name('pae.')->group(function () {
 
     Route::get('/formulario/{paeForm}/anexos/{paeFormAnexo}/visualizar', [PaeFormularioController::class, 'viewAnexo'])
         ->name('formulario.anexos.view')
+        ->middleware('can:pae.empreendimentos.view');
+
+    Route::get('/formulario/{paeForm}/anexos/{paeFormAnexo}/leitura', [PaeLeituraPdfController::class, 'show'])
+        ->name('formulario.anexos.leitura')
         ->middleware('can:pae.empreendimentos.view');
 
     Route::put('/formulario/{paeForm}/finalizar', [PaeFormularioController::class, 'finalizar'])

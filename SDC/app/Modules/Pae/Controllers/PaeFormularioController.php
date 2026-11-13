@@ -9,11 +9,13 @@ use App\Models\Municipio;
 use App\Modules\Pae\DTOs\PaeFormAnexoDTO;
 use App\Modules\Pae\DTOs\PaeFormInfoGeraisDTO;
 use App\Modules\Pae\DTOs\PaeFormObjetivoDTO;
+use App\Modules\Pae\Enums\CategoriaAnexo;
 use App\Modules\Pae\Models\PaeForm;
 use App\Modules\Pae\Models\PaeFormAnexo;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Requests\StorePaeFormAnexoRequest;
 use App\Modules\Pae\Services\PaeFormularioService;
+use App\Modules\Pae\Support\PastaProtocolo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -72,6 +74,7 @@ class PaeFormularioController extends Controller
             'formulario' => $formulario,
             'protocolo'  => $protocolo,
             'readOnly'   => $request->boolean('readonly'),
+            'categoriasAnexo' => CategoriaAnexo::opcoes(),
         ]);
     }
 
@@ -92,6 +95,7 @@ class PaeFormularioController extends Controller
             'municipios' => Municipio::catalogo()->pluck('nome', 'id'),
             'formulario' => $this->service->formatForView($form),
             'readOnly'   => $request->boolean('readonly'),
+            'categoriasAnexo' => CategoriaAnexo::opcoes(),
         ]);
     }
 
@@ -207,15 +211,11 @@ class PaeFormularioController extends Controller
     {
         $prot->loadMissing('analistaAtual:id,name');
 
-        return [
-            'id'                => $prot->id,
-            'num_protocolo'     => $prot->num_protocolo,
-            'status'            => $prot->status?->value,
+        return PastaProtocolo::props($prot, [
             'analista_atual_id' => $prot->analista_atual_id,
             'analista_nome'     => $prot->analistaAtual?->name,
-            'arquivado'         => (bool) $prot->arquivado,
             'analise_status'    => $prot->analise_status,
-        ];
+        ]);
     }
 
     private function validateInfoGerais(Request $request): array
