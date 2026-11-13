@@ -13,6 +13,8 @@ const props = defineProps({
 
 const { show: toast } = useToast();
 
+const classeAcao = 'inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-600 dark:text-slate-300 dark:hover:border-blue-400 dark:hover:bg-slate-700 dark:hover:text-blue-300';
+
 async function copiar() {
   try {
     await navigator.clipboard.writeText(props.codigo);
@@ -24,11 +26,11 @@ async function copiar() {
 </script>
 
 <template>
-  <span v-if="codigo" class="inline-flex items-center gap-1.5">
-    <span class="font-mono font-medium">{{ codigo }}</span>
+  <span v-if="codigo" class="inline-flex items-center gap-1.5 align-middle">
+    <span class="rounded-md bg-slate-100 px-2 py-1 font-mono text-sm font-semibold tracking-wide text-slate-800 dark:bg-slate-700 dark:text-slate-100">{{ codigo }}</span>
     <button
       type="button"
-      class="rounded p-0.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+      :class="classeAcao"
       title="Copiar código"
       aria-label="Copiar código de verificação"
       @click="copiar"
@@ -40,7 +42,7 @@ async function copiar() {
       :href="urlValidacao"
       target="_blank"
       rel="noopener"
-      class="rounded p-0.5 text-blue-600 hover:bg-slate-100 dark:text-blue-400 dark:hover:bg-slate-700"
+      :class="classeAcao"
       title="Abrir a página de validação"
       aria-label="Abrir a página pública de validação"
     >
