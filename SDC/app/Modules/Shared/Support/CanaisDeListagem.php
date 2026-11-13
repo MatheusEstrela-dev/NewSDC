@@ -65,6 +65,16 @@ final class CanaisDeListagem
         // Cronogramas e Historico, entao saber que "algo mudou no TDAP" nao
         // revela nada que a pessoa nao veja.
         'tdap' => 'tdap.dashboard.view',
+
+        // routes/modules/treinamento-aluno.php -> can:treinamento.cursos.view
+        // (Meus cursos EAD) e as telas de listagem e detalhe do treinamento.
+        'treinamento-cursos' => 'treinamento.cursos.view',
+
+        // routes/modules/treinamento-professor.php aceita professor.acessar OU
+        // cursos.edit, e o canal so aceita uma permissao: o professor designado
+        // escuta aqui, e quem edita cursos escuta 'treinamento-cursos'. A Area do
+        // professor assina os dois; ver AvisoDeCursos.
+        'treinamento-professor' => 'treinamento.professor.acessar',
     ];
 
     /**

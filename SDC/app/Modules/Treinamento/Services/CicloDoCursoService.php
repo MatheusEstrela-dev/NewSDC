@@ -11,6 +11,7 @@ use App\Modules\Treinamento\Enums\SituacaoCurso;
 use App\Modules\Treinamento\Jobs\ReavaliarConclusoesDoCursoJob;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Services\Video\AutorizacaoVideoService;
+use App\Modules\Treinamento\Support\AvisoDeCursos;
 use Throwable;
 
 /**
@@ -66,6 +67,10 @@ class CicloDoCursoService
         if ($afetadas !== 1) {
             throw new \DomainException($recusa.' Situacao atual: '.mb_strtolower($curso->situacaoEfetiva()->getLabel()).'. Atualize a pagina.');
         }
+
+        // O update por query nao dispara evento de model: as telas abertas so
+        // ficam sabendo da nova situacao por este aviso.
+        AvisoDeCursos::avisar();
 
         // O video autoriza por sessao com cache: o curso que saiu do ar perde o
         // video agora. Feito logo apos o UPDATE, antes de qualquer passo que

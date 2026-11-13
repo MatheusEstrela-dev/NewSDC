@@ -9,6 +9,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import CursoSelos from '@/Components/Molecules/Treinamento/CursoSelos.vue';
 import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesCicloCurso.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import { useCursosAoVivo } from '@/Composables/treinamento/useCursosAoVivo';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -17,6 +18,8 @@ defineProps({
   // So quem ja cria treinamento (admin) abre curso; o backend recusa os demais.
   pode_abrir: { type: Boolean, default: false },
 });
+
+useCursosAoVivo(['cursos', 'pode_abrir'], { professor: true });
 
 
 

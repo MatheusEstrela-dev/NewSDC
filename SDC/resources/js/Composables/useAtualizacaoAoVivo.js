@@ -25,14 +25,19 @@ const CABECALHO_ATUALIZACAO_AO_VIVO = 'X-Atualizacao-Ao-Vivo';
  *                                  o broadcastAs em vez do FQCN da classe.
  * @param {string[]} opcoes.props   Props a rebuscar, no formato do Inertia.
  * @param {number}   [opcoes.debounceMs] Janela de coalescencia, em ms.
+ * @param {number}   [opcoes.intervaloSemTempoRealMs] Reserva para ambiente sem
+ *                                  websocket: rebusca nesse intervalo e ao voltar
+ *                                  para a aba. Sem o parametro, sem Echo nao ha
+ *                                  atualizacao nenhuma (comportamento original).
  */
-export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400 }) {
+export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400, intervaloSemTempoRealMs = null }) {
     let echo = null;
     let assinatura = null;
     let pendente = false;
     let desmontado = false;
     let visibilidadeHandler = null;
     let timerDebounce = null;
+    let timerReserva = null;
 
     const recarregar = () => {
         // preserveState mantem a pagina da tabela e o estado local; sem
@@ -100,6 +105,27 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400 })
         agendarRecarga();
     };
 
+    /*
+     * Sem websocket a tela so mudaria no F5. Quem pede a reserva troca isso por
+     * uma rebusca periodica, so com a aba visivel, e outra na volta para a aba.
+     * Onde ha Echo isto nunca liga: o ambiente com Reverb nao ganha polling.
+     */
+    const iniciarReserva = () => {
+        if (!intervaloSemTempoRealMs || desmontado) {
+            return;
+        }
+
+        const recarregarSeVisivel = () => {
+            if (!document.hidden) {
+                recarregar();
+            }
+        };
+
+        timerReserva = setInterval(recarregarSeVisivel, intervaloSemTempoRealMs);
+        visibilidadeHandler = recarregarSeVisivel;
+        document.addEventListener('visibilitychange', visibilidadeHandler);
+    };
+
     const assinar = async () => {
         // Sem Echo nao ha tempo real, e isso NAO e erro: com
         // BROADCAST_CONNECTION=null a pagina funciona como sempre funcionou.
@@ -107,6 +133,8 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400 })
         const instancia = await initEcho();
 
         if (!instancia) {
+            iniciarReserva();
+
             return;
         }
 
@@ -145,6 +173,11 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400 })
         if (timerDebounce) {
             clearTimeout(timerDebounce);
             timerDebounce = null;
+        }
+
+        if (timerReserva) {
+            clearInterval(timerReserva);
+            timerReserva = null;
         }
 
         if (visibilidadeHandler) {
