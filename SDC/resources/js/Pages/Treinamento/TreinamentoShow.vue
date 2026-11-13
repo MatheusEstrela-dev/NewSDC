@@ -144,6 +144,7 @@ function copiarLinkPublico() {
       <div class="mb-6 flex flex-wrap gap-2">
         <template v-if="treinamento.tipo === 'EAD' && can('treinamento.cursos.edit')">
           <CursoSelos :publicado="treinamento.esta_publicado" :situacao="treinamento.situacao" :situacao-label="treinamento.situacao_label" />
+          <Button variant="primary" size="sm" :href="route('treinamentos.professor.conteudo', treinamento.id)">Gerenciar conteúdo</Button>
           <AcoesCicloCurso :curso="treinamento" />
         </template>
         <Button v-if="can('treinamento.cursos.edit') && !treinamento.esta_publicado" variant="secondary" size="sm" @click="publicar">
@@ -292,6 +293,9 @@ function copiarLinkPublico() {
       <!-- Professores (EAD) -->
       <section v-if="treinamento.tipo === 'EAD'" class="mt-8 space-y-3">
         <Heading :level="3" class="text-lg font-semibold">Professores</Heading>
+        <Text size="xs" color="muted">
+          O campo Instrutor é apenas o nome exibido no curso. Designar um professor aqui é o que dá a ele acesso à área do professor.
+        </Text>
         <Text v-if="!professores.length" size="sm" color="muted">Nenhum professor designado.</Text>
         <ul v-else class="space-y-2">
           <li

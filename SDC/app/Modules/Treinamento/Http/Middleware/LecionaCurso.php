@@ -26,14 +26,14 @@ class LecionaCurso
             $treinamento = Treinamento::query()->find($treinamento);
         }
 
-        $userId = $request->user()?->getKey();
+        $usuario = $request->user();
 
         // A area do professor e so do EAD: um curso de outro tipo nem existe aqui.
         abort_unless($treinamento instanceof Treinamento && $treinamento->isEad(), 404);
 
+        // Designado no curso ou admin (treinamento.cursos.edit).
         abort_unless(
-            $userId !== null
-                && $this->professorService->leciona((int) $userId, $treinamento),
+            $usuario !== null && $this->professorService->gerencia($usuario, $treinamento),
             403
         );
 
