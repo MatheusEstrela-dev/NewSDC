@@ -17,7 +17,10 @@ class MeusCursosController extends Controller
 
     public function __invoke(Request $request): Response
     {
-        $cursos = $this->professores->cursosDe((int) $request->user()->getKey())
+        $usuario = $request->user();
+        $designados = array_flip($this->professores->idsDesignados($usuario));
+
+        $cursos = $this->professores->cursosDe($usuario)
             ->loadCount('inscricoesAprovadas')
             ->map(fn (Treinamento $t) => [
                 'id' => $t->id,
@@ -29,6 +32,7 @@ class MeusCursosController extends Controller
                 'situacao' => $t->situacaoEfetiva()->value,
                 'situacao_label' => $t->situacaoEfetiva()->getLabel(),
                 'alunos' => (int) $t->inscricoes_aprovadas_count,
+                'designado' => isset($designados[(int) $t->id]),
             ])
             ->values();
 

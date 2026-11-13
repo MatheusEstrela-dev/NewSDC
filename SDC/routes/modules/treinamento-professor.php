@@ -54,7 +54,8 @@ use Illuminate\Support\Facades\Route;
 | de routes/modules/treinamento.php, antes do wildcard /{id}.
 */
 
-Route::prefix('professor')->name('professor.')->middleware('can:treinamento.professor.acessar')->group(function () {
+// Entra quem tem o acesso de professor ou quem edita cursos (admin gerencia qualquer curso EAD).
+Route::prefix('professor')->name('professor.')->middleware('permission:treinamento.professor.acessar|treinamento.cursos.edit')->group(function () {
     Route::get('/', MeusCursosController::class)->name('index');
 
     // Biblioteca de videos: declarada antes das rotas com /{treinamento}.

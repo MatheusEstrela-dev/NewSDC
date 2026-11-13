@@ -12,13 +12,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Pausar, retomar, desativar e reativar um curso EAD: o professor designado
- * ou quem edita cursos (admin). Diferente de LecionaCurso, o admin nao precisa
- * ser professor do curso nem ter o acesso a area do professor.
+ * ou quem edita cursos (admin), pela regra unica de ProfessorService::gerencia.
  */
 class GerenciaCicloDoCurso
 {
-    public const PERMISSAO_ADMIN = 'treinamento.cursos.edit';
-
     public function __construct(private readonly ProfessorService $professores) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -34,8 +31,7 @@ class GerenciaCicloDoCurso
         $usuario = $request->user();
 
         abort_unless(
-            $usuario !== null
-                && ($usuario->can(self::PERMISSAO_ADMIN) || $this->professores->leciona((int) $usuario->getKey(), $treinamento)),
+            $usuario !== null && $this->professores->gerencia($usuario, $treinamento),
             403
         );
 

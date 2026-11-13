@@ -15,6 +15,9 @@ class ProfessorService
 {
     public const PERMISSAO = 'treinamento.professor.acessar';
 
+    /** Quem edita cursos gerencia qualquer curso EAD, sem precisar ser designado. */
+    public const PERMISSAO_ADMIN = 'treinamento.cursos.edit';
+
     public function designar(Treinamento $treinamento, int $userId): TreinamentoProfessor
     {
         if (!$treinamento->isEad()) {
@@ -59,17 +62,41 @@ class ProfessorService
             ->exists();
     }
 
+    /** Admin (edita cursos) ou professor designado no curso. */
+    public function gerencia(User $usuario, Treinamento $treinamento): bool
+    {
+        return $usuario->can(self::PERMISSAO_ADMIN)
+            || $this->leciona((int) $usuario->getKey(), $treinamento);
+    }
+
     /**
+     * Cursos EAD que o usuario gerencia: todos para o admin, so os designados para os demais.
+     *
      * @return Collection<int, Treinamento>
      */
-    public function cursosDe(int $userId): Collection
+    public function cursosDe(User $usuario): Collection
     {
-        return Treinamento::query()
-            ->where('tipo', TipoTreinamento::EAD->value)
-            ->whereIn('id', TreinamentoProfessor::query()->where('user_id', $userId)->select('treinamento_id'))
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get();
+        $query = Treinamento::query()->where('tipo', TipoTreinamento::EAD->value);
+
+        if (!$usuario->can(self::PERMISSAO_ADMIN)) {
+            $query->whereIn('id', $this->idsDesignados($usuario));
+        }
+
+        return $query->orderByDesc('created_at')->orderByDesc('id')->get();
+    }
+
+    /**
+     * Ids dos cursos em que o usuario esta designado como professor.
+     *
+     * @return list<int>
+     */
+    public function idsDesignados(User $usuario): array
+    {
+        return TreinamentoProfessor::query()
+            ->where('user_id', $usuario->getKey())
+            ->pluck('treinamento_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**
