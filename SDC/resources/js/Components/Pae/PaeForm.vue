@@ -1,6 +1,14 @@
 <template>
   <div class="space-y-4 sm:space-y-6 animate-fade-in-up">
+    <div
+      v-if="leituraAplicada"
+      class="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-800 dark:text-blue-200"
+    >
+      Campos preenchidos a partir do PDF. Confira os valores e clique em Salvar Informações Gerais para gravar.
+    </div>
+
     <PaeFormTabs
+      v-if="!secaoAnexos"
       :active-tab="activeSubTab"
       :tabs="tabConfig"
       @tab-change="activeSubTab = $event"
@@ -40,6 +48,8 @@
 
     <div v-else-if="activeSubTab === 4">
       <PaeFormAnexos
+        :categoria-ativa="categoriaAnexo"
+        :categorias="categoriasAnexo"
         :items="rat.anexos"
         :historico="props.formulario?.anexos_historico ?? []"
         :formulario-id="formularioId"
@@ -76,6 +86,7 @@
 import { ref, h, reactive, computed, watch } from 'vue';
 import { usePaeFormulario } from '@/Composables/pae/usePaeFormulario';
 import { usePage } from '@inertiajs/vue3';
+import { aplicarEmVazios, retirarLeitura } from '@/utils/paeAnexos';
 import PaeFormTabs from './PaeFormTabs.vue';
 import PaeFormInfoGerais from './PaeFormInfoGerais.vue';
 import PaeFormObjetivoContexto from './PaeFormObjetivoContexto.vue';
@@ -112,7 +123,24 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Item da pasta do protocolo: 'relatorio' (abas do relatorio, sem anexos),
+  // 'anexos' (so os anexos) ou null no fluxo avulso, que mantem todas as abas.
+  secao: {
+    type: String,
+    default: null,
+  },
+  categoriasAnexo: {
+    type: Array,
+    default: () => [],
+  },
+  categoriaAnexo: {
+    type: String,
+    default: null,
+  },
 });
+
+const ABA_ANEXOS = 4;
+const secaoAnexos = computed(() => props.secao === 'anexos');
 
 const activeSubTab = ref(1);
 const page = usePage();
@@ -122,6 +150,14 @@ const page = usePage();
 const localFormularioId = ref(props.formulario?.id ?? null);
 
 const rat = reactive(usePaeFormulario(props.empreendimento, props.formulario));
+
+// Sugestao deixada pela leitura do PDF na tela de anexos: entra no formulario
+// para conferencia e so e gravada quando o analista salvar.
+const leituraAplicada = ref(false);
+if (!props.readOnly && props.secao !== 'anexos' && props.protocolo?.id) {
+  // So ocupa campo vazio: o que o analista ja digitou ou salvou prevalece.
+  leituraAplicada.value = aplicarEmVazios(rat.infoGerais, retirarLeitura(props.protocolo.id, 'relatorio')) > 0;
+}
 
 const todasAsAbas = [
   {
@@ -157,15 +193,24 @@ const abasLiberadas = computed(() => {
   return !!props.protocolo?.analista_atual_id;
 });
 
-const tabConfig = computed(() =>
-  abasLiberadas.value
+const tabConfig = computed(() => {
+  if (secaoAnexos.value) {
+    return todasAsAbas.filter((tab) => tab.id === ABA_ANEXOS);
+  }
+
+  const liberadas = abasLiberadas.value
     ? todasAsAbas
-    : todasAsAbas.filter((tab) => [1, 4].includes(tab.id))
-);
+    : todasAsAbas.filter((tab) => [1, ABA_ANEXOS].includes(tab.id));
+
+  // Na pasta do protocolo os anexos tem item proprio e saem das abas do relatorio.
+  return props.secao === 'relatorio'
+    ? liberadas.filter((tab) => tab.id !== ABA_ANEXOS)
+    : liberadas;
+});
 
 watch(tabConfig, (tabs) => {
   if (!tabs.some((tab) => tab.id === activeSubTab.value)) {
-    activeSubTab.value = 1;
+    activeSubTab.value = tabs[0]?.id ?? 1;
   }
 }, { immediate: true });
 
@@ -218,7 +263,7 @@ function handleSaveApontamentos() {
   if (props.readOnly) return;
 
   rat.saveApontamentos(formularioId.value, () => {
-    activeSubTab.value = 4;
+    activeSubTab.value = nextTabId(activeSubTab.value);
   });
 }
 

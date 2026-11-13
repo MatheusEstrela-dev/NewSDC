@@ -9,6 +9,7 @@ use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Requests\RegistrarEvacuacaoRequest;
 use App\Modules\Pae\Requests\SimularEvacuacaoRequest;
 use App\Modules\Pae\Services\PaeEvacuacaoService;
+use App\Modules\Pae\Support\PastaProtocolo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,12 +28,7 @@ final class PaeEvacuacaoController extends Controller
 
         return Inertia::render('PaeEvacuacao', [
             ...$resumo,
-            'protocolo' => [
-                'id' => $paeProtocolo->id,
-                'num_protocolo' => $paeProtocolo->num_protocolo,
-                'status' => $paeProtocolo->status->value,
-                'arquivado' => $paeProtocolo->arquivado,
-            ],
+            'protocolo' => PastaProtocolo::props($paeProtocolo),
             'can_edit' => ($request->user()?->can('pae.protocolos.edit') ?? false)
                 && ! $paeProtocolo->arquivado && ! $resumo['historica'],
         ]);

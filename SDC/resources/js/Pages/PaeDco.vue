@@ -3,6 +3,7 @@
 
   <PaeTelaLayout
     v-model:aba="aba"
+    pasta="dco"
     titulo="Declaração de Conformidade e Operacionalidade"
     :icone="ShieldCheckIcon"
     :protocolo="protocolo"

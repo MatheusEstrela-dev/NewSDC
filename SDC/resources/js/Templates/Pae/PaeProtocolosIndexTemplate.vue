@@ -94,10 +94,6 @@
       @history="handleHistory"
       @check="handleCheck"
       @pdf="handlePdf"
-      @ficha="handleFicha"
-      @dco="handleDco"
-      @evacuacao="handleEvacuacao"
-      @simulado="handleSimulado"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -122,10 +118,6 @@
       @history="handleHistory"
       @check="handleCheck"
       @pdf="handlePdf"
-      @ficha="handleFicha"
-      @dco="handleDco"
-      @evacuacao="handleEvacuacao"
-      @simulado="handleSimulado"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -170,6 +162,20 @@
       :loading="deleteLoading"
       @confirm="confirmDelete"
       @cancel="cancelDelete"
+    />
+
+    <!-- Modal de Confirmacao de nova versao relacionada -->
+    <ConfirmDialog
+      :is-open="relateId !== null"
+      title="Relacionar Protocolo"
+      :message="`Criar uma nova versão relacionada${relateNumero ? ` do protocolo ${relateNumero}` : ' deste protocolo'}?`"
+      description="Um novo protocolo do mesmo processo sera aberto com o proximo sufixo de versao (-002, -003...). O protocolo atual nao e alterado."
+      variant="info"
+      confirm-text="Criar versão"
+      cancel-text="Cancelar"
+      :loading="relateLoading"
+      @confirm="confirmRelate"
+      @cancel="relateId = null"
     />
 
     <!-- Modal de Confirmacao de Arquivamento -->
@@ -396,25 +402,25 @@ function handleEdit(id) {
   router.visit(route('pae.index', { protocolo_id: id }));
 }
 
-function handleFicha(id) {
-  router.visit(route('pae.protocolo.ficha-anexo-b.show', id));
-}
-
-function handleDco(id) {
-  router.visit(route('pae.protocolo.dco.show', id));
-}
-
-function handleEvacuacao(id) {
-  router.visit(route('pae.protocolo.evacuacao.show', id));
-}
-
-function handleSimulado(id) {
-  router.visit(route('pae.protocolo.simulados.show', id));
-}
+// Relacionar: confirma no dialogo padrao do sistema antes de criar a versao.
+const relateId = ref(null);
+const relateLoading = ref(false);
+const relateNumero = computed(() =>
+  paginatedProtocolos.value?.find((p) => p.id === relateId.value)?.protocoloNumero ?? ''
+);
 
 function handleRelate(id) {
-  if (!confirm('Criar nova versao relacionada deste protocolo?')) return;
-  router.post(route('pae.protocolo.relacionar', id));
+  relateId.value = id;
+}
+
+function confirmRelate() {
+  relateLoading.value = true;
+  router.post(route('pae.protocolo.relacionar', relateId.value), {}, {
+    onFinish: () => {
+      relateLoading.value = false;
+      relateId.value = null;
+    },
+  });
 }
 
 // Modal de Confirmacao de Exclusao / Arquivamento

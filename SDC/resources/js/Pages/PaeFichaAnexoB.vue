@@ -3,6 +3,7 @@
 
   <PaeTelaLayout
     v-model:aba="aba"
+    pasta="ficha"
     titulo="Ficha cadastral"
     subtitulo="PAE · Anexo B, item 2"
     :icone="ClipboardDocumentListIcon"
@@ -13,6 +14,7 @@
   >
     <template #avisos>
       <PaeAviso v-if="rascunho" tom="info">Os dados existentes do empreendimento aparecem como pré-preenchimento. Salve a ficha para criar a primeira versão deste protocolo.</PaeAviso>
+      <PaeAviso v-if="leituraAplicada" tom="neutro">Campos preenchidos a partir do PDF enviado nos anexos. Confira os valores e salve a ficha para gravar.</PaeAviso>
       <PaeAviso v-if="historica" tom="neutro">Você está consultando a versão {{ ficha.versao }}. <a :href="urlAtual" class="font-semibold underline">Abrir versão atual</a></PaeAviso>
       <PaeAviso v-if="protocolo.arquivado" tom="aviso">Este protocolo está arquivado. A ficha permanece disponível para consulta.</PaeAviso>
       <PaeAviso v-if="municipios_alterados" tom="aviso">A lista ZAS/ZSS mudou depois desta versão. A próxima gravação da ficha incluirá a lista atual.</PaeAviso>
@@ -111,6 +113,7 @@ import PaeTelaLayout from '@/Templates/Pae/PaeTelaLayout.vue';
 import { ClipboardDocumentListIcon, ClockIcon, DocumentTextIcon, MapIcon, MapPinIcon } from '@heroicons/vue/24/outline';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { aplicarEmVazios, retirarLeitura } from '@/utils/paeAnexos';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -182,6 +185,10 @@ function valoresIniciais(ficha) {
 
 const form = useForm(valoresIniciais(props.ficha));
 const podeEditar = computed(() => props.can_edit && !props.historica && !props.protocolo.arquivado);
+
+// Sugestao deixada pela leitura do PDF nos anexos: ocupa so campos vazios e
+// fica para o analista conferir e salvar.
+const leituraAplicada = ref(podeEditar.value && aplicarEmVazios(form, retirarLeitura(props.protocolo.id, 'ficha')) > 0);
 const urlAtual = computed(() => route('pae.protocolo.ficha-anexo-b.show', props.protocolo.id));
 const opcoesMunicipios = computed(() => props.municipios_disponiveis.map(m => ({ value: m.id, label: `${m.nome} / ${m.uf}` })));
 

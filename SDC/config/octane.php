@@ -82,9 +82,10 @@ return [
             'http_compression' => true,
             'compression_min_length' => 1024,
             'max_request' => (int) env('OCTANE_MAX_REQUESTS', 500),
-            // O default do Swoole/Octane e 10 MB e derruba o upload antes do
-            // Laravel validar; o EAD aceita arquivos de ate 50 MB.
-            'package_max_length' => (int) env('OCTANE_PACKAGE_MAX_LENGTH', 64 * 1024 * 1024),
+            // Padrao do Swoole e 10 MB e derruba a conexao acima disso. Os
+            // mapas A0 do PAE passam de 90 MB; a validacao de cada modulo
+            // continua impondo o seu proprio teto por arquivo.
+            'package_max_length' => (int) env('OCTANE_PACKAGE_MAX_LENGTH', 160 * 1024 * 1024),
         ],
     ],
 

@@ -11,6 +11,7 @@ use App\Modules\Pae\Requests\AvaliarSimuladoRequest;
 use App\Modules\Pae\Requests\PreviaIndiciosSimuladoRequest;
 use App\Modules\Pae\Requests\RegistrarSimuladoRequest;
 use App\Modules\Pae\Services\PaeSimuladoService;
+use App\Modules\Pae\Support\PastaProtocolo;
 use App\Modules\Pae\Support\PaeArquivoPdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -29,12 +30,7 @@ final class PaeSimuladoController extends Controller
     public function show(Request $request, PaeProtocolo $paeProtocolo): Response
     {
         return Inertia::render('PaeSimulados', [
-            'protocolo' => [
-                'id' => $paeProtocolo->id,
-                'num_protocolo' => $paeProtocolo->num_protocolo,
-                'status' => $paeProtocolo->status->value,
-                'arquivado' => $paeProtocolo->arquivado,
-            ],
+            'protocolo' => PastaProtocolo::props($paeProtocolo),
             'resumo' => $this->simulados->resumo($paeProtocolo, CarbonImmutable::today()),
             'can_validar' => (bool) $request->user()?->can('pae.protocolos.validar') && ! $paeProtocolo->arquivado,
             'can_view' => (bool) $request->user()?->can('pae.protocolos.view'),

@@ -20,6 +20,7 @@ use App\Modules\Pae\Services\PaeNotificacaoService;
 use App\Modules\Pae\Services\PaePrazoService;
 use App\Modules\Pae\Services\PaeProtocoloService;
 use App\Modules\Pae\Services\PaeSimuladoService;
+use App\Modules\Pae\Support\AcompanhamentoProtocolo;
 use App\Services\Export\CsvExportService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -170,6 +171,7 @@ class PaeProtocoloController extends Controller
 
         return response()->json([
             'protocolo'    => $protocolo->num_protocolo,
+            'acompanhamento' => AcompanhamentoProtocolo::de($protocolo),
             'analises'     => $analises,
             'notificacoes' => $this->notificacoes->listarPorProtocolo($protocolo),
             'prazos'       => $this->prazos->resumo($protocolo),
