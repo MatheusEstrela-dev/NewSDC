@@ -5,7 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import CertificadoItem from '@/Components/Molecules/Treinamento/CertificadoItem.vue';
 import CursoEadCard from '@/Components/Molecules/Treinamento/CursoEadCard.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
+import SecaoHeader from '@/Components/Molecules/Treinamento/SecaoHeader.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
@@ -43,7 +43,7 @@ function inscrever(curso) {
     />
 
     <section class="mt-6">
-      <Heading :level="2" class="mb-3 text-lg font-semibold">Meus cursos</Heading>
+      <SecaoHeader titulo="Meus cursos" :total="meus_cursos.length" />
 
       <CardBase v-if="meus_cursos.length === 0">
         <Text color="muted">Você ainda não está inscrito em nenhum curso EAD.</Text>
@@ -55,7 +55,7 @@ function inscrever(curso) {
     </section>
 
     <section v-if="certificados.length" class="mt-8">
-      <Heading :level="2" class="mb-3 text-lg font-semibold">Meus certificados</Heading>
+      <SecaoHeader titulo="Meus certificados" :total="certificados.length" />
 
       <div class="space-y-4">
         <CertificadoItem
@@ -68,7 +68,7 @@ function inscrever(curso) {
     </section>
 
     <section class="mt-8">
-      <Heading :level="2" class="mb-3 text-lg font-semibold">Cursos disponíveis</Heading>
+      <SecaoHeader titulo="Cursos disponíveis" :total="disponiveis.length" />
 
       <CardBase v-if="disponiveis.length === 0">
         <Text color="muted">Nenhum curso aberto para inscrição no momento.</Text>
