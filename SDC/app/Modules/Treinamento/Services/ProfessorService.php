@@ -9,6 +9,7 @@ use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Models\TreinamentoProfessor;
+use App\Modules\Treinamento\Support\AvisoDeCursos;
 use Illuminate\Support\Collection;
 
 class ProfessorService
@@ -40,18 +41,29 @@ class ProfessorService
             throw new \DomainException('Usuario inscrito como aluno neste curso nao pode ser professor.');
         }
 
-        return TreinamentoProfessor::query()->firstOrCreate([
+        $vinculo = TreinamentoProfessor::query()->firstOrCreate([
             'treinamento_id' => $treinamento->id,
             'user_id' => $userId,
         ]);
+
+        // O curso passa a aparecer na Area do professor de quem foi designado.
+        if ($vinculo->wasRecentlyCreated) {
+            AvisoDeCursos::avisar();
+        }
+
+        return $vinculo;
     }
 
     public function remover(Treinamento $treinamento, int $userId): void
     {
-        TreinamentoProfessor::query()
+        $removidos = TreinamentoProfessor::query()
             ->where('treinamento_id', $treinamento->id)
             ->where('user_id', $userId)
             ->delete();
+
+        if ($removidos > 0) {
+            AvisoDeCursos::avisar();
+        }
     }
 
     public function leciona(int $userId, Treinamento $treinamento): bool

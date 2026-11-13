@@ -171,16 +171,17 @@ class Treinamento extends Model implements Rastreavel
     }
 
     /**
-     * Endereco da capa, ou null quando o curso nao tem imagem propria. O
-     * carimbo muda a cada troca, entao o navegador pode guardar a imagem.
+     * Endereco da capa, ou null quando o curso nao tem imagem propria (so curso
+     * EAD tem capa). O carimbo vem do proprio arquivo: muda a cada troca, mesmo
+     * duas no mesmo segundo, e editar o curso nao invalida o cache da imagem.
      */
     public function capaUrl(string $rota = self::ROTA_CAPA_SDC): ?string
     {
-        if ($this->capa_path === null) {
+        if ($this->capa_path === null || ! $this->isEad()) {
             return null;
         }
 
-        return route($rota, ['treinamento' => $this->id, 'v' => $this->updated_at?->timestamp]);
+        return route($rota, ['treinamento' => $this->id, 'v' => substr(md5($this->capa_path), 0, 12)]);
     }
 
     public function estaPublicado(): bool

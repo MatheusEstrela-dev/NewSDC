@@ -135,13 +135,33 @@ class LimparVideosOrfaosJob implements ShouldQueue
 
                 if ($remover) {
                     $disco->deleteDirectory($dir);
+
+                    return 1;
                 }
 
-                return (int) $remover;
+                // Com acervo, o video PRONTO guarda so o original vigente: o de uma
+                // troca que falhou de vez nao e de ninguem e ficaria para sempre.
+                // Sem original_path (processado antes do acervo) nao ha o que comparar.
+                if ($manter && $video->status === VideoStatus::PRONTO && $video->original_path !== null && ! $this->recente($disco, $dir)) {
+                    return $this->removerOriginaisSuperados($disco, $dir, $video->original_path);
+                }
+
+                return 0;
             }) ?? 0;
         }
 
         return $removidos;
+    }
+
+    private function removerOriginaisSuperados(Filesystem $disco, string $dir, string $vigente): int
+    {
+        $superados = array_filter($disco->files($dir), fn (string $arquivo) => $arquivo !== $vigente);
+
+        foreach ($superados as $arquivo) {
+            $disco->delete($arquivo);
+        }
+
+        return count($superados) > 0 ? 1 : 0;
     }
 
     /** Toda remocao de HLS passa pelo publicador (mantem o gauge de bytes em dia). */

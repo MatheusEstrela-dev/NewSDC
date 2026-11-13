@@ -16,7 +16,10 @@ class CursoTempoRealObserver
 {
     public function saved(Model $model): void
     {
-        AvisoDeCursos::avisar();
+        // save() sem mudanca nao altera nenhuma tela: nao vale um aviso.
+        if ($model->wasRecentlyCreated || $model->wasChanged()) {
+            AvisoDeCursos::avisar();
+        }
     }
 
     public function deleted(Model $model): void
