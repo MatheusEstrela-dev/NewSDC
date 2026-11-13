@@ -203,6 +203,18 @@ function abrirSeletor(item) {
   seletorAberto.value = true;
 }
 
+// Arquivo escolhido no seletor, a enviar pelo card do video recem-vinculado.
+const envioPendente = ref(null);
+
+function aoVincularVideo(_item, envio) {
+  envioPendente.value = envio;
+  recarregarPastas();
+}
+
+function arquivoPendente(video) {
+  return envioPendente.value?.videoId === video.id ? envioPendente.value.arquivo : null;
+}
+
 // O servidor e a fonte do payload do video vinculado.
 function recarregarPastas() {
   router.reload({ only: ['pastas'], preserveScroll: true });
@@ -346,7 +358,14 @@ function publicar() {
                         <Button v-if="item.video" size="sm" variant="outline" @click="desvincularVideo(item)">Desvincular</Button>
                       </div>
 
-                      <UploaderVideo v-if="item.video" :key="item.video.id" :video="item.video" @atualizado="atualizarVideo" />
+                      <UploaderVideo
+                        v-if="item.video"
+                        :key="item.video.id"
+                        :video="item.video"
+                        :arquivo-inicial="arquivoPendente(item.video)"
+                        @atualizado="atualizarVideo"
+                        @arquivo-consumido="envioPendente = null"
+                      />
                     </div>
                   </div>
                 </template>
@@ -461,7 +480,7 @@ function publicar() {
       :show="seletorAberto"
       :treinamento-id="curso.id"
       :item="itemDoSeletor"
-      @vinculado="recarregarPastas"
+      @vinculado="aoVincularVideo"
       @fechar="seletorAberto = false"
     />
   </div>

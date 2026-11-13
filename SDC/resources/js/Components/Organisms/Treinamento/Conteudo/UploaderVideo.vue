@@ -2,7 +2,8 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import { ACCEPT_VIDEO, useUploadEmPartes, validarArquivoDeVideo } from '@/Composables/treinamento/useUploadEmPartes';
+import ZonaArquivoVideo from '@/Components/Organisms/Treinamento/Conteudo/ZonaArquivoVideo.vue';
+import { useUploadEmPartes } from '@/Composables/treinamento/useUploadEmPartes';
 import { formatarDuracao } from '@/Composables/treinamento/formatarDuracao';
 
 const INTERVALO_STATUS_MS = 5000;
@@ -12,16 +13,17 @@ const ERROS_DEFINITIVOS = [401, 403, 404, 422];
 
 const props = defineProps({
   video: { type: Object, required: true },
+  // Arquivo escolhido no seletor ("Enviar novo"): o envio comeca sozinho.
+  arquivoInicial: { type: Object, default: null },
 });
 
-const emit = defineEmits(['atualizado']);
+const emit = defineEmits(['atualizado', 'arquivo-consumido']);
 
 const { enviar, cancelar, progresso, estado, erro: erroEnvio, statusFinal, rotuloFinal } = useUploadEmPartes({ videoId: () => props.video.id });
 
 const erroArquivo = ref(null);
 const substituindo = ref(false);
 const desistiuDeAcompanhar = ref(false);
-const arrastando = ref(false);
 
 const erro = computed(() => erroArquivo.value ?? erroEnvio.value);
 const emEnvio = computed(() => estado.value === 'enviando' || estado.value === 'finalizando');
@@ -95,22 +97,15 @@ onUnmounted(pararAcompanhamento);
 // ---- Escolha do arquivo -----------------------------------------------------
 
 function iniciar(arquivo) {
-  erroArquivo.value = validarArquivoDeVideo(arquivo);
-  if (erroArquivo.value) return;
+  erroArquivo.value = null;
   enviar(arquivo);
 }
 
-function escolher(evento) {
-  const arquivo = evento.target.files?.[0];
-  evento.target.value = '';
-  if (arquivo) iniciar(arquivo);
-}
-
-function soltar(evento) {
-  arrastando.value = false;
-  const arquivo = evento.dataTransfer?.files?.[0];
-  if (arquivo) iniciar(arquivo);
-}
+watch(() => props.arquivoInicial, (arquivo) => {
+  if (!arquivo) return;
+  emit('arquivo-consumido');
+  iniciar(arquivo);
+}, { immediate: true });
 
 function cancelarSubstituicao() {
   substituindo.value = false;
@@ -130,18 +125,7 @@ async function reprocessar() {
 
 <template>
   <div v-if="video.pode_gerenciar" class="space-y-2">
-    <label
-      v-if="mostrarZona"
-      class="flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed px-4 py-5 text-center text-sm"
-      :class="arrastando ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20' : 'border-slate-300 dark:border-slate-600'"
-      @dragover.prevent="arrastando = true"
-      @dragleave="arrastando = false"
-      @drop.prevent="soltar"
-    >
-      <input type="file" class="sr-only" :accept="ACCEPT_VIDEO" @change="escolher">
-      <span class="font-medium">Arraste o vídeo aqui ou clique para escolher</span>
-      <Text size="xs" color="muted">MP4, MOV ou MKV, até 2 GB.</Text>
-    </label>
+    <ZonaArquivoVideo v-if="mostrarZona" @arquivo="iniciar" @erro="erroArquivo = $event" />
 
     <Button v-if="substituindo && mostrarZona" size="sm" variant="outline" @click="cancelarSubstituicao">Cancelar substituição</Button>
     <Text v-if="(substituindo || podeSubstituir) && video.usos > 1" size="xs" color="muted">
