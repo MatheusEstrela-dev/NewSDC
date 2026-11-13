@@ -3,6 +3,7 @@ import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import CapaCursoUpload from '@/Components/Molecules/Treinamento/CapaCursoUpload.vue';
 import CursoSelos from '@/Components/Molecules/Treinamento/CursoSelos.vue';
 import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesCicloCurso.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
@@ -184,6 +185,21 @@ function copiarLinkPublico() {
             <div v-if="treinamento.esta_publicado" class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
               <span>Publicado no Portal do Cidadão</span>
               <button type="button" class="text-blue-600 hover:underline dark:text-blue-400" @click="copiarLinkPublico">copiar link público</button>
+            </div>
+
+            <div v-if="treinamento.tipo === 'EAD'" class="relative aspect-[16/6] w-full max-w-xl overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
+              <img
+                v-if="treinamento.capa_url"
+                :src="treinamento.capa_url"
+                :alt="`Capa do curso: ${treinamento.titulo}`"
+                class="h-full w-full object-cover"
+              />
+              <div v-else class="flex h-full w-full items-center justify-center px-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                Curso sem imagem de capa
+              </div>
+              <div v-if="can('treinamento.cursos.edit')" class="absolute right-2 top-2">
+                <CapaCursoUpload :curso="treinamento" />
+              </div>
             </div>
 
             <img
