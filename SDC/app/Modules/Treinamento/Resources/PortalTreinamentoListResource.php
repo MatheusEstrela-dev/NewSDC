@@ -13,7 +13,7 @@ class PortalTreinamentoListResource extends TreinamentoListResource
     public function toArray(Request $request): array
     {
         return parent::toArray($request) + [
-            'capa_url' => $this->isEad() ? $this->capaUrl(Treinamento::ROTA_CAPA_PORTAL) : null,
+            'capa_url' => $this->capaUrl(Treinamento::ROTA_CAPA_PORTAL),
         ];
     }
 }

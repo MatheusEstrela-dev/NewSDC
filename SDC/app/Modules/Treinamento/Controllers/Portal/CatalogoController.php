@@ -61,7 +61,7 @@ class CatalogoController extends Controller
             // A capa do SDC exige permissao de servidor: aqui vai a do portal.
             'treinamento' => [
                 ...(new TreinamentoResource($treinamento))->resolve(),
-                'capa_url' => $treinamento->isEad() ? $treinamento->capaUrl(Treinamento::ROTA_CAPA_PORTAL) : null,
+                'capa_url' => $treinamento->capaUrl(Treinamento::ROTA_CAPA_PORTAL),
             ],
             'minhaInscricao' => $minhaInscricao ? [
                 'id' => $minhaInscricao->id,

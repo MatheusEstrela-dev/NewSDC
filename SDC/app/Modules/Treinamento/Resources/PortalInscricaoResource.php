@@ -13,9 +13,7 @@ class PortalInscricaoResource extends InscricaoResource
     public function toArray(Request $request): array
     {
         return parent::toArray($request) + [
-            'treinamento_capa_url' => $this->whenLoaded('treinamento', fn () => $this->treinamento->isEad()
-                ? $this->treinamento->capaUrl(Treinamento::ROTA_CAPA_PORTAL)
-                : null),
+            'treinamento_capa_url' => $this->whenLoaded('treinamento', fn () => $this->treinamento->capaUrl(Treinamento::ROTA_CAPA_PORTAL)),
         ];
     }
 }

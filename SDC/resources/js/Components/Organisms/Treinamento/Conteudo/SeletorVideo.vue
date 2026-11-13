@@ -5,6 +5,7 @@ import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
+import ZonaArquivoVideo from '@/Components/Organisms/Treinamento/Conteudo/ZonaArquivoVideo.vue';
 import { formatarDuracao } from '@/Composables/treinamento/formatarDuracao';
 import { mensagemDeErro } from '@/Composables/treinamento/useUploadEmPartes';
 
@@ -60,12 +61,14 @@ watch(busca, () => {
   debounce = setTimeout(carregar, DEBOUNCE_MS);
 });
 
-async function vincular(videoId) {
+// `envio` ({ videoId, arquivo }) vai junto quando o arquivo foi escolhido aqui:
+// o card do item comeca o envio sozinho.
+async function vincular(videoId, envio = null) {
   erro.value = null;
   ocupado.value = true;
   try {
     await window.axios.put(route('treinamentos.professor.itens.video.vincular', [props.treinamentoId, props.item.id]), { video_id: videoId });
-    emit('vinculado', props.item);
+    emit('vinculado', props.item, envio);
     emit('fechar');
   } catch (e) {
     erro.value = mensagemDeErro(e);
@@ -76,8 +79,9 @@ async function vincular(videoId) {
 
 // ---- Enviar novo ------------------------------------------------------------
 
-// Cria o registro e vincula ao item; o arquivo e enviado no card do item.
-async function criarNovo() {
+// Com o arquivo ja escolhido: cria o registro, vincula ao item e entrega o
+// arquivo ao card do item, que faz o envio em partes. Nunca cria video vazio.
+async function criarNovo(arquivo) {
   if (ocupado.value) return;
   erro.value = null;
   ocupado.value = true;
@@ -86,7 +90,7 @@ async function criarNovo() {
       const { data: criado } = await window.axios.post(route('treinamentos.professor.videos.store'), { titulo: props.item.titulo });
       videoCriadoId = criado.id;
     }
-    await vincular(videoCriadoId);
+    await vincular(videoCriadoId, { videoId: videoCriadoId, arquivo });
   } catch (e) {
     erro.value = mensagemDeErro(e);
     ocupado.value = false;
@@ -159,10 +163,14 @@ onUnmounted(limpar);
 
       <div v-show="aba === 'novo'" class="space-y-3">
         <Text color="muted">
-          O vídeo é criado com o título do item ("{{ item.titulo }}") e vinculado a ele agora.
-          Depois, escolha o arquivo no próprio item.
+          Escolha o arquivo: o vídeo é criado com o título do item ("{{ item.titulo }}"), vinculado a ele
+          e o envio começa no próprio item.
         </Text>
-        <Button size="sm" :loading="ocupado" @click="criarNovo">Criar vídeo e vincular ao item</Button>
+        <ZonaArquivoVideo :desabilitada="ocupado" @arquivo="criarNovo" @erro="erro = $event" />
+        <Text v-if="item.video" size="xs" color="muted">
+          Para reenviar o arquivo deste mesmo vídeo, mantendo o vínculo e o histórico, feche e use
+          "Substituir arquivo" no item.
+        </Text>
       </div>
 
       <div class="flex justify-end">
