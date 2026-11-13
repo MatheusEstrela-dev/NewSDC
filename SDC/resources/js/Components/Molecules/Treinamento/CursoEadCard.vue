@@ -13,8 +13,10 @@ import Button from '@/Components/Atoms/Button/Button.vue';
  */
 const props = defineProps({
   curso: { type: Object, required: true },
-  // 'inscrito': mostra progresso e Continuar; 'disponivel': mostra Inscrever-se.
-  modo: { type: String, default: 'inscrito', validator: (v) => ['inscrito', 'disponivel'].includes(v) },
+  // 'inscrito': mostra progresso e Continuar; 'disponivel': mostra Inscrever-se;
+  // 'professor': selo de publicacao e rodape entregue pelo slot `rodape`.
+  modo: { type: String, default: 'inscrito', validator: (v) => ['inscrito', 'disponivel', 'professor'].includes(v) },
+  // Sobrepoe `curso.capa_url`, que e a capa enviada pelo professor.
   capaUrl: { type: String, default: null },
   loading: { type: Boolean, default: false },
 });
@@ -47,12 +49,19 @@ const icone = computed(() => {
   return markRaw(tema?.icone ?? AcademicCapIcon);
 });
 
+const capa = computed(() => props.capaUrl ?? props.curso.capa_url ?? null);
+
 const concluido = computed(() => props.modo === 'inscrito' && props.curso.aprovada && Math.round(props.curso.percentual) >= 100);
 
 const selo = computed(() => {
   if (concluido.value) return { texto: 'Concluído', classe: 'bg-emerald-500 text-white' };
   if (props.curso.situacao === 'PAUSADO') return { texto: 'Pausado', classe: 'bg-amber-400 text-slate-900' };
   if (props.curso.situacao === 'DESATIVADO') return { texto: 'Encerrado', classe: 'bg-slate-500 text-white' };
+  if (props.modo === 'professor') {
+    return props.curso.publicado
+      ? { texto: 'Publicado', classe: 'bg-emerald-500 text-white' }
+      : { texto: 'Rascunho', classe: 'bg-slate-500 text-white' };
+  }
   if (props.modo === 'disponivel') return { texto: 'Inscrições abertas', classe: 'bg-emerald-500 text-white' };
   if (!props.curso.aprovada) return { texto: props.curso.status_label || 'Pendente', classe: 'bg-amber-400 text-slate-900' };
   return { texto: 'Em andamento', classe: 'bg-sky-500 text-white' };
@@ -63,7 +72,7 @@ const selo = computed(() => {
   <article class="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700/50 dark:bg-slate-800/80">
     <!-- Capa -->
     <div class="relative h-36 overflow-hidden">
-      <img v-if="capaUrl" :src="capaUrl" :alt="curso.titulo" class="h-full w-full object-cover" />
+      <img v-if="capa" :src="capa" :alt="curso.titulo" class="h-full w-full object-cover" loading="lazy" />
       <div v-else :class="['h-full w-full bg-gradient-to-br', capaClasse]">
         <div class="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,.55)_1px,transparent_0)] [background-size:14px_14px]" />
         <div class="absolute -right-6 -bottom-8 h-36 w-36 rounded-full bg-white/10 blur-xl" />
@@ -76,6 +85,9 @@ const selo = computed(() => {
       <span :class="['absolute left-3 top-3 rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow', selo.classe]">
         {{ selo.texto }}
       </span>
+      <div v-if="$slots['capa-acoes']" class="absolute right-3 top-3">
+        <slot name="capa-acoes" />
+      </div>
     </div>
 
     <!-- Corpo -->
@@ -93,7 +105,15 @@ const selo = computed(() => {
         {{ curso.descricao }}
       </p>
 
-      <div class="mt-auto pt-4">
+      <slot name="corpo" />
+
+      <div v-if="$slots.rodape" class="mt-auto pt-4">
+        <div class="border-t border-slate-100 pt-3 dark:border-slate-700/60">
+          <slot name="rodape" />
+        </div>
+      </div>
+
+      <div v-else class="mt-auto pt-4">
         <div v-if="modo === 'inscrito' && curso.aprovada" class="mb-3">
           <div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
             <div :class="['h-full rounded-full transition-all', concluido ? 'bg-emerald-500' : 'bg-amber-500']" :style="{ width: `${Math.min(100, curso.percentual)}%` }" />

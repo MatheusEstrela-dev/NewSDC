@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Treinamento\Controllers\Admin\CertificadoCancelarController;
+use App\Modules\Treinamento\Controllers\CapaController;
 use App\Modules\Treinamento\Controllers\Admin\CertificadoIndexController;
 use App\Modules\Treinamento\Controllers\Admin\CertificadoReemitirController;
 use App\Modules\Treinamento\Controllers\Admin\InscricaoAprovarController;
@@ -45,6 +46,12 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
         ->middleware('can:treinamento.cursos.export');
     // Curso EAD: area do aluno servidor e area do professor (inclui a designacao
     // de professores pelo admin). Antes do /{id} pelo mesmo motivo do /create.
+    // Capa do curso: quem ve a lista de cursos (aluno, professor ou admin) ve a imagem.
+    Route::get('/{treinamento}/capa', CapaController::class)
+        ->middleware('permission:treinamento.cursos.view|treinamento.professor.acessar|treinamento.cursos.edit')
+        ->whereNumber('treinamento')
+        ->name('capa');
+
     require __DIR__ . '/treinamento-aluno.php';
     require __DIR__ . '/treinamento-professor.php';
 
