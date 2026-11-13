@@ -9,7 +9,10 @@ return [
         'tamanho_maximo_bytes' => (int) env('TREINAMENTO_VIDEO_MAX_BYTES', 2147483648),
         'mimes' => ['video/mp4', 'video/quicktime', 'video/x-matroska'],
         'upload_expira_horas' => 24,
-        'manter_original' => (bool) env('TREINAMENTO_VIDEO_MANTER_ORIGINAL', false),
+        // O MP4 enviado e o acervo do curso: fica guardado depois da conversao
+        // para HLS, para reprocessar (outra qualidade, novo player) sem pedir o
+        // arquivo de novo ao professor. Desligar so economiza disco.
+        'manter_original' => (bool) env('TREINAMENTO_VIDEO_MANTER_ORIGINAL', true),
         'conexao_fila' => 'redis-videos',
         'fila' => 'videos',
         'auth_cache_segundos' => 300,
