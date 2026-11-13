@@ -298,7 +298,7 @@ class Handler extends ExceptionHandler
 
             return Inertia::render('Errors/Forbidden', [
                 'title' => 'Acesso negado',
-                'message' => 'Você não tem permissão para acessar esta página.',
+                'message' => $this->mensagemDeAcessoNegado($e),
             ])->toResponse($request)->setStatusCode(403);
         }
 
@@ -349,6 +349,20 @@ class Handler extends ExceptionHandler
      * fazendo com que auth.user e acl fiquem ausentes no frontend.
      * Este método garante que o layout (sidebar, avatar) renderize corretamente.
      */
+    /**
+     * O motivo so vai para a tela quando veio de um abort(403, '...') do proprio
+     * sistema. Subclasses (pacotes de permissao) e AuthorizationException trazem
+     * texto padrao em ingles e ficam com a mensagem generica.
+     */
+    private function mensagemDeAcessoNegado(Throwable $e): string
+    {
+        if ($e::class === HttpException::class && $e->getMessage() !== '') {
+            return $e->getMessage();
+        }
+
+        return 'Você não tem permissão para acessar esta página.';
+    }
+
     protected function getInertiaSharedData(Request $request): array
     {
         $user = $request->user();
