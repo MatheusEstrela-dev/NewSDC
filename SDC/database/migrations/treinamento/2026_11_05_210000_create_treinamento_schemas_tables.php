@@ -693,6 +693,9 @@ return new class extends Migration
         $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS situacao_alterada_por bigint');
         $this->exec('ALTER TABLE treinamento.treinamentos DROP CONSTRAINT IF EXISTS treinamentos_situacao_check');
         $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_situacao_check CHECK (situacao IN ('ATIVO', 'PAUSADO', 'DESATIVADO'))");
+        // Capa do curso: caminho da imagem no disco privado `treinamentos`.
+        // NULL = sem imagem propria, a tela gera uma capa pelo titulo.
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS capa_path varchar(255)');
         $this->indices('treinamento.treinamentos', [
             'treinamentos_situacao_index' => 'situacao',
             'treinamentos_situacao_alterada_por_fkidx' => 'situacao_alterada_por',

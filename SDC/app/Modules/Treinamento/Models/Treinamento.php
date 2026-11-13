@@ -165,6 +165,19 @@ class Treinamento extends Model implements Rastreavel
         return $this->isEad() && $this->estaPublicado() && $this->situacaoEfetiva()->permiteAcessoDoAluno();
     }
 
+    /**
+     * Endereco da capa, ou null quando o curso nao tem imagem propria. O
+     * carimbo muda a cada troca, entao o navegador pode guardar a imagem.
+     */
+    public function capaUrl(): ?string
+    {
+        if ($this->capa_path === null) {
+            return null;
+        }
+
+        return route('treinamentos.capa', ['treinamento' => $this->id, 'v' => $this->updated_at?->timestamp]);
+    }
+
     public function estaPublicado(): bool
     {
         return $this->link_publico_slug !== null && $this->publicado_em !== null;

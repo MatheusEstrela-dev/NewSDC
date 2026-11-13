@@ -4,6 +4,8 @@ use App\Modules\Treinamento\Controllers\Admin\ProfessorCandidatosController;
 use App\Modules\Treinamento\Controllers\Admin\ProfessorDestroyController;
 use App\Modules\Treinamento\Controllers\Admin\ProfessorStoreController;
 use App\Modules\Treinamento\Controllers\Professor\AlunosController;
+use App\Modules\Treinamento\Controllers\Professor\CapaDestroyController;
+use App\Modules\Treinamento\Controllers\Professor\CapaStoreController;
 use App\Modules\Treinamento\Controllers\Professor\ConteudoController;
 use App\Modules\Treinamento\Controllers\Professor\CorrecaoStoreController;
 use App\Modules\Treinamento\Controllers\Professor\CorrecoesController;
@@ -92,6 +94,8 @@ Route::prefix('professor')->name('professor.')->middleware('permission:treinamen
         Route::post('/{treinamento}/provas/{prova}/questoes-ordem', QuestaoOrdemController::class)->whereNumber('prova')->name('provas.questoes.ordem');
         Route::post('/{treinamento}/provas/{prova}/liberacoes', LiberacaoStoreController::class)->whereNumber('prova')->name('provas.liberacoes.store');
         Route::post('/{treinamento}/publicar', PublicarController::class)->name('publicar');
+        Route::post('/{treinamento}/capa', CapaStoreController::class)->name('capa.store');
+        Route::delete('/{treinamento}/capa', CapaDestroyController::class)->name('capa.destroy');
 
         Route::post('/{treinamento}/pastas', PastaStoreController::class)->name('pastas.store');
         Route::put('/{treinamento}/pastas/{modulo}', PastaUpdateController::class)->name('pastas.update');

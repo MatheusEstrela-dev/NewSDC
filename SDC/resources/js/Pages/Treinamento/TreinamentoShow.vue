@@ -18,6 +18,7 @@ import { useTabs } from '@/Composables/core/useTabs';
 import { router, Link } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import axios from 'axios';
+import { useCursosAoVivo } from '@/Composables/treinamento/useCursosAoVivo';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -35,6 +36,8 @@ const props = defineProps({
     default: () => [],
   },
 });
+
+useCursosAoVivo(['treinamento', 'minhaInscricao', 'professores']);
 
 const { can } = usePermissions();
 const { show: toast } = useToast();

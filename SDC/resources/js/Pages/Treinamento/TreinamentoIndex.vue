@@ -7,6 +7,7 @@ defineOptions({ layout: AuthenticatedLayout });
 import TreinamentoIndexTemplate from '@/Templates/Treinamento/TreinamentoIndexTemplate.vue';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from '@/Composables/useToast';
+import { useCursosAoVivo } from '@/Composables/treinamento/useCursosAoVivo';
 
 const { can } = usePermissions();
 const { show: toast } = useToast();
@@ -29,6 +30,8 @@ const props = defineProps({
     default: () => ({}),
   },
 });
+
+useCursosAoVivo(['treinamentos', 'statistics']);
 
 const pagination = computed(() => {
   const m = props.treinamentos?.meta;

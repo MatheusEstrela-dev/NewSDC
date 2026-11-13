@@ -10,6 +10,7 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
+import { useCursosAoVivo } from '@/Composables/treinamento/useCursosAoVivo';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -18,6 +19,8 @@ defineProps({
   disponiveis: { type: Array, default: () => [] },
   certificados: { type: Array, default: () => [] },
 });
+
+useCursosAoVivo(['meus_cursos', 'disponiveis', 'certificados']);
 
 const { show: toast } = useToast();
 const inscrevendo = ref(null);

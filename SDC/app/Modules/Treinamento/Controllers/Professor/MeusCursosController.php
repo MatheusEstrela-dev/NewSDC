@@ -25,6 +25,10 @@ class MeusCursosController extends Controller
             ->map(fn (Treinamento $t) => [
                 'id' => $t->id,
                 'titulo' => $t->titulo,
+                'descricao' => $t->descricao,
+                'carga_horaria' => $t->carga_horaria,
+                'instrutor' => $t->instrutor,
+                'capa_url' => $t->capaUrl(),
                 'publico_alvo_label' => $t->publico_alvo?->getLabel(),
                 'status' => $t->status->value,
                 'status_label' => $t->status->getLabel(),
