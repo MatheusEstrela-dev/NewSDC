@@ -6,6 +6,10 @@ import { usePulsoSessao } from '@/Composables/treinamento/usePulsoSessao';
 const INTERVALO_POSICAO_MS = 15000;
 const MAX_RECUPERACOES_MIDIA = 2;
 const BUFFER_ATRAS_SEGUNDOS = 90;
+// Banda presumida antes da primeira medicao. O padrao do hls.js (500 kbps) fica
+// abaixo do 720p e abria toda aula no 480p; com 5 Mbps ela abre na maior
+// qualidade que cabe no player, e o ABR so desce se a rede nao sustentar.
+const BANDA_INICIAL_BPS = 5_000_000;
 const TIPO_HLS_NATIVO = 'application/vnd.apple.mpegurl';
 const MENSAGEM_ERRO = 'Não foi possível reproduzir este vídeo. Tente novamente em instantes.';
 const MENSAGEM_SEM_SUPORTE = 'Este navegador não consegue reproduzir este vídeo.';
@@ -179,6 +183,7 @@ function liberar() {
 function configuracaoHls() {
   const config = {
     capLevelToPlayerSize: true,
+    abrEwmaDefaultEstimate: BANDA_INICIAL_BPS,
     backBufferLength: BUFFER_ATRAS_SEGUNDOS,
   };
   if (!props.concluido && props.posicaoInicial > 0) config.startPosition = Math.floor(props.posicaoInicial);
