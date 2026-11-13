@@ -7,7 +7,7 @@ namespace App\Modules\Treinamento\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Models\Treinamento;
-use App\Modules\Treinamento\Resources\TreinamentoListResource;
+use App\Modules\Treinamento\Resources\PortalTreinamentoListResource;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +33,7 @@ class CatalogoController extends Controller
         $treinamentos = $query->orderBy('data_inicio', 'asc')->paginate(12);
 
         return Inertia::render('Treinamento/Portal/Catalogo', [
-            'treinamentos' => TreinamentoListResource::collection($treinamentos->withPath($request->url())),
+            'treinamentos' => PortalTreinamentoListResource::collection($treinamentos->withPath($request->url())),
             'filters' => $filters,
         ]);
     }
@@ -58,7 +58,11 @@ class CatalogoController extends Controller
             : null;
 
         return Inertia::render('Treinamento/Portal/Detalhe', [
-            'treinamento' => (new TreinamentoResource($treinamento))->resolve(),
+            // A capa do SDC exige permissao de servidor: aqui vai a do portal.
+            'treinamento' => [
+                ...(new TreinamentoResource($treinamento))->resolve(),
+                'capa_url' => $treinamento->isEad() ? $treinamento->capaUrl(Treinamento::ROTA_CAPA_PORTAL) : null,
+            ],
             'minhaInscricao' => $minhaInscricao ? [
                 'id' => $minhaInscricao->id,
                 'status' => $minhaInscricao->status->value,

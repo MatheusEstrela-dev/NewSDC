@@ -23,6 +23,11 @@ class Treinamento extends Model implements Rastreavel
 {
     use SoftDeletes, TrilhaDeAcoes, UsaConexaoDeTreinamento;
 
+    /** Rotas que entregam a imagem de capa: uma por escopo (servidor e cidadao). */
+    public const ROTA_CAPA_SDC = 'treinamentos.capa';
+
+    public const ROTA_CAPA_PORTAL = 'portal.treinamento.capa';
+
     protected $table = 'treinamento.treinamentos';
 
     protected $fillable = [
@@ -169,13 +174,13 @@ class Treinamento extends Model implements Rastreavel
      * Endereco da capa, ou null quando o curso nao tem imagem propria. O
      * carimbo muda a cada troca, entao o navegador pode guardar a imagem.
      */
-    public function capaUrl(): ?string
+    public function capaUrl(string $rota = self::ROTA_CAPA_SDC): ?string
     {
         if ($this->capa_path === null) {
             return null;
         }
 
-        return route('treinamentos.capa', ['treinamento' => $this->id, 'v' => $this->updated_at?->timestamp]);
+        return route($rota, ['treinamento' => $this->id, 'v' => $this->updated_at?->timestamp]);
     }
 
     public function estaPublicado(): bool

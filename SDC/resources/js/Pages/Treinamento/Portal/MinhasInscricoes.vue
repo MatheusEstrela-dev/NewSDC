@@ -47,7 +47,14 @@ const formatDate = (dateValue) => {
     <div class="space-y-4">
       <CardBase v-for="inscricao in inscricoes.data" :key="inscricao.id" class="p-5">
         <div class="flex items-start justify-between gap-3">
-          <div>
+          <img
+            v-if="inscricao.treinamento_capa_url"
+            :src="inscricao.treinamento_capa_url"
+            :alt="`Capa do curso: ${inscricao.treinamento_titulo}`"
+            class="h-16 w-28 shrink-0 rounded-md object-cover"
+            loading="lazy"
+          />
+          <div class="min-w-0 flex-1">
             <Text size="base" class="font-semibold">{{ inscricao.treinamento_titulo }}</Text>
             <Text size="sm" color="muted">
               {{ formatDate(inscricao.treinamento_data_inicio) }}
