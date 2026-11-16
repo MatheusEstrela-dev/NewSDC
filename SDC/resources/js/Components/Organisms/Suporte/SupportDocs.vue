@@ -58,7 +58,7 @@ const categories = [
             { id: 'ajuda', label: 'Ajuda Humanitária', icon: HeartIcon, desc: 'Gestão de donativos, logística de suprimentos e assistência a populações afetadas.' },
             { id: 'orgaos', label: 'Órgãos', icon: BuildingOffice2Icon, desc: 'Cadastro e integração de entidades parceiras e órgãos da administração pública.' },
             { id: 'tdap', label: 'TDAP', icon: FolderIcon, desc: 'Transferência de Dados de Apoio. Repositório de documentos técnicos e normativos.' },
-            { id: 'treinamento', label: 'Treinamento', icon: AcademicCapIcon, desc: 'Gestão de cursos, capacitações e simulados para as equipas de defesa civil.' },
+            { id: 'treinamento', label: 'Capacitações', icon: AcademicCapIcon, desc: 'Gestão de cursos, capacitações e simulados para as equipas de defesa civil.' },
             { id: 'meteorologia', label: 'Meteorologia', icon: CloudIcon, desc: 'Monitoramento de condições climáticas, alertas de chuva e riscos geo-hidrológicos.' },
             { id: 'vistoria', label: 'Vistoria', icon: ClipboardDocumentCheckIcon, desc: 'Módulo específico para inspeções técnicas de engenharia e avaliação de danos.' },
         ]

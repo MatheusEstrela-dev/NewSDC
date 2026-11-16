@@ -52,21 +52,21 @@ export function useBreadcrumb() {
 
         'Treinamento/TreinamentoIndex': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'Treinamentos', route: null }
+            { label: 'Capacitações', route: null }
         ],
         'Treinamento/TreinamentoCreate': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'Treinamentos', route: 'treinamentos.index' },
-            { label: 'Novo Treinamento', route: null }
+            { label: 'Capacitações', route: 'treinamentos.index' },
+            { label: 'Nova capacitação', route: null }
         ],
         'Treinamento/TreinamentoEdit': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'Treinamentos', route: 'treinamentos.index' },
+            { label: 'Capacitações', route: 'treinamentos.index' },
             { label: 'Edição', route: null }
         ],
         'Treinamento/TreinamentoShow': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'Treinamentos', route: 'treinamentos.index' },
+            { label: 'Capacitações', route: 'treinamentos.index' },
             { label: 'Visualizar', route: null }
         ],
 
@@ -547,7 +547,17 @@ export function useBreadcrumb() {
             'Show': 'Visualizar',
         };
 
-        const humanize = (segment) => segment.replace(/([A-Z])/g, ' $1').trim();
+        // Nome que o usuario ve quando difere do nome da pasta do componente.
+        // Mesmos rotulos do menu lateral: a trilha nao pode chamar a area de
+        // um jeito e o menu de outro.
+        const rotulos = {
+            Treinamento: 'Capacitações',
+            Aluno: 'Meus cursos',
+            MeusCursos: 'Meus cursos',
+            Professor: 'Área do Gestor',
+        };
+
+        const humanize = (segment) => rotulos[segment] ?? segment.replace(/([A-Z])/g, ' $1').trim();
 
         /**
          * Nome de rota provavel para um nivel da trilha, ou null.

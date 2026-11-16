@@ -31,7 +31,7 @@ const categoryLabels = {
     demandas: 'Demandas',
     orgaos: 'Órgãos',
     processos: 'Processos',
-    treinamentos: 'Treinamentos',
+    treinamentos: 'Capacitações',
 };
 
 const getIconPath = (iconName) => {

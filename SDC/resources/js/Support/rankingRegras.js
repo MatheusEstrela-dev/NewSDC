@@ -3,7 +3,7 @@ const MODULOS = {
   compdec: 'COMPDEC', decretacoes: 'Decretações', demandas: 'Demandas',
   estoque: 'Estoque', geoespacial: 'Geoespacial', inventario: 'Inventário',
   pae: 'PAE', plancon: 'Plano de Contingência', plantao: 'Plantão',
-  pmda: 'PMDA', rat: 'RAT', suporte: 'Suporte', tdap: 'TDAP', treinamento: 'Treinamento',
+  pmda: 'PMDA', rat: 'RAT', suporte: 'Suporte', tdap: 'TDAP', treinamento: 'Capacitações',
 };
 
 const ENTREGAS = {

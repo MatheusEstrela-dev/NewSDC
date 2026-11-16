@@ -110,8 +110,8 @@ function handleExportCsv(params) {
   <div class="treinamentos-container">
     <!-- Header Padronizado -->
     <PageHeader
-      title="Treinamentos"
-      description="Gestão de treinamentos e cursos"
+      title="Capacitações"
+      description="Gestão de capacitações e cursos"
       :icon-image="moduleIcon('treinamento')"
       variant="gradient"
     >
@@ -134,7 +134,7 @@ function handleExportCsv(params) {
             icon-position="left"
             @click="emit('create')"
           >
-            <span>Novo Treinamento</span>
+            <span>Nova capacitação</span>
           </Button>
         </div>
       </template>
@@ -143,7 +143,7 @@ function handleExportCsv(params) {
     <!-- Modal de Exportação CSV -->
     <ExportCsvModal
       :show="showExportModal"
-      module-name="Treinamentos"
+      module-name="Capacitações"
       @close="showExportModal = false"
       @export="handleExportCsv"
     />
