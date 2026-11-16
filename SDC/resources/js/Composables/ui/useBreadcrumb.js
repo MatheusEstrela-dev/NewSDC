@@ -654,6 +654,17 @@ export function useBreadcrumb() {
             items.push({ label: actionMap[acao], route: null });
         }
 
+        // O nome do componente nem sempre bate com o da rota
+        // (Treinamento/Aluno/MeusCursos -> a rota e treinamentos.index, no
+        // plural): sem rota, o modulo nao era clicavel e o Voltar pulava ele
+        // e caia no Inicio. O servidor manda a raiz do modulo que o usuario
+        // pode abrir.
+        const raiz = propsDaPagina?.navegacao?.raiz;
+
+        if (raiz && items[1] && !items[1].route && items.length > 2) {
+            items[1] = { ...items[1], route: raiz.rota, params: raiz.params };
+        }
+
         // Colapsa repeticao consecutiva: `Plantao/PlantaoIndex` produzia
         // "Plantao > Plantao", porque modulo e recurso tem o mesmo nome. E o
         // caso de toda pagina raiz de modulo neste projeto.
@@ -677,22 +688,39 @@ export function useBreadcrumb() {
     // dois cliques (por exemplo apos um resize/re-render trocar a pilha de
     // historico), porque a pagina anterior real nem sempre e a entrada anterior
     // do historico.
+    //
+    // Ordem: degrau da trilha com rota (sem contar o Inicio), depois o
+    // ancestral do modulo que o servidor calculou, e so entao o Inicio. Antes
+    // o Inicio entrava na varredura da trilha, e qualquer tela cuja trilha nao
+    // tivesse o modulo com rota voltava direto para o dashboard.
+    const irPara = (item) => {
+        // `params` e obrigatorio em rota com binding -- a trilha do Cisterna
+        // volta para a lista DAQUELE beneficiario. Sem repassar, o Ziggy lanca
+        // por falta do parametro e o Voltar nao faz nada.
+        router.visit(item.params !== undefined ? route(item.route, item.params) : route(item.route));
+    };
+
     const handleBack = () => {
         const items = breadcrumbItems.value;
 
-        for (let i = items.length - 2; i >= 0; i--) {
+        for (let i = items.length - 2; i >= 1; i--) {
             if (items[i]?.route) {
-                // `params` e obrigatorio em rota com binding -- a trilha do
-                // Cisterna volta para a lista DAQUELE beneficiario. Sem
-                // repassar, o Ziggy lanca por falta do parametro e o Voltar
-                // nao faz nada.
-                const destino = items[i].params !== undefined
-                    ? route(items[i].route, items[i].params)
-                    : route(items[i].route);
-
-                router.visit(destino);
+                irPara(items[i]);
                 return;
             }
+        }
+
+        const props = page.props?.value ?? page.props;
+        const voltar = props?.navegacao?.voltar;
+
+        if (voltar?.url) {
+            router.visit(voltar.url);
+            return;
+        }
+
+        if (items[0]?.route) {
+            irPara(items[0]);
+            return;
         }
 
         window.history.back();
