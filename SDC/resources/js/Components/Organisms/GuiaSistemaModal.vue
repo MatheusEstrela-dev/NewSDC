@@ -111,7 +111,7 @@ const modulos = [
     uso: 'Frequente',
   },
   {
-    nome: 'Treinamento',
+    nome: 'Capacitações',
     icon: AcademicCapIcon,
     accent: 'from-violet-500 to-fuchsia-500',
     descricao: 'Cursos, capacitacoes e historico de formacao dos agentes da Defesa Civil municipal e estadual.',

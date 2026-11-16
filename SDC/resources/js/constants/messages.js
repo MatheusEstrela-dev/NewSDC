@@ -30,10 +30,10 @@ export const MESSAGES = {
     loading: 'Carregando beneficiários...',
   },
   treinamento: {
-    title: 'Treinamentos',
-    description: 'Gerencie os treinamentos e capacitações',
-    empty: 'Nenhum treinamento encontrado',
-    loading: 'Carregando treinamentos...',
+    title: 'Capacitações',
+    description: 'Gerencie as capacitações',
+    empty: 'Nenhuma capacitação encontrada',
+    loading: 'Carregando capacitações...',
   },
   demandas: {
     title: 'Demandas',

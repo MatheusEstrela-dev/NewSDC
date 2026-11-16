@@ -284,7 +284,7 @@ const navigationIndex = computed(() => [
     { id: 'nav_tdap_acompanhamento', title: 'TDAP Acompanhamento', subtitle: 'Tramitação dos cronogramas', url: safeRoute('tdap.acompanhamento.index'), icon: 'document', category: 'navigation', keywords: ['tdap', 'cronograma', 'acompanhamento', 'tramitacao', 'analise', 'aprovacao'] },
 
     // Outros
-    { id: 'nav_treino', title: 'Treinamentos', subtitle: 'Cursos e Capacitações', url: safeRoute('treinamentos.index'), icon: 'academic', category: 'navigation', keywords: ['curso', 'aula', 'ead'] },
+    { id: 'nav_treino', title: 'Capacitações', subtitle: 'Cursos e eventos', url: safeRoute('treinamentos.index'), icon: 'academic', category: 'navigation', keywords: ['curso', 'aula', 'ead', 'treinamento', 'capacitacao'] },
     { id: 'nav_meteo', title: 'Meteorologia', subtitle: 'Alertas e Previsão (INMET)', url: safeRoute('inmet.index'), icon: 'cloud', category: 'navigation', keywords: ['clima', 'tempo', 'chuva'] },
 
     // Admin

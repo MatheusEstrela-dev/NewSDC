@@ -52,21 +52,21 @@ export function useBreadcrumb() {
 
         'Treinamento/TreinamentoIndex': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'Treinamentos', route: null }
+            { label: 'Capacitações', route: null }
         ],
         'Treinamento/TreinamentoCreate': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'Treinamentos', route: 'treinamentos.index' },
-            { label: 'Novo Treinamento', route: null }
+            { label: 'Capacitações', route: 'treinamentos.index' },
+            { label: 'Nova capacitação', route: null }
         ],
         'Treinamento/TreinamentoEdit': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'Treinamentos', route: 'treinamentos.index' },
+            { label: 'Capacitações', route: 'treinamentos.index' },
             { label: 'Edição', route: null }
         ],
         'Treinamento/TreinamentoShow': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'Treinamentos', route: 'treinamentos.index' },
+            { label: 'Capacitações', route: 'treinamentos.index' },
             { label: 'Visualizar', route: null }
         ],
 
@@ -547,7 +547,17 @@ export function useBreadcrumb() {
             'Show': 'Visualizar',
         };
 
-        const humanize = (segment) => segment.replace(/([A-Z])/g, ' $1').trim();
+        // Nome que o usuario ve quando difere do nome da pasta do componente.
+        // Mesmos rotulos do menu lateral: a trilha nao pode chamar a area de
+        // um jeito e o menu de outro.
+        const rotulos = {
+            Treinamento: 'Capacitações',
+            Aluno: 'Meus cursos',
+            MeusCursos: 'Meus cursos',
+            Professor: 'Área do Gestor',
+        };
+
+        const humanize = (segment) => rotulos[segment] ?? segment.replace(/([A-Z])/g, ' $1').trim();
 
         /**
          * Nome de rota provavel para um nivel da trilha, ou null.
@@ -689,10 +699,14 @@ export function useBreadcrumb() {
     // historico), porque a pagina anterior real nem sempre e a entrada anterior
     // do historico.
     //
-    // Ordem: degrau da trilha com rota (sem contar o Inicio), depois o
-    // ancestral do modulo que o servidor calculou, e so entao o Inicio. Antes
-    // o Inicio entrava na varredura da trilha, e qualquer tela cuja trilha nao
+    // Ordem: degrau da trilha abaixo do modulo, depois o ancestral que o
+    // servidor calculou, depois o proprio modulo e so entao o Inicio. Antes o
+    // Inicio entrava na varredura da trilha, e qualquer tela cuja trilha nao
     // tivesse o modulo com rota voltava direto para o dashboard.
+    //
+    // O modulo fica DEPOIS do ancestral: com o link da raiz preenchido pelo
+    // servidor, o Conteudo do professor pularia a Area do Gestor (o ancestral
+    // mais proximo) e iria direto para a listagem geral.
     const irPara = (item) => {
         // `params` e obrigatorio em rota com binding -- a trilha do Cisterna
         // volta para a lista DAQUELE beneficiario. Sem repassar, o Ziggy lanca
@@ -703,7 +717,7 @@ export function useBreadcrumb() {
     const handleBack = () => {
         const items = breadcrumbItems.value;
 
-        for (let i = items.length - 2; i >= 1; i--) {
+        for (let i = items.length - 2; i >= 2; i--) {
             if (items[i]?.route) {
                 irPara(items[i]);
                 return;
@@ -718,9 +732,13 @@ export function useBreadcrumb() {
             return;
         }
 
-        if (items[0]?.route) {
-            irPara(items[0]);
-            return;
+        // Modulo, depois Inicio. O ultimo degrau (a propria pagina) nunca tem
+        // rota, entao items[1] so e destino quando ha pagina abaixo dele.
+        for (const item of [items[1], items[0]]) {
+            if (item?.route) {
+                irPara(item);
+                return;
+            }
         }
 
         window.history.back();

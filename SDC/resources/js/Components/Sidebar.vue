@@ -75,7 +75,7 @@
       -->
       <nav v-if="isCidadao" class="sidebar-nav sidebar-view sidebar-view-main">
         <div class="nav-section" data-tour="sidebar-principal">
-          <div v-show="!isCollapsed" class="nav-section-title">TREINAMENTOS</div>
+          <div v-show="!isCollapsed" class="nav-section-title">CAPACITAÇÕES</div>
           <NavItem
             :href="route('portal.treinamento.catalogo')"
             :active="isRouteActive('portal.treinamento.catalogo') || isRouteActive('portal.treinamento.eventos.*')"
@@ -321,7 +321,7 @@
           icon="academic"
           :collapsed="isCollapsed"
         >
-          Treinamento
+          Capacitações
         </NavItem>
         <NavItem
           v-if="canSeeTreinamentoAluno && _routes.hasTreinamentoAluno"
@@ -330,7 +330,7 @@
           icon="book"
           :collapsed="isCollapsed"
         >
-          Meus cursos EAD
+          Meus cursos
         </NavItem>
         <NavItem
           v-if="canSeeTreinamentoProfessor && _routes.hasTreinamentoProfessor"
@@ -339,7 +339,7 @@
           icon="document-check"
           :collapsed="isCollapsed"
         >
-          Area do professor
+          Área do Gestor
         </NavItem>
 
         <NavItem

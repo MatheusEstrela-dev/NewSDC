@@ -1,5 +1,5 @@
 <template>
-  <Head title="Portal de Treinamentos - Confirmar cadastro" />
+  <Head title="Portal de Capacitações - Confirmar cadastro" />
 
   <div class="login-container">
     <div class="login-card" style="max-width: 32rem;">
