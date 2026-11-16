@@ -689,10 +689,14 @@ export function useBreadcrumb() {
     // historico), porque a pagina anterior real nem sempre e a entrada anterior
     // do historico.
     //
-    // Ordem: degrau da trilha com rota (sem contar o Inicio), depois o
-    // ancestral do modulo que o servidor calculou, e so entao o Inicio. Antes
-    // o Inicio entrava na varredura da trilha, e qualquer tela cuja trilha nao
+    // Ordem: degrau da trilha abaixo do modulo, depois o ancestral que o
+    // servidor calculou, depois o proprio modulo e so entao o Inicio. Antes o
+    // Inicio entrava na varredura da trilha, e qualquer tela cuja trilha nao
     // tivesse o modulo com rota voltava direto para o dashboard.
+    //
+    // O modulo fica DEPOIS do ancestral: com o link da raiz preenchido pelo
+    // servidor, o Conteudo do professor pularia a Area do Gestor (o ancestral
+    // mais proximo) e iria direto para a listagem geral.
     const irPara = (item) => {
         // `params` e obrigatorio em rota com binding -- a trilha do Cisterna
         // volta para a lista DAQUELE beneficiario. Sem repassar, o Ziggy lanca
@@ -703,7 +707,7 @@ export function useBreadcrumb() {
     const handleBack = () => {
         const items = breadcrumbItems.value;
 
-        for (let i = items.length - 2; i >= 1; i--) {
+        for (let i = items.length - 2; i >= 2; i--) {
             if (items[i]?.route) {
                 irPara(items[i]);
                 return;
@@ -718,9 +722,13 @@ export function useBreadcrumb() {
             return;
         }
 
-        if (items[0]?.route) {
-            irPara(items[0]);
-            return;
+        // Modulo, depois Inicio. O ultimo degrau (a propria pagina) nunca tem
+        // rota, entao items[1] so e destino quando ha pagina abaixo dele.
+        for (const item of [items[1], items[0]]) {
+            if (item?.route) {
+                irPara(item);
+                return;
+            }
         }
 
         window.history.back();
