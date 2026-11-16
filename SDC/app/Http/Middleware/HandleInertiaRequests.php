@@ -72,6 +72,11 @@ class HandleInertiaRequests extends Middleware
             // Antes: era exposta no data-page do Inertia mesmo sem usuario autenticado.
             'acl' => fn() => $user ? $this->getCachedAclConfig() : (object) [],
             'rankingDisponivel' => fn() => \App\Modules\Ranking\Support\RankingAccess::visivel($user),
+            // Destino do Voltar e link do modulo na trilha, sem sair do modulo
+            // nem apontar para tela que o usuario nao pode abrir.
+            'navegacao' => fn() => $user && $request->route() instanceof \Illuminate\Routing\Route
+                ? app(\App\Support\Routing\NavegacaoDoModulo::class)->para($request->route(), $user)
+                : null,
             // Inertia::always() porque flash PRECISA viajar tambem no reload
             // parcial. Sem isso o `only:` do reload filtra o flash da resposta,
             // o cliente mantem o objeto da visita anterior, e o watcher do
