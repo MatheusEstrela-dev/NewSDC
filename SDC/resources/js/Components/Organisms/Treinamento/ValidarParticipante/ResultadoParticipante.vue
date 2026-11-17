@@ -4,7 +4,7 @@ import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import CredencialCertificadoLinha from '@/Components/Molecules/Treinamento/CredencialCertificadoLinha.vue';
 import CredencialCursoAndamento from '@/Components/Molecules/Treinamento/CredencialCursoAndamento.vue';
-import { formatDateTime } from '@/Utils/dateFormatter';
+import { formatDateTime } from '@/utils/dateFormatter';
 
 /* Resultado da consulta de uma credencial: identificacao, certificados validos e cursos em andamento. */
 defineProps({
