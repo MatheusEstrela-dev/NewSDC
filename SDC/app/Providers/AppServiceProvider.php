@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Database\ConnectionSemaphore;
 use App\Database\QueryBudgetGuard;
+use Illuminate\Queue\Events\JobProcessing;
 use App\Services\Database\DatabaseCircuitBreaker;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -176,10 +177,14 @@ class AppServiceProvider extends ServiceProvider
         // coroutines. O cache deve ser limpo em deploy/comando admin ou quando
         // permissoes forem alteradas, nao no RequestReceived.
 
-        // Um listener por worker; reset antes de cada request ou task.
+        // Um listener por worker; reset antes de cada request, task ou job de
+        // fila. Sem o JobProcessing, o `queue:work` (processo longo) somava as
+        // queries de todos os jobs desde que subiu e acusava N+1 falso: cada
+        // NormalizarSilverJob faz UMA busca na ingestao bruta, mas o centesimo
+        // job do worker cruzava o teto de 100.
         $budget = $this->app->make(QueryBudgetGuard::class);
         $budget->bind();
-        foreach ([RequestReceived::class, TaskReceived::class] as $event) {
+        foreach ([RequestReceived::class, TaskReceived::class, JobProcessing::class] as $event) {
             if (class_exists($event)) {
                 $this->app['events']->listen($event, fn () => $budget->reset());
             }
