@@ -4,7 +4,7 @@ import { router } from '@inertiajs/vue3';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import { useToast } from '@/Composables/useToast';
-import { formatDateTime } from '@/Utils/dateFormatter';
+import { formatDateTime } from '@/utils/dateFormatter';
 
 /*
  * Credencial do proprio servidor: QR que a equipe da CEDEC le num evento para

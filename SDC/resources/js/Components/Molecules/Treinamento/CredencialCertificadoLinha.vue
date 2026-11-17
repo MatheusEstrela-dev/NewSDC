@@ -1,6 +1,6 @@
 <script setup>
 import { CheckBadgeIcon } from '@heroicons/vue/24/solid';
-import { formatDate } from '@/Utils/dateFormatter';
+import { formatDate } from '@/utils/dateFormatter';
 
 /* Certificado valido de um servidor no resultado da leitura de QR. */
 defineProps({
