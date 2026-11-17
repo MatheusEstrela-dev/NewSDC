@@ -854,7 +854,7 @@
         <NavItem
           v-if="canSeeTreinamento && _routes.hasTreinamentos"
           :href="route('treinamentos.index')"
-          :active="isRouteActive('treinamentos.*') && !isRouteActive('treinamentos.aluno.*') && !isRouteActive('treinamentos.professor.*') && !isRouteActive('treinamentos.indicadores')"
+          :active="isRouteActive('treinamentos.*') && !isRouteActive('treinamentos.aluno.*') && !isRouteActive('treinamentos.professor.*') && !isRouteActive('treinamentos.indicadores') && !isRouteActive('treinamentos.validar-participante*')"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
@@ -880,6 +880,16 @@
           :collapsed="isCollapsed"
         >
           Área do Gestor
+        </NavItem>
+        <NavItem
+          v-if="canSeeTreinamentoValidar && _routes.hasTreinamentoValidar"
+          :href="route('treinamentos.validar-participante')"
+          :active="isRouteActive('treinamentos.validar-participante*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Validar participante
         </NavItem>
       </div>
     </nav>
@@ -1097,6 +1107,7 @@ const _routes = {
   hasTreinamentoAluno: route().has('treinamentos.aluno.index'),
   hasTreinamentoProfessor: route().has('treinamentos.professor.index'),
   hasTreinamentoIndicadores: route().has('treinamentos.indicadores'),
+  hasTreinamentoValidar: route().has('treinamentos.validar-participante'),
   hasRanking: route().has('ranking.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
@@ -1189,6 +1200,7 @@ const _activeRoutes = computed(() => {
     // Painel e irmao de Capacitacoes sob o mesmo prefixo: chave propria para
     // 'treinamentos.*' nao acender os dois itens juntos.
     'treinamentos.indicadores': route().current('treinamentos.indicadores'),
+    'treinamentos.validar-participante*': route().current('treinamentos.validar-participante*'),
     'plancon.*': route().current('plancon.*'),
     // isRouteActive so consulta ESTE mapa: sem a linha abaixo o item de
     // Ranking nasceria permanentemente apagado, mesmo dentro do modulo.
@@ -1384,6 +1396,9 @@ const canSeeTreinamentoAluno = computed(() => {
 const canSeeTreinamentoProfessor = computed(() => {
   return hasPermission(['treinamento.professor.acessar']);
 });
+const canSeeTreinamentoValidar = computed(() => {
+  return hasPermission(['treinamento.participantes.validar']);
+});
 const canSeeTreinamentoIndicadores = computed(() => {
   return hasPermission(['treinamento.indicadores.view']);
 });
@@ -1392,7 +1407,8 @@ const canSeeTreinamentoGroup = computed(() => {
   return (canSeeTreinamentoIndicadores.value && _routes.hasTreinamentoIndicadores)
     || (canSeeTreinamento.value && _routes.hasTreinamentos)
     || (canSeeTreinamentoAluno.value && _routes.hasTreinamentoAluno)
-    || (canSeeTreinamentoProfessor.value && _routes.hasTreinamentoProfessor);
+    || (canSeeTreinamentoProfessor.value && _routes.hasTreinamentoProfessor)
+    || (canSeeTreinamentoValidar.value && _routes.hasTreinamentoValidar);
 });
 
 const canSeePlanCon = computed(() => {

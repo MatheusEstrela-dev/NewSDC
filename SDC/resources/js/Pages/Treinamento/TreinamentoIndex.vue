@@ -89,6 +89,7 @@ const handleFilter = (filters) => {
       :can-edit="can('treinamento.cursos.edit')"
       :can-delete="can('treinamento.cursos.delete')"
       :can-export="can('treinamento.cursos.export')"
+      :can-validar="can('treinamento.participantes.validar')"
       @create="handleCreate"
       @view="handleView"
       @edit="handleEdit"

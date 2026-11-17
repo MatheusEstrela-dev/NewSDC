@@ -11,7 +11,7 @@ import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/Treina
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
 import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
 import { useMobile } from '@/Composables/useMobile';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon, QrCodeIcon } from '@heroicons/vue/24/outline';
 import { ref } from 'vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 
@@ -63,6 +63,10 @@ const props = defineProps({
     default: false,
   },
   canExport: {
+    type: Boolean,
+    default: false,
+  },
+  canValidar: {
     type: Boolean,
     default: false,
   },
@@ -119,6 +123,18 @@ function handleExportCsv(params) {
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Oculto em mobile -->
           <ViewModeToggle v-model="viewMode" />
+
+          <!-- Ler QR: uso principal e no celular em evento, entao o rotulo nunca recolhe -->
+          <Button
+            v-if="canValidar && route().has('treinamentos.validar-participante')"
+            variant="outline"
+            size="md"
+            :icon="QrCodeIcon"
+            icon-position="left"
+            :href="route('treinamentos.validar-participante')"
+          >
+            <span>Ler QR</span>
+          </Button>
 
           <!-- Botão Exportar -->
           <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">

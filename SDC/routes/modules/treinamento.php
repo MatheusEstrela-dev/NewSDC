@@ -27,6 +27,8 @@ use App\Modules\Treinamento\Controllers\TreinamentoShowController;
 use App\Modules\Treinamento\Controllers\TreinamentoStoreController;
 use App\Modules\Treinamento\Controllers\TreinamentoTransicionarStatusController;
 use App\Modules\Treinamento\Controllers\TreinamentoUpdateController;
+use App\Modules\Treinamento\Controllers\ValidarParticipanteConsultarController;
+use App\Modules\Treinamento\Controllers\ValidarParticipanteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -60,6 +62,14 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
     Route::get('/indicadores', IndicadoresController::class)
         ->name('indicadores')
         ->middleware('can:treinamento.indicadores.view');
+
+    // Validador de credencial por QR Code (equipe da CEDEC); antes do /{id}.
+    Route::get('/validar-participante', ValidarParticipanteController::class)
+        ->name('validar-participante')
+        ->middleware('can:treinamento.participantes.validar');
+    Route::get('/validar-participante/{token}', ValidarParticipanteConsultarController::class)
+        ->name('validar-participante.consultar')
+        ->middleware('can:treinamento.participantes.validar');
 
     // Antes do /{id} de proposito: senao o wildcard casaria com "create" primeiro.
     Route::get('/create', TreinamentoCreateController::class)

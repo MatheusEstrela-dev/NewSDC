@@ -77,6 +77,7 @@ return new class extends Migration
         $this->criarComprovacao();
         $this->criarCicloDoCurso();
         $this->criarIndicadores();
+        $this->criarCredencialQr();
     }
 
     public function down(): void
@@ -723,6 +724,39 @@ return new class extends Migration
         ]);
         $this->indices('treinamento.inscricoes', [
             'inscricoes_concluido_em_index' => 'concluido_em',
+        ]);
+    }
+
+    /**
+     * Credencial por QR Code do servidor e trilha das consultas a ela. Autocontido
+     * e idempotente. user_id e do sdc (sem FK, como os demais ids de outro banco).
+     *
+     * - credenciais_qr: um token por servidor (UNIQUE em user_id), trocavel.
+     * - credencial_consultas: quem consultou quem e quando (dado pessoal lido).
+     */
+    private function criarCredencialQr(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.credenciais_qr (
+                id bigserial PRIMARY KEY,
+                user_id bigint NOT NULL UNIQUE,
+                token varchar(64) NOT NULL UNIQUE,
+                gerado_em timestamp(0) NOT NULL,
+                created_at timestamp(0),
+                updated_at timestamp(0)
+            )
+            SQL);
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.credencial_consultas (
+                id bigserial PRIMARY KEY,
+                user_id_consultado bigint NOT NULL,
+                consultado_por bigint NOT NULL,
+                created_at timestamp(0) NOT NULL
+            )
+            SQL);
+        $this->indices('treinamento.credencial_consultas', [
+            'credencial_consultas_user_id_consultado_index' => 'user_id_consultado',
+            'credencial_consultas_consultado_por_index' => 'consultado_por',
         ]);
     }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Treinamento\Controllers\Aluno\CredencialRegerarController;
 use App\Modules\Treinamento\Controllers\Aluno\EntregaStoreController;
 use App\Modules\Treinamento\Controllers\Aluno\ItemArquivoController;
 use App\Modules\Treinamento\Controllers\Aluno\MeusCursosController;
@@ -27,6 +28,7 @@ Route::post('/sessao/pulso', SessaoPulsoController::class)
 
 Route::prefix('aluno')->name('aluno.')->middleware('can:treinamento.cursos.view')->group(function () {
     Route::get('/', MeusCursosController::class)->name('index');
+    Route::post('/credencial/regerar', CredencialRegerarController::class)->name('credencial.regerar');
     Route::get('/cursos/{treinamento}', SalaDeAulaController::class)->name('sala');
     Route::get('/cursos/{treinamento}/itens/{item}/arquivo', ItemArquivoController::class)->name('itens.arquivo');
     Route::post('/cursos/{treinamento}/itens/{item}/progresso', ProgressoController::class)

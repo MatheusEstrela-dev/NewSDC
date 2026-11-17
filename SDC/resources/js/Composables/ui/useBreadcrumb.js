@@ -59,6 +59,11 @@ export function useBreadcrumb() {
             { label: 'Capacitações', route: 'treinamentos.index' },
             { label: 'Painel', route: null }
         ],
+        'Treinamento/ValidarParticipante/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Capacitações', route: 'treinamentos.index' },
+            { label: 'Validar participante', route: null }
+        ],
         'Treinamento/TreinamentoCreate': [
             { label: 'Início', route: 'dashboard' },
             { label: 'Capacitações', route: 'treinamentos.index' },

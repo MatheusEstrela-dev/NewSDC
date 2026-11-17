@@ -8,6 +8,7 @@ import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexo
 import CursoEadCard from '@/Components/Molecules/Treinamento/CursoEadCard.vue';
 import SecaoRecolhivel from '@/Components/Molecules/Treinamento/SecaoRecolhivel.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import CredencialQrBloco from '@/Components/Organisms/Treinamento/CredencialQrBloco.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
@@ -20,6 +21,7 @@ defineProps({
   meus_cursos: { type: Array, default: () => [] },
   disponiveis: { type: Array, default: () => [] },
   certificados: { type: Array, default: () => [] },
+  credencial: { type: Object, default: null },
 });
 
 useCursosAoVivo(['meus_cursos', 'disponiveis', 'certificados']);
@@ -60,6 +62,10 @@ function inscrever(sexo) {
       <div v-else class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
         <CursoEadCard v-for="curso in meus_cursos" :key="curso.id" :curso="curso" modo="inscrito" />
       </div>
+    </SecaoRecolhivel>
+
+    <SecaoRecolhivel v-if="credencial" class="mt-8" titulo="Minha credencial" namespace="treinamento-aluno" secao-id="credencial">
+      <CredencialQrBloco :credencial="credencial" />
     </SecaoRecolhivel>
 
     <SecaoRecolhivel v-if="certificados.length" class="mt-8" titulo="Meus certificados" :total="certificados.length" namespace="treinamento-aluno" secao-id="certificados">
