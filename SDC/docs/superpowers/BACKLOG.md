@@ -156,3 +156,150 @@ Trazidas da triagem da revisao final de branch. Nenhuma bloqueou o merge.
 | `toSelectArray()` identico em 6 enums | `app/Modules/Plantao/Enums/` | Padrao pre-existente do projeto, nao desta release. Divida global. |
 | Sem teste do bloco catch/traduz de `abrirTurno()` | `PassagemServicoService` | So a constraint crua do banco e testada. Bloco de 4 linhas, risco baixo. |
 | Filtros da tela da frota inline no template | `ViaturasIndexTemplate.vue` | Sem segundo consumidor; extrair organismo seria YAGNI hoje. |
+
+---
+
+## Painel de Capacitacoes, pagina 2: distribuicao de kits de material didatico
+
+**Levantado em:** 2026-11-17, na abertura do painel de indicadores das Capacitacoes
+**Origem:** `SDC/docs/plans/kpis-treinmento-dash.md` (pagina 2), pedido da Diretoria de Educacao (DEPDC)
+
+### O que foi pedido
+
+Painel "PAINEL DE MONITORAMENTO - DEPDC/CEDEC-MG" da distribuicao de material
+didatico nas acoes de capacitacao. Filtros: ano, periodo, municipio, REDEC e
+curso/evento. Cards: total de kits, municipios atendidos, REDECs atendidas,
+eventos atendidos, media de kits por evento e por municipio. Mapa de MG (circulo
+= kits), kits por REDEC, kits por curso/evento, evolucao mensal com comparacao
+entre anos, quantidade e composicao percentual por item (blocos, pastas,
+panfletos Estiagem, Enxurradas, COMPDEC e NUPDEC) e tabela detalhada. Indicador
+estrategico: media de kits distribuidos por participante.
+
+### O que existe hoje
+
+Nada registra essa distribuicao. O modulo Estoque tem `estoque_kits` e
+movimentacoes com `destino_municipio_id`, mas os kits de la sao de ajuda
+humanitaria; blocos, pastas e panfletos nao estao cadastrados.
+
+### A decidir antes da spec
+
+1. O material didatico passa a ser controlado no Estoque (almoxarifado da DEPDC,
+   saida com destino = municipio e vinculo a turma) ou num lancamento proprio das
+   Capacitacoes (por turma/evento, quantidade por item)?
+2. A lista de itens e fixa ou cadastravel?
+3. Evento fora do SDC (palestra, seminario) recebe kit: entra como turma ou como
+   evento avulso?
+
+A pagina 1 (Capacitacoes) ja esta no ar com municipio da turma e REDEC; o
+painel de kits reaproveita esses filtros e o mapa.
+
+---
+
+## Painel de Capacitacoes: importar o historico da DEPDC
+
+**Levantado em:** 2026-11-17, na abertura do painel de indicadores
+**Origem:** os exemplos do pedido (2024: 5 capacitacoes, 2025: 26; 1a REDEC: 2.350
+participantes) vem de planilha, nao do SDC
+
+### O que existe hoje
+
+O painel conta so inscricoes concluidas no SDC (`inscricoes.concluido_em`), com
+municipio de realizacao da turma e sexo declarado na inscricao. Capacitacoes
+feitas antes do modulo, ou com lista de presenca em papel, nao aparecem.
+
+### A decidir antes da spec
+
+1. Formato das planilhas da DEPDC (linha por evento com totais por sexo, ou
+   linha por participante?).
+2. Importar como turmas concluidas com participantes agregados (sem pessoa) ou
+   como um lancamento agregado proprio que o painel soma as turmas do SDC?
+3. Ate que ano voltar.
+
+---
+
+## Meus cursos: secoes retrateis
+
+**Status:** FEITO em 2026-11-17 (branch `feat/capacitacoes-indicadores`): `Molecules/Treinamento/SecaoRecolhivel.vue` sobre o `useCollapsibleSection` existente; todas comecam abertas e o navegador lembra o que foi fechado. A Area do Gestor ficou de fora (uma secao so).
+
+**Levantado em:** 2026-11-17
+**Origem:** pedido do usuario sobre `/treinamentos/aluno` (print das tres secoes)
+
+### O que foi pedido
+
+As secoes "Meus cursos", "Meus certificados" e "Cursos disponiveis" da tela do
+aluno passam a abrir e fechar (retrateis), para o aluno com muitos cursos nao
+precisar rolar a pagina inteira ate a secao que quer.
+
+### O que existe hoje
+
+`resources/js/Pages/Treinamento/Aluno/MeusCursos.vue` monta as tres secoes com o
+`SecaoHeader` (titulo + contador), sempre abertas.
+
+### A decidir antes da spec
+
+1. Estado inicial: todas abertas, ou so "Meus cursos" aberta?
+2. Lembrar o que o aluno fechou (por navegador) ou sempre reabrir?
+3. O `SecaoHeader` ganha a opcao de recolher (vale para outras telas que o usam)
+   ou a tela do aluno tem o seu?
+
+---
+
+## Validador de cursos por QR Code do participante
+
+**Status:** FEITO em 2026-11-17 (branch `feat/capacitacoes-indicadores`): bloco "Minha credencial" em Meus cursos (QR fixo, regeravel, vinculado ao CPF), tela "Validar participante" com leitor, abas de pesquisa por CPF e numero do certificado e painel de situacao (certificados validos e cursos em andamento); permissao `treinamento.participantes.validar`; cada consulta registrada em `treinamento.credencial_consultas`.
+
+**Levantado em:** 2026-11-17
+**Origem:** logistica de evento: a equipe da CEDEC precisa conferir na hora quais
+cursos uma pessoa ja fez (ex.: pre-requisito para atuar ou participar)
+
+### O que foi pedido
+
+Cada participante tem um QR Code proprio. Num evento, a equipe da CEDEC le o QR
+com o celular e ve as capacitacoes da pessoa (concluidas, em andamento e
+certificados validos), sem precisar buscar nome ou CPF numa lista.
+
+**Ponto de entrada:** botao "Ler QR" com icone no cabecalho da tela de gestao de
+Capacitacoes (`/treinamentos`), ao lado do botao Exportar. O uso principal sera
+no CELULAR, em evento, entao o desenho parte do mobile:
+
+- No mobile o botao fica visivel e facil de tocar (alvo de toque do guia de
+  responsividade), nao escondido num menu de "mais acoes"; Grade/Tabela e
+  Exportar podem recolher antes dele.
+- O leitor abre a camera traseira em tela cheia, com retorno imediato (som ou
+  vibracao) e o resultado em cartao legivel com uma mao; botao para ler o
+  proximo sem voltar para a lista.
+- Sem rolagem horizontal em 375px e 840px, como o resto do sistema.
+- Fallback para digitar o codigo quando a camera falhar ou for negada.
+
+### O que existe hoje
+
+- QR por INSCRICAO (`inscricoes.qr_code_token`), usado para a presenca na turma
+  (`Controllers/Admin/PresencaQrController.php`, `PresencaRosterController.php`).
+  Ele identifica uma inscricao, nao a pessoa.
+- Validacao publica de UM certificado pelo codigo (`/validar-certificado/{codigo}`,
+  `ValidarCertificadoController`).
+- Nao ha QR por pessoa nem tela que liste as capacitacoes de alguem a partir de
+  um codigo.
+
+### Decidido (2026-11-17)
+
+- **Quem le:** so usuarios da CEDEC autenticados com autorizacao do modulo de
+  Capacitacoes. Nao ha leitura publica: fora do sistema o QR nao mostra nada.
+  Na spec, criar a permissao propria (ex.: `treinamento.participantes.validar`)
+  em `config/permissions.php` e no papel de gestao, em vez de reaproveitar outra.
+- **Quem tem QR:** so SERVIDORES (`User`, banco sdc). Cidadao do portal fica de
+  fora, o que elimina o problema das duas identidades em bancos diferentes.
+- **QR fixo por servidor:** mais simples de gerenciar. O que comprova cada curso
+  concluido e o certificado ja registrado (`certificados`, com codigo de
+  verificacao); o QR so identifica a pessoa e a tela lista as capacitacoes e os
+  certificados dela. Prever revogar/regerar o token se o QR vazar.
+- **Sem check-in:** a leitura so consulta. Check-in em evento e outra
+  funcionalidade, fora deste item.
+
+### Ainda a decidir antes da spec
+
+1. Onde o servidor pega o QR: "Meus cursos" (bloco proprio ou junto de "Meus
+   certificados")? Tambem no perfil do usuario?
+2. O que a tela de resultado mostra alem dos certificados validos: cursos em
+   andamento? certificados cancelados?
+3. Registrar quem consultou quem (trilha de acesso a dado pessoal)?
