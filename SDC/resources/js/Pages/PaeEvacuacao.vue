@@ -21,7 +21,7 @@
     </template>
 
     <template #topo>
-      <EvacuacaoResultadoPainel :resultado="resultado" :simulado="simulado" />
+      <EvacuacaoResultadoPainel v-if="aba !== 'checklist'" :resultado="resultado" :simulado="simulado" />
     </template>
 
     <template #default="{ aba: ativa }">
@@ -30,6 +30,7 @@
       <EvacuacaoAcessosEditor v-else-if="ativa === 'acessos'" :itens="form.acessos" :erros="erros" :resultado="resultado" :simulado="simulado" :rotas-disponiveis="idsRotas" :somente-leitura="!can_edit" @adicionar="adicionar('acessos')" @remover="remover('acessos', $event)" />
       <EvacuacaoPontosEditor v-else-if="ativa === 'pontos'" :itens="form.pontos_encontro" :erros="erros" :resultado="resultado" :simulado="simulado" :somente-leitura="!can_edit" @adicionar="adicionar('pontos_encontro')" @remover="remover('pontos_encontro', $event)" />
 
+      <PaeChecklistPainel v-else-if="ativa === 'checklist'" :protocolo-id="protocolo.id" secao="evacuacao" :somente-leitura="historica" />
       <CollapsibleSection v-else namespace="pae" section-id="evacuacao-historico" title="Histórico de conferências" :subtitle="`${historico.length} versão(ões)`" :icon="ClockIcon" tom="neutro">
         <p v-if="!historico.length" class="text-sm text-slate-500 dark:text-slate-400">Nenhuma conferência registrada.</p>
         <ol v-else class="space-y-2 text-sm">
@@ -44,7 +45,7 @@
       </CollapsibleSection>
     </template>
 
-    <template #rodape>
+    <template v-if="aba !== 'checklist'" #rodape>
       <CollapsibleSection v-if="conferencia && !can_edit" namespace="pae" section-id="evacuacao-registro-lido" :title="`Registro da versão ${conferencia.versao}`" :icon="DocumentTextIcon" tom="neutro">
         <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <div><dt class="text-xs uppercase text-slate-500 dark:text-slate-400">Número SEI</dt><dd class="break-words text-slate-800 dark:text-slate-100">{{ conferencia.num_sei || '—' }}</dd></div>
@@ -81,6 +82,7 @@ import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import PaeAviso from '@/Components/Molecules/Pae/PaeAviso.vue';
+import PaeChecklistPainel from '@/Components/Organisms/Pae/Checklist/PaeChecklistPainel.vue';
 import EvacuacaoAcessosEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoAcessosEditor.vue';
 import EvacuacaoPontosEditor from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoPontosEditor.vue';
 import EvacuacaoResultadoPainel from '@/Components/Organisms/Pae/Evacuacao/EvacuacaoResultadoPainel.vue';
@@ -112,6 +114,7 @@ const abas = computed(() => [
   { id: 'rotas', label: 'Rotas', icon: MapIcon, badge: form.rotas.length || null },
   { id: 'acessos', label: 'Acessos', icon: ArrowsPointingInIcon, badge: form.acessos.length || null },
   { id: 'pontos', label: 'Pontos de encontro', icon: MapPinIcon, badge: form.pontos_encontro.length || null },
+  { id: 'checklist', label: 'Checklist Anexo E', icon: CheckBadgeIcon },
   { id: 'historico', label: 'Histórico', icon: ClockIcon, badge: props.historico.length || null },
 ]);
 

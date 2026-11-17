@@ -37,6 +37,15 @@
                     :secao="secao"
                     :categorias-anexo="props.categoriasAnexo"
                 />
+
+                <PaeChecklistPainel
+                    v-if="secaoChecklist"
+                    :key="secaoChecklist"
+                    class="mt-6"
+                    :protocolo-id="props.protocolo.id"
+                    :secao="secaoChecklist"
+                    :somente-leitura="props.readOnly"
+                />
             </PaeProtocoloPastaLayout>
 
             <PaeForm
@@ -56,6 +65,7 @@
 import PaeForm from '@/Components/Pae/PaeForm.vue';
 import DetalheHeader from '@/Components/Molecules/DetalheHeader.vue';
 import PaeHeader from '@/Components/Pae/PaeHeader.vue';
+import PaeChecklistPainel from '@/Components/Organisms/Pae/Checklist/PaeChecklistPainel.vue';
 import { DocumentTextIcon, PaperClipIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PaeProtocoloPastaLayout from '@/Templates/Pae/PaeProtocoloPastaLayout.vue';
@@ -135,6 +145,15 @@ const subitensAnexos = computed(() => {
                 filho: !!categoria.pai,
             })),
     ];
+});
+
+// Anexos sem tela propria na pasta trazem o checklist GMG 83 junto da categoria;
+// B, C e E ficam nas telas da ficha, dos simulados e da evacuacao.
+const ANEXOS_COM_CHECKLIST = ['anexo_a', 'anexo_d', 'anexo_f', 'anexo_g', 'anexo_h', 'anexo_i', 'anexo_j'];
+
+const secaoChecklist = computed(() => {
+    if (secao.value === 'relatorio') return 'relatorio';
+    return ANEXOS_COM_CHECKLIST.includes(categoriaAnexo.value) ? categoriaAnexo.value : null;
 });
 
 function selecionarCategoria(id) {

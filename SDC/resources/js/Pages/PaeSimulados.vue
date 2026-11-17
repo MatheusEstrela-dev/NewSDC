@@ -27,7 +27,7 @@
       </div>
       <PaeAviso v-if="!formularioDisponivel && ativa === 'envio'" tom="aviso">O relatório só pode ser registrado depois de a CEDEC avaliar o simulado como exigível.</PaeAviso>
       <!-- As abas do formulario ficam montadas (v-show): trocar de aba nao pode perder o PDF escolhido. -->
-      <div v-show="formularioDisponivel && !['historico', 'exigibilidade'].includes(ativa)">
+      <div v-show="formularioDisponivel && !['historico', 'exigibilidade', 'checklist'].includes(ativa)">
         <div v-show="ativa === 'envio'">
           <SimuladoEnvioTab :form="form" :somente-leitura="somenteLeitura" :selecionado="selecionado" :protocolo-id="protocolo.id" :can-view="can_view" />
         </div>
@@ -44,12 +44,13 @@
           <SimuladoInformativosTab :informativos="form.informativos" :erros="form.errors" :somente-leitura="somenteLeitura" @adicionar-ano="adicionarAno" @remover-ano="removerAno" />
         </div>
       </div>
+      <PaeChecklistPainel v-if="ativa === 'checklist'" :protocolo-id="protocolo.id" secao="simulados" />
       <SimuladoHistoricoTab v-if="ativa === 'historico'" :relatorios="resumo.relatorios" :selecionado-id="selecionadoId" :protocolo-id="protocolo.id" :somente-leitura="!podeRegistrar" :can-view="can_view" @abrir="abrir" @novo="novo" />
     </template>
 
     <template #rodape>
       <PaeAviso v-if="mensagemGeral" tom="erro">{{ mensagemGeral }}</PaeAviso>
-      <div v-if="formularioDisponivel && !somenteLeitura" class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <div v-if="formularioDisponivel && !somenteLeitura && aba !== 'checklist'" class="flex flex-col gap-3 sm:flex-row sm:justify-end">
         <Button class="w-full sm:w-auto" :loading="form.processing" :disabled="!form.arquivo || !form.num_sei" @click="enviar">Registrar relatório</Button>
       </div>
       <CollapsibleSection v-if="resumo.ccpae" namespace="pae" section-id="simulado-ccpae" title="Evidência usada no CCPAE" :icon="ShieldCheckIcon" tom="neutro">
@@ -64,6 +65,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 import PaeAviso from '@/Components/Molecules/Pae/PaeAviso.vue';
+import PaeChecklistPainel from '@/Components/Organisms/Pae/Checklist/PaeChecklistPainel.vue';
 import SimuladoAlarmeTab from '@/Components/Organisms/Pae/Simulados/SimuladoAlarmeTab.vue';
 import SimuladoCriteriosTab from '@/Components/Organisms/Pae/Simulados/SimuladoCriteriosTab.vue';
 import SimuladoEnvioTab from '@/Components/Organisms/Pae/Simulados/SimuladoEnvioTab.vue';
@@ -76,7 +78,7 @@ import { usePaeSimuladoForm } from '@/Composables/pae/usePaeSimuladoForm';
 import PaeTelaLayout from '@/Templates/Pae/PaeTelaLayout.vue';
 import { rotuloSituacaoSimulado, varianteSituacaoSimulado } from '@/utils/paeSimulado';
 import { errosSemCampo, formatarData } from '@/utils/paeTela';
-import { BellAlertIcon, ClipboardDocumentCheckIcon, ClipboardDocumentListIcon, ClockIcon, DocumentArrowUpIcon, InformationCircleIcon, ShieldCheckIcon, SpeakerWaveIcon } from '@heroicons/vue/24/outline';
+import { BellAlertIcon, CheckBadgeIcon, ClipboardDocumentCheckIcon, ClipboardDocumentListIcon, ClockIcon, DocumentArrowUpIcon, InformationCircleIcon, ShieldCheckIcon, SpeakerWaveIcon } from '@heroicons/vue/24/outline';
 import { Head } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
@@ -115,6 +117,7 @@ const abas = computed(() => [
   { id: 'tempos', label: 'Tempos', icon: ClockIcon, badge: errosPorAba.value.tempos || null },
   { id: 'alarme', label: 'Alarme', icon: SpeakerWaveIcon, badge: errosPorAba.value.alarme || null },
   { id: 'informativos', label: 'Informativos', icon: InformationCircleIcon, badge: errosPorAba.value.informativos || null },
+  { id: 'checklist', label: 'Checklist Anexo C', icon: CheckBadgeIcon },
   { id: 'historico', label: 'Histórico', icon: ClipboardDocumentListIcon, badge: props.resumo.relatorios.length || null },
 ]);
 

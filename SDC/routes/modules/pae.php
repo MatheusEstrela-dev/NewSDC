@@ -4,12 +4,14 @@ use App\Modules\Pae\Controllers\PaeFormularioController;
 use App\Modules\Pae\Controllers\PaeFichaAnexoBController;
 use App\Modules\Pae\Controllers\PaeLeituraPdfController;
 use App\Modules\Pae\Controllers\PaeAdmissibilidadeController;
+use App\Modules\Pae\Controllers\PaeChecklistController;
 use App\Modules\Pae\Controllers\PaeComunicacaoController;
 use App\Modules\Pae\Controllers\PaeDcoController;
 use App\Modules\Pae\Controllers\PaeEvacuacaoController;
 use App\Modules\Pae\Controllers\PaeNotificacaoController;
 use App\Modules\Pae\Controllers\PaeProtocoloController;
 use App\Modules\Pae\Controllers\PaeSimuladoController;
+use App\Modules\Pae\Support\Checklist\ChecklistGmg83;
 
 Route::prefix('pae')->name('pae.')->group(function () {
 
@@ -147,6 +149,16 @@ Route::prefix('pae')->name('pae.')->group(function () {
     Route::get('/protocolo/{paeProtocolo}/simulados/relatorios/{paeSimuladoRelatorio}/download', [PaeSimuladoController::class, 'download'])
         ->name('protocolo.simulados.relatorios.download')
         ->middleware('can:pae.protocolos.view');
+
+    Route::get('/protocolo/{paeProtocolo}/checklist/{secao}', [PaeChecklistController::class, 'show'])
+        ->whereIn('secao', array_keys(ChecklistGmg83::SECOES))
+        ->name('protocolo.checklist.show')
+        ->middleware('can:pae.protocolos.view');
+
+    Route::put('/protocolo/{paeProtocolo}/checklist/{secao}', [PaeChecklistController::class, 'salvar'])
+        ->whereIn('secao', array_keys(ChecklistGmg83::SECOES))
+        ->name('protocolo.checklist.salvar')
+        ->middleware('can:pae.protocolos.edit');
 
     Route::get('/protocolo/{paeProtocolo}/admissibilidade', [PaeAdmissibilidadeController::class, 'show'])
         ->name('protocolo.admissibilidade.show')

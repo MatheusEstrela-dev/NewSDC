@@ -156,6 +156,11 @@ class PaeProtocolo extends Model implements Rastreavel
         return $this->hasMany(PaeAdmissibilidadeItem::class, 'protocolo_id');
     }
 
+    public function checklistRespostas(): HasMany
+    {
+        return $this->hasMany(PaeChecklistResposta::class, 'protocolo_id');
+    }
+
     public function decisoesAdmissibilidade(): HasMany
     {
         return $this->hasMany(PaeAdmissibilidadeDecisao::class, 'protocolo_id')->orderByDesc('id');

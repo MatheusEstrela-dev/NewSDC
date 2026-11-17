@@ -18,6 +18,11 @@ export function formatarData(valor) {
   return `${dia}/${mes}/${ano}`;
 }
 
+/** Data e hora local de um instante ISO; vazio quando nao ha valor. */
+export function formatarDataHora(valor) {
+  return valor ? new Date(valor).toLocaleString('pt-BR') : '';
+}
+
 /** Junta os erros de chaves sem campo proprio no formulario (ex.: avaliacao, dco, protocolo). */
 export function errosSemCampo(erros, camposConhecidos) {
   return Object.entries(erros)
