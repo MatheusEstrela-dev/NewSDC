@@ -91,7 +91,7 @@ import EvacuacaoSetoresEditor from '@/Components/Organisms/Pae/Evacuacao/Evacuac
 import { usePaeEvacuacaoForm } from '@/Composables/pae/usePaeEvacuacaoForm';
 import PaeTelaLayout from '@/Templates/Pae/PaeTelaLayout.vue';
 import { formatarData } from '@/utils/paeTela';
-import { ArrowsPointingInIcon, ClockIcon, DocumentTextIcon, MapIcon, MapPinIcon, PencilSquareIcon, Squares2X2Icon, UserGroupIcon } from '@heroicons/vue/24/outline';
+import { ArrowsPointingInIcon, CheckBadgeIcon, ClockIcon, DocumentTextIcon, MapIcon, MapPinIcon, PencilSquareIcon, Squares2X2Icon, UserGroupIcon } from '@heroicons/vue/24/outline';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
