@@ -29,6 +29,14 @@ class TreinamentoResource extends JsonResource
             'status_label' => $this->status->getLabel(),
             'status_color' => $this->status->getBadgeColor(),
             'status_transicoes' => array_map(fn ($s) => $s->value, $this->status->getAllowedTransitions()),
+            // Status de exibicao da Area do Gestor (Planejado/Publicado/Em
+            // andamento/Concluido/Cancelado): deriva status + publicacao, sem
+            // coluna propria. Pausado/Desativado continuam vindo de `situacao`.
+            'status_exibicao' => $this->statusDeExibicao()->value,
+            'status_exibicao_label' => $this->statusDeExibicao()->getLabel(),
+            'status_exibicao_variant' => $this->statusDeExibicao()->getVariant(),
+            'status_exibicao_color' => $this->statusDeExibicao()->getBadgeColor(),
+            'usa_turma' => $this->usaTurma(),
             'instrutor' => $this->instrutor,
             'local' => $this->local,
             'municipio_id' => $this->municipio_id,

@@ -28,6 +28,7 @@ class Inscricao extends Model
 
     protected $fillable = [
         'treinamento_id',
+        'turma_id',
         'inscrito_type',
         'inscrito_id',
         'status',
@@ -41,6 +42,7 @@ class Inscricao extends Model
 
     protected $casts = [
         'status' => StatusInscricao::class,
+        'turma_id' => 'integer',
         'sexo' => Sexo::class,
         'data_inscricao' => 'datetime',
         'data_aprovacao' => 'datetime',
@@ -55,6 +57,12 @@ class Inscricao extends Model
     public function treinamento(): BelongsTo
     {
         return $this->belongsTo(Treinamento::class);
+    }
+
+    /** NULL quando o curso nao tem turma (EAD e inscricoes do legado). */
+    public function turma(): BelongsTo
+    {
+        return $this->belongsTo(Turma::class);
     }
 
     /**
@@ -124,6 +132,11 @@ class Inscricao extends Model
     public function scopePorTreinamento($query, int $treinamentoId)
     {
         return $query->where('treinamento_id', $treinamentoId);
+    }
+
+    public function scopePorTurma($query, int $turmaId)
+    {
+        return $query->where('turma_id', $turmaId);
     }
 
     // ─── Trilha de acoes no protocolo pai ───────────────────────────────────

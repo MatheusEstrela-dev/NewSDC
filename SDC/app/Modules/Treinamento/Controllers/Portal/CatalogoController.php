@@ -78,6 +78,21 @@ class CatalogoController extends Controller
                 'certificado_disponivel' => $minhaInscricao->certificado?->status->value === 'GERADO',
                 'certificado_id' => $minhaInscricao->certificado?->id,
             ] : null,
+            // Turmas abertas, para o select da inscricao (curso sem turma manda
+            // lista vazia e a inscricao segue sem turma, como ja era).
+            'turmas' => $treinamento->turmas()
+                ->get()
+                ->map(fn ($turma) => [
+                    'id' => (int) $turma->getKey(),
+                    'nome' => (string) $turma->nome,
+                    'data_inicio' => $turma->data_inicio?->toDateString(),
+                    'data_fim' => $turma->data_fim?->toDateString(),
+                    'local' => $turma->local,
+                    'vagas_restantes' => $turma->vagasRestantes(),
+                    'encerrou_inscricoes' => $turma->encerrouInscricoes(),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 }

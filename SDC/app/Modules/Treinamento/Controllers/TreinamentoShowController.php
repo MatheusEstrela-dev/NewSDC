@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
 use App\Modules\Treinamento\Services\InscricaoService;
 use App\Modules\Treinamento\Services\ProfessorService;
@@ -38,6 +39,10 @@ class TreinamentoShowController extends Controller
             'treinamento' => (new TreinamentoResource($treinamento))->resolve(),
             'sexoPadrao' => $this->inscricaoService->sexoDaUltimaInscricao($user)?->value,
             'professores' => $treinamento->isEad() ? $this->professorService->listar($treinamento) : [],
+            // Turmas abertas, so o que a tela de inscricao precisa para deixar
+            // escolher uma (nome, periodo, vagas restantes). Curso sem nenhuma
+            // turma manda lista vazia e a inscricao segue sem turma.
+            'turmas' => $this->turmasParaInscricao($treinamento),
             'minhaInscricao' => $minhaInscricao ? [
                 'id' => $minhaInscricao->id,
                 'status' => $minhaInscricao->status->value,
@@ -46,5 +51,29 @@ class TreinamentoShowController extends Controller
                 'certificado_id' => $minhaInscricao->certificado?->id,
             ] : null,
         ]);
+    }
+
+    /**
+     * Turmas do curso para o select da inscricao: so o que a tela precisa
+     * (nao reaproveita GestaoCursoConsulta::turmas(), que e do gestor e
+     * mostraria inscricoes_pendentes a quem so esta se inscrevendo).
+     *
+     * @return list<array{id: int, nome: string, data_inicio: string, data_fim: string, local: string|null, vagas_restantes: int, encerrou_inscricoes: bool}>
+     */
+    private function turmasParaInscricao(Treinamento $treinamento): array
+    {
+        return $treinamento->turmas()
+            ->get()
+            ->map(fn ($turma) => [
+                'id' => (int) $turma->getKey(),
+                'nome' => (string) $turma->nome,
+                'data_inicio' => $turma->data_inicio?->toDateString(),
+                'data_fim' => $turma->data_fim?->toDateString(),
+                'local' => $turma->local,
+                'vagas_restantes' => $turma->vagasRestantes(),
+                'encerrou_inscricoes' => $turma->encerrouInscricoes(),
+            ])
+            ->values()
+            ->all();
     }
 }

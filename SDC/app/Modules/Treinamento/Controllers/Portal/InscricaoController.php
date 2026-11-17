@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Models\Turma;
 use App\Modules\Treinamento\Requests\InscreverRequest;
 use App\Modules\Treinamento\Services\InscricaoService;
 use Illuminate\Support\Facades\Auth;
@@ -24,8 +25,13 @@ class InscricaoController extends Controller
             ->where('link_publico_slug', $slug)
             ->firstOrFail();
 
+        // Turma e buscada so pelo id: o proprio InscricaoService e quem
+        // recusa turma de outro curso, com a mensagem de dominio correta.
+        $turmaId = $request->turmaId();
+        $turma = $turmaId !== null ? Turma::find($turmaId) : null;
+
         try {
-            $inscricao = $this->inscricaoService->inscrever($treinamento, Auth::guard('cidadao')->user(), $request->sexo());
+            $inscricao = $this->inscricaoService->inscrever($treinamento, Auth::guard('cidadao')->user(), $request->sexo(), $turma);
         } catch (\DomainException $e) {
             return back()->withErrors(['inscricao' => $e->getMessage()]);
         }

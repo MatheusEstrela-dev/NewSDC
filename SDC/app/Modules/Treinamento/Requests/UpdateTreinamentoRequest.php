@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Requests;
 
+use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Services\ProfessorService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateTreinamentoRequest extends FormRequest
 {
@@ -22,7 +24,9 @@ class UpdateTreinamentoRequest extends FormRequest
             'descricao' => ['nullable', 'string'],
             'carga_horaria' => ['sometimes', 'required', 'integer', 'min:1'],
             'categoria' => ['sometimes', 'required', 'string', 'in:EVENTO,CURSO'],
-            'tipo' => ['sometimes', 'required', 'string', 'in:PRESENCIAL,ONLINE,EAD'],
+            // Enum da modalidade, nao lista literal: SEMI_PRESENCIAL (bloco 1)
+            // ficava de fora da validacao mesmo o banco ja aceitando.
+            'tipo' => ['sometimes', 'required', 'string', new Enum(TipoTreinamento::class)],
             'publico_alvo' => ['sometimes', 'required', 'string', 'in:SERVIDORES,CIDADAOS'],
             'inscricao_aprovacao_automatica' => ['boolean'],
             'instrutor' => ['nullable', 'string', 'max:255'],

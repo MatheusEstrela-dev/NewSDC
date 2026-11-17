@@ -16,6 +16,8 @@ const props = defineProps({
   treinamento: { type: Object, required: true },
   minhaInscricao: { type: Object, default: null },
   sexoPadrao: { type: String, default: null },
+  // Turmas abertas do curso (vazio em curso sem turma).
+  turmas: { type: Array, default: () => [] },
 });
 
 const { show: toast } = useToast();
@@ -39,9 +41,9 @@ watch(() => props.minhaInscricao?.qr_code_token, desenharQr);
 
 const modalInscricao = ref(false);
 
-function inscreverSe(sexo) {
+function inscreverSe({ sexo, turma_id }) {
   modalInscricao.value = false;
-  router.post(route('portal.treinamento.inscricoes.store', props.treinamento.link_publico_slug), { sexo }, {
+  router.post(route('portal.treinamento.inscricoes.store', props.treinamento.link_publico_slug), { sexo, turma_id }, {
     preserveScroll: true,
     // O sucesso aparece no banner do flash (texto vem do servidor, conforme o status).
     onError: (errors) => toast(Object.values(errors)[0] || 'Não foi possível concluir a inscrição.', 'error'),
@@ -156,6 +158,7 @@ function confirmarPresenca() {
       :show="modalInscricao"
       :titulo="treinamento.titulo"
       :padrao="sexoPadrao"
+      :turmas="turmas"
       @fechar="modalInscricao = false"
       @confirmar="inscreverSe"
     />

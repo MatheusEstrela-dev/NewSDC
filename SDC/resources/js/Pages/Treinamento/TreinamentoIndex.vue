@@ -86,7 +86,7 @@ const handleFilter = (filters) => {
       :filters="filters"
       :filter-options="filterOptions"
       :can-create="can('treinamento.cursos.create')"
-      :can-edit="can('treinamento.cursos.edit')"
+      :can-edit="can('treinamento.cursos.configurar')"
       :can-delete="can('treinamento.cursos.delete')"
       :can-export="can('treinamento.cursos.export')"
       :can-validar="can('treinamento.participantes.validar')"

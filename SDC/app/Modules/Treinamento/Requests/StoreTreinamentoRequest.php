@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Requests;
 
+use App\Modules\Treinamento\Enums\TipoTreinamento;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreTreinamentoRequest extends FormRequest
 {
@@ -21,7 +23,9 @@ class StoreTreinamentoRequest extends FormRequest
             'descricao' => ['nullable', 'string'],
             'carga_horaria' => ['required', 'integer', 'min:1'],
             'categoria' => ['required', 'string', 'in:EVENTO,CURSO'],
-            'tipo' => ['required', 'string', 'in:PRESENCIAL,ONLINE,EAD'],
+            // Enum da modalidade, nao lista literal: SEMI_PRESENCIAL (bloco 1)
+            // ficava de fora da validacao mesmo o banco ja aceitando.
+            'tipo' => ['required', 'string', new Enum(TipoTreinamento::class)],
             'publico_alvo' => ['required', 'string', 'in:SERVIDORES,CIDADAOS'],
             'inscricao_aprovacao_automatica' => ['boolean'],
             'instrutor' => ['nullable', 'string', 'max:255'],
