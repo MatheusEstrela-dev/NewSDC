@@ -39,6 +39,12 @@ x-ha-client-environment: &ha-client-environment
   GEO_DB_PORT: 6434
   TREINAMENTO_DB_HOST: db,db_replica_1,db_replica_2
   TREINAMENTO_DB_PORT: 6434
+  # Virada para os bancos dedicados feita no homolog em 2026-11-17 (dados
+  # copiados e verificados por medalhao:copiar-para-banco-geo e
+  # treinamento:copiar-para-banco). Desligar aqui depois de removidos os
+  # schemas do sdc (db:remover-schemas-migrados) deixa o modulo sem dados.
+  DB_GEO_CONNECTION: pgsql_geo
+  DB_TREINAMENTO_CONNECTION: pgsql_treinamento
 
 # sdc_powerbi (C1) fica no db_powerbi, instancia propria fora do Patroni (sem
 # HA): escrita e leitura vao direto a ele, porta 5432. A FONTE do materializador
