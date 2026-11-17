@@ -361,6 +361,9 @@ return [
             'Professor' => [
                 'acessar' => 'treinamento.professor.acessar',
             ],
+            'Indicadores' => [
+                'view' => 'treinamento.indicadores.view',
+            ],
         ],
         'PLANTAO' => [
             'Turnos' => [
@@ -872,6 +875,7 @@ return [
             'treinamento.certificados.view',
             'treinamento.certificados.reemitir',
             'treinamento.certificados.download',
+            'treinamento.indicadores.view',
             // Plantao - gestao completa
             'plantao.turnos.view',
             'plantao.turnos.create',

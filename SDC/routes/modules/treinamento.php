@@ -12,6 +12,7 @@ use App\Modules\Treinamento\Controllers\Admin\PresencaQrController;
 use App\Modules\Treinamento\Controllers\Admin\PresencaRosterController;
 use App\Modules\Treinamento\Controllers\Admin\PresencaSincronizarController;
 use App\Modules\Treinamento\Controllers\CertificadoImprimirController;
+use App\Modules\Treinamento\Controllers\IndicadoresController;
 use App\Modules\Treinamento\Controllers\InscricaoAutoconfirmarController;
 use App\Modules\Treinamento\Controllers\InscricaoSelfStoreController;
 use App\Modules\Treinamento\Controllers\TreinamentoBloquearPresencaController;
@@ -54,6 +55,11 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
 
     require __DIR__ . '/treinamento-aluno.php';
     require __DIR__ . '/treinamento-professor.php';
+
+    // Painel de indicadores: antes do /{id}, senao "indicadores" cairia no show.
+    Route::get('/indicadores', IndicadoresController::class)
+        ->name('indicadores')
+        ->middleware('can:treinamento.indicadores.view');
 
     // Antes do /{id} de proposito: senao o wildcard casaria com "create" primeiro.
     Route::get('/create', TreinamentoCreateController::class)

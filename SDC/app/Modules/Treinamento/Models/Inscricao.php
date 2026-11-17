@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use App\Modules\Treinamento\Enums\StatusFrequencia;
+use App\Modules\Treinamento\Enums\Sexo;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
@@ -35,10 +36,12 @@ class Inscricao extends Model
         'data_aprovacao',
         'aprovado_por_id',
         'observacoes',
+        'sexo',
     ];
 
     protected $casts = [
         'status' => StatusInscricao::class,
+        'sexo' => Sexo::class,
         'data_inscricao' => 'datetime',
         'data_aprovacao' => 'datetime',
         // Conclusao congelada do EAD (spec 8.7): gravada uma vez, fora do

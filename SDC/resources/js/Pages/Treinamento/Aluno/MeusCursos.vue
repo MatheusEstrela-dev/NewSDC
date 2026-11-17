@@ -4,6 +4,7 @@ import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import CertificadoItem from '@/Components/Molecules/Treinamento/CertificadoItem.vue';
+import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexoModal.vue';
 import CursoEadCard from '@/Components/Molecules/Treinamento/CursoEadCard.vue';
 import SecaoHeader from '@/Components/Molecules/Treinamento/SecaoHeader.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
@@ -15,6 +16,7 @@ import { useCursosAoVivo } from '@/Composables/treinamento/useCursosAoVivo';
 defineOptions({ layout: AuthenticatedLayout });
 
 defineProps({
+  sexo_padrao: { type: String, default: null },
   meus_cursos: { type: Array, default: () => [] },
   disponiveis: { type: Array, default: () => [] },
   certificados: { type: Array, default: () => [] },
@@ -25,9 +27,13 @@ useCursosAoVivo(['meus_cursos', 'disponiveis', 'certificados']);
 const { show: toast } = useToast();
 const inscrevendo = ref(null);
 
-function inscrever(curso) {
+const cursoEscolhido = ref(null);
+
+function inscrever(sexo) {
+  const curso = cursoEscolhido.value;
   inscrevendo.value = curso.id;
-  router.post(route('treinamentos.inscrever', curso.id), {}, {
+  cursoEscolhido.value = null;
+  router.post(route('treinamentos.inscrever', curso.id), { sexo }, {
     preserveScroll: true,
     onSuccess: () => toast('Inscrição realizada.', 'success'),
     onError: (errors) => toast(errors.inscricao || 'Não foi possível concluir a inscrição.', 'error'),
@@ -84,9 +90,17 @@ function inscrever(curso) {
           :curso="curso"
           modo="disponivel"
           :loading="inscrevendo === curso.id"
-          @inscrever="inscrever"
+          @inscrever="cursoEscolhido = $event"
         />
       </div>
     </section>
+
+    <InscricaoSexoModal
+      :show="cursoEscolhido !== null"
+      :titulo="cursoEscolhido?.titulo"
+      :padrao="sexo_padrao"
+      @fechar="cursoEscolhido = null"
+      @confirmar="inscrever"
+    />
   </div>
 </template>

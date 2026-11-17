@@ -17,9 +17,13 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  municipios: {
+    type: Array,
+    default: () => [],
+  },
 });
 </script>
 
 <template>
-  <TreinamentoCreateTemplate :filter-options="filterOptions" :publicos="publicos" :padroes="padroes" />
+  <TreinamentoCreateTemplate :filter-options="filterOptions" :publicos="publicos" :municipios="municipios" :padroes="padroes" />
 </template>

@@ -151,6 +151,7 @@ final class ArquiteturaDaCamadaDtoTest extends TestCase
         'App\Modules\Tdap\DTOs\VinculoPmdaDTO' => 'integracao',
         'App\Modules\Tdap\DTOs\VistoriaDTO' => 'escrita',
         // Treinamento
+        'App\Modules\Treinamento\DTOs\IndicadoresFiltroDTO' => 'filtro',
         'App\Modules\Treinamento\DTOs\ResultadoAutenticacaoCidadao' => 'integracao',
     ];
 

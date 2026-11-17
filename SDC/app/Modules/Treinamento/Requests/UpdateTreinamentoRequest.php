@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Requests;
 
 use App\Modules\Treinamento\Services\ProfessorService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTreinamentoRequest extends FormRequest
 {
@@ -32,6 +33,9 @@ class UpdateTreinamentoRequest extends FormRequest
             'numero_vagas' => ['nullable', 'integer', 'min:1'],
             'percentual_frequencia_minimo' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'presenca_autoconfirmavel' => ['nullable', 'boolean'],
+            // Municipio de realizacao (alimenta o painel de indicadores). A tabela
+            // municipios fica no banco sdc (conexao padrao), nao no do treinamento.
+            'municipio_id' => ['nullable', 'integer', Rule::exists('municipios', 'id')->where('uf', 'MG')],
         ];
     }
 }

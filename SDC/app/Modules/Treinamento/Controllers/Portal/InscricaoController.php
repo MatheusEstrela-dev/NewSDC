@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Requests\InscreverRequest;
 use App\Modules\Treinamento\Services\InscricaoService;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,7 +17,7 @@ class InscricaoController extends Controller
     ) {
     }
 
-    public function store(string $slug)
+    public function store(InscreverRequest $request, string $slug)
     {
         $treinamento = Treinamento::query()
             ->publicado()
@@ -24,7 +25,7 @@ class InscricaoController extends Controller
             ->firstOrFail();
 
         try {
-            $inscricao = $this->inscricaoService->inscrever($treinamento, Auth::guard('cidadao')->user());
+            $inscricao = $this->inscricaoService->inscrever($treinamento, Auth::guard('cidadao')->user(), $request->sexo());
         } catch (\DomainException $e) {
             return back()->withErrors(['inscricao' => $e->getMessage()]);
         }

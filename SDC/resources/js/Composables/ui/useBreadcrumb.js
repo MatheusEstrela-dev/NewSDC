@@ -54,6 +54,11 @@ export function useBreadcrumb() {
             { label: 'Início', route: 'dashboard' },
             { label: 'Capacitações', route: null }
         ],
+        'Treinamento/Indicadores/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Capacitações', route: 'treinamentos.index' },
+            { label: 'Painel', route: null }
+        ],
         'Treinamento/TreinamentoCreate': [
             { label: 'Início', route: 'dashboard' },
             { label: 'Capacitações', route: 'treinamentos.index' },

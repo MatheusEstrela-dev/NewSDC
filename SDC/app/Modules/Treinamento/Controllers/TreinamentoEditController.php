@@ -35,6 +35,7 @@ class TreinamentoEditController extends Controller
                 'categorias' => CategoriaTreinamento::toSelectArray(),
             ],
             'publicos' => PublicoAlvo::toSelectArray(),
+            'municipios' => $this->treinamentoService->municipiosDeMg(),
         ]);
     }
 }

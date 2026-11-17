@@ -285,6 +285,7 @@ const navigationIndex = computed(() => [
 
     // Outros
     { id: 'nav_treino', title: 'Capacitações', subtitle: 'Cursos e eventos', url: safeRoute('treinamentos.index'), icon: 'academic', category: 'navigation', keywords: ['curso', 'aula', 'ead', 'treinamento', 'capacitacao'] },
+    { id: 'nav_treino_painel', title: 'Painel de Capacitações', subtitle: 'Indicadores de participantes e municípios', url: safeRoute('treinamentos.indicadores'), icon: 'academic', category: 'navigation', keywords: ['indicadores', 'painel', 'capacitados', 'participantes', 'treinamento', 'capacitacao'] },
     { id: 'nav_meteo', title: 'Meteorologia', subtitle: 'Alertas e Previsão (INMET)', url: safeRoute('inmet.index'), icon: 'cloud', category: 'navigation', keywords: ['clima', 'tempo', 'chuva'] },
 
     // Admin
