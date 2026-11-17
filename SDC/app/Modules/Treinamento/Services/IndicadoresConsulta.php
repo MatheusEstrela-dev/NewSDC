@@ -25,7 +25,8 @@ final class IndicadoresConsulta
 
     private const LIMITE_MUNICIPIOS = 20;
 
-    private const POR_PAGINA = 20;
+    /** Tabela compacta: o painel e de leitura rapida; o relatorio traz tudo. */
+    private const POR_PAGINA = 6;
 
     /** @var Collection<int, array<string, mixed>>|null */
     private ?Collection $fatos = null;
