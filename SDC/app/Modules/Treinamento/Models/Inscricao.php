@@ -37,6 +37,7 @@ class Inscricao extends Model
         'aprovado_por_id',
         'observacoes',
         'sexo',
+        'municipio_inscrito_id',
     ];
 
     protected $casts = [

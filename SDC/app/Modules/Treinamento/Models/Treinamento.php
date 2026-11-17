@@ -42,6 +42,7 @@ class Treinamento extends Model implements Rastreavel
         'instrutor',
         'local',
         'municipio_id',
+        'curso_id',
         'data_inicio',
         'data_fim',
         'hora_inicio',
@@ -66,6 +67,7 @@ class Treinamento extends Model implements Rastreavel
         'situacao' => SituacaoCurso::class,
         'situacao_alterada_em' => 'datetime',
         'municipio_id' => 'integer',
+        'curso_id' => 'integer',
         'data_inicio' => 'date',
         'data_fim' => 'date',
         'percentual_frequencia_minimo' => 'decimal:2',
@@ -82,6 +84,12 @@ class Treinamento extends Model implements Rastreavel
     ];
 
     // Relationships
+
+    /** Curso do catalogo ao qual esta turma pertence (NULL = ainda nao vinculada). */
+    public function curso(): BelongsTo
+    {
+        return $this->belongsTo(Curso::class, 'curso_id');
+    }
 
     public function modulos(): HasMany
     {
