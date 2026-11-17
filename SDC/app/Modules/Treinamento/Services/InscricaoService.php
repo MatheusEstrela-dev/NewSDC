@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Shared\BaseService;
+use App\Modules\Treinamento\Enums\Sexo;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Mail\InscricaoConfirmadaMail;
@@ -37,7 +38,7 @@ class InscricaoService extends BaseService
      * $inscrito e polimorfico: App\Models\User (servidor, area interna) ou
      * App\Modules\Treinamento\Models\Cidadao (portal do cidadao).
      */
-    public function inscrever(Treinamento $treinamento, Model $inscrito): Inscricao
+    public function inscrever(Treinamento $treinamento, Model $inscrito, ?Sexo $sexo = null): Inscricao
     {
         if ($treinamento->isEad() && !$treinamento->estaPublicado()) {
             throw new \DomainException('Este curso ainda nao foi publicado.');
@@ -80,6 +81,7 @@ class InscricaoService extends BaseService
             'aprovado_por_id' => null,
             'qr_code_token' => (string) Str::uuid(),
             'data_inscricao' => now(),
+            'sexo' => $sexo?->value,
         ]);
 
         if ($aprovacaoAutomatica) {
@@ -103,6 +105,26 @@ class InscricaoService extends BaseService
         );
 
         return $inscricao;
+    }
+
+    /**
+     * Sexo informado na inscricao mais recente do mesmo inscrito, para
+     * pre-preencher a pergunta e nao trata-lo como se fosse a primeira vez.
+     */
+    public function sexoDaUltimaInscricao(?Model $inscrito): ?Sexo
+    {
+        if ($inscrito === null) {
+            return null;
+        }
+
+        return Inscricao::query()
+            ->where('inscrito_type', $inscrito::class)
+            ->where('inscrito_id', $inscrito->getKey())
+            ->whereNotNull('sexo')
+            ->orderByDesc('data_inscricao')
+            ->orderByDesc('id')
+            ->first()
+            ?->sexo;
     }
 
     /**

@@ -12,6 +12,7 @@ use App\Modules\Treinamento\Controllers\Admin\PresencaQrController;
 use App\Modules\Treinamento\Controllers\Admin\PresencaRosterController;
 use App\Modules\Treinamento\Controllers\Admin\PresencaSincronizarController;
 use App\Modules\Treinamento\Controllers\CertificadoImprimirController;
+use App\Modules\Treinamento\Controllers\IndicadoresController;
 use App\Modules\Treinamento\Controllers\InscricaoAutoconfirmarController;
 use App\Modules\Treinamento\Controllers\InscricaoSelfStoreController;
 use App\Modules\Treinamento\Controllers\TreinamentoBloquearPresencaController;
@@ -26,6 +27,8 @@ use App\Modules\Treinamento\Controllers\TreinamentoShowController;
 use App\Modules\Treinamento\Controllers\TreinamentoStoreController;
 use App\Modules\Treinamento\Controllers\TreinamentoTransicionarStatusController;
 use App\Modules\Treinamento\Controllers\TreinamentoUpdateController;
+use App\Modules\Treinamento\Controllers\ValidarParticipanteConsultarController;
+use App\Modules\Treinamento\Controllers\ValidarParticipanteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -54,6 +57,19 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
 
     require __DIR__ . '/treinamento-aluno.php';
     require __DIR__ . '/treinamento-professor.php';
+
+    // Painel de indicadores: antes do /{id}, senao "indicadores" cairia no show.
+    Route::get('/indicadores', IndicadoresController::class)
+        ->name('indicadores')
+        ->middleware('can:treinamento.indicadores.view');
+
+    // Validador de credencial por QR Code (equipe da CEDEC); antes do /{id}.
+    Route::get('/validar-participante', ValidarParticipanteController::class)
+        ->name('validar-participante')
+        ->middleware('can:treinamento.participantes.validar');
+    Route::get('/validar-participante/{token}', ValidarParticipanteConsultarController::class)
+        ->name('validar-participante.consultar')
+        ->middleware('can:treinamento.participantes.validar');
 
     // Antes do /{id} de proposito: senao o wildcard casaria com "create" primeiro.
     Route::get('/create', TreinamentoCreateController::class)

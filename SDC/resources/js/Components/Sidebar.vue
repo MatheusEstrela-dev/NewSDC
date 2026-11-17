@@ -313,34 +313,28 @@
           Cisternas
         </NavItem>
 
-        <!-- Treinamento -->
-        <NavItem
-          v-if="canSeeTreinamento && _routes.hasTreinamentos"
-          :href="route('treinamentos.index')"
-          :active="isRouteActive('treinamentos.*') && !isRouteActive('treinamentos.aluno.*') && !isRouteActive('treinamentos.professor.*')"
-          icon="academic"
-          :collapsed="isCollapsed"
+        <!-- Capacitacoes - drill-down (abre submenu como nova seccao) -->
+        <button
+          v-if="canSeeTreinamentoGroup"
+          @click="openSubmenu('treinamentos')"
+          class="nav-group-toggle nav-drilldown"
+          :class="{ 'is-active-route': isRouteActive('treinamentos.*') }"
+          :title="isCollapsed ? 'Capacitações' : ''"
         >
-          Capacitações
-        </NavItem>
-        <NavItem
-          v-if="canSeeTreinamentoAluno && _routes.hasTreinamentoAluno"
-          :href="route('treinamentos.aluno.index')"
-          :active="isRouteActive('treinamentos.aluno.*')"
-          icon="book"
-          :collapsed="isCollapsed"
-        >
-          Meus cursos
-        </NavItem>
-        <NavItem
-          v-if="canSeeTreinamentoProfessor && _routes.hasTreinamentoProfessor"
-          :href="route('treinamentos.professor.index')"
-          :active="isRouteActive('treinamentos.professor.*')"
-          icon="document-check"
-          :collapsed="isCollapsed"
-        >
-          Área do Gestor
-        </NavItem>
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+          </svg>
+          <span v-show="!isCollapsed">Capacitações</span>
+          <svg
+            v-show="!isCollapsed"
+            class="nav-arrow nav-arrow-drill"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
         <NavItem
           v-if="page.props.rankingDisponivel && _routes.hasRanking"
@@ -827,6 +821,79 @@
       </div>
     </nav>
 
+    <!-- SUBMENU VIEW: Capacitacoes -->
+    <nav
+      v-if="canSeeTreinamentoGroup"
+      class="sidebar-nav sidebar-view sidebar-view-submenu"
+      :class="{ 'is-active': activeSubmenu === 'treinamentos' }"
+      :inert="activeSubmenu !== 'treinamentos'"
+    >
+      <button
+        type="button"
+        class="submenu-back"
+        @click="closeSubmenu"
+        v-show="!isCollapsed"
+      >
+        <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="submenu-back-title">{{ submenuTitle || 'Capacitações' }}</span>
+      </button>
+
+      <div class="nav-section">
+        <NavItem
+          v-if="canSeeTreinamentoIndicadores && _routes.hasTreinamentoIndicadores"
+          :href="route('treinamentos.indicadores')"
+          :active="isRouteActive('treinamentos.indicadores')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Painel
+        </NavItem>
+        <NavItem
+          v-if="canSeeTreinamento && _routes.hasTreinamentos"
+          :href="route('treinamentos.index')"
+          :active="isRouteActive('treinamentos.*') && !isRouteActive('treinamentos.aluno.*') && !isRouteActive('treinamentos.professor.*') && !isRouteActive('treinamentos.indicadores') && !isRouteActive('treinamentos.validar-participante*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Capacitações
+        </NavItem>
+        <NavItem
+          v-if="canSeeTreinamentoAluno && _routes.hasTreinamentoAluno"
+          :href="route('treinamentos.aluno.index')"
+          :active="isRouteActive('treinamentos.aluno.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Meus cursos
+        </NavItem>
+        <NavItem
+          v-if="canSeeTreinamentoProfessor && _routes.hasTreinamentoProfessor"
+          :href="route('treinamentos.professor.index')"
+          :active="isRouteActive('treinamentos.professor.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Área do Gestor
+        </NavItem>
+        <NavItem
+          v-if="canSeeTreinamentoValidar && _routes.hasTreinamentoValidar"
+          :href="route('treinamentos.validar-participante')"
+          :active="isRouteActive('treinamentos.validar-participante*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Validar participante
+        </NavItem>
+      </div>
+    </nav>
+
     <!-- SUBMENU VIEW: DEMANDAS -->
     <nav
       v-if="canSeeDemandasGroup"
@@ -1039,6 +1106,8 @@ const _routes = {
   hasTreinamentos: route().has('treinamentos.index'),
   hasTreinamentoAluno: route().has('treinamentos.aluno.index'),
   hasTreinamentoProfessor: route().has('treinamentos.professor.index'),
+  hasTreinamentoIndicadores: route().has('treinamentos.indicadores'),
+  hasTreinamentoValidar: route().has('treinamentos.validar-participante'),
   hasRanking: route().has('ranking.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
@@ -1128,6 +1197,10 @@ const _activeRoutes = computed(() => {
     'treinamentos.*': route().current('treinamentos.*'),
     'treinamentos.aluno.*': route().current('treinamentos.aluno.*'),
     'treinamentos.professor.*': route().current('treinamentos.professor.*'),
+    // Painel e irmao de Capacitacoes sob o mesmo prefixo: chave propria para
+    // 'treinamentos.*' nao acender os dois itens juntos.
+    'treinamentos.indicadores': route().current('treinamentos.indicadores'),
+    'treinamentos.validar-participante*': route().current('treinamentos.validar-participante*'),
     'plancon.*': route().current('plancon.*'),
     // isRouteActive so consulta ESTE mapa: sem a linha abaixo o item de
     // Ranking nasceria permanentemente apagado, mesmo dentro do modulo.
@@ -1323,6 +1396,20 @@ const canSeeTreinamentoAluno = computed(() => {
 const canSeeTreinamentoProfessor = computed(() => {
   return hasPermission(['treinamento.professor.acessar']);
 });
+const canSeeTreinamentoValidar = computed(() => {
+  return hasPermission(['treinamento.participantes.validar']);
+});
+const canSeeTreinamentoIndicadores = computed(() => {
+  return hasPermission(['treinamento.indicadores.view']);
+});
+// O botao do grupo aparece se qualquer um dos itens aparecer.
+const canSeeTreinamentoGroup = computed(() => {
+  return (canSeeTreinamentoIndicadores.value && _routes.hasTreinamentoIndicadores)
+    || (canSeeTreinamento.value && _routes.hasTreinamentos)
+    || (canSeeTreinamentoAluno.value && _routes.hasTreinamentoAluno)
+    || (canSeeTreinamentoProfessor.value && _routes.hasTreinamentoProfessor)
+    || (canSeeTreinamentoValidar.value && _routes.hasTreinamentoValidar);
+});
 
 const canSeePlanCon = computed(() => {
   // TODO: Adicionar permissao plancon.planos.view no config
@@ -1391,6 +1478,7 @@ const submenuPorRota = {
   'ajuda-humanitaria.': 'ajuda-humanitaria',
   'demandas.': 'demandas',
   'admin.demandas.': 'demandas',
+  'treinamentos.': 'treinamentos',
   'inventario.': 'inventario',
   'acessos.': 'inventario',
 };
@@ -1414,6 +1502,7 @@ const submenuTitles = {
   estoque: 'Estoque',
   'ajuda-humanitaria': 'Ajuda Humanitaria',
   demandas: 'Demandas',
+  treinamentos: 'Capacitações',
   inventario: 'Inventário',
 };
 

@@ -14,6 +14,8 @@ use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Models\TreinamentoProfessor;
 use App\Modules\Treinamento\Resources\CertificadoResource;
+use App\Modules\Treinamento\Services\CredencialQrService;
+use App\Modules\Treinamento\Services\InscricaoService;
 use App\Modules\Treinamento\Services\TrilhaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -22,7 +24,11 @@ use Inertia\Response;
 
 class MeusCursosController extends Controller
 {
-    public function __construct(private readonly TrilhaService $trilha) {}
+    public function __construct(
+        private readonly TrilhaService $trilha,
+        private readonly InscricaoService $inscricaoService,
+        private readonly CredencialQrService $credenciais,
+    ) {}
 
     public function __invoke(Request $request): Response
     {
@@ -39,6 +45,8 @@ class MeusCursosController extends Controller
         return Inertia::render('Treinamento/Aluno/MeusCursos', [
             'meus_cursos' => $inscricoes->map(fn (Inscricao $i) => $this->curso($i))->values(),
             'certificados' => CertificadoResource::collection($this->certificados($inscricoes->pluck('id')->all()))->resolve(),
+            'credencial' => $request->user() instanceof User ? $this->credenciais->paraServidor($request->user()) : null,
+            'sexo_padrao' => $this->inscricaoService->sexoDaUltimaInscricao($request->user())?->value,
             'disponiveis' => $this->disponiveis($userId, $inscricoes->pluck('treinamento_id')->all()),
         ]);
     }

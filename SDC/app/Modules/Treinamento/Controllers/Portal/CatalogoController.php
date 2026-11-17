@@ -9,6 +9,7 @@ use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Resources\PortalTreinamentoListResource;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
+use App\Modules\Treinamento\Services\InscricaoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -16,6 +17,11 @@ use Inertia\Response;
 
 class CatalogoController extends Controller
 {
+    public function __construct(
+        private readonly InscricaoService $inscricaoService
+    ) {
+    }
+
     public function index(Request $request): Response
     {
         $filters = $request->only(['search', 'categoria']);
@@ -63,6 +69,7 @@ class CatalogoController extends Controller
                 ...(new TreinamentoResource($treinamento))->resolve(),
                 'capa_url' => $treinamento->capaUrl(Treinamento::ROTA_CAPA_PORTAL),
             ],
+            'sexoPadrao' => $this->inscricaoService->sexoDaUltimaInscricao($cidadao)?->value,
             'minhaInscricao' => $minhaInscricao ? [
                 'id' => $minhaInscricao->id,
                 'status' => $minhaInscricao->status->value,

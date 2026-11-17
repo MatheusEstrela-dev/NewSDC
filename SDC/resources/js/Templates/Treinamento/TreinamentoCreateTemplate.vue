@@ -5,6 +5,7 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import SelectInput from '@/Components/Atoms/Input/SelectInput.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import MunicipioBuscaSelect from '@/Components/Molecules/Treinamento/MunicipioBuscaSelect.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
 
@@ -18,6 +19,10 @@ const props = defineProps({
     default: () => ({}),
   },
   publicos: {
+    type: Array,
+    default: () => [],
+  },
+  municipios: {
     type: Array,
     default: () => [],
   },
@@ -35,6 +40,7 @@ const form = useForm({
   inscricao_aprovacao_automatica: false,
   instrutor: '',
   local: '',
+  municipio_id: null,
   data_inicio: '',
   data_fim: '',
   hora_inicio: '',
@@ -126,6 +132,15 @@ function cancelar() {
             <label class="field-label">Local / Link Online</label>
             <TextInput v-model="form.local" :maxlength="255" />
           </div>
+        </div>
+
+        <div>
+          <label class="field-label">Município de realização</label>
+          <MunicipioBuscaSelect v-model="form.municipio_id" :municipios="municipios" />
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Opcional. Alimenta o painel de indicadores das capacitações (mapa e ranking por município). Deixe vazio para cursos EAD.
+          </p>
+          <p v-if="form.errors.municipio_id" class="field-error">{{ form.errors.municipio_id }}</p>
         </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

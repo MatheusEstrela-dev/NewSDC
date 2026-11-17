@@ -7,6 +7,7 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexoModal.vue';
 import { useToast } from '@/Composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -14,6 +15,7 @@ defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
   treinamento: { type: Object, required: true },
   minhaInscricao: { type: Object, default: null },
+  sexoPadrao: { type: String, default: null },
 });
 
 const { show: toast } = useToast();
@@ -35,8 +37,11 @@ async function desenharQr() {
 onMounted(desenharQr);
 watch(() => props.minhaInscricao?.qr_code_token, desenharQr);
 
-function inscreverSe() {
-  router.post(route('portal.treinamento.inscricoes.store', props.treinamento.link_publico_slug), {}, {
+const modalInscricao = ref(false);
+
+function inscreverSe(sexo) {
+  modalInscricao.value = false;
+  router.post(route('portal.treinamento.inscricoes.store', props.treinamento.link_publico_slug), { sexo }, {
     preserveScroll: true,
     // O sucesso aparece no banner do flash (texto vem do servidor, conforme o status).
     onError: (errors) => toast(Object.values(errors)[0] || 'Não foi possível concluir a inscrição.', 'error'),
@@ -139,12 +144,20 @@ function confirmarPresenca() {
           </a>
         </div>
 
-        <Button v-else-if="treinamento.pode_receber_inscricao" variant="primary" @click="inscreverSe">
+        <Button v-else-if="treinamento.pode_receber_inscricao" variant="primary" @click="modalInscricao = true">
           Inscrever-se
         </Button>
         <Text v-else-if="treinamento.situacao === 'PAUSADO'" size="sm" color="muted">Este curso está pausado e não recebe inscrições no momento.</Text>
         <Text v-else size="sm" color="muted">Este treinamento não está recebendo inscrições no momento.</Text>
       </div>
     </CardBase>
+
+    <InscricaoSexoModal
+      :show="modalInscricao"
+      :titulo="treinamento.titulo"
+      :padrao="sexoPadrao"
+      @fechar="modalInscricao = false"
+      @confirmar="inscreverSe"
+    />
   </div>
 </template>

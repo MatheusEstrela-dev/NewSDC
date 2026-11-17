@@ -76,6 +76,8 @@ return new class extends Migration
         $this->ajustarTabelasExistentes();
         $this->criarComprovacao();
         $this->criarCicloDoCurso();
+        $this->criarIndicadores();
+        $this->criarCredencialQr();
     }
 
     public function down(): void
@@ -699,6 +701,62 @@ return new class extends Migration
         $this->indices('treinamento.treinamentos', [
             'treinamentos_situacao_index' => 'situacao',
             'treinamentos_situacao_alterada_por_fkidx' => 'situacao_alterada_por',
+        ]);
+    }
+
+    /**
+     * Dados do painel de indicadores das Capacitacoes. Autocontido e idempotente.
+     *
+     * - treinamentos.municipio_id: municipio de realizacao da turma (municipios.id
+     *   do sdc, sem FK, como os demais ids de outro banco). NULL = sem municipio
+     *   (EAD ou turma antiga); o painel mostra esse grupo a parte do mapa.
+     * - inscricoes.sexo: declarado na inscricao (F/M). NULL = nao informado.
+     *   Mora na inscricao para nao exigir coluna nova em users (outro banco).
+     */
+    private function criarIndicadores(): void
+    {
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS municipio_id bigint');
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD COLUMN IF NOT EXISTS sexo char(1)');
+        $this->exec('ALTER TABLE treinamento.inscricoes DROP CONSTRAINT IF EXISTS inscricoes_sexo_check');
+        $this->exec("ALTER TABLE treinamento.inscricoes ADD CONSTRAINT inscricoes_sexo_check CHECK (sexo IN ('F', 'M'))");
+        $this->indices('treinamento.treinamentos', [
+            'treinamentos_municipio_id_fkidx' => 'municipio_id',
+        ]);
+        $this->indices('treinamento.inscricoes', [
+            'inscricoes_concluido_em_index' => 'concluido_em',
+        ]);
+    }
+
+    /**
+     * Credencial por QR Code do servidor e trilha das consultas a ela. Autocontido
+     * e idempotente. user_id e do sdc (sem FK, como os demais ids de outro banco).
+     *
+     * - credenciais_qr: um token por servidor (UNIQUE em user_id), trocavel.
+     * - credencial_consultas: quem consultou quem e quando (dado pessoal lido).
+     */
+    private function criarCredencialQr(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.credenciais_qr (
+                id bigserial PRIMARY KEY,
+                user_id bigint NOT NULL UNIQUE,
+                token varchar(64) NOT NULL UNIQUE,
+                gerado_em timestamp(0) NOT NULL,
+                created_at timestamp(0),
+                updated_at timestamp(0)
+            )
+            SQL);
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.credencial_consultas (
+                id bigserial PRIMARY KEY,
+                user_id_consultado bigint NOT NULL,
+                consultado_por bigint NOT NULL,
+                created_at timestamp(0) NOT NULL
+            )
+            SQL);
+        $this->indices('treinamento.credencial_consultas', [
+            'credencial_consultas_user_id_consultado_index' => 'user_id_consultado',
+            'credencial_consultas_consultado_por_index' => 'consultado_por',
         ]);
     }
 

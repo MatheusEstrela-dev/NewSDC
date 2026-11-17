@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Services;
 
+use App\Models\Municipio;
 use App\Models\User;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Jobs\EmitirCertificadosTreinamentoJob;
@@ -37,6 +38,21 @@ class TreinamentoService extends BaseService
         }
 
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * Municipios de MG para o select de "municipio de realizacao" (catalogo
+     * cacheado do sdc, so id e nome).
+     *
+     * @return list<array{id: int, nome: string}>
+     */
+    public function municipiosDeMg(): array
+    {
+        return Municipio::catalogo()
+            ->where('uf', 'MG')
+            ->map(fn (array $m) => ['id' => $m['id'], 'nome' => $m['nome']])
+            ->values()
+            ->all();
     }
 
     public function findById(int $id): ?Treinamento

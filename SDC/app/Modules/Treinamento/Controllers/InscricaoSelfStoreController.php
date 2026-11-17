@@ -7,7 +7,7 @@ namespace App\Modules\Treinamento\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Services\InscricaoService;
-use Illuminate\Http\Request;
+use App\Modules\Treinamento\Requests\InscreverRequest;
 
 /**
  * Auto-inscricao do servidor interno logado (nao e uma acao de admin - so
@@ -20,10 +20,10 @@ class InscricaoSelfStoreController extends Controller
     ) {
     }
 
-    public function __invoke(Request $request, Treinamento $treinamento)
+    public function __invoke(InscreverRequest $request, Treinamento $treinamento)
     {
         try {
-            $inscricao = $this->inscricaoService->inscrever($treinamento, $request->user());
+            $inscricao = $this->inscricaoService->inscrever($treinamento, $request->user(), $request->sexo());
         } catch (\DomainException $e) {
             return back()->withErrors(['inscricao' => $e->getMessage()]);
         }

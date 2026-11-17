@@ -21,6 +21,7 @@ class InscricaoResource extends JsonResource
             'treinamento_situacao' => $this->whenLoaded('treinamento', fn () => $this->treinamento->situacaoEfetiva()->value),
             'treinamento_situacao_label' => $this->whenLoaded('treinamento', fn () => $this->treinamento->situacaoEfetiva()->getLabel()),
             'treinamento_situacao_variant' => $this->whenLoaded('treinamento', fn () => $this->treinamento->situacaoEfetiva()->getVariant()),
+            'sexo' => $this->sexo?->value,
             'status' => $this->status->value,
             'status_label' => $this->status->getLabel(),
             'status_color' => $this->status->getBadgeColor(),

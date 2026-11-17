@@ -5,6 +5,7 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CapaCursoUpload from '@/Components/Molecules/Treinamento/CapaCursoUpload.vue';
 import CursoSelos from '@/Components/Molecules/Treinamento/CursoSelos.vue';
+import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexoModal.vue';
 import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesCicloCurso.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -35,6 +36,10 @@ const props = defineProps({
   professores: {
     type: Array,
     default: () => [],
+  },
+  sexoPadrao: {
+    type: String,
+    default: null,
   },
 });
 
@@ -73,7 +78,11 @@ function postAction(url, data = {}, successMessage = 'Feito.') {
   });
 }
 
-const inscreverSe = () => postAction('treinamentos.inscrever', {}, 'Inscricao realizada! Aguarde a aprovacao.');
+const modalInscricao = ref(false);
+const inscreverSe = (sexo) => {
+  postAction('treinamentos.inscrever', { sexo }, 'Inscricao realizada! Aguarde a aprovacao.');
+  modalInscricao.value = false;
+};
 
 const confirmarPresenca = () => {
   router.post(route('treinamentos.inscricoes.autoconfirmar', props.minhaInscricao.id), {}, {
@@ -227,6 +236,11 @@ function copiarLinkPublico() {
                 <Text size="base" class="font-medium">{{ treinamento.local }}</Text>
               </div>
 
+              <div v-if="treinamento.municipio_nome">
+                <Text size="sm" color="muted" class="mb-1">Município de realização</Text>
+                <Text size="base" class="font-medium">{{ treinamento.municipio_nome }}</Text>
+              </div>
+
               <div v-if="treinamento.data_inicio">
                 <Text size="sm" color="muted" class="mb-1">Data de Início</Text>
                 <Text size="base" class="font-medium">{{ formatDate(treinamento.data_inicio) }}</Text>
@@ -300,7 +314,7 @@ function copiarLinkPublico() {
                 Ver / imprimir certificado
               </a>
             </div>
-            <Button v-else-if="podeInscreverServidor" variant="primary" @click="inscreverSe">
+            <Button v-else-if="podeInscreverServidor" variant="primary" @click="modalInscricao = true">
               Inscrever-se
             </Button>
             <Text v-else-if="!destinadoAoServidor" size="sm" color="muted">Este treinamento é destinado ao público do Portal do Cidadão.</Text>
@@ -308,6 +322,14 @@ function copiarLinkPublico() {
           </div>
         </template>
       </TreinamentoTabs>
+
+      <InscricaoSexoModal
+        :show="modalInscricao"
+        :titulo="treinamento.titulo"
+        :padrao="sexoPadrao"
+        @fechar="modalInscricao = false"
+        @confirmar="inscreverSe"
+      />
 
       <!-- Professores (EAD) -->
       <section v-if="treinamento.tipo === 'EAD'" class="mt-8 space-y-3">

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Resources;
 
+use App\Models\Municipio;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -30,6 +31,10 @@ class TreinamentoResource extends JsonResource
             'status_transicoes' => array_map(fn ($s) => $s->value, $this->status->getAllowedTransitions()),
             'instrutor' => $this->instrutor,
             'local' => $this->local,
+            'municipio_id' => $this->municipio_id,
+            'municipio_nome' => $this->municipio_id
+                ? Municipio::catalogo()->firstWhere('id', $this->municipio_id)['nome'] ?? null
+                : null,
             'data_inicio' => $this->data_inicio?->toDateString(),
             'data_fim' => $this->data_fim?->toDateString(),
             'hora_inicio' => $this->hora_inicio ? substr($this->hora_inicio, 0, 5) : null,
