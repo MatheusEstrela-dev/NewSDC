@@ -14,6 +14,7 @@ use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Mail\InscricaoConfirmadaMail;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Support\MunicipioDoInscrito;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Mail;
@@ -70,6 +71,8 @@ class InscricaoService extends BaseService
             throw new \DomainException('Voce ja possui uma inscricao neste treinamento.');
         }
 
+        $this->garantirDentroDoLimiteDoCurso($treinamento, $inscrito);
+
         $aprovacaoAutomatica = (bool) $treinamento->inscricao_aprovacao_automatica;
 
         $inscricao = Inscricao::create([
@@ -82,6 +85,7 @@ class InscricaoService extends BaseService
             'qr_code_token' => (string) Str::uuid(),
             'data_inscricao' => now(),
             'sexo' => $sexo?->value,
+            'municipio_inscrito_id' => MunicipioDoInscrito::de($inscrito),
         ]);
 
         if ($aprovacaoAutomatica) {
@@ -105,6 +109,23 @@ class InscricaoService extends BaseService
         );
 
         return $inscricao;
+    }
+
+    private function garantirDentroDoLimiteDoCurso(Treinamento $treinamento, Model $inscrito): void
+    {
+        if ($treinamento->curso_id === null) {
+            return;
+        }
+
+        $situacao = app(RegraDeReinscricaoService::class)->situacao((int) $treinamento->curso_id, $inscrito);
+
+        if ($situacao->bloqueado) {
+            throw new \DomainException(sprintf(
+                'O limite e de %d inscricoes por curso e este CPF ja o atingiu neste curso. Nova inscricao liberada a partir de %s.',
+                $situacao->limite,
+                $situacao->bloqueadoAte->format('d/m/Y'),
+            ));
+        }
     }
 
     /**

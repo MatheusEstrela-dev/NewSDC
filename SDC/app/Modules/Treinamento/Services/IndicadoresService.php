@@ -70,6 +70,29 @@ class IndicadoresService
     }
 
     /**
+     * Uma linha por inscricao capacitada, com a pessoa, o municipio DA PESSOA
+     * (foto da inscricao) e o curso do catalogo. Base dos blocos "pessoas por
+     * curso" e "pessoas por municipio": a contagem de gente distinta precisa
+     * da linha, nao de um total ja somado. Uma consulta, nome do curso incluso.
+     *
+     * @return Collection<int, array{pessoa: string, municipio_id: ?int, curso_id: ?int, curso: ?string, turma_id: int}>
+     */
+    public function pessoas(IndicadoresFiltroDTO $filtro): Collection
+    {
+        return $this->baseCapacitados($filtro)
+            ->leftJoin('treinamento.cursos as c', 'c.id', '=', 't.curso_id')
+            ->select('i.inscrito_type', 'i.inscrito_id', 'i.municipio_inscrito_id', 't.curso_id', 't.id as turma_id', 'c.nome as curso')
+            ->get()
+            ->map(fn ($l) => [
+                'pessoa' => $l->inscrito_type . ':' . $l->inscrito_id,
+                'municipio_id' => $l->municipio_inscrito_id !== null ? (int) $l->municipio_inscrito_id : null,
+                'curso_id' => $l->curso_id !== null ? (int) $l->curso_id : null,
+                'curso' => $l->curso,
+                'turma_id' => (int) $l->turma_id,
+            ]);
+    }
+
+    /**
      * Serie historica: ignora o filtro de ano, por isso tem consulta propria.
      * Capacitacoes contam no ano da turma; participantes, no ano da conclusao.
      *

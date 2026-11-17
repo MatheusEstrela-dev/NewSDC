@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Cidadao;
 use App\Modules\Treinamento\Requests\Portal\RegisterCidadaoRequest;
 use App\Modules\Treinamento\Services\CidadaoVerificacaoService;
+use App\Modules\Treinamento\Services\TreinamentoService;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -17,12 +18,15 @@ class RegisterController extends Controller
 {
     public function __construct(
         private readonly CidadaoVerificacaoService $verificacao,
+        private readonly TreinamentoService $treinamentos,
     ) {
     }
 
     public function create(): Response
     {
-        return Inertia::render('Treinamento/Portal/Registrar');
+        return Inertia::render('Treinamento/Portal/Registrar', [
+            'municipios' => $this->treinamentos->municipiosDeMg(),
+        ]);
     }
 
     /**
@@ -54,6 +58,7 @@ class RegisterController extends Controller
                 'email' => $request->validated('email'),
                 'cpf' => $request->validated('cpf'),
                 'telefone' => $request->validated('telefone'),
+                'municipio_id' => $request->validated('municipio_id'),
                 // Nao usar Hash::make aqui: o cast 'password' => 'hashed' do model
                 // Cidadao ja hasheia sozinho ao salvar. Fazer os dois hashearia
                 // duas vezes e nenhum login futuro bateria com a senha em texto puro.

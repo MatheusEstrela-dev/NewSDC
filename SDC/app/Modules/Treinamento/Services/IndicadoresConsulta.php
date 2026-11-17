@@ -37,6 +37,9 @@ final class IndicadoresConsulta
     /** @var array<int, array<string, mixed>>|null */
     private ?array $catalogo = null;
 
+    /** @var Collection<int, array<string, mixed>>|null */
+    private ?Collection $pessoas = null;
+
     public function __construct(
         private readonly IndicadoresFiltroDTO $filtro,
         private readonly IndicadoresService $service,
@@ -205,6 +208,56 @@ final class IndicadoresConsulta
             ->all();
     }
 
+    /**
+     * Pessoas distintas por curso do catalogo. Turma sem curso cai numa linha
+     * propria. Municipios sao os da PESSOA, nao os da turma.
+     *
+     * @return list<array{curso_id: ?int, nome: string, pessoas: int, municipios: int, turmas: int}>
+     */
+    public function pessoasPorCurso(): array
+    {
+        return $this->pessoas()
+            ->groupBy(fn ($l) => $l['curso_id'] ?? 0)
+            ->map(fn (Collection $g, int|string $id) => [
+                'curso_id' => (int) $id > 0 ? (int) $id : null,
+                'nome' => (int) $id > 0 ? (string) $g->first()['curso'] : 'Sem curso no catálogo',
+                'pessoas' => $g->pluck('pessoa')->unique()->count(),
+                'municipios' => $g->pluck('municipio_id')->filter()->unique()->count(),
+                'turmas' => $g->pluck('turma_id')->unique()->count(),
+            ])
+            ->sort(fn ($a, $b) => [$b['pessoas'], $a['nome']] <=> [$a['pessoas'], $b['nome']])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Pessoas distintas por municipio DA PESSOA; sem municipio, uma linha propria.
+     *
+     * @return list<array{municipio_id: ?int, nome: string, redec: ?string, pessoas: int, cursos: int}>
+     */
+    public function pessoasPorMunicipio(): array
+    {
+        $catalogo = $this->catalogo();
+
+        return $this->pessoas()
+            ->groupBy(fn ($l) => $l['municipio_id'] ?? 0)
+            ->map(function (Collection $g, int|string $id) use ($catalogo) {
+                $id = (int) $id;
+                $m = $id > 0 ? ($catalogo[$id] ?? null) : null;
+
+                return [
+                    'municipio_id' => $id > 0 ? $id : null,
+                    'nome' => $id === 0 ? 'Município não informado' : ($m['nome'] ?? "Município {$id}"),
+                    'redec' => $this->service->nomeDaRedec($m['redec_id'] ?? null),
+                    'pessoas' => $g->pluck('pessoa')->unique()->count(),
+                    'cursos' => $g->pluck('curso_id')->filter()->unique()->count(),
+                ];
+            })
+            ->sort(fn ($a, $b) => [$b['pessoas'], $a['nome']] <=> [$a['pessoas'], $b['nome']])
+            ->values()
+            ->all();
+    }
+
     /** Uma linha por turma, paginada em memoria (as linhas ja estao carregadas). */
     public function tabela(): LengthAwarePaginator
     {
@@ -302,6 +355,12 @@ final class IndicadoresConsulta
                 <=> [$a['ano'], $a['periodo_inicio'] ?? '', $b['treinamento'], $b['treinamento_id']])
             ->map(fn ($l) => array_diff_key($l, ['treinamento_id' => true]))
             ->values();
+    }
+
+    /** @return Collection<int, array<string, mixed>> */
+    private function pessoas(): Collection
+    {
+        return $this->pessoas ??= $this->service->pessoas($this->filtro);
     }
 
     /** @return Collection<int, array<string, mixed>> */

@@ -39,6 +39,8 @@ class IndicadoresController extends Controller
             'porSexo' => fn () => $consulta->porSexo(),
             'porCapacitacao' => fn () => $consulta->porCapacitacao(),
             'rankingMunicipios' => fn () => $consulta->rankingMunicipios(),
+            'pessoasPorCurso' => fn () => $consulta->pessoasPorCurso(),
+            'pessoasPorMunicipio' => fn () => $consulta->pessoasPorMunicipio(),
             'tabela' => fn () => JsonResource::collection($consulta->tabela()->withQueryString()),
             // So vem quando a tela pede (Gerar relatorio): a tabela inteira, sem paginar.
             'relatorio' => Inertia::lazy(fn () => $consulta->relatorio()),

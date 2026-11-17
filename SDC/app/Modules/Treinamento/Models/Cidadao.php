@@ -31,6 +31,7 @@ class Cidadao extends Authenticatable
         'password',
         'aceite_lgpd_em',
         'ativo',
+        'municipio_id',
     ];
 
     protected $hidden = [

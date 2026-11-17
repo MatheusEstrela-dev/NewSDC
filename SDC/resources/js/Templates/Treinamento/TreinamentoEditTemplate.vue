@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
@@ -6,6 +7,8 @@ import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import SelectInput from '@/Components/Atoms/Input/SelectInput.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import MunicipioBuscaSelect from '@/Components/Molecules/Treinamento/MunicipioBuscaSelect.vue';
+import CursoBuscaSelect from '@/Components/Molecules/Treinamento/CursoBuscaSelect.vue';
+import CursoFormModal from '@/Components/Organisms/Treinamento/Catalogo/CursoFormModal.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
 
@@ -26,6 +29,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  cursos: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const { show: toast } = useToast();
@@ -40,6 +47,7 @@ const form = useForm({
   inscricao_aprovacao_automatica: props.treinamento.inscricao_aprovacao_automatica ?? false,
   instrutor: props.treinamento.instrutor ?? '',
   local: props.treinamento.local ?? '',
+  curso_id: props.treinamento.curso_id ?? null,
   municipio_id: props.treinamento.municipio_id ?? null,
   data_inicio: props.treinamento.data_inicio ?? '',
   data_fim: props.treinamento.data_fim ?? '',
@@ -47,6 +55,14 @@ const form = useForm({
   percentual_frequencia_minimo: props.treinamento.percentual_frequencia_minimo ?? 75,
   presenca_autoconfirmavel: props.treinamento.presenca_autoconfirmavel ?? false,
 });
+
+const cursosLista = ref([...props.cursos]);
+const modalCurso = ref(false);
+
+function cursoCriado(curso) {
+  cursosLista.value = [...cursosLista.value, curso].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  form.curso_id = curso.id;
+}
 
 function salvar() {
   form.put(route('treinamentos.update', props.treinamento.id), {
@@ -88,6 +104,15 @@ function cancelar() {
             class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           ></textarea>
           <p v-if="form.errors.descricao" class="field-error">{{ form.errors.descricao }}</p>
+        </div>
+
+        <div>
+          <label class="field-label">Curso do catálogo <span class="req">*</span></label>
+          <CursoBuscaSelect v-model="form.curso_id" :cursos="cursosLista" @novo="modalCurso = true" />
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            O curso agrupa as turmas e vale para a regra de inscrições e a consulta para edital.
+          </p>
+          <p v-if="form.errors.curso_id" class="field-error">{{ form.errors.curso_id }}</p>
         </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
@@ -195,6 +220,8 @@ function cancelar() {
         </Button>
       </footer>
     </CardBase>
+
+    <CursoFormModal :show="modalCurso" rapido @fechar="modalCurso = false" @criado="cursoCriado" />
   </div>
 </template>
 

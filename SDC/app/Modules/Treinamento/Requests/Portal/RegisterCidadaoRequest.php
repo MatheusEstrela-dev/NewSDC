@@ -93,6 +93,8 @@ class RegisterCidadaoRequest extends FormRequest
                 // entrar por essa conta, sem nenhum erro visivel no cadastro.
                 Rule::unique('users', 'cpf'),
             ],
+            // Municipio da pessoa (MG): a tabela municipios fica no banco sdc.
+            'municipio_id' => ['required', 'integer', Rule::exists('municipios', 'id')->where('uf', 'MG')],
             'telefone' => ['bail', 'nullable', 'string', 'regex:/^\d{11}$/'],
             'password' => ['required', 'confirmed', new StrongPassword()],
             'aceite_lgpd' => ['accepted'],
@@ -105,6 +107,8 @@ class RegisterCidadaoRequest extends FormRequest
             'cpf.size' => 'O CPF deve conter 11 numeros.',
             'email.unique' => 'Ja existe um usuario cadastrado com este e-mail. Se voce e servidor, entre com seu login de servidor; caso contrario, use a opcao "Entrar" com a senha do seu cadastro.',
             'cpf.unique' => 'Ja existe um usuario cadastrado com este CPF. Se voce e servidor, entre com seu login de servidor; caso contrario, use a opcao "Entrar" com a senha do seu cadastro.',
+            'municipio_id.required' => 'Informe o seu municipio.',
+            'municipio_id.exists' => 'Selecione um municipio de Minas Gerais.',
             'telefone.regex' => 'O telefone deve conter 11 numeros, com DDD (ex: 31912345678).',
             'aceite_lgpd.accepted' => 'E preciso aceitar os termos de uso e a politica de privacidade (LGPD) para se cadastrar.',
         ];

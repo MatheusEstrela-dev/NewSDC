@@ -78,6 +78,7 @@ return new class extends Migration
         $this->criarCicloDoCurso();
         $this->criarIndicadores();
         $this->criarCredencialQr();
+        $this->criarCatalogo();
     }
 
     public function down(): void
@@ -757,6 +758,68 @@ return new class extends Migration
         $this->indices('treinamento.credencial_consultas', [
             'credencial_consultas_user_id_consultado_index' => 'user_id_consultado',
             'credencial_consultas_consultado_por_index' => 'consultado_por',
+        ]);
+    }
+
+    /**
+     * Catalogo de cursos e regra de reinscricao. Autocontido e idempotente.
+     *
+     * - cursos: o "curso" acima das turmas (varias turmas do mesmo curso).
+     *   Nome unico entre os ativos (sem caixa/acento de diferenca e o servico
+     *   que garante; o indice so pega o nome exato em minusculas).
+     * - treinamentos.curso_id: turma -> curso do catalogo (NULL = turma antiga
+     *   ainda nao vinculada; o comando treinamento:vincular-catalogo preenche).
+     * - inscricoes.municipio_inscrito_id: municipio DA PESSOA no momento da
+     *   inscricao (municipios.id do sdc, sem FK). Servidor: municipio do orgao
+     *   principal; cidadao: o do cadastro. Foto do momento, para o historico.
+     * - cadastro.cidadaos.municipio_id: municipio informado no cadastro do portal.
+     * - liberacoes_inscricao: gestor libera um CPF bloqueado pela regra das 3
+     *   inscricoes no mesmo curso; zera a contagem a partir dali.
+     */
+    private function criarCatalogo(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.cursos (
+                id bigserial PRIMARY KEY,
+                nome varchar(255) NOT NULL,
+                sigla varchar(30),
+                descricao text,
+                ativo boolean NOT NULL DEFAULT true,
+                created_by bigint,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                deleted_at timestamp(0)
+            )
+            SQL);
+        $this->exec('CREATE UNIQUE INDEX IF NOT EXISTS cursos_nome_unico ON treinamento.cursos (lower(nome)) WHERE deleted_at IS NULL');
+
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS curso_id bigint');
+        $this->exec('ALTER TABLE treinamento.treinamentos DROP CONSTRAINT IF EXISTS treinamentos_curso_id_foreign');
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_curso_id_foreign FOREIGN KEY (curso_id) REFERENCES treinamento.cursos (id) ON DELETE SET NULL');
+
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD COLUMN IF NOT EXISTS municipio_inscrito_id bigint');
+        $this->exec('ALTER TABLE cadastro.cidadaos ADD COLUMN IF NOT EXISTS municipio_id bigint');
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.liberacoes_inscricao (
+                id bigserial PRIMARY KEY,
+                cpf varchar(11) NOT NULL,
+                curso_id bigint NOT NULL,
+                liberado_por bigint NOT NULL,
+                motivo text NOT NULL,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT liberacoes_inscricao_curso_id_foreign
+                    FOREIGN KEY (curso_id) REFERENCES treinamento.cursos (id) ON DELETE CASCADE
+            )
+            SQL);
+
+        $this->indices('treinamento.treinamentos', ['treinamentos_curso_id_fkidx' => 'curso_id']);
+        $this->indices('treinamento.inscricoes', ['inscricoes_municipio_inscrito_id_index' => 'municipio_inscrito_id']);
+        $this->indices('cadastro.cidadaos', ['cidadaos_municipio_id_index' => 'municipio_id']);
+        $this->indices('treinamento.liberacoes_inscricao', [
+            'liberacoes_inscricao_cpf_curso_index' => 'cpf, curso_id',
+            'liberacoes_inscricao_liberado_por_fkidx' => 'liberado_por',
         ]);
     }
 

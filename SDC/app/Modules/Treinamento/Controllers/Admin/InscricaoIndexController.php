@@ -29,6 +29,7 @@ class InscricaoIndexController extends Controller
             'treinamento' => [
                 'id' => $treinamento->id,
                 'titulo' => $treinamento->titulo,
+                'curso_id' => $treinamento->curso_id,
                 'presenca_liberada' => (bool) $treinamento->presenca_liberada,
                 'modulos' => $treinamento->modulos()->orderBy('ordem')->get(['id', 'titulo'])->map(fn ($m) => [
                     'id' => $m->id,

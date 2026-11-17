@@ -226,6 +226,11 @@ function copiarLinkPublico() {
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div v-if="treinamento.curso_nome">
+                <Text size="sm" color="muted" class="mb-1">Curso do catálogo</Text>
+                <Text size="base" class="font-medium">{{ treinamento.curso_nome }}</Text>
+              </div>
+
               <div v-if="treinamento.instrutor">
                 <Text size="sm" color="muted" class="mb-1">Instrutor</Text>
                 <Text size="base" class="font-medium">{{ treinamento.instrutor }}</Text>

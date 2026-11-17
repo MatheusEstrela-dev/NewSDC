@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Enums\CategoriaTreinamento;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
+use App\Modules\Treinamento\Services\CatalogoService;
 use App\Modules\Treinamento\Services\TreinamentoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,7 +17,8 @@ use Inertia\Response;
 class TreinamentoCreateController extends Controller
 {
     public function __construct(
-        private readonly TreinamentoService $treinamentoService
+        private readonly TreinamentoService $treinamentoService,
+        private readonly CatalogoService $catalogo
     ) {
     }
 
@@ -29,6 +31,7 @@ class TreinamentoCreateController extends Controller
             ],
             'publicos' => PublicoAlvo::toSelectArray(),
             'municipios' => $this->treinamentoService->municipiosDeMg(),
+            'cursos' => $this->catalogo->opcoesAtivas(),
             // "Abrir curso" chega aqui com ?categoria=CURSO&tipo=EAD; valor invalido e ignorado.
             'padroes' => (object) array_filter([
                 'categoria' => CategoriaTreinamento::tryFrom((string) $request->query('categoria'))?->value,
