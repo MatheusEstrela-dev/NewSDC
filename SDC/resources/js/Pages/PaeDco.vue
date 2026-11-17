@@ -51,6 +51,8 @@
         </CollapsibleSection>
       </div>
 
+      <PaeChecklistPainel v-else-if="ativa === 'checklist'" :protocolo-id="protocolo.id" secao="dco" />
+
       <div v-else class="space-y-4">
         <CollapsibleSection v-if="can_validar && resumo.avaliacao?.resultado === 'aplicavel'" namespace="pae" section-id="dco-registrar" title="Registrar declaração" subtitle="Cada apresentação gera uma versão; a mais recente da competência prevalece na emissão." :icon="DocumentArrowUpIcon" tom="success">
           <form class="grid grid-cols-1 gap-3 sm:grid-cols-2" @submit.prevent="registrarDocumento">
@@ -101,9 +103,10 @@ import FormFileField from '@/Components/Molecules/Form/FormFileField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import PaeAviso from '@/Components/Molecules/Pae/PaeAviso.vue';
+import PaeChecklistPainel from '@/Components/Organisms/Pae/Checklist/PaeChecklistPainel.vue';
 import PaeTelaLayout from '@/Templates/Pae/PaeTelaLayout.vue';
 import { errosSemCampo, formatarData, novoUuid } from '@/utils/paeTela';
-import { ClockIcon, DocumentArrowUpIcon, DocumentTextIcon, PencilSquareIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline';
+import { CheckBadgeIcon, ClockIcon, DocumentArrowUpIcon, DocumentTextIcon, PencilSquareIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -125,6 +128,7 @@ const aba = ref('aplicabilidade');
 const abas = [
   { id: 'aplicabilidade', label: 'Aplicabilidade', icon: ShieldCheckIcon },
   { id: 'declaracoes', label: 'Declarações', icon: DocumentTextIcon, badge: props.resumo.documentos.length || null },
+  { id: 'checklist', label: 'Checklist', icon: CheckBadgeIcon },
 ];
 
 const avaliacao = useForm({ resultado: 'aplicavel', fundamentacao: '', num_sei: '', chave_idempotencia: novoUuid() });

@@ -63,6 +63,8 @@
         </CollapsibleSection>
       </form>
 
+      <PaeChecklistPainel v-else-if="ativa === 'checklist'" :protocolo-id="protocolo.id" secao="ficha" :somente-leitura="historica" />
+
       <div v-else class="space-y-4">
         <CollapsibleSection namespace="pae" section-id="ficha-versao" title="Versão e pendências" :icon="ClipboardDocumentListIcon">
           <p class="text-sm text-slate-600 dark:text-slate-300">{{ rascunho ? 'Rascunho não salvo' : `Versão ${ficha.versao}` }}</p>
@@ -94,7 +96,7 @@
     <template #rodape>
       <PaeAviso v-if="camposComErro" tom="erro">{{ camposComErro }} campo(s) com erro na aba Cadastro</PaeAviso>
       <PaeAviso v-if="form.errors.base_versao || form.errors.protocolo" tom="erro">{{ form.errors.base_versao || form.errors.protocolo }}</PaeAviso>
-      <div v-if="podeEditar" class="flex flex-col sm:flex-row sm:justify-end">
+      <div v-if="podeEditar && aba !== 'checklist'" class="flex flex-col sm:flex-row sm:justify-end">
         <Button class="w-full sm:w-auto" :loading="form.processing" @click="salvar">{{ form.processing ? 'Salvando...' : 'Salvar ficha cadastral' }}</Button>
       </div>
     </template>
@@ -109,11 +111,13 @@ import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import PaeAviso from '@/Components/Molecules/Pae/PaeAviso.vue';
+import PaeChecklistPainel from '@/Components/Organisms/Pae/Checklist/PaeChecklistPainel.vue';
 import PaeTelaLayout from '@/Templates/Pae/PaeTelaLayout.vue';
-import { ClipboardDocumentListIcon, ClockIcon, DocumentTextIcon, MapIcon, MapPinIcon } from '@heroicons/vue/24/outline';
+import { CheckBadgeIcon, ClipboardDocumentListIcon, ClockIcon, DocumentTextIcon, MapIcon, MapPinIcon } from '@heroicons/vue/24/outline';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { aplicarEmVazios, retirarLeitura } from '@/utils/paeAnexos';
+import { formatarDataHora } from '@/utils/paeTela';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -195,6 +199,7 @@ const opcoesMunicipios = computed(() => props.municipios_disponiveis.map(m => ({
 const aba = ref('cadastro');
 const abas = computed(() => [
   { id: 'cadastro', label: 'Cadastro', icon: DocumentTextIcon },
+  { id: 'checklist', label: 'Checklist Anexo B', icon: CheckBadgeIcon },
   { id: 'versoes', label: 'Versões e pendências', icon: ClockIcon, badge: props.pendencias.length || null },
 ]);
 const seloRotulo = computed(() => (props.rascunho ? 'Rascunho' : `Versão ${props.ficha.versao}${props.historica ? ' (histórica)' : ''}`));
@@ -244,9 +249,5 @@ function urlVersao(versao) {
 
 function rotuloPendencia(chave) {
   return rotulos[chave] ?? chave;
-}
-
-function formatarDataHora(valor) {
-  return valor ? new Date(valor).toLocaleString('pt-BR') : '';
 }
 </script>
