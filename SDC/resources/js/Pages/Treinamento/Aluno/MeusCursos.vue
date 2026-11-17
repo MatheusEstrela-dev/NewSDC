@@ -6,7 +6,7 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import CertificadoItem from '@/Components/Molecules/Treinamento/CertificadoItem.vue';
 import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexoModal.vue';
 import CursoEadCard from '@/Components/Molecules/Treinamento/CursoEadCard.vue';
-import SecaoHeader from '@/Components/Molecules/Treinamento/SecaoHeader.vue';
+import SecaoRecolhivel from '@/Components/Molecules/Treinamento/SecaoRecolhivel.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
@@ -51,8 +51,7 @@ function inscrever(sexo) {
       variant="gradient"
     />
 
-    <section class="mt-6">
-      <SecaoHeader titulo="Meus cursos" :total="meus_cursos.length" />
+    <SecaoRecolhivel class="mt-6" titulo="Meus cursos" :total="meus_cursos.length" namespace="treinamento-aluno" secao-id="meus-cursos">
 
       <CardBase v-if="meus_cursos.length === 0">
         <Text color="muted">Você ainda não está inscrito em nenhum curso EAD.</Text>
@@ -61,10 +60,9 @@ function inscrever(sexo) {
       <div v-else class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
         <CursoEadCard v-for="curso in meus_cursos" :key="curso.id" :curso="curso" modo="inscrito" />
       </div>
-    </section>
+    </SecaoRecolhivel>
 
-    <section v-if="certificados.length" class="mt-8">
-      <SecaoHeader titulo="Meus certificados" :total="certificados.length" />
+    <SecaoRecolhivel v-if="certificados.length" class="mt-8" titulo="Meus certificados" :total="certificados.length" namespace="treinamento-aluno" secao-id="certificados">
 
       <div class="space-y-4">
         <CertificadoItem
@@ -74,10 +72,9 @@ function inscrever(sexo) {
           :imprimir-url="route('treinamentos.certificados.imprimir', certificado.id)"
         />
       </div>
-    </section>
+    </SecaoRecolhivel>
 
-    <section class="mt-8">
-      <SecaoHeader titulo="Cursos disponíveis" :total="disponiveis.length" />
+    <SecaoRecolhivel class="mt-8" titulo="Cursos disponíveis" :total="disponiveis.length" namespace="treinamento-aluno" secao-id="disponiveis">
 
       <CardBase v-if="disponiveis.length === 0">
         <Text color="muted">Nenhum curso aberto para inscrição no momento.</Text>
@@ -93,7 +90,7 @@ function inscrever(sexo) {
           @inscrever="cursoEscolhido = $event"
         />
       </div>
-    </section>
+    </SecaoRecolhivel>
 
     <InscricaoSexoModal
       :show="cursoEscolhido !== null"
