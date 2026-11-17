@@ -50,6 +50,12 @@
       <!-- Estrategico -->
       <IndicadoresEstrategicosPainel :kpis="kpis" />
 
+      <!-- Pessoas por curso e por municipio -->
+      <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
+        <PessoasPorCursoPainel class="min-w-0" :linhas="pessoasPorCurso" />
+        <PessoasPorMunicipioPainel class="min-w-0" :linhas="pessoasPorMunicipio" />
+      </div>
+
       <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
         <RankingPainel
           class="min-w-0"
@@ -107,6 +113,8 @@ import MapaTerritorialPainel from '@/Components/Organisms/Treinamento/Indicadore
 import PorRedecPainel from '@/Components/Organisms/Treinamento/Indicadores/PorRedecPainel.vue';
 import IndicadoresEstrategicosPainel from '@/Components/Organisms/Treinamento/Indicadores/IndicadoresEstrategicosPainel.vue';
 import RankingPainel from '@/Components/Organisms/Treinamento/Indicadores/RankingPainel.vue';
+import PessoasPorCursoPainel from '@/Components/Organisms/Treinamento/Indicadores/PessoasPorCursoPainel.vue';
+import PessoasPorMunicipioPainel from '@/Components/Organisms/Treinamento/Indicadores/PessoasPorMunicipioPainel.vue';
 import CapacitacoesPorAnoPainel from '@/Components/Organisms/Treinamento/Indicadores/CapacitacoesPorAnoPainel.vue';
 import MapIcon from '@/Components/Icons/MapIcon.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
@@ -144,6 +152,8 @@ const props = defineProps({
   porSexo: { type: Object, default: () => ({ feminino: 0, masculino: 0, nao_informado: 0 }) },
   porCapacitacao: { type: Array, default: () => [] },
   rankingMunicipios: { type: Array, default: () => [] },
+  pessoasPorCurso: { type: Array, default: () => [] },
+  pessoasPorMunicipio: { type: Array, default: () => [] },
   /** Lazy: so chega quando o botao "Gerar relatorio" pede (visita parcial). */
   relatorio: { type: Object, default: null },
   tabela: { type: Object, default: () => ({ data: [], meta: null }) },
@@ -153,7 +163,7 @@ const props = defineProps({
 // recarregar todos os municipios de MG a cada clique seria peso sem ganho.
 const PROPS_DE_DADOS = [
   'filtros', 'kpis', 'mapa', 'semMunicipio', 'porRedec', 'porMes', 'porAno',
-  'porSexo', 'porCapacitacao', 'rankingMunicipios', 'tabela',
+  'porSexo', 'porCapacitacao', 'rankingMunicipios', 'pessoasPorCurso', 'pessoasPorMunicipio', 'tabela',
 ];
 
 const carregando = ref(false);

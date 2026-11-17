@@ -64,6 +64,11 @@ export function useBreadcrumb() {
             { label: 'Capacitações', route: 'treinamentos.index' },
             { label: 'Catálogo de cursos', route: null }
         ],
+        'Treinamento/ConsultaEdital/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Capacitações', route: 'treinamentos.index' },
+            { label: 'Consulta para edital', route: null }
+        ],
         'Treinamento/ValidarParticipante/Index': [
             { label: 'Início', route: 'dashboard' },
             { label: 'Capacitações', route: 'treinamentos.index' },

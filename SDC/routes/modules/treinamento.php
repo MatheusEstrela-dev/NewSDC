@@ -5,6 +5,8 @@ use App\Modules\Treinamento\Controllers\CapaController;
 use App\Modules\Treinamento\Controllers\Catalogo\CatalogoIndexController;
 use App\Modules\Treinamento\Controllers\Catalogo\CatalogoStoreController;
 use App\Modules\Treinamento\Controllers\Catalogo\CatalogoUpdateController;
+use App\Modules\Treinamento\Controllers\Edital\ConsultaEditalController;
+use App\Modules\Treinamento\Controllers\Edital\ConsultaEditalExportController;
 use App\Modules\Treinamento\Controllers\Admin\CertificadoIndexController;
 use App\Modules\Treinamento\Controllers\Admin\CertificadoReemitirController;
 use App\Modules\Treinamento\Controllers\Admin\InscricaoAprovarController;
@@ -68,6 +70,13 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
         Route::get('/', CatalogoIndexController::class)->name('index');
         Route::post('/', CatalogoStoreController::class)->name('store');
         Route::put('/{curso}', CatalogoUpdateController::class)->whereNumber('curso')->name('update');
+    });
+
+    // Consulta para edital: quem (e qual municipio) concluiu determinado(s)
+    // curso(s). Mesmo publico do painel de indicadores.
+    Route::middleware('can:treinamento.indicadores.view')->group(function () {
+        Route::get('/consulta-edital', ConsultaEditalController::class)->name('consulta-edital');
+        Route::get('/consulta-edital/exportar', ConsultaEditalExportController::class)->name('consulta-edital.exportar');
     });
 
     // Liberacao de CPF bloqueado pela regra das 3 inscricoes no mesmo curso.
