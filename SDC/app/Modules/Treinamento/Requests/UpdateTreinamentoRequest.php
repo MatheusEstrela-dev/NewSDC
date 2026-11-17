@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Requests;
 
+use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Services\ProfessorService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -35,7 +36,25 @@ class UpdateTreinamentoRequest extends FormRequest
             'presenca_autoconfirmavel' => ['nullable', 'boolean'],
             // Municipio de realizacao (alimenta o painel de indicadores). A tabela
             // municipios fica no banco sdc (conexao padrao), nao no do treinamento.
+            'curso_id' => $this->regraDoCurso(),
             'municipio_id' => ['nullable', 'integer', Rule::exists('municipios', 'id')->where('uf', 'MG')],
+        ];
+    }
+
+    /**
+     * Turma antiga (sem curso) aceita null ate ser vinculada; turma que ja tem
+     * curso exige um. O curso atual continua valido mesmo se foi inativado.
+     */
+    private function regraDoCurso(): array
+    {
+        $atual = Treinamento::query()->whereKey((int) $this->route('id'))->value('curso_id');
+
+        return [
+            $atual === null ? 'nullable' : 'required',
+            'integer',
+            Rule::exists(config('database.treinamento_connection').'.treinamento.cursos', 'id')
+                ->where(fn ($q) => $q->whereNull('deleted_at')
+                    ->where(fn ($w) => $w->where('ativo', true)->orWhere('id', $atual ?? 0))),
         ];
     }
 }

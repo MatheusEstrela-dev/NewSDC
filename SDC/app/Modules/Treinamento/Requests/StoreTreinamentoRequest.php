@@ -34,6 +34,9 @@ class StoreTreinamentoRequest extends FormRequest
             'presenca_autoconfirmavel' => ['nullable', 'boolean'],
             // Municipio de realizacao (alimenta o painel de indicadores). A tabela
             // municipios fica no banco sdc (conexao padrao), nao no do treinamento.
+            // Curso do catalogo (banco do treinamento): obrigatorio e ativo.
+            'curso_id' => ['required', 'integer', Rule::exists(config('database.treinamento_connection').'.treinamento.cursos', 'id')
+                ->where(fn ($q) => $q->where('ativo', true)->whereNull('deleted_at'))],
             'municipio_id' => ['nullable', 'integer', Rule::exists('municipios', 'id')->where('uf', 'MG')],
         ];
     }

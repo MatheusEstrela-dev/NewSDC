@@ -31,6 +31,8 @@ class TreinamentoResource extends JsonResource
             'status_transicoes' => array_map(fn ($s) => $s->value, $this->status->getAllowedTransitions()),
             'instrutor' => $this->instrutor,
             'local' => $this->local,
+            'curso_id' => $this->curso_id,
+            'curso_nome' => $this->curso?->nome,
             'municipio_id' => $this->municipio_id,
             'municipio_nome' => $this->municipio_id
                 ? Municipio::catalogo()->firstWhere('id', $this->municipio_id)['nome'] ?? null

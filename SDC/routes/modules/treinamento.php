@@ -2,6 +2,9 @@
 
 use App\Modules\Treinamento\Controllers\Admin\CertificadoCancelarController;
 use App\Modules\Treinamento\Controllers\CapaController;
+use App\Modules\Treinamento\Controllers\Catalogo\CatalogoIndexController;
+use App\Modules\Treinamento\Controllers\Catalogo\CatalogoStoreController;
+use App\Modules\Treinamento\Controllers\Catalogo\CatalogoUpdateController;
 use App\Modules\Treinamento\Controllers\Admin\CertificadoIndexController;
 use App\Modules\Treinamento\Controllers\Admin\CertificadoReemitirController;
 use App\Modules\Treinamento\Controllers\Admin\InscricaoAprovarController;
@@ -57,6 +60,14 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
 
     require __DIR__ . '/treinamento-aluno.php';
     require __DIR__ . '/treinamento-professor.php';
+
+    // Catalogo de cursos (o curso acima das turmas): quem edita cursos cuida do
+    // catalogo. Antes do /{id}, como as demais rotas de nome fixo.
+    Route::middleware('can:treinamento.cursos.edit')->prefix('catalogo')->name('catalogo.')->group(function () {
+        Route::get('/', CatalogoIndexController::class)->name('index');
+        Route::post('/', CatalogoStoreController::class)->name('store');
+        Route::put('/{curso}', CatalogoUpdateController::class)->whereNumber('curso')->name('update');
+    });
 
     // Painel de indicadores: antes do /{id}, senao "indicadores" cairia no show.
     Route::get('/indicadores', IndicadoresController::class)

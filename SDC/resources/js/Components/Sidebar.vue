@@ -854,7 +854,7 @@
         <NavItem
           v-if="canSeeTreinamento && _routes.hasTreinamentos"
           :href="route('treinamentos.index')"
-          :active="isRouteActive('treinamentos.*') && !isRouteActive('treinamentos.aluno.*') && !isRouteActive('treinamentos.professor.*') && !isRouteActive('treinamentos.indicadores') && !isRouteActive('treinamentos.validar-participante*')"
+          :active="isRouteActive('treinamentos.*') && !isRouteActive('treinamentos.aluno.*') && !isRouteActive('treinamentos.professor.*') && !isRouteActive('treinamentos.indicadores') && !isRouteActive('treinamentos.validar-participante*') && !isRouteActive('treinamentos.catalogo.*')"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
@@ -890,6 +890,16 @@
           :collapsed="isCollapsed"
         >
           Validar participante
+        </NavItem>
+        <NavItem
+          v-if="canSeeTreinamentoCatalogo && _routes.hasTreinamentoCatalogo"
+          :href="route('treinamentos.catalogo.index')"
+          :active="isRouteActive('treinamentos.catalogo.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Catálogo de cursos
         </NavItem>
       </div>
     </nav>
@@ -1108,6 +1118,7 @@ const _routes = {
   hasTreinamentoProfessor: route().has('treinamentos.professor.index'),
   hasTreinamentoIndicadores: route().has('treinamentos.indicadores'),
   hasTreinamentoValidar: route().has('treinamentos.validar-participante'),
+  hasTreinamentoCatalogo: route().has('treinamentos.catalogo.index'),
   hasRanking: route().has('ranking.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
@@ -1201,6 +1212,7 @@ const _activeRoutes = computed(() => {
     // 'treinamentos.*' nao acender os dois itens juntos.
     'treinamentos.indicadores': route().current('treinamentos.indicadores'),
     'treinamentos.validar-participante*': route().current('treinamentos.validar-participante*'),
+    'treinamentos.catalogo.*': route().current('treinamentos.catalogo.*'),
     'plancon.*': route().current('plancon.*'),
     // isRouteActive so consulta ESTE mapa: sem a linha abaixo o item de
     // Ranking nasceria permanentemente apagado, mesmo dentro do modulo.
@@ -1403,12 +1415,14 @@ const canSeeTreinamentoIndicadores = computed(() => {
   return hasPermission(['treinamento.indicadores.view']);
 });
 // O botao do grupo aparece se qualquer um dos itens aparecer.
+const canSeeTreinamentoCatalogo = computed(() => hasPermission(['treinamento.cursos.edit']));
 const canSeeTreinamentoGroup = computed(() => {
   return (canSeeTreinamentoIndicadores.value && _routes.hasTreinamentoIndicadores)
     || (canSeeTreinamento.value && _routes.hasTreinamentos)
     || (canSeeTreinamentoAluno.value && _routes.hasTreinamentoAluno)
     || (canSeeTreinamentoProfessor.value && _routes.hasTreinamentoProfessor)
-    || (canSeeTreinamentoValidar.value && _routes.hasTreinamentoValidar);
+    || (canSeeTreinamentoValidar.value && _routes.hasTreinamentoValidar)
+    || (canSeeTreinamentoCatalogo.value && _routes.hasTreinamentoCatalogo);
 });
 
 const canSeePlanCon = computed(() => {

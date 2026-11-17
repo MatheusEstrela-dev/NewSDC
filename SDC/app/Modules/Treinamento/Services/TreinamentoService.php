@@ -59,7 +59,7 @@ class TreinamentoService extends BaseService
     {
         // Nota: `frequencias` pertence a Modulo, nao a Treinamento diretamente
         // (bug pre-existente aqui tentava eager-load de uma relacao inexistente).
-        return Treinamento::with(['modulos.frequencias', 'inscricoes.inscrito', 'inscricoes.certificado'])->find($id);
+        return Treinamento::with(['curso', 'modulos.frequencias', 'inscricoes.inscrito', 'inscricoes.certificado'])->find($id);
     }
 
     public function create(array $data): Treinamento

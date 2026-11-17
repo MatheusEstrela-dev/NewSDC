@@ -9,6 +9,7 @@ use App\Modules\Treinamento\Enums\CategoriaTreinamento;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
+use App\Modules\Treinamento\Services\CatalogoService;
 use App\Modules\Treinamento\Services\TreinamentoService;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +17,8 @@ use Inertia\Response;
 class TreinamentoEditController extends Controller
 {
     public function __construct(
-        private readonly TreinamentoService $treinamentoService
+        private readonly TreinamentoService $treinamentoService,
+        private readonly CatalogoService $catalogo
     ) {
     }
 
@@ -36,6 +38,7 @@ class TreinamentoEditController extends Controller
             ],
             'publicos' => PublicoAlvo::toSelectArray(),
             'municipios' => $this->treinamentoService->municipiosDeMg(),
+            'cursos' => $this->catalogo->opcoesAtivas($treinamento->curso_id),
         ]);
     }
 }
