@@ -2,6 +2,7 @@
   <TdapPainel rotulo="Detalhamento" titulo="Capacitações realizadas" subtitulo="Uma linha por turma, com município, REDEC e participantes">
     <template #acoes>
       <button
+        v-show="estaExpandido"
         type="button"
         class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
         :aria-expanded="filtrosAbertos"
@@ -11,7 +12,22 @@
         Filtros
         <span v-if="ativos > 0" class="rounded-full bg-blue-600 px-1.5 text-[10px] font-semibold text-white">{{ ativos }}</span>
       </button>
+      <button
+        type="button"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+        :aria-expanded="estaExpandido"
+        :aria-label="estaExpandido ? 'Recolher detalhamento' : 'Expandir detalhamento'"
+        @click="alternar"
+      >
+        <ChevronDownIcon class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': estaExpandido }" />
+      </button>
     </template>
+
+    <p v-if="!estaExpandido" class="px-5 py-3 text-xs text-slate-500 dark:text-slate-400">
+      {{ formatarNumero(paginacao?.total ?? linhas.length) }} turma(s) no recorte. Expanda para ver a lista.
+    </p>
+
+    <div v-show="estaExpandido">
 
     <div v-show="filtrosAbertos" class="grid grid-cols-1 gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700/40 sm:grid-cols-2">
       <SeletorCompacto rotulo="REDEC" :model-value="valor('redec_id')" :opcoes="opcoesRedec" @update:model-value="$emit('alterar', { chave: 'redec_id', valor: $event })" />
@@ -71,7 +87,9 @@
       </ResponsiveTable>
     </div>
 
-    <template v-if="paginacao && paginacao.last_page > 1" #rodape>
+    </div>
+
+    <template v-if="estaExpandido && paginacao && paginacao.last_page > 1" #rodape>
       <Pagination class="!mt-0" :pagination="paginacao" @page-change="$emit('pagina', $event)" />
     </template>
   </TdapPainel>
@@ -84,6 +102,8 @@
  * da pagina pedida: quem recarrega e a Index.
  */
 import { computed, ref } from 'vue';
+import { ChevronDownIcon } from '@heroicons/vue/24/outline';
+import { useCollapsibleSection } from '@/Composables/core/useCollapsibleSection';
 import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
@@ -104,6 +124,12 @@ defineEmits(['pagina', 'alterar', 'limpar']);
 
 // Abre sozinho quando ja ha filtro de REDEC/municipio na URL: filtro escondido
 // e recorte invisivel.
+// Retratil: comeca aberto e o navegador lembra se foi recolhido.
+const { estaExpandido, alternar } = useCollapsibleSection('treinamento-indicadores', 'detalhamento', {
+  expandidoPorPadrao: true,
+  recolherNoMobile: false,
+});
+
 const FILTROS_DA_TABELA = ['redec_id', 'municipio_id'];
 const ativos = computed(() => FILTROS_DA_TABELA.filter((k) => props.filtros[k]).length);
 const filtrosAbertos = ref(ativos.value > 0);
