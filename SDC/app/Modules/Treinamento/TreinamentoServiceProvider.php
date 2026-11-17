@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento;
 
 use App\Modules\Treinamento\Console\CopiarParaBancoCommand;
 use App\Modules\Treinamento\Console\GerarCodigosCertificadosCommand;
+use App\Modules\Treinamento\Console\PreencherMunicipioInscritoCommand;
 use App\Modules\Treinamento\Console\ReavaliarConclusoesCommand;
 use App\Modules\Treinamento\Console\VincularCatalogoCommand;
 use App\Modules\Treinamento\Http\Middleware\GerenciaCicloDoCurso;
@@ -51,6 +52,7 @@ class TreinamentoServiceProvider extends ServiceProvider
                 GerarCodigosCertificadosCommand::class,
                 ReavaliarConclusoesCommand::class,
                 VincularCatalogoCommand::class,
+                PreencherMunicipioInscritoCommand::class,
             ]);
         }
     }

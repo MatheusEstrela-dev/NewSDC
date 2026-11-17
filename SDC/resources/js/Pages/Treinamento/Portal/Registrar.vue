@@ -45,6 +45,11 @@
           <label for="cpf" class="input-label">CPF</label>
         </div>
 
+        <div class="mb-4">
+          <label class="mb-1 block text-xs font-medium text-slate-300">Município (MG)</label>
+          <MunicipioBuscaSelect v-model="form.municipio_id" :municipios="municipios" />
+        </div>
+
         <div class="input-group">
           <input
             type="text"
@@ -97,13 +102,19 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { applyCpfMask } from '@/utils/cpfMask';
 import { applyPhoneMask } from '@/utils/phoneMask';
+import MunicipioBuscaSelect from '@/Components/Molecules/Treinamento/MunicipioBuscaSelect.vue';
 import '../../../../css/pages/auth/login.css';
+
+defineProps({
+  municipios: { type: Array, default: () => [] },
+});
 
 const form = useForm({
   name: '',
   email: '',
   cpf: '',
   telefone: '',
+  municipio_id: null,
   password: '',
   password_confirmation: '',
   aceite_lgpd: false,

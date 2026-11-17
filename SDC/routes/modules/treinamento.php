@@ -10,6 +10,7 @@ use App\Modules\Treinamento\Controllers\Admin\CertificadoReemitirController;
 use App\Modules\Treinamento\Controllers\Admin\InscricaoAprovarController;
 use App\Modules\Treinamento\Controllers\Admin\InscricaoIndexController;
 use App\Modules\Treinamento\Controllers\Admin\InscricaoReprovarController;
+use App\Modules\Treinamento\Controllers\Admin\LiberacaoInscricaoStoreController;
 use App\Modules\Treinamento\Controllers\Admin\PresencaManualController;
 use App\Modules\Treinamento\Controllers\Admin\PresencaQrController;
 use App\Modules\Treinamento\Controllers\Admin\PresencaRosterController;
@@ -68,6 +69,11 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
         Route::post('/', CatalogoStoreController::class)->name('store');
         Route::put('/{curso}', CatalogoUpdateController::class)->whereNumber('curso')->name('update');
     });
+
+    // Liberacao de CPF bloqueado pela regra das 3 inscricoes no mesmo curso.
+    Route::post('/inscricoes/liberacoes', LiberacaoInscricaoStoreController::class)
+        ->name('inscricoes.liberar')
+        ->middleware('can:treinamento.inscricoes.manage');
 
     // Painel de indicadores: antes do /{id}, senao "indicadores" cairia no show.
     Route::get('/indicadores', IndicadoresController::class)

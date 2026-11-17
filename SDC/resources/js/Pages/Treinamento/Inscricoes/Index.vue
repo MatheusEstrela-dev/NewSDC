@@ -10,6 +10,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import InscricoesTable from '@/Components/Organisms/Treinamento/InscricoesTable.vue';
+import LiberarCpfModal from '@/Components/Organisms/Treinamento/LiberarCpfModal.vue';
 import QrScanner from '@/Components/Molecules/QrScanner.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { usePermissions } from '@/Composables/usePermissions';
@@ -28,6 +29,9 @@ const props = defineProps({
 const { can } = usePermissions();
 const { show: toast } = useToast();
 const { pendentes, sincronizando, cachearRoster, validarTokenLocal, enfileirar, sincronizar } = useOfflinePresenca();
+
+const liberarAberto = ref(false);
+const podeLiberarCpf = computed(() => can('treinamento.inscricoes.manage') && props.treinamento.curso_id != null);
 
 const moduloSelecionado = ref(props.treinamento.modulos?.[0]?.id ?? null);
 const chamadaHabilitada = computed(() => can('treinamento.presencas.registrar') && props.treinamento.presenca_liberada);
@@ -195,6 +199,10 @@ onUnmounted(() => {
     </CardBase>
 
     <CardBase class="p-6">
+      <div v-if="podeLiberarCpf" class="mb-4 flex justify-end">
+        <Button variant="outline" class="min-h-[44px]" @click="liberarAberto = true">Liberar CPF bloqueado</Button>
+      </div>
+
       <InscricoesTable
         :inscricoes="inscricoes.data"
         :can-aprovar="can('treinamento.inscricoes.aprovar')"
@@ -211,6 +219,13 @@ onUnmounted(() => {
         <Pagination :pagination="pagination" @page-change="irParaPagina" />
       </div>
     </CardBase>
+
+    <LiberarCpfModal
+      v-if="podeLiberarCpf"
+      :show="liberarAberto"
+      :curso-id="treinamento.curso_id"
+      @fechar="liberarAberto = false"
+    />
   </div>
 </template>
 
