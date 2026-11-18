@@ -1,7 +1,7 @@
 <script setup>
 import { computed, markRaw } from 'vue';
 import {
-  AcademicCapIcon, BookOpenIcon, BuildingOffice2Icon, ClipboardDocumentListIcon,
+  AcademicCapIcon, ArrowPathIcon, BookOpenIcon, BuildingOffice2Icon, ClipboardDocumentListIcon,
   ClockIcon, ExclamationTriangleIcon, UserGroupIcon,
 } from '@heroicons/vue/24/outline';
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -19,9 +19,11 @@ const props = defineProps({
   // Sobrepoe `curso.capa_url`, que e a capa enviada pelo professor.
   capaUrl: { type: String, default: null },
   loading: { type: Boolean, default: false },
+  // Atualizacao para a versao vigente em andamento (botao Atualizar do card de formado).
+  atualizando: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['inscrever']);
+const emit = defineEmits(['inscrever', 'atualizar']);
 
 const CAPAS = [
   'from-[#16305c] via-[#1e4079] to-[#0b1a33]',
@@ -48,6 +50,8 @@ const icone = computed(() => {
   const tema = TEMAS.find(({ termos }) => termos.some((t) => titulo.includes(t)));
   return markRaw(tema?.icone ?? AcademicCapIcon);
 });
+
+const novaVersao = computed(() => (props.modo === 'inscrito' ? props.curso.nova_versao ?? null : null));
 
 const capa = computed(() => props.capaUrl ?? props.curso.capa_url ?? null);
 
@@ -82,9 +86,14 @@ const selo = computed(() => {
           <span>SDC MG · CEDEC</span>
         </div>
       </div>
-      <span :class="['absolute left-3 top-3 rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow', selo.classe]">
-        {{ selo.texto }}
-      </span>
+      <div class="absolute left-3 top-3 flex items-center gap-1.5">
+        <span :class="['rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow', selo.classe]">
+          {{ selo.texto }}
+        </span>
+        <span v-if="curso.versao_rotulo" class="rounded bg-slate-900/70 px-1.5 py-0.5 text-[11px] font-semibold text-white shadow">
+          {{ curso.versao_rotulo }}
+        </span>
+      </div>
       <div v-if="$slots['capa-acoes']" class="absolute right-3 top-3">
         <slot name="capa-acoes" />
       </div>
@@ -121,7 +130,12 @@ const selo = computed(() => {
           <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Math.round(curso.percentual) }}% concluído</p>
         </div>
 
-        <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 dark:border-slate-700/60">
+        <p v-if="novaVersao" class="mb-3 flex items-start gap-1.5 text-sm font-medium text-sky-700 dark:text-sky-300">
+          <ArrowPathIcon class="mt-0.5 h-4 w-4 shrink-0" />
+          <span>Versão {{ novaVersao.rotulo.replace(/^v/, '') }} disponível<template v-if="novaVersao.itens_novos > 0">: +{{ novaVersao.itens_novos }} {{ novaVersao.itens_novos === 1 ? 'módulo' : 'módulos' }}</template></span>
+        </p>
+
+        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-slate-100 pt-3 dark:border-slate-700/60">
           <span v-if="curso.carga_horaria" class="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
             <ClockIcon class="h-4 w-4" />
             {{ curso.carga_horaria }} horas
@@ -131,7 +145,10 @@ const selo = computed(() => {
           <span v-if="modo === 'disponivel' && curso.pausado" class="text-xs text-slate-500 dark:text-slate-400">Inscrições suspensas</span>
           <Button v-else-if="modo === 'disponivel'" size="sm" :loading="loading" @click="emit('inscrever', curso)">Inscrever-se</Button>
           <span v-else-if="curso.aprovada && !curso.sala_url" class="text-xs text-slate-500 dark:text-slate-400">{{ curso.situacao === 'DESATIVADO' ? 'Curso encerrado' : 'Curso pausado pelo professor' }}</span>
-          <Button v-else-if="curso.aprovada" size="sm" :href="curso.sala_url">{{ concluido ? 'Revisar' : 'Continuar' }}</Button>
+          <div v-else-if="curso.aprovada" class="flex flex-wrap items-center gap-2">
+            <Button size="sm" :variant="novaVersao ? 'outline' : 'primary'" :href="curso.sala_url">{{ concluido ? 'Revisar' : 'Continuar' }}</Button>
+            <Button v-if="novaVersao" size="sm" :loading="atualizando" @click="emit('atualizar', curso)">Atualizar</Button>
+          </div>
           <span v-else class="text-xs text-slate-500 dark:text-slate-400">Aguardando aprovação</span>
         </div>
       </div>

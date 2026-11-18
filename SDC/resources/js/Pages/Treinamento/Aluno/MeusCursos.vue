@@ -29,7 +29,15 @@ useCursosAoVivo(['meus_cursos', 'disponiveis', 'certificados']);
 const { show: toast } = useToast();
 const inscrevendo = ref(null);
 
+const atualizando = ref(null);
 const cursoEscolhido = ref(null);
+
+function atualizar(curso) {
+  atualizando.value = curso.id;
+  router.post(curso.nova_versao.atualizar_url, {}, {
+    onFinish: () => { atualizando.value = null; },
+  });
+}
 
 function inscrever(sexo) {
   const curso = cursoEscolhido.value;
@@ -60,7 +68,14 @@ function inscrever(sexo) {
       </CardBase>
 
       <div v-else class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <CursoEadCard v-for="curso in meus_cursos" :key="curso.id" :curso="curso" modo="inscrito" />
+        <CursoEadCard
+          v-for="curso in meus_cursos"
+          :key="curso.id"
+          :curso="curso"
+          modo="inscrito"
+          :atualizando="atualizando === curso.id"
+          @atualizar="atualizar"
+        />
       </div>
     </SecaoRecolhivel>
 
