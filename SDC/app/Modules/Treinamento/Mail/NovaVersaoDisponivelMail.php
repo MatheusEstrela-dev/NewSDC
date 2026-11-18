@@ -23,6 +23,7 @@ class NovaVersaoDisponivelMail extends Mailable
         public readonly string $curso,
         public readonly string $rotulo,
         public readonly ?string $notas,
+        public readonly string $urlMeusCursos,
     ) {}
 
     public function envelope(): Envelope

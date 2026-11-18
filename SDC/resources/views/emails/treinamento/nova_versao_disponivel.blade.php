@@ -17,7 +17,11 @@
             <p style="margin:0 0 16px;">
                 O curso <strong>&ldquo;{{ $curso }}&rdquo;</strong>, que você concluiu, ganhou uma nova versão
                 (<strong>{{ $rotulo }}</strong>). O seu certificado da versão anterior continua válido.
-                Você pode se inscrever na versão atual para completar apenas o que mudou.
+                Use o botão <strong>Atualizar</strong> em Meus cursos para completar apenas o que mudou.
+            </p>
+
+            <p style="margin:0 0 16px;">
+                <a href="{{ $urlMeusCursos }}" style="display:inline-block; background:#003b7a; color:#ffffff; text-decoration:none; padding:10px 18px; border-radius:6px; font-size:14px;">Ir para Meus cursos</a>
             </p>
 
             @if($notas)

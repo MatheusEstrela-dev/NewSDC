@@ -7,15 +7,15 @@ namespace App\Modules\Treinamento\Services\Versoes;
 use App\Models\User;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Mail\NovaVersaoDisponivelMail;
-use App\Modules\Treinamento\Models\Cidadao;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Enfileira o aviso "versao nova disponivel" para quem se formou (inscricao
- * concluida) numa versao anterior do mesmo curso e tem e-mail cadastrado.
+ * Enfileira o aviso "versao nova disponivel" para o servidor que se formou
+ * (inscricao concluida) numa versao anterior do mesmo curso e tem e-mail
+ * cadastrado. Cidadao fica de fora: a atualizacao so existe em Meus cursos.
  */
 class AvisoDeNovaVersao
 {
@@ -28,6 +28,7 @@ class AvisoDeNovaVersao
 
         $curso = (string) $nova->titulo;
         $rotulo = $nova->rotuloDeVersao();
+        $urlMeusCursos = route('treinamentos.aluno.index');
         $enviados = [];
 
         foreach ($this->formadosEmVersaoAnterior($nova) as $inscricao) {
@@ -39,7 +40,7 @@ class AvisoDeNovaVersao
             }
 
             $enviados[$chave] = true;
-            Mail::to($email)->queue(new NovaVersaoDisponivelMail((string) $inscrito->name, $curso, $rotulo, $nova->versao_notas));
+            Mail::to($email)->queue(new NovaVersaoDisponivelMail((string) $inscrito->name, $curso, $rotulo, $nova->versao_notas, $urlMeusCursos));
         }
 
         return count($enviados);
@@ -62,7 +63,7 @@ class AvisoDeNovaVersao
         return Inscricao::query()
             ->whereIn('treinamento_id', $anteriores)
             ->whereNotNull('concluido_em')
-            ->whereIn('inscrito_type', [(new User)->getMorphClass(), (new Cidadao)->getMorphClass()])
+            ->where('inscrito_type', (new User)->getMorphClass())
             ->with('inscrito')
             ->get();
     }
