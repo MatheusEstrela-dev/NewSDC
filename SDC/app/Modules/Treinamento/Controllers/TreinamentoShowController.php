@@ -38,7 +38,7 @@ class TreinamentoShowController extends Controller
         $minhaInscricao = $treinamento->inscricoes
             ->first(fn ($i) => $i->inscrito_type === $user::class && $i->inscrito_id === $user->id);
 
-        $rascunho = $treinamento->curso_id ? $this->versoes->rascunhoDe($treinamento->curso_id) : null;
+        $rascunho = $treinamento->isEad() && $treinamento->curso_id ? $this->versoes->rascunhoDe($treinamento->curso_id) : null;
 
         return Inertia::render('Treinamento/TreinamentoShow', [
             'treinamento' => (new TreinamentoResource($treinamento))->resolve(),

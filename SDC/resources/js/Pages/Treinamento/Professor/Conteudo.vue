@@ -267,6 +267,11 @@ function enviarPublicacao(dados) {
     onStart: () => { publicando.value = true; },
     onFinish: () => { publicando.value = false; },
     onSuccess: () => { modalPublicar.value = false; },
+    // So o "O que mudou" invalido fica no modal; qualquer outro motivo (pendencias)
+    // fecha o modal para a tela exibir o erro, como no fluxo sem versao.
+    onError: (erros) => {
+      if (Object.keys(erros).some((campo) => campo !== 'versao_notas')) modalPublicar.value = false;
+    },
   });
 }
 </script>
