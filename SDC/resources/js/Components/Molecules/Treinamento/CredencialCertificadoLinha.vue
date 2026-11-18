@@ -12,7 +12,7 @@ defineProps({
   <li class="flex items-start gap-3 py-3">
     <CheckBadgeIcon class="mt-0.5 h-6 w-6 shrink-0 text-emerald-500" />
     <div class="min-w-0">
-      <p class="break-words text-base font-semibold text-slate-900 dark:text-white">{{ certificado.titulo }}</p>
+      <p class="break-words text-base font-semibold text-slate-900 dark:text-white">{{ certificado.titulo }}<span v-if="certificado.versao_rotulo"> - {{ certificado.versao_rotulo }}</span></p>
       <p class="text-sm text-slate-600 dark:text-slate-300">
         Emitido em {{ formatDate(certificado.emitido_em) || '-' }}
       </p>

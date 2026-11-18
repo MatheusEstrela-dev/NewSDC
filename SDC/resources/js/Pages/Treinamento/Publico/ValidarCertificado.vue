@@ -30,7 +30,7 @@ const linhas = computed(() => {
   return [
     ['Nome', r.nome],
     ['CPF', r.cpf_mascarado],
-    ['Curso', r.curso],
+    ['Curso', r.versao_rotulo ? `${r.curso} - ${r.versao_rotulo}` : r.curso],
     ['Carga horária', r.carga_horaria != null ? `${r.carga_horaria} horas` : null],
     ['Modalidade', r.modalidade],
     ['Data de conclusão', r.concluido_em ? new Date(`${r.concluido_em}T00:00:00`).toLocaleDateString('pt-BR') : null],

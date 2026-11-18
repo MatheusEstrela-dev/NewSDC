@@ -44,6 +44,9 @@ class Treinamento extends Model implements Rastreavel
         'local',
         'municipio_id',
         'curso_id',
+        'versao',
+        'versao_origem_id',
+        'versao_notas',
         'data_inicio',
         'data_fim',
         'hora_inicio',
@@ -69,6 +72,8 @@ class Treinamento extends Model implements Rastreavel
         'situacao_alterada_em' => 'datetime',
         'municipio_id' => 'integer',
         'curso_id' => 'integer',
+        'versao' => 'integer',
+        'versao_origem_id' => 'integer',
         'data_inicio' => 'date',
         'data_fim' => 'date',
         'percentual_frequencia_minimo' => 'decimal:2',
@@ -90,6 +95,18 @@ class Treinamento extends Model implements Rastreavel
     public function curso(): BelongsTo
     {
         return $this->belongsTo(Curso::class, 'curso_id');
+    }
+
+    /** Versao da qual esta foi copiada (NULL na primeira versao do curso). */
+    public function versaoOrigem(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'versao_origem_id');
+    }
+
+    /** Rotulo de exibicao da versao ("v2.0"). */
+    public function rotuloDeVersao(): string
+    {
+        return "v{$this->versao}.0";
     }
 
     public function modulos(): HasMany
@@ -317,10 +334,40 @@ class Treinamento extends Model implements Rastreavel
         return $query->whereNotNull('link_publico_slug')->whereNotNull('publicado_em');
     }
 
+    /**
+     * Versao vigente do curso: nenhuma outra versao EAD publicada (e nao excluida) do
+     * mesmo curso do catalogo tem numero maior. Sem curso do catalogo, a turma e a
+     * unica versao e portanto vigente.
+     */
+    public function scopeVigente($query)
+    {
+        $tabela = $this->getTable();
+
+        return $query->where(function ($q) use ($tabela) {
+            // Versao e coisa de EAD: turma presencial do mesmo curso do catalogo nunca e substituida.
+            $q->where("{$tabela}.tipo", '<>', TipoTreinamento::EAD->value)
+                ->orWhereNull("{$tabela}.curso_id")
+                ->orWhereNotExists(function ($sub) use ($tabela) {
+                    $sub->selectRaw('1')
+                        ->from("{$tabela} as posterior")
+                        ->whereColumn('posterior.curso_id', "{$tabela}.curso_id")
+                        ->whereColumn('posterior.versao', '>', "{$tabela}.versao")
+                        ->where('posterior.tipo', TipoTreinamento::EAD->value)
+                        ->whereNotNull('posterior.publicado_em')
+                        ->whereNull('posterior.deleted_at');
+                });
+        });
+    }
+
+    public function eVigente(): bool
+    {
+        return self::query()->whereKey($this->getKey())->vigente()->exists();
+    }
+
     /** Publicado e nao desativado: o que os catalogos (interno e portal) listam. */
     public function scopeNoCatalogo($query)
     {
-        return $query->publicado()->whereIn('situacao', SituacaoCurso::valoresNoCatalogo());
+        return $query->publicado()->vigente()->whereIn('situacao', SituacaoCurso::valoresNoCatalogo());
     }
 
     /** Cursos que ainda podem concluir alunos e emitir certificado. */

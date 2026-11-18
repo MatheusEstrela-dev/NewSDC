@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Treinamento\Controllers\Aluno\AtualizarVersaoController;
 use App\Modules\Treinamento\Controllers\Aluno\CredencialRegerarController;
 use App\Modules\Treinamento\Controllers\Aluno\EntregaStoreController;
 use App\Modules\Treinamento\Controllers\Aluno\ItemArquivoController;
@@ -30,6 +31,7 @@ Route::prefix('aluno')->name('aluno.')->middleware('can:treinamento.cursos.view'
     Route::get('/', MeusCursosController::class)->name('index');
     Route::post('/credencial/regerar', CredencialRegerarController::class)->name('credencial.regerar');
     Route::get('/cursos/{treinamento}', SalaDeAulaController::class)->name('sala');
+    Route::post('/cursos/{treinamento}/atualizar', AtualizarVersaoController::class)->name('atualizar');
     Route::get('/cursos/{treinamento}/itens/{item}/arquivo', ItemArquivoController::class)->name('itens.arquivo');
     Route::post('/cursos/{treinamento}/itens/{item}/progresso', ProgressoController::class)
         ->middleware('throttle:120,1,ead-progresso')

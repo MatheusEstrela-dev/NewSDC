@@ -21,6 +21,7 @@ const props = defineProps({
   curso: { type: Object, required: true },
   estado: { type: Object, required: true },
   escopo: { type: String, required: true, validator: (v) => ['aluno', 'portal', 'previa'].includes(v) },
+  versaoRotulo: { type: String, default: null },
 });
 
 const { show: toast } = useToast();
@@ -109,7 +110,10 @@ onBeforeUnmount(enviarPendente);
 <template>
   <div class="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/80">
     <div class="flex items-center gap-3 bg-slate-900 px-4 py-3 text-white">
-      <Heading :level="1" class="min-w-0 flex-1 truncate text-sm font-bold sm:text-base">{{ curso.titulo }}</Heading>
+      <Heading :level="1" class="min-w-0 flex-1 truncate text-sm font-bold sm:text-base">
+        {{ curso.titulo }}
+        <span v-if="versaoRotulo" class="ml-1.5 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold">{{ versaoRotulo }}</span>
+      </Heading>
       <span class="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-semibold">{{ Math.round(estadoLocal.percentual) }}%</span>
       <Link :href="rotas.fechar()" class="text-xs hover:underline">Fechar &#10005;</Link>
     </div>

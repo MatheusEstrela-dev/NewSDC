@@ -6,6 +6,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import CapaCursoUpload from '@/Components/Molecules/Treinamento/CapaCursoUpload.vue';
 import CursoSelos from '@/Components/Molecules/Treinamento/CursoSelos.vue';
 import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexoModal.vue';
+import ListaDeVersoes from '@/Components/Organisms/Treinamento/Versoes/ListaDeVersoes.vue';
 import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesCicloCurso.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -41,9 +42,21 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  versoes: {
+    type: Array,
+    default: () => [],
+  },
+  pode_criar_versao: {
+    type: Boolean,
+    default: false,
+  },
+  rascunho_id: {
+    type: Number,
+    default: null,
+  },
 });
 
-useCursosAoVivo(['treinamento', 'minhaInscricao', 'professores']);
+useCursosAoVivo(['treinamento', 'minhaInscricao', 'professores', 'versoes', 'pode_criar_versao', 'rascunho_id']);
 
 const { can } = usePermissions();
 const { show: toast } = useToast();
@@ -91,6 +104,7 @@ const confirmarPresenca = () => {
     onError: (errors) => toast(Object.values(errors)[0] || 'Não foi possível confirmar a presença.', 'error'),
   });
 };
+const criarVersao = () => postAction('treinamentos.versoes.store', {}, 'Nova versão criada.');
 const publicar = () => postAction('treinamentos.publicar', {}, 'Treinamento publicado no Portal do Cidadao!');
 const liberarPresenca = () => postAction('treinamentos.liberar-presenca', {}, 'Presenca liberada.');
 const bloquearPresenca = () => postAction('treinamentos.bloquear-presenca', {}, 'Presenca bloqueada.');
@@ -165,6 +179,12 @@ function copiarLinkPublico() {
           <CursoSelos :publicado="treinamento.esta_publicado" :situacao="treinamento.situacao" :situacao-label="treinamento.situacao_label" />
           <AcoesCicloCurso :curso="treinamento" />
         </template>
+        <Button v-if="pode_criar_versao" variant="primary" size="sm" @click="criarVersao">
+          Nova versão
+        </Button>
+        <Link v-else-if="rascunho_id && can('treinamento.cursos.edit')" :href="route('treinamentos.professor.conteudo', rascunho_id)">
+          <Button variant="secondary" size="sm">Continuar rascunho da nova versão</Button>
+        </Link>
         <Button v-if="can('treinamento.cursos.configurar') && !treinamento.esta_publicado" variant="secondary" size="sm" @click="publicar">
           Publicar no Portal
         </Button>
@@ -222,6 +242,8 @@ function copiarLinkPublico() {
               :alt="`Imagem de divulgação: ${treinamento.titulo}`"
               class="w-full max-w-xl rounded-lg border border-slate-200 dark:border-slate-700"
             />
+
+            <ListaDeVersoes v-if="versoes.length > 1" :versoes="versoes" />
 
             <div v-if="treinamento.descricao">
               <Heading :level="3" class="text-lg font-semibold mb-2">Descrição</Heading>

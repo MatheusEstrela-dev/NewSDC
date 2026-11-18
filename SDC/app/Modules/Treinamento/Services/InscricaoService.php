@@ -18,6 +18,7 @@ use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use App\Modules\Treinamento\Support\ControleDeVagas;
 use App\Modules\Treinamento\Support\MunicipioDoInscrito;
 use App\Modules\Treinamento\Support\PeriodoDeInscricao;
+use App\Modules\Treinamento\Support\VersoesDoCurso;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Mail;
@@ -44,9 +45,27 @@ class InscricaoService extends BaseService
      */
     public function inscrever(Treinamento $treinamento, Model $inscrito, ?Sexo $sexo = null): Inscricao
     {
+        return $this->registrarInscricao($treinamento, $inscrito, $sexo, null);
+    }
+
+    /**
+     * Inscricao de atualizacao: pessoa formada em versao anterior entra na
+     * vigente. Passa por publicacao, vigencia, vaga, periodo e publico como
+     * qualquer inscricao, mas nunca pela regra das 3 inscricoes, e nasce
+     * aprovada (a pessoa ja foi aprovada nesta formacao).
+     */
+    public function inscreverParaAtualizacao(Treinamento $vigente, Model $inscrito, Inscricao $origem, ?Sexo $sexo = null): Inscricao
+    {
+        return $this->registrarInscricao($vigente, $inscrito, $sexo, $origem);
+    }
+
+    private function registrarInscricao(Treinamento $treinamento, Model $inscrito, ?Sexo $sexo, ?Inscricao $origemDaAtualizacao): Inscricao
+    {
         if ($treinamento->isEad() && !$treinamento->estaPublicado()) {
             throw new \DomainException('Este curso ainda nao foi publicado.');
         }
+
+        $this->exigirVersaoVigente($treinamento);
 
         if (!$treinamento->situacaoEfetiva()->recebeInscricao()) {
             throw new \DomainException('Este curso esta '.mb_strtolower($treinamento->situacaoEfetiva()->getLabel()).' e nao recebe inscricoes.');
@@ -78,16 +97,18 @@ class InscricaoService extends BaseService
             throw new \DomainException('Voce ja possui uma inscricao neste treinamento.');
         }
 
-        $this->garantirDentroDoLimiteDoCurso($treinamento, $inscrito);
+        if ($origemDaAtualizacao === null) {
+            $this->garantirDentroDoLimiteDoCurso($treinamento, $inscrito);
+        }
 
         // Periodo de atuacao: so o limite final recusa (ver PeriodoDeInscricao).
         PeriodoDeInscricao::exigirAberto($treinamento);
 
-        $aprovacaoAutomatica = (bool) $treinamento->inscricao_aprovacao_automatica;
+        $aprovacaoAutomatica = $origemDaAtualizacao !== null || (bool) $treinamento->inscricao_aprovacao_automatica;
 
         // A vaga so e segura com a linha do limite travada, e a trava so vale
         // dentro da transacao - por isso a checagem e a insercao andam juntas.
-        $inscricao = ConexaoTreinamento::transacao(function () use ($treinamento, $inscrito, $sexo, $aprovacaoAutomatica) {
+        $inscricao = ConexaoTreinamento::transacao(function () use ($treinamento, $inscrito, $sexo, $aprovacaoAutomatica, $origemDaAtualizacao) {
             ControleDeVagas::exigirVagaComTrava($treinamento);
 
             return Inscricao::create([
@@ -101,6 +122,7 @@ class InscricaoService extends BaseService
                 'data_inscricao' => now(),
                 'sexo' => $sexo?->value,
                 'municipio_inscrito_id' => MunicipioDoInscrito::de($inscrito),
+                'atualizacao_de_inscricao_id' => $origemDaAtualizacao?->id,
             ]);
         });
 
@@ -125,6 +147,20 @@ class InscricaoService extends BaseService
         );
 
         return $inscricao;
+    }
+
+    /** Versao substituida por outra publicada mais nova nao recebe inscricao nova. */
+    private function exigirVersaoVigente(Treinamento $treinamento): void
+    {
+        if (!$treinamento->isEad() || $treinamento->eVigente()) {
+            return;
+        }
+
+        $vigente = VersoesDoCurso::vigenteDe((int) $treinamento->curso_id);
+
+        throw new \DomainException(
+            'Esta versao do curso foi substituida pela '.($vigente?->rotuloDeVersao() ?? 'versao atual').'. Inscreva-se na versao atual.'
+        );
     }
 
     private function garantirDentroDoLimiteDoCurso(Treinamento $treinamento, Model $inscrito): void

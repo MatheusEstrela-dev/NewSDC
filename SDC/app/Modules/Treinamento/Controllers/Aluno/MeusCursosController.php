@@ -17,6 +17,8 @@ use App\Modules\Treinamento\Resources\CertificadoResource;
 use App\Modules\Treinamento\Services\CredencialQrService;
 use App\Modules\Treinamento\Services\InscricaoService;
 use App\Modules\Treinamento\Services\TrilhaService;
+use App\Modules\Treinamento\Support\NovasVersoesDoAluno;
+use App\Modules\Treinamento\Support\VersoesDoCurso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -43,12 +45,29 @@ class MeusCursosController extends Controller
             ->get();
 
         return Inertia::render('Treinamento/Aluno/MeusCursos', [
-            'meus_cursos' => $inscricoes->map(fn (Inscricao $i) => $this->curso($i))->values(),
+            'meus_cursos' => $this->cursos($inscricoes),
             'certificados' => CertificadoResource::collection($this->certificados($inscricoes->pluck('id')->all()))->resolve(),
             'credencial' => $request->user() instanceof User ? $this->credenciais->paraServidor($request->user()) : null,
             'sexo_padrao' => $this->inscricaoService->sexoDaUltimaInscricao($request->user())?->value,
-            'disponiveis' => $this->disponiveis($userId, $inscricoes->pluck('treinamento_id')->all()),
+            'disponiveis' => $this->disponiveis($userId, $inscricoes),
         ]);
+    }
+
+    /**
+     * @param  Collection<int, Inscricao>  $inscricoes
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function cursos(Collection $inscricoes): Collection
+    {
+        $rotulos = VersoesDoCurso::rotulos($inscricoes->pluck('treinamento'));
+        $novas = NovasVersoesDoAluno::para($inscricoes);
+
+        return $inscricoes->map(fn (Inscricao $i) => $this->curso($i) + [
+            'versao_rotulo' => $rotulos[$i->treinamento_id] ?? null,
+            'nova_versao' => isset($novas[$i->id])
+                ? $novas[$i->id] + ['atualizar_url' => route('treinamentos.aluno.atualizar', $novas[$i->id]['id'])]
+                : null,
+        ])->values();
     }
 
     /**
@@ -93,13 +112,20 @@ class MeusCursosController extends Controller
 
     /**
      * Cursos EAD de servidores abertos a inscricao em que o usuario ainda nao
-     * esta inscrito nem leciona.
+     * esta inscrito nem leciona. A versao vigente de um curso que a pessoa ja
+     * concluiu numa versao anterior nao entra: ali ela usa "Atualizar".
      *
-     * @param  list<int>  $inscritos
+     * @param  Collection<int, Inscricao>  $inscricoes  inscricoes EAD do usuario, com `treinamento`
      * @return list<array<string, mixed>>
      */
-    private function disponiveis(int $userId, array $inscritos): array
+    private function disponiveis(int $userId, Collection $inscricoes): array
     {
+        $inscritos = $inscricoes->pluck('treinamento_id')->all();
+        $formadoEm = $inscricoes
+            ->filter(fn (Inscricao $i) => $i->concluido_em !== null && $i->treinamento->curso_id !== null)
+            ->map(fn (Inscricao $i) => $i->treinamento->curso_id)
+            ->unique()
+            ->all();
         $leciona = TreinamentoProfessor::query()->where('user_id', $userId)->pluck('treinamento_id')->all();
 
         return Treinamento::query()
@@ -107,6 +133,7 @@ class MeusCursosController extends Controller
             ->paraPublico(PublicoAlvo::SERVIDORES)
             ->noCatalogo()
             ->whereNotIn('id', array_merge($inscritos, $leciona))
+            ->when($formadoEm !== [], fn ($q) => $q->where(fn ($w) => $w->whereNull('curso_id')->orWhereNotIn('curso_id', $formadoEm)))
             ->orderBy('titulo')
             ->get()
             ->filter(fn (Treinamento $t) => $t->aceitaInscricaoAlemDaSituacao())

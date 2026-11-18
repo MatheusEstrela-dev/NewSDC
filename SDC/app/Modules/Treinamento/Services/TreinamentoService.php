@@ -11,6 +11,7 @@ use App\Modules\Treinamento\Enums\TipoEventoCurso;
 use App\Modules\Treinamento\Jobs\EmitirCertificadosTreinamentoJob;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Shared\BaseService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class TreinamentoService extends BaseService
@@ -65,7 +66,7 @@ class TreinamentoService extends BaseService
 
     public function create(array $data): Treinamento
     {
-        $treinamento = Treinamento::create($data);
+        $treinamento = $this->semColisaoDeVersao(fn () => Treinamento::create($data));
 
         app(HistoricoDoCursoService::class)->registrar(
             (int) $treinamento->id,
@@ -84,7 +85,7 @@ class TreinamentoService extends BaseService
             return false;
         }
 
-        $alterado = $treinamento->update($data);
+        $alterado = $this->semColisaoDeVersao(fn () => $treinamento->update($data));
 
         // So vira linha de historico o que de fato mudou: salvar o formulario
         // sem mexer em nada nao enche a tela do gestor.
@@ -101,6 +102,16 @@ class TreinamentoService extends BaseService
         }
 
         return $alterado;
+    }
+
+    /** Indice unico (curso, versao) do EAD estourado por corrida: vira mensagem, nao 500. */
+    private function semColisaoDeVersao(callable $grava): mixed
+    {
+        try {
+            return $grava();
+        } catch (UniqueConstraintViolationException) {
+            throw new \DomainException('Este curso do catalogo ja tem um EAD. Para uma nova edicao, use "Nova versao" na tela do curso.');
+        }
     }
 
     public function delete(int $id): bool

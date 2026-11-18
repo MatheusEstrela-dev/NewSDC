@@ -24,6 +24,7 @@ final class SalaDeAulaProps
                 'titulo' => $curso->titulo,
                 'carga_horaria' => $curso->carga_horaria,
             ],
+            'versao_rotulo' => VersoesDoCurso::rotuloDe($curso),
             'estado' => $estado->toArray(),
             'escopo' => $escopo,
         ];

@@ -6,12 +6,14 @@ namespace App\Modules\Treinamento\Services;
 
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Services\RegistroDeAcao;
+use App\Modules\Treinamento\Enums\TipoEventoCurso;
 use App\Modules\Treinamento\Enums\TipoItem;
 use App\Modules\Treinamento\Exceptions\PublicacaoBloqueada;
 use App\Modules\Treinamento\Jobs\ReavaliarConclusoesDoCursoJob;
 use App\Modules\Treinamento\Models\Modulo;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Services\Versoes\AvisoDeNovaVersao;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use App\Modules\Treinamento\Support\Ordenacao;
 use Illuminate\Http\UploadedFile;
@@ -26,6 +28,8 @@ class ConteudoCursoService
         private readonly TreinamentoService $treinamentos,
         private readonly ProvaConteudoService $provas,
         private readonly VerificacaoPublicacaoService $verificacao,
+        private readonly HistoricoDoCursoService $historico,
+        private readonly AvisoDeNovaVersao $aviso,
     ) {}
 
     /**
@@ -135,15 +139,23 @@ class ConteudoCursoService
             'total_paginas' => $item->tipo === TipoItem::PDF ? (int) $dados['total_paginas'] : null,
         ]);
 
+        // Lido antes de marcarAlterado(), cujo update sobrescreve o wasChanged().
+        $deixouDeSerObrigatorio = $item->wasChanged('obrigatorio') && ! $item->obrigatorio;
+        $mudouConteudo = $arquivo !== null || $item->wasChanged(['obrigatorio', 'total_paginas']);
+
         if ($item->tipo === TipoItem::PROVA && $item->prova !== null) {
             $this->provas->configurar($item->prova, $dados);
+        }
+
+        if ($mudouConteudo) {
+            $item->marcarAlterado();
         }
 
         if ($arquivo !== null) {
             $this->arquivos->apagar($anterior);
         }
 
-        if ($item->wasChanged('obrigatorio') && ! $item->obrigatorio) {
+        if ($deixouDeSerObrigatorio) {
             $this->reavaliarConclusoes($item->modulo->treinamento_id);
         }
 
@@ -177,7 +189,7 @@ class ConteudoCursoService
         abort_unless((int) $treinamentoId === (int) $treinamento->id, 404);
     }
 
-    public function publicar(Treinamento $treinamento): void
+    public function publicar(Treinamento $treinamento, ?string $versaoNotas = null): void
     {
         $temItem = ModuloItem::query()
             ->whereIn('modulo_id', Modulo::query()->porTreinamento($treinamento->id)->select('id'))
@@ -192,7 +204,36 @@ class ConteudoCursoService
             throw new PublicacaoBloqueada('O curso nao pode ser publicado. '.implode(' ', $problemas), $problemas);
         }
 
-        $this->treinamentos->publicar($treinamento);
+        $novaVersao = ConexaoTreinamento::transacao(function () use ($treinamento, $versaoNotas): bool {
+            // So a primeira publicacao de uma versao > 1 grava notas, historico e avisa.
+            // Decidido sob trava: duas requisicoes simultaneas nao publicam duas vezes.
+            $treinamento->newQuery()->lockForUpdate()->findOrFail($treinamento->id);
+            $treinamento->refresh();
+            $novaVersao = $treinamento->versao > 1 && $treinamento->publicado_em === null;
+
+            $this->treinamentos->publicar($treinamento);
+
+            if ($novaVersao) {
+                $treinamento->update(['versao_notas' => $versaoNotas]);
+                $this->historico->registrar(
+                    $treinamento->id,
+                    TipoEventoCurso::VERSAO_PUBLICADA,
+                    "Versao {$treinamento->rotuloDeVersao()} publicada.",
+                    ['versao' => $treinamento->versao, 'versao_notas' => $versaoNotas],
+                );
+            }
+
+            return $novaVersao;
+        });
+
+        if ($novaVersao) {
+            try {
+                $this->aviso->avisar($treinamento);
+            } catch (\Throwable $e) {
+                // O curso ja esta publicado: falha de fila nao pode virar 500.
+                report($e);
+            }
+        }
 
         app(RegistroDeAcao::class)->registrarNoProtocolo(
             Treinamento::class,

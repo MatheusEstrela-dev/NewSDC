@@ -97,6 +97,7 @@ class VideoBibliotecaService
             }
 
             $item->update(['video_id' => $atual->id]);
+            $this->marcarTrocaDeVideo($item);
         });
 
         $this->auditoria->noCursoDoItem($item, "video \"{$video->titulo}\" vinculado ao item");
@@ -108,9 +109,18 @@ class VideoBibliotecaService
     public function desvincular(ModuloItem $item): ModuloItem
     {
         $item->update(['video_id' => null]);
+        $this->marcarTrocaDeVideo($item);
         $this->auditoria->noCursoDoItem($item, 'video desvinculado do item');
 
         return $item;
+    }
+
+    /** Troca ou remocao de video muda o conteudo da copia; o mesmo video de novo, nao. */
+    private function marcarTrocaDeVideo(ModuloItem $item): void
+    {
+        if ($item->wasChanged('video_id')) {
+            $item->marcarAlterado();
+        }
     }
 
     public function excluir(Video $video): void

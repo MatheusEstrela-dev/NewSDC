@@ -80,6 +80,7 @@ return new class extends Migration
         $this->criarCredencialQr();
         $this->criarCatalogo();
         $this->criarAreaDoGestor();
+        $this->criarVersoes();
     }
 
     public function down(): void
@@ -888,6 +889,104 @@ return new class extends Migration
             'curso_eventos_created_at_index' => 'created_at',
             'curso_eventos_autor_id_fkidx' => 'autor_id',
         ]);
+    }
+
+    /**
+     * Versoes de curso EAD: cada versao e um treinamento proprio no mesmo
+     * curso do catalogo. Autocontido e idempotente.
+     *
+     * - treinamentos.versao: numero principal da versao (1, 2, 3...). Todo
+     *   treinamento existente vira 1 pelo DEFAULT.
+     * - treinamentos.versao_origem_id: versao da qual esta foi copiada (NULL na
+     *   primeira). SET NULL: excluir a origem nao leva a copia junto.
+     * - treinamentos.versao_notas: "o que mudou", preenchido ao publicar.
+     * - modulo_itens.origem_item_id: item de onde este foi copiado; a cadeia
+     *   (3.0 -> 2.0 -> 1.0) decide o aproveitamento.
+     * - modulo_itens.alterado_desde_copia: true quando o conteudo deixou de ser
+     *   igual ao da origem (titulo, descricao e ordem nao contam).
+     * - inscricoes.atualizacao_de_inscricao_id: inscricao concluida (versao
+     *   anterior) que esta aproveitou; NOT NULL marca a inscricao de
+     *   atualizacao, que nunca conta na regra das 3 inscricoes.
+     *
+     * POR QUE O UNICO PARCIAL (curso_id, versao)
+     * Numero de versao repetido no mesmo curso deixaria a "vigente" ambigua. O
+     * indice vale so para EAD: turmas presenciais do mesmo curso do catalogo
+     * coexistem todas na versao 1 (versao so existe onde ha arvore de conteudo).
+     * Ignora tambem treinamentos sem curso (turmas antigas ainda nao vinculadas)
+     * e excluidos, para o numero poder ser reaproveitado apos excluir um rascunho.
+     * O indice criado na primeira aplicacao (sem o filtro de tipo) e recriado.
+     */
+    private function criarVersoes(): void
+    {
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS versao integer NOT NULL DEFAULT 1');
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS versao_origem_id bigint');
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS versao_notas text');
+        $this->chaveEstrangeira('treinamento.treinamentos', 'treinamentos_versao_origem_id_foreign', 'versao_origem_id', 'treinamento.treinamentos');
+
+        $this->exec('ALTER TABLE treinamento.modulo_itens ADD COLUMN IF NOT EXISTS origem_item_id bigint');
+        $this->exec('ALTER TABLE treinamento.modulo_itens ADD COLUMN IF NOT EXISTS alterado_desde_copia boolean NOT NULL DEFAULT false');
+        $this->chaveEstrangeira('treinamento.modulo_itens', 'modulo_itens_origem_item_id_foreign', 'origem_item_id', 'treinamento.modulo_itens');
+
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD COLUMN IF NOT EXISTS atualizacao_de_inscricao_id bigint');
+        $this->chaveEstrangeira('treinamento.inscricoes', 'inscricoes_atualizacao_de_inscricao_id_foreign', 'atualizacao_de_inscricao_id', 'treinamento.inscricoes');
+
+        $this->indiceUnicoDeVersao();
+
+        $this->indices('treinamento.treinamentos', ['treinamentos_versao_origem_id_fkidx' => 'versao_origem_id']);
+        $this->indices('treinamento.modulo_itens', ['modulo_itens_origem_item_id_fkidx' => 'origem_item_id']);
+        $this->indices('treinamento.inscricoes', ['inscricoes_atualizacao_de_inscricao_id_fkidx' => 'atualizacao_de_inscricao_id']);
+    }
+
+    /** Cria a FK so se ela ainda nao existe: reaplicar nao revalida nem trava as tabelas. */
+    private function chaveEstrangeira(string $tabela, string $nome, string $coluna, string $referencia): void
+    {
+        $existe = $this->conexao()->selectOne(
+            'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass',
+            [$nome, $tabela],
+        );
+
+        if ($existe === null) {
+            $this->exec("ALTER TABLE {$tabela} ADD CONSTRAINT {$nome} FOREIGN KEY ({$coluna}) REFERENCES {$referencia} (id) ON DELETE SET NULL");
+        }
+    }
+
+    /**
+     * Uma versao EAD por (curso, numero). Duplicados ja existentes (varios EAD no
+     * mesmo curso, todos na versao 1) sao numerados 1, 2, 3... por created_at, id
+     * antes de o indice existir. Reaplicar nao derruba nem recria o indice.
+     */
+    private function indiceUnicoDeVersao(): void
+    {
+        $nome = 'treinamentos_curso_versao_unico';
+        $existente = $this->conexao()->selectOne(
+            "SELECT indexdef FROM pg_indexes WHERE schemaname = 'treinamento' AND indexname = ?",
+            [$nome],
+        );
+
+        if ($existente !== null && str_contains((string) $existente->indexdef, "'EAD'")) {
+            return;
+        }
+
+        $this->exec(<<<'SQL'
+            WITH numerados AS (
+                SELECT id, row_number() OVER (PARTITION BY curso_id ORDER BY created_at, id) AS numero
+                FROM treinamento.treinamentos
+                WHERE curso_id IS NOT NULL AND tipo = 'EAD' AND deleted_at IS NULL
+            )
+            UPDATE treinamento.treinamentos t
+            SET versao = n.numero
+            FROM numerados n
+            WHERE t.id = n.id
+              AND t.curso_id IN (
+                  SELECT curso_id FROM treinamento.treinamentos
+                  WHERE curso_id IS NOT NULL AND tipo = 'EAD' AND deleted_at IS NULL
+                  GROUP BY curso_id, versao HAVING count(*) > 1
+              )
+              AND t.versao <> n.numero
+            SQL);
+
+        $this->exec("DROP INDEX IF EXISTS treinamento.{$nome}");
+        $this->exec("CREATE UNIQUE INDEX {$nome} ON treinamento.treinamentos (curso_id, versao) WHERE curso_id IS NOT NULL AND tipo = 'EAD' AND deleted_at IS NULL");
     }
 
     /**

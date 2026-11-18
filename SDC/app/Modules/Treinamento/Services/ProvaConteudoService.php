@@ -40,6 +40,10 @@ class ProvaConteudoService
     {
         $prova->update($this->configuracao($dados));
 
+        if ($prova->wasChanged('nota_minima')) {
+            $prova->item?->marcarAlterado();
+        }
+
         return $prova;
     }
 
@@ -84,6 +88,8 @@ class ProvaConteudoService
                 $this->gravarAlternativa($questao, $alternativa, $posicao + 1);
             }
 
+            $prova->item?->marcarAlterado();
+
             return $questao;
         });
     }
@@ -125,6 +131,7 @@ class ProvaConteudoService
             }
 
             $questao->update(['enunciado' => $dados['enunciado']]);
+            $questao->prova->item?->marcarAlterado();
 
             return $questao;
         });
@@ -146,6 +153,7 @@ class ProvaConteudoService
         }
 
         $questao->delete();
+        $prova->item?->marcarAlterado();
     }
 
     /**

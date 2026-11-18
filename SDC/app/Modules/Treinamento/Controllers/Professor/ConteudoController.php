@@ -62,6 +62,7 @@ class ConteudoController extends Controller
                 'titulo' => $treinamento->titulo,
                 'carga_horaria' => $treinamento->carga_horaria,
                 'publicado' => $treinamento->estaPublicado(),
+                'versao' => $treinamento->versao,
             ],
             'pastas' => $pastas,
             'pendentes' => $this->acompanhamento->contarPendentes($treinamento),

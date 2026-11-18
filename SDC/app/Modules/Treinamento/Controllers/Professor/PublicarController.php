@@ -7,16 +7,17 @@ namespace App\Modules\Treinamento\Controllers\Professor;
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Exceptions\PublicacaoBloqueada;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Requests\Professor\PublicarCursoRequest;
 use App\Modules\Treinamento\Services\ConteudoCursoService;
 
 class PublicarController extends Controller
 {
     public function __construct(private readonly ConteudoCursoService $conteudo) {}
 
-    public function __invoke(Treinamento $treinamento)
+    public function __invoke(PublicarCursoRequest $request, Treinamento $treinamento)
     {
         try {
-            $this->conteudo->publicar($treinamento);
+            $this->conteudo->publicar($treinamento, $request->validated('versao_notas'));
         } catch (PublicacaoBloqueada $e) {
             return back()->withErrors($e->comoErros());
         } catch (\DomainException $e) {
