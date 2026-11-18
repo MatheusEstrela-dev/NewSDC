@@ -16,6 +16,7 @@ use App\Modules\Treinamento\Services\CatalogoService;
 use App\Modules\Treinamento\Services\HistoricoDoCursoService;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use DomainException;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 /**
  * Cria a proxima versao (rascunho) de um curso EAD copiando o conteudo da vigente.
@@ -56,6 +57,15 @@ class NovaVersaoDoCursoService
             throw new DomainException('So um curso publicado pode ter nova versao.');
         }
 
+        try {
+            return $this->criarEmTransacao($vigente, $autor);
+        } catch (UniqueConstraintViolationException) {
+            throw new DomainException('Ja existe uma versao com este numero neste curso. Tente novamente.');
+        }
+    }
+
+    private function criarEmTransacao(Treinamento $vigente, User $autor): Treinamento
+    {
         return ConexaoTreinamento::transacao(function () use ($vigente, $autor): Treinamento {
             $curso = $this->cursoTravado($vigente, $autor);
 
@@ -98,8 +108,13 @@ class NovaVersaoDoCursoService
         $chave = CatalogoService::normalizarNome($vigente->titulo);
 
         $curso = Curso::query()->get(['id', 'nome'])
-            ->first(fn (Curso $c) => CatalogoService::normalizarNome($c->nome) === $chave)
-            ?? $this->catalogo->criar(['nome' => $vigente->titulo], $autor->id);
+            ->first(fn (Curso $c) => CatalogoService::normalizarNome($c->nome) === $chave);
+
+        if ($curso !== null && $this->catalogo->cursoTemEad($curso->id, $vigente->id)) {
+            throw new DomainException("O curso \"{$curso->nome}\" do catalogo ja tem outro EAD. Vincule esta turma ao curso correto antes de criar a nova versao.");
+        }
+
+        $curso ??= $this->catalogo->criar(['nome' => $vigente->titulo], $autor->id);
 
         $vigente->update(['curso_id' => $curso->id]);
 

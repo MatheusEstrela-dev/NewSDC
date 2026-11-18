@@ -17,7 +17,11 @@ class TreinamentoUpdateController extends Controller
 
     public function __invoke(UpdateTreinamentoRequest $request, int $id)
     {
-        $this->treinamentoService->update($id, $request->validated());
+        try {
+            $this->treinamentoService->update($id, $request->validated());
+        } catch (\DomainException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('treinamentos.show', $id)
             ->with('success', 'Treinamento atualizado com sucesso!');

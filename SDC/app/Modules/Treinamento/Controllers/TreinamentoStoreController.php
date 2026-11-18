@@ -17,7 +17,11 @@ class TreinamentoStoreController extends Controller
 
     public function __invoke(StoreTreinamentoRequest $request)
     {
-        $treinamento = $this->treinamentoService->create($request->validated());
+        try {
+            $treinamento = $this->treinamentoService->create($request->validated());
+        } catch (\DomainException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('treinamentos.show', $treinamento->id)
             ->with('success', 'Treinamento cadastrado com sucesso!');

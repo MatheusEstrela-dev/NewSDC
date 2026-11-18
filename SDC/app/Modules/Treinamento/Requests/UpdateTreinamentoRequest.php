@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Requests;
 
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Rules\CursoSemOutroEad;
 use App\Modules\Treinamento\Services\ProfessorService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -48,17 +49,42 @@ class UpdateTreinamentoRequest extends FormRequest
     /**
      * Turma antiga (sem curso) aceita null ate ser vinculada; turma que ja tem
      * curso exige um. O curso atual continua valido mesmo se foi inativado.
+     * EAD: nao pode ir para curso que ja tem outro EAD, e o curso de um EAD que
+     * tem versoes (versao > 1 ou origem de outra) e imutavel.
      */
     private function regraDoCurso(): array
     {
-        $atual = Treinamento::query()->whereKey((int) $this->route('id'))->value('curso_id');
+        $treinamento = Treinamento::query()->find((int) $this->route('id'));
+        $atual = $treinamento?->curso_id;
+        $tipo = (string) ($this->input('tipo') ?? $treinamento?->tipo?->value);
+        $ehEad = $tipo === TipoTreinamento::EAD->value;
 
-        return [
+        $regras = [
             $atual === null ? 'nullable' : 'required',
             'integer',
             Rule::exists(config('database.treinamento_connection').'.treinamento.cursos', 'id')
                 ->where(fn ($q) => $q->whereNull('deleted_at')
                     ->where(fn ($w) => $w->where('ativo', true)->orWhere('id', $atual ?? 0))),
         ];
+
+        if ($ehEad) {
+            $regras[] = new CursoSemOutroEad($treinamento?->id, $atual);
+        }
+
+        if ($treinamento !== null && $atual !== null && $this->temVersoes($treinamento)) {
+            $regras[] = function (string $attribute, mixed $value, \Closure $fail) use ($atual): void {
+                if ((int) $value !== (int) $atual) {
+                    $fail('O curso de um EAD que tem versoes nao pode ser trocado.');
+                }
+            };
+        }
+
+        return $regras;
+    }
+
+    private function temVersoes(Treinamento $treinamento): bool
+    {
+        return $treinamento->tipo === TipoTreinamento::EAD
+            && ($treinamento->versao > 1 || Treinamento::query()->where('versao_origem_id', $treinamento->id)->exists());
     }
 }

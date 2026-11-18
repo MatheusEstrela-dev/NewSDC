@@ -27,6 +27,10 @@ class VincularCatalogoCommand extends Command
             array_map(fn (array $g) => [$g['curso'], $g['curso_existente'] ? 'sim' : 'nao', $g['turmas']], $relatorio['grupos'])
         );
 
+        foreach ($relatorio['ead_ignorados'] as $ignorado) {
+            $this->warn("EAD ignorado (o curso ja tem um EAD; use Nova versao): #{$ignorado['id']} {$ignorado['titulo']}");
+        }
+
         $grupos = count($relatorio['grupos']);
         $this->info(($simular ? 'Simulacao: ' : '')."grupos {$grupos}, cursos criados {$relatorio['cursos_criados']}, turmas ligadas {$relatorio['turmas_ligadas']}");
 

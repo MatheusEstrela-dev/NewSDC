@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Requests;
 
 use App\Modules\Treinamento\Enums\TipoTreinamento;
+use App\Modules\Treinamento\Rules\CursoSemOutroEad;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -39,8 +40,13 @@ class StoreTreinamentoRequest extends FormRequest
             // Municipio de realizacao (alimenta o painel de indicadores). A tabela
             // municipios fica no banco sdc (conexao padrao), nao no do treinamento.
             // Curso do catalogo (banco do treinamento): obrigatorio e ativo.
-            'curso_id' => ['required', 'integer', Rule::exists(config('database.treinamento_connection').'.treinamento.cursos', 'id')
-                ->where(fn ($q) => $q->where('ativo', true)->whereNull('deleted_at'))],
+            'curso_id' => array_filter([
+                'required',
+                'integer',
+                Rule::exists(config('database.treinamento_connection').'.treinamento.cursos', 'id')
+                    ->where(fn ($q) => $q->where('ativo', true)->whereNull('deleted_at')),
+                $this->input('tipo') === TipoTreinamento::EAD->value ? new CursoSemOutroEad : null,
+            ]),
             'municipio_id' => ['nullable', 'integer', Rule::exists('municipios', 'id')->where('uf', 'MG')],
         ];
     }

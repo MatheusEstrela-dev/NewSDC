@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Services;
 
+use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Curso;
 use App\Modules\Treinamento\Models\Treinamento;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -108,18 +109,22 @@ class CatalogoService
      * Liga as turmas sem curso a um curso do catalogo pelo titulo normalizado,
      * criando o curso do grupo quando ainda nao existir um com o mesmo nome.
      *
-     * @return array{grupos: list<array{curso: string, curso_existente: bool, turmas: int}>, cursos_criados: int, turmas_ligadas: int}
+     * Um curso tem um EAD por vez (as demais edicoes sao versoes): EAD que colidiria
+     * com o EAD ja existente do curso, ou com outro EAD do mesmo grupo, nao e ligado
+     * e vai para `ead_ignorados`.
+     *
+     * @return array{grupos: list<array{curso: string, curso_existente: bool, turmas: int}>, cursos_criados: int, turmas_ligadas: int, ead_ignorados: list<array{id: int, titulo: string}>}
      */
     public function vincularPorTitulo(bool $simular): array
     {
-        $turmas = Treinamento::query()->whereNull('curso_id')->get(['id', 'titulo']);
+        $turmas = Treinamento::query()->whereNull('curso_id')->get(['id', 'titulo', 'tipo']);
         $porChave = $turmas->groupBy(fn (Treinamento $t) => self::normalizarNome((string) $t->titulo))
             ->reject(fn ($grupo, $chave) => $chave === '');
 
         $existentes = Curso::query()->get(['id', 'nome'])
             ->mapWithKeys(fn (Curso $c) => [self::normalizarNome($c->nome) => $c->id]);
 
-        $relatorio = ['grupos' => [], 'cursos_criados' => 0, 'turmas_ligadas' => 0];
+        $relatorio = ['grupos' => [], 'cursos_criados' => 0, 'turmas_ligadas' => 0, 'ead_ignorados' => []];
 
         $aplicar = function () use ($porChave, $existentes, $simular, &$relatorio) {
             foreach ($porChave as $chave => $grupo) {
@@ -127,22 +132,56 @@ class CatalogoService
                 $cursoId = $existentes->get($chave);
                 $jaExistia = $cursoId !== null;
 
+                [$ligar, $ignoradas] = $this->separarEadQueColidem($grupo, $cursoId);
+                foreach ($ignoradas as $t) {
+                    $relatorio['ead_ignorados'][] = ['id' => $t->id, 'titulo' => trim((string) $t->titulo)];
+                }
+
+                if ($ligar->isEmpty()) {
+                    continue;
+                }
+
                 if (! $simular) {
                     if (! $jaExistia) {
                         $cursoId = Curso::create(['nome' => $nome, 'ativo' => true])->id;
                     }
-                    Treinamento::query()->whereIn('id', $grupo->pluck('id'))->update(['curso_id' => $cursoId]);
+                    Treinamento::query()->whereIn('id', $ligar->pluck('id'))->update(['curso_id' => $cursoId]);
                 }
 
-                $relatorio['grupos'][] = ['curso' => $nome, 'curso_existente' => $jaExistia, 'turmas' => $grupo->count()];
+                $relatorio['grupos'][] = ['curso' => $nome, 'curso_existente' => $jaExistia, 'turmas' => $ligar->count()];
                 $relatorio['cursos_criados'] += $jaExistia ? 0 : 1;
-                $relatorio['turmas_ligadas'] += $grupo->count();
+                $relatorio['turmas_ligadas'] += $ligar->count();
             }
         };
 
         $simular ? $aplicar() : DB::connection(config('database.treinamento_connection'))->transaction($aplicar);
 
         return $relatorio;
+    }
+
+    /**
+     * Do grupo, o que pode ser ligado e os EAD que colidiriam: o curso ja tem EAD
+     * (nenhum entra) ou o grupo traz mais de um (so o primeiro por id entra).
+     *
+     * @return array{0: Collection<int, Treinamento>, 1: Collection<int, Treinamento>}
+     */
+    private function separarEadQueColidem(Collection $grupo, ?int $cursoId): array
+    {
+        $ead = $grupo->filter(fn (Treinamento $t) => $t->tipo === TipoTreinamento::EAD)->sortBy('id')->values();
+        $permitidos = $cursoId !== null && $this->cursoTemEad($cursoId) ? collect() : $ead->take(1);
+        $ignoradas = $ead->diff($permitidos)->values();
+
+        return [$grupo->diff($ignoradas)->values(), $ignoradas];
+    }
+
+    /** O curso do catalogo ja tem um EAD (nao excluido). */
+    public function cursoTemEad(int $cursoId, ?int $ignorarTreinamentoId = null): bool
+    {
+        return Treinamento::query()
+            ->where('curso_id', $cursoId)
+            ->where('tipo', TipoTreinamento::EAD->value)
+            ->when($ignorarTreinamentoId !== null, fn ($q) => $q->where('id', '<>', $ignorarTreinamentoId))
+            ->exists();
     }
 
     /** Titulo mais frequente do grupo (empate: o primeiro), com espacos aparados. */
