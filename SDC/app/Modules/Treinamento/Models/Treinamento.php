@@ -344,15 +344,18 @@ class Treinamento extends Model implements Rastreavel
         $tabela = $this->getTable();
 
         return $query->where(function ($q) use ($tabela) {
-            $q->whereNull("{$tabela}.curso_id")->orWhereNotExists(function ($sub) use ($tabela) {
-                $sub->selectRaw('1')
-                    ->from("{$tabela} as posterior")
-                    ->whereColumn('posterior.curso_id', "{$tabela}.curso_id")
-                    ->whereColumn('posterior.versao', '>', "{$tabela}.versao")
-                    ->where('posterior.tipo', TipoTreinamento::EAD->value)
-                    ->whereNotNull('posterior.publicado_em')
-                    ->whereNull('posterior.deleted_at');
-            });
+            // Versao e coisa de EAD: turma presencial do mesmo curso do catalogo nunca e substituida.
+            $q->where("{$tabela}.tipo", '<>', TipoTreinamento::EAD->value)
+                ->orWhereNull("{$tabela}.curso_id")
+                ->orWhereNotExists(function ($sub) use ($tabela) {
+                    $sub->selectRaw('1')
+                        ->from("{$tabela} as posterior")
+                        ->whereColumn('posterior.curso_id', "{$tabela}.curso_id")
+                        ->whereColumn('posterior.versao', '>', "{$tabela}.versao")
+                        ->where('posterior.tipo', TipoTreinamento::EAD->value)
+                        ->whereNotNull('posterior.publicado_em')
+                        ->whereNull('posterior.deleted_at');
+                });
         });
     }
 
