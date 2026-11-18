@@ -364,7 +364,7 @@ class Treinamento extends Model implements Rastreavel
     /** Publicado e nao desativado: o que os catalogos (interno e portal) listam. */
     public function scopeNoCatalogo($query)
     {
-        return $query->publicado()->whereIn('situacao', SituacaoCurso::valoresNoCatalogo());
+        return $query->publicado()->vigente()->whereIn('situacao', SituacaoCurso::valoresNoCatalogo());
     }
 
     /** Cursos que ainda podem concluir alunos e emitir certificado. */

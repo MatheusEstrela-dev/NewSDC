@@ -6,12 +6,14 @@ namespace App\Modules\Treinamento\Services;
 
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Services\RegistroDeAcao;
+use App\Modules\Treinamento\Enums\TipoEventoCurso;
 use App\Modules\Treinamento\Enums\TipoItem;
 use App\Modules\Treinamento\Exceptions\PublicacaoBloqueada;
 use App\Modules\Treinamento\Jobs\ReavaliarConclusoesDoCursoJob;
 use App\Modules\Treinamento\Models\Modulo;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Services\Versoes\AvisoDeNovaVersao;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use App\Modules\Treinamento\Support\Ordenacao;
 use Illuminate\Http\UploadedFile;
@@ -26,6 +28,8 @@ class ConteudoCursoService
         private readonly TreinamentoService $treinamentos,
         private readonly ProvaConteudoService $provas,
         private readonly VerificacaoPublicacaoService $verificacao,
+        private readonly HistoricoDoCursoService $historico,
+        private readonly AvisoDeNovaVersao $aviso,
     ) {}
 
     /**
@@ -185,7 +189,7 @@ class ConteudoCursoService
         abort_unless((int) $treinamentoId === (int) $treinamento->id, 404);
     }
 
-    public function publicar(Treinamento $treinamento): void
+    public function publicar(Treinamento $treinamento, ?string $versaoNotas = null): void
     {
         $temItem = ModuloItem::query()
             ->whereIn('modulo_id', Modulo::query()->porTreinamento($treinamento->id)->select('id'))
@@ -200,7 +204,25 @@ class ConteudoCursoService
             throw new PublicacaoBloqueada('O curso nao pode ser publicado. '.implode(' ', $problemas), $problemas);
         }
 
-        $this->treinamentos->publicar($treinamento);
+        $novaVersao = $treinamento->versao > 1;
+
+        ConexaoTreinamento::transacao(function () use ($treinamento, $novaVersao, $versaoNotas) {
+            $this->treinamentos->publicar($treinamento);
+
+            if ($novaVersao) {
+                $treinamento->update(['versao_notas' => $versaoNotas]);
+                $this->historico->registrar(
+                    $treinamento->id,
+                    TipoEventoCurso::VERSAO_PUBLICADA,
+                    "Versao {$treinamento->rotuloDeVersao()} publicada.",
+                    ['versao' => $treinamento->versao, 'versao_notas' => $versaoNotas],
+                );
+            }
+        });
+
+        if ($novaVersao) {
+            $this->aviso->avisar($treinamento);
+        }
 
         app(RegistroDeAcao::class)->registrarNoProtocolo(
             Treinamento::class,

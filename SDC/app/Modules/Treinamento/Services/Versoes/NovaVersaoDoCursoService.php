@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Services\Versoes;
 
 use App\Models\User;
 use App\Modules\Treinamento\Enums\SituacaoCurso;
+use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Enums\TipoEventoCurso;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Curso;
@@ -118,10 +119,17 @@ class NovaVersaoDoCursoService
             'publicado_em' => null,
             'link_publico_slug' => null,
             'situacao' => SituacaoCurso::ATIVO->value,
+            'status' => $this->statusInicial($vigente),
             'created_by' => $autor->id,
         ])->save();
 
         return $rascunho;
+    }
+
+    /** Status copiado so se ainda recebe inscricao; senao o rascunho nasceria impublicavel. */
+    private function statusInicial(Treinamento $vigente): string
+    {
+        return ($vigente->status->podeReceberInscricoes() ? $vigente->status : StatusTreinamento::PLANEJADO)->value;
     }
 
     private function copiarProfessores(Treinamento $origem, Treinamento $destino): void

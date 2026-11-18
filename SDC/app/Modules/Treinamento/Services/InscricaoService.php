@@ -18,6 +18,7 @@ use App\Modules\Treinamento\Support\ConexaoTreinamento;
 use App\Modules\Treinamento\Support\ControleDeVagas;
 use App\Modules\Treinamento\Support\MunicipioDoInscrito;
 use App\Modules\Treinamento\Support\PeriodoDeInscricao;
+use App\Modules\Treinamento\Support\VersoesDoCurso;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Mail;
@@ -47,6 +48,8 @@ class InscricaoService extends BaseService
         if ($treinamento->isEad() && !$treinamento->estaPublicado()) {
             throw new \DomainException('Este curso ainda nao foi publicado.');
         }
+
+        $this->exigirVersaoVigente($treinamento);
 
         if (!$treinamento->situacaoEfetiva()->recebeInscricao()) {
             throw new \DomainException('Este curso esta '.mb_strtolower($treinamento->situacaoEfetiva()->getLabel()).' e nao recebe inscricoes.');
@@ -125,6 +128,20 @@ class InscricaoService extends BaseService
         );
 
         return $inscricao;
+    }
+
+    /** Versao substituida por outra publicada mais nova nao recebe inscricao nova. */
+    private function exigirVersaoVigente(Treinamento $treinamento): void
+    {
+        if (!$treinamento->isEad() || $treinamento->eVigente()) {
+            return;
+        }
+
+        $vigente = VersoesDoCurso::vigenteDe((int) $treinamento->curso_id);
+
+        throw new \DomainException(
+            'Esta versao do curso foi substituida pela '.($vigente?->rotuloDeVersao() ?? 'versao atual').'. Inscreva-se na versao atual.'
+        );
     }
 
     private function garantirDentroDoLimiteDoCurso(Treinamento $treinamento, Model $inscrito): void
