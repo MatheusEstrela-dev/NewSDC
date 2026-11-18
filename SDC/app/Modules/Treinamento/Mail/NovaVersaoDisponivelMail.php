@@ -27,7 +27,7 @@ class NovaVersaoDisponivelMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: "Versao {$this->rotulo} disponivel: {$this->curso}");
+        return new Envelope(subject: "Versão {$this->rotulo} disponível: {$this->curso}");
     }
 
     public function content(): Content

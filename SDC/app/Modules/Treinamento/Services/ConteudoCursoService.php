@@ -204,7 +204,8 @@ class ConteudoCursoService
             throw new PublicacaoBloqueada('O curso nao pode ser publicado. '.implode(' ', $problemas), $problemas);
         }
 
-        $novaVersao = $treinamento->versao > 1;
+        // So a primeira publicacao de uma versao > 1 grava notas, historico e avisa.
+        $novaVersao = $treinamento->versao > 1 && $treinamento->publicado_em === null;
 
         ConexaoTreinamento::transacao(function () use ($treinamento, $novaVersao, $versaoNotas) {
             $this->treinamentos->publicar($treinamento);
@@ -221,7 +222,12 @@ class ConteudoCursoService
         });
 
         if ($novaVersao) {
-            $this->aviso->avisar($treinamento);
+            try {
+                $this->aviso->avisar($treinamento);
+            } catch (\Throwable $e) {
+                // O curso ja esta publicado: falha de fila nao pode virar 500.
+                report($e);
+            }
         }
 
         app(RegistroDeAcao::class)->registrarNoProtocolo(
