@@ -38,6 +38,7 @@ class Inscricao extends Model
         'observacoes',
         'sexo',
         'municipio_inscrito_id',
+        'atualizacao_de_inscricao_id',
     ];
 
     protected $casts = [
@@ -49,6 +50,7 @@ class Inscricao extends Model
         // $fillable de proposito (so o servico de conclusao escreve, com forceFill).
         'concluido_em' => 'datetime',
         'aproveitamento' => 'float',
+        'atualizacao_de_inscricao_id' => 'integer',
     ];
 
     // Relationships
@@ -80,6 +82,12 @@ class Inscricao extends Model
     public function provaTentativas(): HasMany
     {
         return $this->hasMany(ProvaTentativa::class);
+    }
+
+    /** Inscricao de atualizacao: pessoa formada em versao anterior que aproveitou aquela conclusao. */
+    public function eAtualizacao(): bool
+    {
+        return $this->atualizacao_de_inscricao_id !== null;
     }
 
     public function estaConcluida(): bool

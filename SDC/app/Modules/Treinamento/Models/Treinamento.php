@@ -44,6 +44,9 @@ class Treinamento extends Model implements Rastreavel
         'local',
         'municipio_id',
         'curso_id',
+        'versao',
+        'versao_origem_id',
+        'versao_notas',
         'data_inicio',
         'data_fim',
         'hora_inicio',
@@ -69,6 +72,8 @@ class Treinamento extends Model implements Rastreavel
         'situacao_alterada_em' => 'datetime',
         'municipio_id' => 'integer',
         'curso_id' => 'integer',
+        'versao' => 'integer',
+        'versao_origem_id' => 'integer',
         'data_inicio' => 'date',
         'data_fim' => 'date',
         'percentual_frequencia_minimo' => 'decimal:2',
@@ -90,6 +95,18 @@ class Treinamento extends Model implements Rastreavel
     public function curso(): BelongsTo
     {
         return $this->belongsTo(Curso::class, 'curso_id');
+    }
+
+    /** Versao da qual esta foi copiada (NULL na primeira versao do curso). */
+    public function versaoOrigem(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'versao_origem_id');
+    }
+
+    /** Rotulo de exibicao da versao ("v2.0"). */
+    public function rotuloDeVersao(): string
+    {
+        return "v{$this->versao}.0";
     }
 
     public function modulos(): HasMany

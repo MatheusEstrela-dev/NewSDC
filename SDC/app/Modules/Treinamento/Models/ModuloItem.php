@@ -30,6 +30,8 @@ class ModuloItem extends Model
         'arquivo_tamanho',
         'total_paginas',
         'video_id',
+        'origem_item_id',
+        'alterado_desde_copia',
     ];
 
     protected $casts = [
@@ -39,11 +41,19 @@ class ModuloItem extends Model
         'arquivo_tamanho' => 'integer',
         'total_paginas' => 'integer',
         'video_id' => 'integer',
+        'origem_item_id' => 'integer',
+        'alterado_desde_copia' => 'boolean',
     ];
 
     public function modulo(): BelongsTo
     {
         return $this->belongsTo(Modulo::class);
+    }
+
+    /** Item de onde este foi copiado numa nova versao do curso (NULL se nao e copia). */
+    public function origem(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'origem_item_id');
     }
 
     /** Configuracao da prova; existe so em itens PROVA. */

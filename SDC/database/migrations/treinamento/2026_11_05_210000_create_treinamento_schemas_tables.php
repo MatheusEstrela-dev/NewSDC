@@ -80,6 +80,7 @@ return new class extends Migration
         $this->criarCredencialQr();
         $this->criarCatalogo();
         $this->criarAreaDoGestor();
+        $this->criarVersoes();
     }
 
     public function down(): void
@@ -888,6 +889,56 @@ return new class extends Migration
             'curso_eventos_created_at_index' => 'created_at',
             'curso_eventos_autor_id_fkidx' => 'autor_id',
         ]);
+    }
+
+    /**
+     * Versoes de curso EAD: cada versao e um treinamento proprio no mesmo
+     * curso do catalogo. Autocontido e idempotente.
+     *
+     * - treinamentos.versao: numero principal da versao (1, 2, 3...). Todo
+     *   treinamento existente vira 1 pelo DEFAULT.
+     * - treinamentos.versao_origem_id: versao da qual esta foi copiada (NULL na
+     *   primeira). SET NULL: excluir a origem nao leva a copia junto.
+     * - treinamentos.versao_notas: "o que mudou", preenchido ao publicar.
+     * - modulo_itens.origem_item_id: item de onde este foi copiado; a cadeia
+     *   (3.0 -> 2.0 -> 1.0) decide o aproveitamento.
+     * - modulo_itens.alterado_desde_copia: true quando o conteudo deixou de ser
+     *   igual ao da origem (titulo, descricao e ordem nao contam).
+     * - inscricoes.atualizacao_de_inscricao_id: inscricao concluida (versao
+     *   anterior) que esta aproveitou; NOT NULL marca a inscricao de
+     *   atualizacao, que nunca conta na regra das 3 inscricoes.
+     *
+     * POR QUE O UNICO PARCIAL (curso_id, versao)
+     * Numero de versao repetido no mesmo curso deixaria a "vigente" ambigua. O
+     * indice vale so para EAD: turmas presenciais do mesmo curso do catalogo
+     * coexistem todas na versao 1 (versao so existe onde ha arvore de conteudo).
+     * Ignora tambem treinamentos sem curso (turmas antigas ainda nao vinculadas)
+     * e excluidos, para o numero poder ser reaproveitado apos excluir um rascunho.
+     * O indice criado na primeira aplicacao (sem o filtro de tipo) e recriado.
+     */
+    private function criarVersoes(): void
+    {
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS versao integer NOT NULL DEFAULT 1');
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS versao_origem_id bigint');
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS versao_notas text');
+        $this->exec('ALTER TABLE treinamento.treinamentos DROP CONSTRAINT IF EXISTS treinamentos_versao_origem_id_foreign');
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_versao_origem_id_foreign FOREIGN KEY (versao_origem_id) REFERENCES treinamento.treinamentos (id) ON DELETE SET NULL');
+
+        $this->exec('ALTER TABLE treinamento.modulo_itens ADD COLUMN IF NOT EXISTS origem_item_id bigint');
+        $this->exec('ALTER TABLE treinamento.modulo_itens ADD COLUMN IF NOT EXISTS alterado_desde_copia boolean NOT NULL DEFAULT false');
+        $this->exec('ALTER TABLE treinamento.modulo_itens DROP CONSTRAINT IF EXISTS modulo_itens_origem_item_id_foreign');
+        $this->exec('ALTER TABLE treinamento.modulo_itens ADD CONSTRAINT modulo_itens_origem_item_id_foreign FOREIGN KEY (origem_item_id) REFERENCES treinamento.modulo_itens (id) ON DELETE SET NULL');
+
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD COLUMN IF NOT EXISTS atualizacao_de_inscricao_id bigint');
+        $this->exec('ALTER TABLE treinamento.inscricoes DROP CONSTRAINT IF EXISTS inscricoes_atualizacao_de_inscricao_id_foreign');
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD CONSTRAINT inscricoes_atualizacao_de_inscricao_id_foreign FOREIGN KEY (atualizacao_de_inscricao_id) REFERENCES treinamento.inscricoes (id) ON DELETE SET NULL');
+
+        $this->exec('DROP INDEX IF EXISTS treinamento.treinamentos_curso_versao_unico');
+        $this->exec("CREATE UNIQUE INDEX IF NOT EXISTS treinamentos_curso_versao_unico ON treinamento.treinamentos (curso_id, versao) WHERE curso_id IS NOT NULL AND tipo = 'EAD' AND deleted_at IS NULL");
+
+        $this->indices('treinamento.treinamentos', ['treinamentos_versao_origem_id_fkidx' => 'versao_origem_id']);
+        $this->indices('treinamento.modulo_itens', ['modulo_itens_origem_item_id_fkidx' => 'origem_item_id']);
+        $this->indices('treinamento.inscricoes', ['inscricoes_atualizacao_de_inscricao_id_fkidx' => 'atualizacao_de_inscricao_id']);
     }
 
     /**

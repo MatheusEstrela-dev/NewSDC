@@ -27,6 +27,8 @@ enum TipoEventoCurso: string
     case CRONOGRAMA_ADICIONADO = 'CRONOGRAMA_ADICIONADO';
     case CRONOGRAMA_ATUALIZADO = 'CRONOGRAMA_ATUALIZADO';
     case CRONOGRAMA_REMOVIDO = 'CRONOGRAMA_REMOVIDO';
+    case VERSAO_CRIADA = 'VERSAO_CRIADA';
+    case VERSAO_PUBLICADA = 'VERSAO_PUBLICADA';
 
     public function getLabel(): string
     {
@@ -45,6 +47,8 @@ enum TipoEventoCurso: string
             self::CRONOGRAMA_ADICIONADO => 'Item do cronograma adicionado',
             self::CRONOGRAMA_ATUALIZADO => 'Item do cronograma atualizado',
             self::CRONOGRAMA_REMOVIDO => 'Item do cronograma removido',
+            self::VERSAO_CRIADA => 'Versao criada',
+            self::VERSAO_PUBLICADA => 'Versao publicada',
         };
     }
 
@@ -54,7 +58,7 @@ enum TipoEventoCurso: string
         return match ($this) {
             self::CURSO_CANCELADO, self::CURSO_DESATIVADO, self::CRONOGRAMA_REMOVIDO => 'danger',
             self::CURSO_PAUSADO => 'warning',
-            self::CURSO_PUBLICADO, self::CURSO_REATIVADO, self::CURSO_RETOMADO, self::CRONOGRAMA_ADICIONADO => 'success',
+            self::CURSO_PUBLICADO, self::VERSAO_PUBLICADA, self::CURSO_REATIVADO, self::CURSO_RETOMADO, self::CRONOGRAMA_ADICIONADO => 'success',
             default => 'info',
         };
     }
