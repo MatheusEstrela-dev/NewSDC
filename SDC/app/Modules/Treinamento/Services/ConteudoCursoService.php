@@ -204,10 +204,13 @@ class ConteudoCursoService
             throw new PublicacaoBloqueada('O curso nao pode ser publicado. '.implode(' ', $problemas), $problemas);
         }
 
-        // So a primeira publicacao de uma versao > 1 grava notas, historico e avisa.
-        $novaVersao = $treinamento->versao > 1 && $treinamento->publicado_em === null;
+        $novaVersao = ConexaoTreinamento::transacao(function () use ($treinamento, $versaoNotas): bool {
+            // So a primeira publicacao de uma versao > 1 grava notas, historico e avisa.
+            // Decidido sob trava: duas requisicoes simultaneas nao publicam duas vezes.
+            $treinamento->newQuery()->lockForUpdate()->findOrFail($treinamento->id);
+            $treinamento->refresh();
+            $novaVersao = $treinamento->versao > 1 && $treinamento->publicado_em === null;
 
-        ConexaoTreinamento::transacao(function () use ($treinamento, $novaVersao, $versaoNotas) {
             $this->treinamentos->publicar($treinamento);
 
             if ($novaVersao) {
@@ -219,6 +222,8 @@ class ConteudoCursoService
                     ['versao' => $treinamento->versao, 'versao_notas' => $versaoNotas],
                 );
             }
+
+            return $novaVersao;
         });
 
         if ($novaVersao) {
