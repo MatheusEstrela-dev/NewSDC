@@ -334,6 +334,33 @@ class Treinamento extends Model implements Rastreavel
         return $query->whereNotNull('link_publico_slug')->whereNotNull('publicado_em');
     }
 
+    /**
+     * Versao vigente do curso: nenhuma outra versao EAD publicada (e nao excluida) do
+     * mesmo curso do catalogo tem numero maior. Sem curso do catalogo, a turma e a
+     * unica versao e portanto vigente.
+     */
+    public function scopeVigente($query)
+    {
+        $tabela = $this->getTable();
+
+        return $query->where(function ($q) use ($tabela) {
+            $q->whereNull("{$tabela}.curso_id")->orWhereNotExists(function ($sub) use ($tabela) {
+                $sub->selectRaw('1')
+                    ->from("{$tabela} as posterior")
+                    ->whereColumn('posterior.curso_id', "{$tabela}.curso_id")
+                    ->whereColumn('posterior.versao', '>', "{$tabela}.versao")
+                    ->where('posterior.tipo', TipoTreinamento::EAD->value)
+                    ->whereNotNull('posterior.publicado_em')
+                    ->whereNull('posterior.deleted_at');
+            });
+        });
+    }
+
+    public function eVigente(): bool
+    {
+        return self::query()->whereKey($this->getKey())->vigente()->exists();
+    }
+
     /** Publicado e nao desativado: o que os catalogos (interno e portal) listam. */
     public function scopeNoCatalogo($query)
     {
