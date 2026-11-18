@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Support;
 
-use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Modulo;
@@ -15,8 +14,8 @@ use Illuminate\Support\Collection;
  * Para os cards de Meus cursos: de quais inscricoes concluidas a pessoa pode se
  * atualizar para a versao vigente, e o que a vigente traz de novo. Uma consulta
  * para as vigentes e outra para as pastas novas, qualquer que seja o numero de
- * cards; as demais regras (espelho de AtualizacaoDeVersaoService::verificar)
- * usam as inscricoes ja carregadas.
+ * cards; a elegibilidade (ElegibilidadeDeAtualizacao, a mesma do servico de
+ * atualizacao) usa as inscricoes ja carregadas.
  */
 class NovasVersoesDoAluno
 {
@@ -26,18 +25,24 @@ class NovasVersoesDoAluno
      */
     public static function para(Collection $inscricoes): array
     {
-        $origens = self::origensConcluidas($inscricoes);
-        if ($origens === []) {
+        $cursoIds = $inscricoes
+            ->filter(fn (Inscricao $i) => $i->concluido_em !== null && $i->treinamento->curso_id !== null)
+            ->map(fn (Inscricao $i) => $i->treinamento->curso_id)
+            ->unique()
+            ->values()
+            ->all();
+        if ($cursoIds === []) {
             return [];
         }
 
-        $vigentes = self::vigentes(array_keys($origens));
+        $vigentes = self::vigentes($cursoIds);
         $novasPorVersao = self::pastasNovas($vigentes->pluck('id')->all());
 
         $resultado = [];
-        foreach ($origens as $cursoId => $origem) {
-            $vigente = $vigentes->get($cursoId);
-            if ($vigente === null || self::semDireito($inscricoes, $cursoId, $vigente, $origem)) {
+        foreach ($vigentes as $cursoId => $vigente) {
+            $doCurso = $inscricoes->filter(fn (Inscricao $i) => $i->treinamento->curso_id === $cursoId);
+            $origem = ElegibilidadeDeAtualizacao::origem($doCurso, $vigente);
+            if ($origem === null || ElegibilidadeDeAtualizacao::motivo($vigente, $doCurso) !== null) {
                 continue;
             }
 
@@ -50,22 +55,6 @@ class NovasVersoesDoAluno
         }
 
         return $resultado;
-    }
-
-    /**
-     * A inscricao concluida mais recente de cada curso do catalogo (a "origem" da atualizacao).
-     *
-     * @param  Collection<int, Inscricao>  $inscricoes
-     * @return array<int, Inscricao> curso_id => inscricao
-     */
-    private static function origensConcluidas(Collection $inscricoes): array
-    {
-        return $inscricoes
-            ->filter(fn (Inscricao $i) => $i->concluido_em !== null && $i->treinamento->curso_id !== null)
-            ->sortBy([['concluido_em', 'desc'], ['id', 'desc']])
-            ->groupBy(fn (Inscricao $i) => $i->treinamento->curso_id)
-            ->map(fn (Collection $grupo) => $grupo->first())
-            ->all();
     }
 
     /**
@@ -100,23 +89,5 @@ class NovasVersoesDoAluno
             ->pluck('total', 'treinamento_id')
             ->map(fn ($total) => (int) $total)
             ->all();
-    }
-
-    /**
-     * A vigente nao e mais nova que a origem, a pessoa ja esta nela, ou ha outra
-     * inscricao em andamento no curso.
-     *
-     * @param  Collection<int, Inscricao>  $inscricoes
-     */
-    private static function semDireito(Collection $inscricoes, int $cursoId, Treinamento $vigente, Inscricao $origem): bool
-    {
-        if ($origem->treinamento->versao >= $vigente->versao) {
-            return true;
-        }
-
-        return $inscricoes->contains(fn (Inscricao $i) => $i->treinamento->curso_id === $cursoId && (
-            $i->treinamento_id === $vigente->id
-            || ($i->concluido_em === null && in_array($i->status, [StatusInscricao::PENDENTE, StatusInscricao::APROVADA], true))
-        ));
     }
 }

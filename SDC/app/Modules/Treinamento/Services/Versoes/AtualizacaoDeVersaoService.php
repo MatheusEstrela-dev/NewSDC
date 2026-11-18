@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Services\Versoes;
 
-use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\StatusProgresso;
+use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\ModuloItem;
 use App\Modules\Treinamento\Models\Treinamento;
@@ -13,8 +13,9 @@ use App\Modules\Treinamento\Services\InscricaoService;
 use App\Modules\Treinamento\Services\ReavaliacaoDeConclusaoService;
 use App\Modules\Treinamento\Services\TrilhaService;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
+use App\Modules\Treinamento\Support\ElegibilidadeDeAtualizacao;
 use DomainException;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -44,12 +45,16 @@ class AtualizacaoDeVersaoService
 
     public function atualizar(Treinamento $vigente, Model $inscrito): Inscricao
     {
-        [$origem, $motivo] = $this->verificar($vigente, $inscrito);
-        if ($motivo !== null) {
-            throw new DomainException($motivo);
-        }
+        $nova = ConexaoTreinamento::transacao(function () use ($vigente, $inscrito): Inscricao {
+            // Trava a linha da vigente e confere de novo sob a trava: duas
+            // requisicoes simultaneas nao passam juntas pelo "ja inscrito".
+            $vigente = Treinamento::query()->lockForUpdate()->findOrFail($vigente->id);
 
-        $nova = ConexaoTreinamento::transacao(function () use ($vigente, $inscrito, $origem): Inscricao {
+            [$origem, $motivo] = $this->verificar($vigente, $inscrito);
+            if ($motivo !== null) {
+                throw new DomainException($motivo);
+            }
+
             $nova = $this->inscricoes->inscreverParaAtualizacao($vigente, $inscrito, $origem, $origem->sexo);
 
             $this->gravarProgressoAproveitado($nova, $vigente, $origem);
@@ -71,46 +76,26 @@ class AtualizacaoDeVersaoService
             return [null, 'So a versao vigente do curso recebe atualizacao.'];
         }
 
-        $origem = $this->origemConcluida($vigente, $inscrito);
-        if ($origem === null) {
-            return [null, 'Voce nao concluiu uma versao anterior deste curso.'];
-        }
+        $doCurso = $this->inscricoesNoCurso($vigente, $inscrito);
 
-        if ($this->inscricoesNoCurso($vigente, $inscrito)->where('treinamento_id', $vigente->id)->exists()) {
-            return [$origem, 'Voce ja possui uma inscricao nesta versao do curso.'];
-        }
-
-        $emAndamento = $this->inscricoesNoCurso($vigente, $inscrito)
-            ->whereNull('concluido_em')
-            ->whereIn('status', [StatusInscricao::PENDENTE->value, StatusInscricao::APROVADA->value])
-            ->exists();
-        if ($emAndamento) {
-            return [$origem, 'Conclua ou cancele a inscricao em andamento neste curso antes de atualizar.'];
-        }
-
-        return [$origem, null];
+        return [
+            ElegibilidadeDeAtualizacao::origem($doCurso, $vigente),
+            ElegibilidadeDeAtualizacao::motivo($vigente, $doCurso),
+        ];
     }
 
-    private function origemConcluida(Treinamento $vigente, Model $inscrito): ?Inscricao
-    {
-        return $this->inscricoesNoCurso($vigente, $inscrito)
-            ->whereNotNull('concluido_em')
-            ->whereIn('treinamento_id', Treinamento::query()
-                ->where('curso_id', $vigente->curso_id)
-                ->where('versao', '<', $vigente->versao)
-                ->select('id'))
-            ->orderByDesc('concluido_em')
-            ->orderByDesc('id')
-            ->first();
-    }
-
-    /** @return Builder<Inscricao> inscricoes da pessoa em qualquer versao do curso da vigente */
-    private function inscricoesNoCurso(Treinamento $vigente, Model $inscrito): Builder
+    /** @return Collection<int, Inscricao> inscricoes da pessoa em qualquer versao EAD do curso da vigente */
+    private function inscricoesNoCurso(Treinamento $vigente, Model $inscrito): Collection
     {
         return Inscricao::query()
+            ->with('treinamento')
             ->where('inscrito_type', $inscrito::class)
             ->where('inscrito_id', $inscrito->getKey())
-            ->whereIn('treinamento_id', Treinamento::query()->where('curso_id', $vigente->curso_id)->select('id'));
+            ->whereIn('treinamento_id', Treinamento::query()
+                ->where('curso_id', $vigente->curso_id)
+                ->where('tipo', TipoTreinamento::EAD->value)
+                ->select('id'))
+            ->get();
     }
 
     /** Mesmos campos que ProgressoService::concluir grava, em lote. */
