@@ -11,6 +11,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import PublicarVersaoModal from '@/Components/Organisms/Treinamento/Versoes/PublicarVersaoModal.vue';
 import PendenciasPublicacao from '@/Components/Molecules/Treinamento/PendenciasPublicacao.vue';
 import MenuCurso from '@/Components/Organisms/Treinamento/Professor/MenuCurso.vue';
 import UploaderVideo from '@/Components/Organisms/Treinamento/Conteudo/UploaderVideo.vue';
@@ -247,9 +248,25 @@ function avisoDoVideo(video) {
     : 'Em preparação: os alunos só veem o vídeo depois que o processamento terminar.';
 }
 
+// Versao > 1: o "O que mudou" e obrigatorio e pedido num modal antes de publicar.
+const exigeNotas = computed(() => (props.curso.versao ?? 1) > 1);
+const modalPublicar = ref(false);
+const publicando = ref(false);
+
 function publicar() {
-  router.post(route('treinamentos.professor.publicar', props.curso.id), {}, {
+  if (exigeNotas.value) {
+    modalPublicar.value = true;
+    return;
+  }
+  enviarPublicacao({});
+}
+
+function enviarPublicacao(dados) {
+  router.post(route('treinamentos.professor.publicar', props.curso.id), dados, {
     preserveScroll: true,
+    onStart: () => { publicando.value = true; },
+    onFinish: () => { publicando.value = false; },
+    onSuccess: () => { modalPublicar.value = false; },
   });
 }
 </script>
@@ -276,6 +293,15 @@ function publicar() {
             </Button>
           </div>
         </div>
+
+        <PublicarVersaoModal
+          :show="modalPublicar"
+          :rotulo="`v${curso.versao}.0`"
+          :processando="publicando"
+          :erro="errosPublicacao.versao_notas ?? ''"
+          @close="modalPublicar = false"
+          @confirmar="(notas) => enviarPublicacao({ versao_notas: notas })"
+        />
 
         <PendenciasPublicacao :erros="errosPublicacao" :href-provas="route('treinamentos.professor.provas', curso.id)" />
 

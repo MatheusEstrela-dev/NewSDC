@@ -35,6 +35,7 @@ use App\Modules\Treinamento\Controllers\TreinamentoTransicionarStatusController;
 use App\Modules\Treinamento\Controllers\TreinamentoUpdateController;
 use App\Modules\Treinamento\Controllers\ValidarParticipanteConsultarController;
 use App\Modules\Treinamento\Controllers\ValidarParticipanteController;
+use App\Modules\Treinamento\Controllers\Versoes\NovaVersaoStoreController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -143,6 +144,8 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
             ->name('update')
             ->middleware('can:treinamento.cursos.configurar');
         Route::post('/{treinamento}/publicar', TreinamentoPublicarController::class)->name('publicar');
+        // Proxima versao do curso EAD (rascunho copiado da vigente).
+        Route::post('/{treinamento}/versoes', NovaVersaoStoreController::class)->name('versoes.store');
         // Issue #86: o destino vem no corpo. `transicao.status.curso` exige
         // `treinamento.cursos.cancelar` so quando o destino e CANCELADO; as
         // demais transicoes continuam com `treinamento.cursos.edit`.
