@@ -52,6 +52,7 @@ const form = useForm({
   data_inicio: '',
   data_fim: '',
   hora_inicio: '',
+  numero_vagas: '',
   percentual_frequencia_minimo: 75,
   presenca_autoconfirmavel: false,
 });
@@ -180,7 +181,7 @@ function cancelar() {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label class="field-label">Horário de Início</label>
             <TextInput v-model="form.hora_inicio" type="time" />
@@ -189,6 +190,12 @@ function cancelar() {
           <div>
             <label class="field-label">Frequência Mínima (%)</label>
             <TextInput v-model="form.percentual_frequencia_minimo" type="number" />
+          </div>
+          <div>
+            <label class="field-label">Vagas</label>
+            <TextInput v-model="form.numero_vagas" type="number" min="1" placeholder="Ilimitadas" />
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Deixe em branco para vagas ilimitadas.</p>
+            <p v-if="form.errors.numero_vagas" class="field-error">{{ form.errors.numero_vagas }}</p>
           </div>
         </div>
 

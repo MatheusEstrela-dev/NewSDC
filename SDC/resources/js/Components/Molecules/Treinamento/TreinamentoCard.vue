@@ -1,6 +1,6 @@
 <script setup>
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import TreinamentoStatusBadge from '@/Components/Molecules/Treinamento/TreinamentoStatusBadge.vue';
+import StatusExibicaoCursoBadge from '@/Components/Molecules/Treinamento/StatusExibicaoCursoBadge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
@@ -62,7 +62,13 @@ const vagasText = computed(() => {
       <Badge v-if="treinamento.situacao && treinamento.situacao !== 'ATIVO'" :variant="treinamento.situacao_variant" size="sm" class="ml-2">
         {{ treinamento.situacao_label }}
       </Badge>
-      <TreinamentoStatusBadge v-else :status="treinamento.status" :label="treinamento.status_label" class="ml-2" />
+      <StatusExibicaoCursoBadge
+        v-else
+        :color="treinamento.status_exibicao_color"
+        :label="treinamento.status_exibicao_label"
+        size="sm"
+        class="ml-2"
+      />
     </div>
 
     <!-- Descrição -->

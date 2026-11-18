@@ -341,6 +341,15 @@ return [
                 'edit' => 'treinamento.cursos.edit',
                 'delete' => 'treinamento.cursos.delete',
                 'export' => 'treinamento.cursos.export',
+                // Configuracao ESTRUTURAL do curso (issue #86): dados do curso,
+                // vagas, periodo, cronograma e designacao de professor.
+                // Slug proprio, mais estreito que `edit`: o professor designado
+                // cuida do conteudo e da sala; o desenho do curso e do gestor.
+                'configurar' => 'treinamento.cursos.configurar',
+                // Encerrar o curso: transicao para CANCELADO e desativacao do
+                // ciclo. Fica fora de `edit` pelo mesmo motivo de
+                // `plantao.escala.publicar`: e o ato irreversivel do modulo.
+                'cancelar' => 'treinamento.cursos.cancelar',
             ],
             'Inscricoes' => [
                 'view' => 'treinamento.inscricoes.view',
@@ -360,6 +369,11 @@ return [
             ],
             'Professor' => [
                 'acessar' => 'treinamento.professor.acessar',
+            ],
+            // Area do Gestor do curso (issue #86). So abre a area; cada acao
+            // de dentro ainda exige o seu proprio slug (configurar/cancelar).
+            'Gestor' => [
+                'acessar' => 'treinamento.gestor.acessar',
             ],
             'Indicadores' => [
                 'view' => 'treinamento.indicadores.view',
@@ -869,6 +883,12 @@ return [
             'treinamento.cursos.create',
             'treinamento.cursos.edit',
             'treinamento.cursos.export',
+            // Issue #86: o Gestor de area e quem desenha e encerra o curso.
+            // Recebe os slugs novos junto com `edit` para nao perder acesso
+            // quando as rotas estruturais passarem a exigi-los.
+            'treinamento.gestor.acessar',
+            'treinamento.cursos.configurar',
+            'treinamento.cursos.cancelar',
             'treinamento.inscricoes.view',
             'treinamento.inscricoes.aprovar',
             'treinamento.inscricoes.reprovar',

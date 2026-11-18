@@ -12,6 +12,7 @@ use App\Modules\Treinamento\Console\VincularCatalogoCommand;
 use App\Modules\Treinamento\Http\Middleware\GerenciaCicloDoCurso;
 use App\Modules\Treinamento\Http\Middleware\GerenciaVideo;
 use App\Modules\Treinamento\Http\Middleware\LecionaCurso;
+use App\Modules\Treinamento\Http\Middleware\TransicaoDeStatusAutorizada;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Observers\CursoTempoRealObserver;
@@ -42,6 +43,7 @@ class TreinamentoServiceProvider extends ServiceProvider
         $this->app['router']->aliasMiddleware('leciona.curso', LecionaCurso::class);
         $this->app['router']->aliasMiddleware('gerencia.video', GerenciaVideo::class);
         $this->app['router']->aliasMiddleware('gerencia.ciclo.curso', GerenciaCicloDoCurso::class);
+        $this->app['router']->aliasMiddleware('transicao.status.curso', TransicaoDeStatusAutorizada::class);
 
         Treinamento::observe(CursoTempoRealObserver::class);
         Inscricao::observe(CursoTempoRealObserver::class);

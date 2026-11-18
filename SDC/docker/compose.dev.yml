@@ -182,7 +182,14 @@ services:
       # 16 nao cobre o pior caso (16 x 3 = 48 tasks); cobre a concorrencia real
       # esperada no indice. A metrica para mexer neste numero e o tempo gasto
       # DENTRO do Concurrency, nao o CPU.
-      OCTANE_TASK_WORKERS: 16
+      #
+      # DESLIGADO (0) desde 2026-11-17: com PHP 8.4.27 + Swoole 6.2.1 o
+      # Octane::concurrently derruba o worker HTTP com segfault (signal=11 no
+      # storage/logs/swoole_http.log). O PasswordVerifier usa task worker, entao
+      # todo login com CPF de servidor travava ate o timeout (408 em ~30s). Com 0,
+      # Concurrency::tasks() cai no caminho sem task worker e o login responde em
+      # ~0,1s. Para religar: OCTANE_TASK_WORKERS=16 no docker/.env, e testar o login.
+      OCTANE_TASK_WORKERS: ${OCTANE_TASK_WORKERS:-0}
       OCTANE_MAX_REQUESTS: 500
       DB_PERSISTENT: "false"
 

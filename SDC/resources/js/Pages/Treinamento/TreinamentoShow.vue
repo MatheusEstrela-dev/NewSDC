@@ -155,21 +155,26 @@ function copiarLinkPublico() {
 
       <!-- Ações de fluxo (admin) -->
       <div class="mb-6 flex flex-wrap gap-2">
-        <template v-if="treinamento.tipo === 'EAD' && can('treinamento.cursos.edit')">
+        <!-- Area do Gestor (issue #86): disponivel para qualquer modalidade,
+             nao so EAD - vagas, periodo e cronograma valem para
+             presencial/semi-presencial/online tambem. -->
+        <Button v-if="can('treinamento.gestor.acessar')" variant="primary" size="sm" :href="route('treinamentos.gestor.show', treinamento.id)">
+          Gestão do curso
+        </Button>
+        <template v-if="treinamento.tipo === 'EAD' && can('treinamento.cursos.configurar')">
           <CursoSelos :publicado="treinamento.esta_publicado" :situacao="treinamento.situacao" :situacao-label="treinamento.situacao_label" />
-          <Button variant="primary" size="sm" :href="route('treinamentos.professor.conteudo', treinamento.id)">Gerenciar conteúdo</Button>
           <AcoesCicloCurso :curso="treinamento" />
         </template>
-        <Button v-if="can('treinamento.cursos.edit') && !treinamento.esta_publicado" variant="secondary" size="sm" @click="publicar">
+        <Button v-if="can('treinamento.cursos.configurar') && !treinamento.esta_publicado" variant="secondary" size="sm" @click="publicar">
           Publicar no Portal
         </Button>
-        <Button v-if="can('treinamento.cursos.edit') && podeTransicionarPara('EM_ANDAMENTO')" variant="primary" size="sm" @click="transicionar('EM_ANDAMENTO')">
+        <Button v-if="can('treinamento.cursos.configurar') && podeTransicionarPara('EM_ANDAMENTO')" variant="primary" size="sm" @click="transicionar('EM_ANDAMENTO')">
           Iniciar Treinamento
         </Button>
-        <Button v-if="can('treinamento.cursos.edit') && podeTransicionarPara('CONCLUIDO')" variant="success" size="sm" @click="transicionar('CONCLUIDO')">
+        <Button v-if="can('treinamento.cursos.configurar') && podeTransicionarPara('CONCLUIDO')" variant="success" size="sm" @click="transicionar('CONCLUIDO')">
           Finalizar Treinamento
         </Button>
-        <Button v-if="can('treinamento.cursos.edit') && podeTransicionarPara('CANCELADO')" variant="danger" size="sm" @click="transicionar('CANCELADO')">
+        <Button v-if="can('treinamento.cursos.cancelar') && podeTransicionarPara('CANCELADO')" variant="danger" size="sm" @click="transicionar('CANCELADO')">
           Cancelar Treinamento
         </Button>
         <Button v-if="can('treinamento.presencas.registrar') && !treinamento.presenca_liberada" variant="secondary" size="sm" @click="liberarPresenca">
@@ -206,7 +211,7 @@ function copiarLinkPublico() {
               <div v-else class="flex h-full w-full items-center justify-center px-4 text-center text-sm text-slate-500 dark:text-slate-400">
                 Curso sem imagem de capa
               </div>
-              <div v-if="can('treinamento.cursos.edit')" class="absolute right-2 top-2">
+              <div v-if="can('treinamento.cursos.configurar')" class="absolute right-2 top-2">
                 <CapaCursoUpload :curso="treinamento" />
               </div>
             </div>
@@ -350,13 +355,13 @@ function copiarLinkPublico() {
             class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
           >
             <Text size="sm" class="font-medium">{{ professor.name }}</Text>
-            <Button v-if="can('treinamento.cursos.edit')" variant="danger" size="sm" @click="removerProfessor(professor.id)">
+            <Button v-if="can('treinamento.cursos.configurar')" variant="danger" size="sm" @click="removerProfessor(professor.id)">
               Remover
             </Button>
           </li>
         </ul>
 
-        <div v-if="can('treinamento.cursos.edit')" class="space-y-2">
+        <div v-if="can('treinamento.cursos.configurar')" class="space-y-2">
           <TextInput v-model="buscaProfessor" placeholder="Buscar professor por nome ou e-mail" />
           <ul v-if="candidatosDisponiveis.length" class="space-y-2">
             <li

@@ -102,9 +102,12 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
         ->name('create')
         ->middleware('can:treinamento.cursos.create');
     // Tambem antes do /{id}, pelo mesmo motivo do /create.
+    // Issue #86: o formulario do curso e configuracao ESTRUTURAL -> exige
+    // tambem `treinamento.cursos.configurar`. Admin e manager ja recebem os
+    // dois slugs no config, entao ninguem perde acesso de forma silenciosa.
     Route::get('/{id}/edit', TreinamentoEditController::class)
         ->name('edit')
-        ->middleware('can:treinamento.cursos.edit');
+        ->middleware(['can:treinamento.cursos.edit', 'can:treinamento.cursos.configurar']);
     Route::get('/{id}', TreinamentoShowController::class)
         ->name('show')
         ->middleware('can:treinamento.cursos.view');
@@ -135,9 +138,17 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
         });
 
     Route::middleware('can:treinamento.cursos.edit')->group(function () {
-        Route::put('/{id}', TreinamentoUpdateController::class)->name('update');
+        // Gravacao do formulario do curso: mesma exigencia do /edit.
+        Route::put('/{id}', TreinamentoUpdateController::class)
+            ->name('update')
+            ->middleware('can:treinamento.cursos.configurar');
         Route::post('/{treinamento}/publicar', TreinamentoPublicarController::class)->name('publicar');
-        Route::post('/{treinamento}/status', TreinamentoTransicionarStatusController::class)->name('status');
+        // Issue #86: o destino vem no corpo. `transicao.status.curso` exige
+        // `treinamento.cursos.cancelar` so quando o destino e CANCELADO; as
+        // demais transicoes continuam com `treinamento.cursos.edit`.
+        Route::post('/{treinamento}/status', TreinamentoTransicionarStatusController::class)
+            ->name('status')
+            ->middleware('transicao.status.curso');
     });
 
     Route::delete('/{id}', TreinamentoDeleteController::class)

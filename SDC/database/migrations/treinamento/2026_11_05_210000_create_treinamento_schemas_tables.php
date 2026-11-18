@@ -79,6 +79,7 @@ return new class extends Migration
         $this->criarIndicadores();
         $this->criarCredencialQr();
         $this->criarCatalogo();
+        $this->criarAreaDoGestor();
     }
 
     public function down(): void
@@ -493,7 +494,7 @@ return new class extends Migration
         $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_publico_alvo_check CHECK (publico_alvo IN ('SERVIDORES', 'CIDADAOS'))");
 
         $this->exec('ALTER TABLE treinamento.treinamentos DROP CONSTRAINT IF EXISTS treinamentos_tipo_check');
-        $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_tipo_check CHECK (tipo IN ('PRESENCIAL', 'ONLINE', 'EAD'))");
+        $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_tipo_check CHECK (tipo IN ('PRESENCIAL', 'SEMI_PRESENCIAL', 'ONLINE', 'EAD'))");
 
         $this->exec('ALTER TABLE treinamento.modulos ADD COLUMN IF NOT EXISTS deleted_at timestamp(0)');
     }
@@ -820,6 +821,72 @@ return new class extends Migration
         $this->indices('treinamento.liberacoes_inscricao', [
             'liberacoes_inscricao_cpf_curso_index' => 'cpf, curso_id',
             'liberacoes_inscricao_liberado_por_fkidx' => 'liberado_por',
+        ]);
+    }
+
+    /**
+     * Area do Gestor (issue #86): cronograma e historico do curso.
+     *
+     * - curso_cronogramas: eventos datados (aulas, provas, encontros) do curso,
+     *   para o calendario do gestor;
+     * - curso_eventos: historico append-only do fluxo do curso.
+     *
+     * POR QUE curso_eventos.tipo NAO TEM CHECK
+     * O historico e append-only e a lista de tipos cresce a cada tela nova do
+     * gestor. A fonte da verdade e o enum TipoEventoCurso; um CHECK aqui
+     * obrigaria uma migration a cada tipo novo e derrubaria a gravacao do
+     * historico (erro em transacao aborta o request inteiro no Postgres).
+     *
+     * autor_id (users.id no sdc) fica como bigint indexado, sem FK, como
+     * treinamentos.created_by. SEMI_PRESENCIAL entra no CHECK de
+     * treinamentos.tipo em ajustarTabelasExistentes().
+     */
+    private function criarAreaDoGestor(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.curso_cronogramas (
+                id bigserial PRIMARY KEY,
+                treinamento_id bigint NOT NULL,
+                titulo varchar(160) NOT NULL,
+                descricao text,
+                tipo varchar(20) NOT NULL DEFAULT 'AULA',
+                inicio timestamp(0) NOT NULL,
+                fim timestamp(0),
+                local varchar(255),
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                deleted_at timestamp(0),
+                CONSTRAINT curso_cronogramas_tipo_check CHECK (tipo IN ('AULA', 'PROVA', 'ENTREGA', 'ENCONTRO', 'OUTRO')),
+                CONSTRAINT curso_cronogramas_periodo_check CHECK (fim IS NULL OR fim >= inicio),
+                CONSTRAINT curso_cronogramas_treinamento_id_foreign
+                    FOREIGN KEY (treinamento_id) REFERENCES treinamento.treinamentos (id) ON UPDATE CASCADE ON DELETE CASCADE
+            )
+            SQL);
+
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.curso_eventos (
+                id bigserial PRIMARY KEY,
+                treinamento_id bigint NOT NULL,
+                tipo varchar(40) NOT NULL,
+                descricao varchar(255) NOT NULL,
+                dados jsonb NOT NULL DEFAULT '{}'::jsonb,
+                autor_id bigint,
+                created_at timestamp(0) NOT NULL,
+                CONSTRAINT curso_eventos_treinamento_id_foreign
+                    FOREIGN KEY (treinamento_id) REFERENCES treinamento.treinamentos (id) ON UPDATE CASCADE ON DELETE CASCADE
+            )
+            SQL);
+        $this->exec("COMMENT ON COLUMN treinamento.curso_eventos.autor_id IS 'users.id no banco sdc; sem FK (outro banco). NULL = acao de sistema (job, comando)'");
+        $this->exec("COMMENT ON COLUMN treinamento.curso_eventos.tipo IS 'Sem CHECK: a fonte da verdade e o enum TipoEventoCurso'");
+
+        $this->indices('treinamento.curso_cronogramas', [
+            'curso_cronogramas_treinamento_inicio_index' => 'treinamento_id, inicio',
+            'curso_cronogramas_inicio_index' => 'inicio',
+        ]);
+        $this->indices('treinamento.curso_eventos', [
+            'curso_eventos_treinamento_id_index' => 'treinamento_id, id',
+            'curso_eventos_created_at_index' => 'created_at',
+            'curso_eventos_autor_id_fkidx' => 'autor_id',
         ]);
     }
 

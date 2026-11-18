@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
 use App\Modules\Treinamento\Services\InscricaoService;
 use App\Modules\Treinamento\Services\ProfessorService;

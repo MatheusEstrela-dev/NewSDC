@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Services;
 use App\Models\Municipio;
 use App\Models\User;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
+use App\Modules\Treinamento\Enums\TipoEventoCurso;
 use App\Modules\Treinamento\Jobs\EmitirCertificadosTreinamentoJob;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Shared\BaseService;
@@ -64,7 +65,16 @@ class TreinamentoService extends BaseService
 
     public function create(array $data): Treinamento
     {
-        return Treinamento::create($data);
+        $treinamento = Treinamento::create($data);
+
+        app(HistoricoDoCursoService::class)->registrar(
+            (int) $treinamento->id,
+            TipoEventoCurso::CURSO_CRIADO,
+            'Curso criado.',
+            ['titulo' => $treinamento->titulo, 'tipo' => $treinamento->tipo?->value],
+        );
+
+        return $treinamento;
     }
 
     public function update(int $id, array $data): bool
@@ -73,7 +83,24 @@ class TreinamentoService extends BaseService
         if (!$treinamento) {
             return false;
         }
-        return $treinamento->update($data);
+
+        $alterado = $treinamento->update($data);
+
+        // So vira linha de historico o que de fato mudou: salvar o formulario
+        // sem mexer em nada nao enche a tela do gestor.
+        $mudancas = array_keys($treinamento->getChanges());
+        $mudancas = array_values(array_diff($mudancas, ['updated_at']));
+
+        if ($alterado && $mudancas !== []) {
+            app(HistoricoDoCursoService::class)->registrar(
+                (int) $treinamento->id,
+                TipoEventoCurso::CURSO_ATUALIZADO,
+                'Curso atualizado: '.implode(', ', $mudancas).'.',
+                ['campos' => $mudancas],
+            );
+        }
+
+        return $alterado;
     }
 
     public function delete(int $id): bool
@@ -118,6 +145,13 @@ class TreinamentoService extends BaseService
         }
 
         $treinamento->publicarNoPortal();
+
+        app(HistoricoDoCursoService::class)->registrar(
+            (int) $treinamento->id,
+            TipoEventoCurso::CURSO_PUBLICADO,
+            'Curso publicado no catalogo.',
+            ['publicado_em' => $treinamento->publicado_em?->toIso8601String()],
+        );
     }
 
     public function liberarPresenca(Treinamento $treinamento, User $por): void
@@ -142,12 +176,26 @@ class TreinamentoService extends BaseService
             );
         }
 
+        $anterior = $treinamento->status;
+
         if ($novoStatus === StatusTreinamento::CONCLUIDO) {
             $treinamento->finalizar();
+            $this->registrarMudancaDeStatus($treinamento, $anterior, $novoStatus);
             EmitirCertificadosTreinamentoJob::dispatch($treinamento->id);
             return;
         }
 
         $treinamento->update(['status' => $novoStatus->value]);
+        $this->registrarMudancaDeStatus($treinamento, $anterior, $novoStatus);
+    }
+
+    private function registrarMudancaDeStatus(Treinamento $treinamento, StatusTreinamento $anterior, StatusTreinamento $novo): void
+    {
+        app(HistoricoDoCursoService::class)->registrar(
+            (int) $treinamento->id,
+            $novo === StatusTreinamento::CANCELADO ? TipoEventoCurso::CURSO_CANCELADO : TipoEventoCurso::STATUS_ALTERADO,
+            'Status alterado de '.$anterior->getLabel().' para '.$novo->getLabel().'.',
+            ['de' => $anterior->value, 'para' => $novo->value],
+        );
     }
 }

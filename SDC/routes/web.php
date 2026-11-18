@@ -183,6 +183,12 @@ Route::middleware('auth')->group(function () {
 
     // Módulo: Treinamento
     require __DIR__ . '/modules/treinamento.php';
+    // Área do Gestor (issue #86, bloco 2): arquivo proprio porque
+    // routes/modules/treinamento.php e de outro bloco. URL em segmento
+    // proprio ("treinamentos-gestor") para nao colidir com o wildcard
+    // /{id} que treinamento.php ja registrou acima - ver comentario no
+    // topo do arquivo.
+    require __DIR__ . '/modules/treinamento-gestor.php';
 
     // Módulo: Suporte
     require __DIR__ . '/modules/suporte.php';

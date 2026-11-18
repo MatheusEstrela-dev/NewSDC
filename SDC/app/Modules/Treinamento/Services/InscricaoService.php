@@ -14,7 +14,10 @@ use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Mail\InscricaoConfirmadaMail;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Support\ConexaoTreinamento;
+use App\Modules\Treinamento\Support\ControleDeVagas;
 use App\Modules\Treinamento\Support\MunicipioDoInscrito;
+use App\Modules\Treinamento\Support\PeriodoDeInscricao;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Mail;
@@ -49,7 +52,11 @@ class InscricaoService extends BaseService
             throw new \DomainException('Este curso esta '.mb_strtolower($treinamento->situacaoEfetiva()->getLabel()).' e nao recebe inscricoes.');
         }
 
-        if (!$treinamento->podeReceberInscricao()) {
+        // So o status aqui. A vaga fica com ControleDeVagas, sob trava, mais
+        // abaixo: contar aprovadas sem trava (como podeReceberInscricao() faz)
+        // deixaria duas inscricoes simultaneas ocuparem a ultima vaga e
+        // trocaria a mensagem "nao tem mais vagas" por esta.
+        if (!$treinamento->status->podeReceberInscricoes()) {
             throw new \DomainException('Este treinamento nao esta recebendo inscricoes no momento.');
         }
 
@@ -73,20 +80,29 @@ class InscricaoService extends BaseService
 
         $this->garantirDentroDoLimiteDoCurso($treinamento, $inscrito);
 
+        // Periodo de atuacao: so o limite final recusa (ver PeriodoDeInscricao).
+        PeriodoDeInscricao::exigirAberto($treinamento);
+
         $aprovacaoAutomatica = (bool) $treinamento->inscricao_aprovacao_automatica;
 
-        $inscricao = Inscricao::create([
-            'treinamento_id' => $treinamento->id,
-            'inscrito_type' => $inscrito::class,
-            'inscrito_id' => $inscrito->getKey(),
-            'status' => ($aprovacaoAutomatica ? StatusInscricao::APROVADA : StatusInscricao::PENDENTE)->value,
-            'data_aprovacao' => $aprovacaoAutomatica ? now() : null,
-            'aprovado_por_id' => null,
-            'qr_code_token' => (string) Str::uuid(),
-            'data_inscricao' => now(),
-            'sexo' => $sexo?->value,
-            'municipio_inscrito_id' => MunicipioDoInscrito::de($inscrito),
-        ]);
+        // A vaga so e segura com a linha do limite travada, e a trava so vale
+        // dentro da transacao - por isso a checagem e a insercao andam juntas.
+        $inscricao = ConexaoTreinamento::transacao(function () use ($treinamento, $inscrito, $sexo, $aprovacaoAutomatica) {
+            ControleDeVagas::exigirVagaComTrava($treinamento);
+
+            return Inscricao::create([
+                'treinamento_id' => $treinamento->id,
+                'inscrito_type' => $inscrito::class,
+                'inscrito_id' => $inscrito->getKey(),
+                'status' => ($aprovacaoAutomatica ? StatusInscricao::APROVADA : StatusInscricao::PENDENTE)->value,
+                'data_aprovacao' => $aprovacaoAutomatica ? now() : null,
+                'aprovado_por_id' => null,
+                'qr_code_token' => (string) Str::uuid(),
+                'data_inscricao' => now(),
+                'sexo' => $sexo?->value,
+                'municipio_inscrito_id' => MunicipioDoInscrito::de($inscrito),
+            ]);
+        });
 
         if ($aprovacaoAutomatica) {
             $this->notificarAprovacao($inscricao);
@@ -158,19 +174,36 @@ class InscricaoService extends BaseService
             : 'Inscricao realizada! Aguarde a aprovacao.';
     }
 
+    /**
+     * A vaga e reconferida aqui, nao so no inscrever(): entre a inscricao
+     * pendente e a aprovacao outras inscricoes podem ter ocupado a vaga, e
+     * duas aprovacoes simultaneas disputariam a mesma ultima vaga.
+     */
     public function aprovar(Inscricao $inscricao, User $aprovador, ?string $observacoes = null): void
     {
         if ($inscricao->status !== StatusInscricao::PENDENTE) {
             throw new \DomainException('Somente inscricoes pendentes podem ser aprovadas.');
         }
 
-        $inscricao->update([
-            'status' => StatusInscricao::APROVADA->value,
-            'data_aprovacao' => now(),
-            'aprovado_por_id' => $aprovador->id,
-            'observacoes' => $observacoes,
-        ]);
+        $inscricao->loadMissing(['treinamento']);
 
+        if ($inscricao->treinamento === null) {
+            throw new \DomainException('Treinamento da inscricao nao encontrado.');
+        }
+
+        ConexaoTreinamento::transacao(function () use ($inscricao, $aprovador, $observacoes) {
+            ControleDeVagas::exigirVagaComTrava($inscricao->treinamento);
+
+            $inscricao->update([
+                'status' => StatusInscricao::APROVADA->value,
+                'data_aprovacao' => now(),
+                'aprovado_por_id' => $aprovador->id,
+                'observacoes' => $observacoes,
+            ]);
+        });
+
+        // E-mail fora da transacao: enfileirar dentro faria o job sair antes do
+        // commit em qualquer fila nao transacional.
         $this->notificarAprovacao($inscricao);
     }
 

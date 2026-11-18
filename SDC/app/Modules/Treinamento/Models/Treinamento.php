@@ -10,6 +10,7 @@ use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Treinamento\Enums\CategoriaTreinamento;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\SituacaoCurso;
+use App\Modules\Treinamento\Enums\StatusExibicaoCurso;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Support\Database\UsaConexaoDeTreinamento;
@@ -116,6 +117,17 @@ class Treinamento extends Model implements Rastreavel
         return $this->hasMany(Certificado::class);
     }
 
+    public function cronogramas(): HasMany
+    {
+        return $this->hasMany(CursoCronograma::class)->orderBy('inicio');
+    }
+
+    /** Historico do fluxo do curso, do mais recente para o mais antigo. */
+    public function eventos(): HasMany
+    {
+        return $this->hasMany(CursoEvento::class)->orderByDesc('id');
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -154,6 +166,34 @@ class Treinamento extends Model implements Rastreavel
     public function isEad(): bool
     {
         return $this->tipo === TipoTreinamento::EAD;
+    }
+
+    /**
+     * Status que a tela do gestor mostra, derivado de status + publicacao.
+     * Nao ha coluna para ele; a precedencia esta documentada no enum.
+     * A situacao (Pausado/Desativado) e ortogonal e vem de situacaoEfetiva().
+     */
+    public function statusDeExibicao(): StatusExibicaoCurso
+    {
+        // "Publicado" usa a mesma definicao do resto do modulo (estaPublicado:
+        // slug + publicado_em), para nao haver duas nocoes de publicado.
+        return StatusExibicaoCurso::derivar($this->status, $this->estaPublicado());
+    }
+
+    /**
+     * Inscricao encerrada pelas datas do curso. So o limite final recusa:
+     * inscricao antes do inicio e inscricao antecipada, sempre permitida pelo
+     * modulo.
+     */
+    public function encerrouInscricoes(?\Carbon\CarbonInterface $agora = null): bool
+    {
+        if ($this->data_fim === null) {
+            return false;
+        }
+
+        $hoje = \Carbon\CarbonImmutable::parse($agora ?? now())->startOfDay();
+
+        return $hoje->greaterThan(\Carbon\CarbonImmutable::parse($this->data_fim)->startOfDay());
     }
 
     public function estaCheio(): bool

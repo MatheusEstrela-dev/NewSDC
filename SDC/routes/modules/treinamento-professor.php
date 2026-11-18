@@ -112,16 +112,27 @@ Route::prefix('professor')->name('professor.')->middleware('permission:treinamen
     });
 });
 
-// Ciclo do curso: professor designado ou admin (que nao precisa da area do professor).
+// Pausa e retomada: professor designado ou admin (que nao precisa da area do
+// professor). Issue #86 mantem a pausa com quem conduz a turma -- e reversivel
+// e nao encerra nada.
 Route::prefix('professor')->name('professor.')->middleware('gerencia.ciclo.curso')->group(function () {
     Route::post('/{treinamento}/pausar', CursoPausarController::class)->name('pausar');
     Route::post('/{treinamento}/retomar', CursoRetomarController::class)->name('retomar');
-    Route::post('/{treinamento}/desativar', CursoDesativarController::class)->name('desativar');
-    Route::post('/{treinamento}/reativar', CursoReativarController::class)->name('reativar');
 });
 
-// Designacao de professores (administracao do curso).
-Route::middleware('can:treinamento.cursos.edit')->group(function () {
+// Desativar e reativar: issue #86 trata a desativacao como ENCERRAMENTO do
+// curso, ao lado do cancelamento. Alem de `gerencia.ciclo.curso` (que mantem o
+// 404 para curso nao-EAD), exige `treinamento.cursos.cancelar`: professor
+// designado sem o slug recebe 403.
+Route::prefix('professor')->name('professor.')
+    ->middleware(['gerencia.ciclo.curso', 'can:treinamento.cursos.cancelar'])
+    ->group(function () {
+        Route::post('/{treinamento}/desativar', CursoDesativarController::class)->name('desativar');
+        Route::post('/{treinamento}/reativar', CursoReativarController::class)->name('reativar');
+    });
+
+// Designacao de professores: configuracao estrutural do curso (issue #86).
+Route::middleware(['can:treinamento.cursos.edit', 'can:treinamento.cursos.configurar'])->group(function () {
     Route::get('/professores/candidatos', ProfessorCandidatosController::class)->name('professores.candidatos');
     Route::post('/{treinamento}/professores', ProfessorStoreController::class)->name('professores.store');
     Route::delete('/{treinamento}/professores/{userId}', ProfessorDestroyController::class)->name('professores.destroy');
