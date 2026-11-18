@@ -40,7 +40,7 @@ class ProvaConteudoService
     {
         $prova->update($this->configuracao($dados));
 
-        if ($prova->wasChanged(['nota_minima', 'max_tentativas'])) {
+        if ($prova->wasChanged('nota_minima')) {
             $prova->item?->marcarAlterado();
         }
 

@@ -135,6 +135,8 @@ class ConteudoCursoService
             'total_paginas' => $item->tipo === TipoItem::PDF ? (int) $dados['total_paginas'] : null,
         ]);
 
+        // Lido antes de marcarAlterado(), cujo update sobrescreve o wasChanged().
+        $deixouDeSerObrigatorio = $item->wasChanged('obrigatorio') && ! $item->obrigatorio;
         $mudouConteudo = $arquivo !== null || $item->wasChanged(['obrigatorio', 'total_paginas']);
 
         if ($item->tipo === TipoItem::PROVA && $item->prova !== null) {
@@ -149,7 +151,7 @@ class ConteudoCursoService
             $this->arquivos->apagar($anterior);
         }
 
-        if ($item->wasChanged('obrigatorio') && ! $item->obrigatorio) {
+        if ($deixouDeSerObrigatorio) {
             $this->reavaliarConclusoes($item->modulo->treinamento_id);
         }
 
