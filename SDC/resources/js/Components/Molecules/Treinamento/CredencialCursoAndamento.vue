@@ -15,7 +15,7 @@ const progresso = computed(() => {
 
 <template>
   <li class="py-3">
-    <p class="break-words text-base font-semibold text-slate-900 dark:text-white">{{ curso.titulo }}</p>
+    <p class="break-words text-base font-semibold text-slate-900 dark:text-white">{{ curso.titulo }}<span v-if="curso.versao_rotulo"> - {{ curso.versao_rotulo }}</span></p>
     <div v-if="progresso !== null" class="mt-2 flex items-center gap-3">
       <div
         class="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificado — {{ $treinamento->titulo }}</title>
+    <title>Certificado — {{ $treinamento->titulo }}{{ $versaoRotulo ? ' - '.$versaoRotulo : '' }}</title>
     <style>
         @font-face {
             font-family: 'Poppins';
@@ -204,7 +204,7 @@
             <p>
                 <strong>{{ $nomeInscrito }}</strong> participou e concluiu com aproveitamento
                 {{ $treinamento->categoria->value === 'EVENTO' ? 'o evento' : 'o(a) curso/capacitação' }}
-                <strong>&ldquo;{{ $treinamento->titulo }}&rdquo;</strong>, realizado no período de
+                <strong>&ldquo;{{ $treinamento->titulo }}{{ $versaoRotulo ? ' - '.$versaoRotulo : '' }}&rdquo;</strong>, realizado no período de
                 <strong>{{ optional($treinamento->data_inicio)->format('d/m/Y') ?? '—' }}</strong> a
                 <strong>{{ optional($treinamento->data_fim)->format('d/m/Y') ?? optional($treinamento->data_inicio)->format('d/m/Y') ?? '—' }}</strong>,
                 com carga horária de <strong>{{ $treinamento->carga_horaria }} horas</strong>@if ($aproveitamento !== null) e aproveitamento de <strong>{{ number_format($aproveitamento, 1, ',', '.') }}%</strong>@endif, promovido no âmbito

@@ -11,6 +11,7 @@ use App\Modules\Treinamento\Models\Certificado;
 use App\Modules\Treinamento\Models\CredencialConsulta;
 use App\Modules\Treinamento\Models\CredencialQr;
 use App\Modules\Treinamento\Models\Inscricao;
+use App\Modules\Treinamento\Support\VersoesDoCurso;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -125,18 +126,22 @@ class CredencialQrService
 
     /**
      * @param  list<int>  $inscricaoIds
-     * @return list<array{titulo: string, emitido_em: string, codigo_verificacao: string|null}>
+     * @return list<array{titulo: string, versao_rotulo: string|null, emitido_em: string, codigo_verificacao: string|null}>
      */
     private function certificados(array $inscricaoIds): array
     {
-        return Certificado::query()
+        $certificados = Certificado::query()
             ->with('treinamento')
             ->whereIn('inscricao_id', $inscricaoIds)
             ->where('status', StatusCertificado::GERADO->value)
             ->orderByDesc('emitido_em')
-            ->get()
+            ->get();
+        $rotulos = VersoesDoCurso::rotulos($certificados->pluck('treinamento'));
+
+        return $certificados
             ->map(fn (Certificado $c) => [
                 'titulo' => $c->treinamento->titulo,
+                'versao_rotulo' => $rotulos[$c->treinamento->id] ?? null,
                 'emitido_em' => ($c->emitido_em ?? $c->created_at)->toDateString(),
                 'codigo_verificacao' => $c->codigo_verificacao,
             ])
@@ -146,14 +151,18 @@ class CredencialQrService
 
     /**
      * @param  Collection<int, Inscricao>  $inscricoes
-     * @return list<array{titulo: string, progresso: int|null}>
+     * @return list<array{titulo: string, versao_rotulo: string|null, progresso: int|null}>
      */
     private function emAndamento(Collection $inscricoes): array
     {
-        return $inscricoes
-            ->filter(fn (Inscricao $i) => $i->status === StatusInscricao::APROVADA && $i->concluido_em === null)
+        $andamento = $inscricoes
+            ->filter(fn (Inscricao $i) => $i->status === StatusInscricao::APROVADA && $i->concluido_em === null);
+        $rotulos = VersoesDoCurso::rotulos($andamento->pluck('treinamento'));
+
+        return $andamento
             ->map(fn (Inscricao $i) => [
                 'titulo' => $i->treinamento->titulo,
+                'versao_rotulo' => $rotulos[$i->treinamento->id] ?? null,
                 'progresso' => (int) round($this->trilha->estado($i)->percentual),
             ])
             ->values()

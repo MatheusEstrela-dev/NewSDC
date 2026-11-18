@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Certificado;
 use App\Modules\Treinamento\Services\CertificadoService;
 use App\Modules\Treinamento\Services\GeradorQrCodeService;
+use App\Modules\Treinamento\Support\VersoesDoCurso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -48,6 +49,7 @@ class CertificadoImprimirController extends Controller
 
         return view('treinamento.certificado-print', [
             'treinamento' => $certificado->treinamento,
+            'versaoRotulo' => VersoesDoCurso::rotulos([$certificado->treinamento])[$certificado->treinamento->id] ?? null,
             'nomeInscrito' => $certificado->inscricao->inscrito?->name ?? '—',
             'percentualFrequencia' => $certificado->inscricao->calcularPercentualFrequencia(),
             'codigoVerificacao' => $certificado->codigo_verificacao,
