@@ -30,6 +30,16 @@ class AproveitamentoDeItens
     /** @return list<int> ids dos itens da vigente */
     public function itensIguais(Treinamento $vigente, Inscricao $origem): array
     {
+        return array_map('intval', array_keys($this->mapaDeIguais($vigente, $origem)));
+    }
+
+    /**
+     * Item da vigente => item da origem que ele repete (com a evidencia exigida).
+     *
+     * @return array<int, int>
+     */
+    public function mapaDeIguais(Treinamento $vigente, Inscricao $origem): array
+    {
         $concluidosNaOrigem = $this->concluidosNaOrigem($origem);
         if ($concluidosNaOrigem === []) {
             return [];
@@ -101,12 +111,12 @@ class AproveitamentoDeItens
      *
      * @param  array<int, int>  $iguais  item da vigente => item concluido na origem
      * @param  array<int, TipoItem>  $tipos
-     * @return list<int>
+     * @return array<int, int> item da vigente => item concluido na origem
      */
     private function comEvidencia(array $iguais, array $tipos, Inscricao $origem): array
     {
         if ($iguais === [] || $origem->eAtualizacao()) {
-            return array_map('intval', array_keys($iguais));
+            return $iguais;
         }
 
         $aprovados = $this->aprovadosNaOrigem($origem, $iguais, $tipos);
@@ -115,7 +125,7 @@ class AproveitamentoDeItens
         foreach ($iguais as $itemVigente => $itemOrigem) {
             $exigeEvidencia = in_array($tipos[$itemVigente], [TipoItem::PROVA, TipoItem::PROJETO], true);
             if (! $exigeEvidencia || isset($aprovados[$itemOrigem])) {
-                $validos[] = (int) $itemVigente;
+                $validos[(int) $itemVigente] = (int) $itemOrigem;
             }
         }
 
