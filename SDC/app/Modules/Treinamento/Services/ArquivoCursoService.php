@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Services;
 
+use App\Modules\Treinamento\Models\ModuloItem;
+use App\Modules\Treinamento\Models\Treinamento;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -39,9 +41,19 @@ class ArquivoCursoService
 
     public function apagar(?string $path): void
     {
-        if ($path !== null && $path !== '') {
+        if ($path !== null && $path !== '' && ! $this->emUso($path)) {
             Storage::disk(self::DISK)->delete($path);
         }
+    }
+
+    /**
+     * Uma nova versao do curso reaproveita o arquivo (PDF, capa) sem copia fisica:
+     * enquanto algum item (inclusive excluido logicamente) ou capa o referencia, ele fica.
+     */
+    private function emUso(string $path): bool
+    {
+        return ModuloItem::withTrashed()->where('arquivo_path', $path)->exists()
+            || Treinamento::withTrashed()->where('capa_path', $path)->exists();
     }
 
     /**

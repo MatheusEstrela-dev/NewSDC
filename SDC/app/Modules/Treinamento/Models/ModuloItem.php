@@ -56,6 +56,17 @@ class ModuloItem extends Model
         return $this->belongsTo(self::class, 'origem_item_id');
     }
 
+    /**
+     * Registra que o conteudo da copia divergiu do item de origem. So itens
+     * copiados (origem_item_id preenchido) carregam a marca.
+     */
+    public function marcarAlterado(): void
+    {
+        if ($this->origem_item_id !== null && ! $this->alterado_desde_copia) {
+            $this->update(['alterado_desde_copia' => true]);
+        }
+    }
+
     /** Configuracao da prova; existe so em itens PROVA. */
     public function prova(): HasOne
     {

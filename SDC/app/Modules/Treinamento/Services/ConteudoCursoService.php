@@ -135,8 +135,14 @@ class ConteudoCursoService
             'total_paginas' => $item->tipo === TipoItem::PDF ? (int) $dados['total_paginas'] : null,
         ]);
 
+        $mudouConteudo = $arquivo !== null || $item->wasChanged(['obrigatorio', 'total_paginas']);
+
         if ($item->tipo === TipoItem::PROVA && $item->prova !== null) {
             $this->provas->configurar($item->prova, $dados);
+        }
+
+        if ($mudouConteudo) {
+            $item->marcarAlterado();
         }
 
         if ($arquivo !== null) {
