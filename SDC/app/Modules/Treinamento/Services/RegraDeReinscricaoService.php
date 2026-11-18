@@ -16,7 +16,8 @@ use Illuminate\Support\Carbon;
  * Regra das 3 inscricoes: a mesma pessoa (CPF) so pode se inscrever 3 vezes no
  * mesmo curso do catalogo. Contam todas as inscricoes nao concluidas e nao
  * excluidas; a 4a e recusada ate 1 ano depois da ultima que contou. O bloqueio
- * e calculado na hora; so a liberacao do gestor e gravada.
+ * e calculado na hora; so a liberacao do gestor e gravada. A inscricao de
+ * atualizacao para nova versao do curso nao conta.
  */
 class RegraDeReinscricaoService
 {
@@ -87,6 +88,8 @@ class RegraDeReinscricaoService
             ->join('treinamento.treinamentos as t', 't.id', '=', 'treinamento.inscricoes.treinamento_id')
             ->where('t.curso_id', $cursoId)
             ->whereNull('treinamento.inscricoes.concluido_em')
+            // Atualizacao para nova versao nunca e tentativa (marca gravada, nao recalculada).
+            ->whereNull('treinamento.inscricoes.atualizacao_de_inscricao_id')
             ->where(function ($q) use ($identidades) {
                 foreach ($identidades as $tipo => $ids) {
                     if ($ids === []) {
