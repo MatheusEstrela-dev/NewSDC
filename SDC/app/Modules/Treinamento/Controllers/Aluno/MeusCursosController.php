@@ -49,7 +49,7 @@ class MeusCursosController extends Controller
             'certificados' => CertificadoResource::collection($this->certificados($inscricoes->pluck('id')->all()))->resolve(),
             'credencial' => $request->user() instanceof User ? $this->credenciais->paraServidor($request->user()) : null,
             'sexo_padrao' => $this->inscricaoService->sexoDaUltimaInscricao($request->user())?->value,
-            'disponiveis' => $this->disponiveis($userId, $inscricoes->pluck('treinamento_id')->all()),
+            'disponiveis' => $this->disponiveis($userId, $inscricoes),
         ]);
     }
 
@@ -112,13 +112,20 @@ class MeusCursosController extends Controller
 
     /**
      * Cursos EAD de servidores abertos a inscricao em que o usuario ainda nao
-     * esta inscrito nem leciona.
+     * esta inscrito nem leciona. A versao vigente de um curso que a pessoa ja
+     * concluiu numa versao anterior nao entra: ali ela usa "Atualizar".
      *
-     * @param  list<int>  $inscritos
+     * @param  Collection<int, Inscricao>  $inscricoes  inscricoes EAD do usuario, com `treinamento`
      * @return list<array<string, mixed>>
      */
-    private function disponiveis(int $userId, array $inscritos): array
+    private function disponiveis(int $userId, Collection $inscricoes): array
     {
+        $inscritos = $inscricoes->pluck('treinamento_id')->all();
+        $formadoEm = $inscricoes
+            ->filter(fn (Inscricao $i) => $i->concluido_em !== null && $i->treinamento->curso_id !== null)
+            ->map(fn (Inscricao $i) => $i->treinamento->curso_id)
+            ->unique()
+            ->all();
         $leciona = TreinamentoProfessor::query()->where('user_id', $userId)->pluck('treinamento_id')->all();
 
         return Treinamento::query()
@@ -126,6 +133,7 @@ class MeusCursosController extends Controller
             ->paraPublico(PublicoAlvo::SERVIDORES)
             ->noCatalogo()
             ->whereNotIn('id', array_merge($inscritos, $leciona))
+            ->when($formadoEm !== [], fn ($q) => $q->where(fn ($w) => $w->whereNull('curso_id')->orWhereNotIn('curso_id', $formadoEm)))
             ->orderBy('titulo')
             ->get()
             ->filter(fn (Treinamento $t) => $t->aceitaInscricaoAlemDaSituacao())

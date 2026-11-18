@@ -144,9 +144,9 @@ const selo = computed(() => {
 
           <span v-if="modo === 'disponivel' && curso.pausado" class="text-xs text-slate-500 dark:text-slate-400">Inscrições suspensas</span>
           <Button v-else-if="modo === 'disponivel'" size="sm" :loading="loading" @click="emit('inscrever', curso)">Inscrever-se</Button>
-          <span v-else-if="curso.aprovada && !curso.sala_url" class="text-xs text-slate-500 dark:text-slate-400">{{ curso.situacao === 'DESATIVADO' ? 'Curso encerrado' : 'Curso pausado pelo professor' }}</span>
           <div v-else-if="curso.aprovada" class="flex flex-wrap items-center gap-2">
-            <Button size="sm" :variant="novaVersao ? 'outline' : 'primary'" :href="curso.sala_url">{{ concluido ? 'Revisar' : 'Continuar' }}</Button>
+            <Button v-if="curso.sala_url" size="sm" :variant="novaVersao ? 'outline' : 'primary'" :href="curso.sala_url">{{ concluido ? 'Revisar' : 'Continuar' }}</Button>
+            <span v-else class="text-xs text-slate-500 dark:text-slate-400">{{ curso.situacao === 'DESATIVADO' ? 'Curso encerrado' : 'Curso pausado pelo professor' }}</span>
             <Button v-if="novaVersao" size="sm" :loading="atualizando" @click="emit('atualizar', curso)">Atualizar</Button>
           </div>
           <span v-else class="text-xs text-slate-500 dark:text-slate-400">Aguardando aprovação</span>
