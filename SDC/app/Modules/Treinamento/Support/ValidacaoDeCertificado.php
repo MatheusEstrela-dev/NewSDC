@@ -53,7 +53,7 @@ final class ValidacaoDeCertificado
             'nome' => $inscrito?->name,
             'cpf_mascarado' => $this->mascararCpf($inscrito instanceof User || $inscrito instanceof Cidadao ? $inscrito->cpf : null),
             'curso' => $treinamento->titulo,
-            'versao_rotulo' => VersoesDoCurso::rotulos([$treinamento])[$treinamento->id] ?? null,
+            'versao_rotulo' => VersoesDoCurso::rotuloDe($treinamento),
             'carga_horaria' => $treinamento->carga_horaria,
             'modalidade' => $treinamento->tipo->getLabel(),
             'concluido_em' => $conclusao->toDateString(),

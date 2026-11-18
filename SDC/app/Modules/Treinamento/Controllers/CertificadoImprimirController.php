@@ -49,7 +49,7 @@ class CertificadoImprimirController extends Controller
 
         return view('treinamento.certificado-print', [
             'treinamento' => $certificado->treinamento,
-            'versaoRotulo' => VersoesDoCurso::rotulos([$certificado->treinamento])[$certificado->treinamento->id] ?? null,
+            'versaoRotulo' => VersoesDoCurso::rotuloDe($certificado->treinamento),
             'nomeInscrito' => $certificado->inscricao->inscrito?->name ?? '—',
             'percentualFrequencia' => $certificado->inscricao->calcularPercentualFrequencia(),
             'codigoVerificacao' => $certificado->codigo_verificacao,

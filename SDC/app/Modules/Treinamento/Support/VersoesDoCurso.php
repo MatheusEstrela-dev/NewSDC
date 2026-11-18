@@ -28,6 +28,12 @@ class VersoesDoCurso
         ])->all();
     }
 
+    /** Rotulo de um unico treinamento (ver rotulos). */
+    public static function rotuloDe(Treinamento $treinamento): ?string
+    {
+        return self::rotulos([$treinamento])[$treinamento->id] ?? null;
+    }
+
     /**
      * Todas as versoes do curso, da mais nova para a mais antiga, com
      * `inscritos` e `formados` (inscricao concluida) numa unica consulta.
@@ -54,7 +60,7 @@ class VersoesDoCurso
             ->where('curso_id', $cursoId)
             ->where('tipo', TipoTreinamento::EAD->value)
             ->whereNotNull('publicado_em')
-            ->orderByDesc('versao')
+            ->vigente()
             ->first();
     }
 
