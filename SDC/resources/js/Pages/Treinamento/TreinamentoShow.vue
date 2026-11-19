@@ -54,9 +54,14 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  // So para quem baixa certificados: { pode_emitir, nome_sugerido, emitidos[] }.
+  certificados_instrutor: {
+    type: Object,
+    default: null,
+  },
 });
 
-useCursosAoVivo(['treinamento', 'minhaInscricao', 'professores', 'versoes', 'pode_criar_versao', 'rascunho_id']);
+useCursosAoVivo(['treinamento', 'minhaInscricao', 'professores', 'versoes', 'pode_criar_versao', 'rascunho_id', 'certificados_instrutor']);
 
 const { can } = usePermissions();
 const { show: toast } = useToast();
@@ -111,6 +116,25 @@ const bloquearPresenca = () => postAction('treinamentos.bloquear-presenca', {}, 
 const transicionar = (status) => postAction('treinamentos.status', { status }, 'Status atualizado.');
 
 const podeTransicionarPara = (status) => (props.treinamento.status_transicoes || []).includes(status);
+
+// Certificados de instrutor: professor designado (EAD) ou nome do instrutor (presencial).
+const nomeInstrutor = ref(props.certificados_instrutor?.nome_sugerido ?? '');
+const professoresSemCertificado = computed(() => {
+  const comCertificado = new Set((props.certificados_instrutor?.emitidos ?? []).map((c) => c.user_id).filter(Boolean));
+  return props.professores.filter((p) => !comCertificado.has(p.id));
+});
+
+function emitirCertificadoInstrutor(dados) {
+  router.post(route('treinamentos.certificados-instrutor.store', props.treinamento.id), dados, {
+    preserveScroll: true,
+    onError: (errors) => toast(Object.values(errors)[0] || 'Não foi possível emitir o certificado.', 'error'),
+  });
+}
+
+// A impressao e uma pagina Blade, fora do Inertia: abre em aba propria.
+function abrirCertificado(url) {
+  window.open(url, '_blank', 'noopener');
+}
 
 // Professores (somente cursos EAD)
 const buscaProfessor = ref('');
@@ -403,6 +427,51 @@ function copiarLinkPublico() {
             </li>
           </ul>
         </div>
+      </section>
+
+      <!-- Certificados de instrutor -->
+      <section v-if="certificados_instrutor" class="mt-8 space-y-3">
+        <Heading :level="3" class="text-lg font-semibold">Certificados de instrutor</Heading>
+        <Text v-if="!certificados_instrutor.pode_emitir" size="xs" color="muted">
+          O certificado de instrutor sai quando o curso termina (concluído ou com a data de término já passada).
+        </Text>
+
+        <ul v-if="certificados_instrutor.emitidos.length" class="space-y-2">
+          <li
+            v-for="certificado in certificados_instrutor.emitidos"
+            :key="certificado.id"
+            class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
+          >
+            <div class="min-w-0">
+              <Text size="sm" class="font-medium">{{ certificado.nome }}</Text>
+              <Text size="xs" color="muted">{{ certificado.codigo }} · emitido em {{ certificado.emitido_em }}</Text>
+            </div>
+            <Button variant="secondary" size="sm" @click="abrirCertificado(certificado.imprimir_url)">Imprimir</Button>
+          </li>
+        </ul>
+
+        <template v-if="certificados_instrutor.pode_emitir">
+          <ul v-if="professoresSemCertificado.length" class="space-y-2">
+            <li
+              v-for="professor in professoresSemCertificado"
+              :key="professor.id"
+              class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
+            >
+              <Text size="sm" class="font-medium">{{ professor.name }}</Text>
+              <Button variant="primary" size="sm" @click="emitirCertificadoInstrutor({ user_id: professor.id })">Emitir certificado</Button>
+            </li>
+          </ul>
+
+          <div class="space-y-1">
+            <Text size="xs" color="muted">Instrutor sem cadastro no sistema (presencial): emita pelo nome, como deve sair no certificado.</Text>
+            <div class="flex flex-col gap-2 sm:flex-row">
+              <TextInput v-model="nomeInstrutor" class="min-w-0 flex-1" placeholder="Nome do instrutor" />
+              <Button variant="primary" size="sm" :disabled="!nomeInstrutor.trim()" @click="emitirCertificadoInstrutor({ nome: nomeInstrutor })">
+                Emitir por nome
+              </Button>
+            </div>
+          </div>
+        </template>
       </section>
     </div>
 

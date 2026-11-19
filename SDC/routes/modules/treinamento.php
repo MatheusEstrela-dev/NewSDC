@@ -36,6 +36,9 @@ use App\Modules\Treinamento\Controllers\TreinamentoUpdateController;
 use App\Modules\Treinamento\Controllers\ValidarParticipanteConsultarController;
 use App\Modules\Treinamento\Controllers\ValidarParticipanteController;
 use App\Modules\Treinamento\Controllers\Versoes\NovaVersaoStoreController;
+use App\Modules\Treinamento\Controllers\CertificadoInstrutor\CertificadoInstrutorImprimirController;
+use App\Modules\Treinamento\Controllers\CertificadoInstrutor\CertificadoInstrutorStoreController;
+use App\Modules\Treinamento\Controllers\CertificadoInstrutor\MeuCertificadoInstrutorController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -129,6 +132,16 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
     // download): a autorizacao fina fica no proprio controller.
     Route::get('/certificados/{certificado}/imprimir', CertificadoImprimirController::class)
         ->name('certificados.imprimir');
+
+    // Certificado de instrutor: o professor abre o proprio (a primeira abertura
+    // emite) e o administrador emite para professor ou, no presencial, por nome.
+    Route::get('/certificados-instrutor/{certificadoInstrutor}/imprimir', CertificadoInstrutorImprimirController::class)
+        ->name('certificados-instrutor.imprimir');
+    Route::get('/{treinamento}/meu-certificado-instrutor', MeuCertificadoInstrutorController::class)
+        ->name('certificados-instrutor.meu');
+    Route::post('/{treinamento}/certificados-instrutor', CertificadoInstrutorStoreController::class)
+        ->name('certificados-instrutor.store')
+        ->middleware('can:treinamento.certificados.download');
 
     // Admin - Gestao de Treinamentos
     Route::middleware('can:treinamento.cursos.create')
