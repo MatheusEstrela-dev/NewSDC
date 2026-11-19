@@ -879,17 +879,6 @@
           is-submenu
           :collapsed="isCollapsed"
         >
-          Área do professor
-        </NavItem>
-        <!-- Issue #86: area de gestao do curso, separada da area do professor. -->
-        <NavItem
-          v-if="canSeeTreinamentoGestor && _routes.hasTreinamentoGestor"
-          :href="route('treinamentos.gestor.index')"
-          :active="isRouteActive('treinamentos.gestor.*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
           Área do Gestor
         </NavItem>
         <NavItem
@@ -1137,7 +1126,6 @@ const _routes = {
   hasTreinamentos: route().has('treinamentos.index'),
   hasTreinamentoAluno: route().has('treinamentos.aluno.index'),
   hasTreinamentoProfessor: route().has('treinamentos.professor.index'),
-  hasTreinamentoGestor: route().has('treinamentos.gestor.index'),
   hasTreinamentoIndicadores: route().has('treinamentos.indicadores'),
   hasTreinamentoValidar: route().has('treinamentos.validar-participante'),
   hasTreinamentoEdital: route().has('treinamentos.consulta-edital'),
@@ -1231,7 +1219,6 @@ const _activeRoutes = computed(() => {
     'treinamentos.*': route().current('treinamentos.*'),
     'treinamentos.aluno.*': route().current('treinamentos.aluno.*'),
     'treinamentos.professor.*': route().current('treinamentos.professor.*'),
-    'treinamentos.gestor.*': route().current('treinamentos.gestor.*'),
     // Painel e irmao de Capacitacoes sob o mesmo prefixo: chave propria para
     // 'treinamentos.*' nao acender os dois itens juntos.
     'treinamentos.indicadores': route().current('treinamentos.indicadores'),
@@ -1269,12 +1256,11 @@ const isRouteActive = (pattern) => _activeRoutes.value[pattern] ?? false;
 
 // Itens irmaos de "Capacitacoes" sob o mesmo prefixo treinamentos.: o item
 // so acende quando nenhum deles esta ativo. Item novo no submenu entra aqui,
-// senao os dois acendem juntos (aconteceu com a Area do Gestor).
+// senao os dois acendem juntos.
 const ROTAS_IRMAS_DE_CAPACITACOES = [
   'treinamentos.indicadores',
   'treinamentos.aluno.*',
   'treinamentos.professor.*',
-  'treinamentos.gestor.*',
   'treinamentos.validar-participante*',
   'treinamentos.consulta-edital*',
   'treinamentos.catalogo.*',
@@ -1447,14 +1433,11 @@ const canSeeTreinamento = computed(() => {
 const canSeeTreinamentoAluno = computed(() => {
   return hasPermission(['treinamento.cursos.view']);
 });
+// Area do Gestor (rotas treinamentos.professor.*): a mesma regra da rota,
+// professor designado ou quem edita cursos. A aba Gestao de cada curso exige
+// ainda treinamento.gestor.acessar (MenuCurso).
 const canSeeTreinamentoProfessor = computed(() => {
-  return hasPermission(['treinamento.professor.acessar']);
-});
-// Issue #86: a Area do Gestor e um item proprio, gated por
-// `treinamento.gestor.acessar`. O professor designado nao a enxerga, mas
-// continua com a area dele (acima) e com os cursos que leciona.
-const canSeeTreinamentoGestor = computed(() => {
-  return hasPermission(['treinamento.gestor.acessar']);
+  return hasPermission(['treinamento.professor.acessar', 'treinamento.cursos.edit']);
 });
 const canSeeTreinamentoValidar = computed(() => {
   return hasPermission(['treinamento.participantes.validar']);
@@ -1470,7 +1453,6 @@ const canSeeTreinamentoGroup = computed(() => {
     || (canSeeTreinamento.value && _routes.hasTreinamentos)
     || (canSeeTreinamentoAluno.value && _routes.hasTreinamentoAluno)
     || (canSeeTreinamentoProfessor.value && _routes.hasTreinamentoProfessor)
-    || (canSeeTreinamentoGestor.value && _routes.hasTreinamentoGestor)
     || (canSeeTreinamentoValidar.value && _routes.hasTreinamentoValidar)
     || (canSeeTreinamentoEdital.value && _routes.hasTreinamentoEdital)
     || (canSeeTreinamentoCatalogo.value && _routes.hasTreinamentoCatalogo);

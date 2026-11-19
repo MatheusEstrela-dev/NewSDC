@@ -169,10 +169,14 @@ function copiarLinkPublico() {
 
       <!-- Ações de fluxo (admin) -->
       <div class="mb-6 flex flex-wrap gap-2">
-        <!-- Area do Gestor (issue #86): disponivel para qualquer modalidade,
-             nao so EAD - vagas, periodo e cronograma valem para
-             presencial/semi-presencial/online tambem. -->
-        <Button v-if="can('treinamento.gestor.acessar')" variant="primary" size="sm" :href="route('treinamentos.gestor.show', treinamento.id)">
+        <!-- Gestao do curso (issue #86): vale para qualquer modalidade. O EAD
+             abre a aba Gestao da Area do Gestor; as demais, a pagina avulsa. -->
+        <Button
+          v-if="can('treinamento.gestor.acessar')"
+          variant="primary"
+          size="sm"
+          :href="route(treinamento.tipo === 'EAD' ? 'treinamentos.professor.gestao' : 'treinamentos.gestor.show', treinamento.id)"
+        >
           Gestão do curso
         </Button>
         <template v-if="treinamento.tipo === 'EAD' && can('treinamento.cursos.configurar')">

@@ -23,6 +23,7 @@ class CancelarController extends Controller
             return back()->withErrors(['cancelar' => $e->getMessage()]);
         }
 
-        return redirect()->route('treinamentos.gestor.index')->with('success', 'Curso cancelado.');
+        // Volta para onde o cancelamento foi pedido (aba Gestao ou pagina avulsa).
+        return back()->with('success', 'Curso cancelado.');
     }
 }

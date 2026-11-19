@@ -14,7 +14,6 @@ import SecaoRecolhivel from '@/Components/Molecules/Treinamento/SecaoRecolhivel.
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 
 const props = defineProps({
-  treinamentoId: { type: [Number, String], required: true },
   // Paginador "cru" do Laravel (GestaoCursoConsulta::historico): data +
   // current_page/last_page/total na raiz, nao em `meta`.
   historico: { type: Object, required: true },
@@ -48,10 +47,11 @@ function formatarDataHora(iso) {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('pt-BR');
 }
 
+// Recarrega a pagina em que o painel esta (aba Gestao ou pagina avulsa).
 function irParaPagina(pagina) {
-  router.get(route('treinamentos.gestor.show', props.treinamentoId), { historico_pagina: pagina }, {
+  router.reload({
+    data: { historico_pagina: pagina },
     preserveScroll: true,
-    preserveState: true,
     only: ['historico'],
   });
 }

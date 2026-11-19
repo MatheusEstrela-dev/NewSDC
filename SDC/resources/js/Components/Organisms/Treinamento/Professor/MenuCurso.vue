@@ -3,11 +3,13 @@ import { computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import { useToast } from '@/Composables/useToast';
+import { usePermissions } from '@/Composables/usePermissions';
 import { pendenciasDe } from '@/Composables/treinamento/useProvaApi';
 
 /**
- * Menu lateral do curso na area do professor (rascunho 3, P1). Compartilhado
- * por Conteudo, Alunos e Correcoes: so muda a entrada ativa.
+ * Menu lateral do curso na Area do Gestor (rascunho 3, P1). Compartilhado
+ * pelas abas do curso: so muda a entrada ativa. Gestao (vagas, periodo,
+ * cronograma) vem depois do Publicar e so para quem abre a gestao.
  */
 const props = defineProps({
   curso: { type: Object, required: true },
@@ -22,6 +24,12 @@ const entradas = computed(() => [
   { chave: 'correcoes', rotulo: 'Correções', href: route('treinamentos.professor.correcoes', props.curso.id), contador: props.pendentes },
   { chave: 'previa', rotulo: 'Prévia', href: route('treinamentos.professor.previa', props.curso.id) },
 ]);
+
+const { can } = usePermissions();
+
+const gestao = computed(() => (can('treinamento.gestor.acessar')
+  ? { chave: 'gestao', rotulo: 'Gestão', href: route('treinamentos.professor.gestao', props.curso.id) }
+  : null));
 
 const baseClasses = 'flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors';
 
@@ -82,5 +90,9 @@ function publicar() {
     >
       <span>{{ curso.publicado ? 'Publicado' : 'Publicar' }}</span>
     </button>
+
+    <Link v-if="gestao" :href="gestao.href" :class="classes(gestao.chave)">
+      <span>{{ gestao.rotulo }}</span>
+    </Link>
   </nav>
 </template>

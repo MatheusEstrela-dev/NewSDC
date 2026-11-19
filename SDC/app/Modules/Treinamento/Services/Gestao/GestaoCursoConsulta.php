@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Services\Gestao;
 
 use App\Models\User;
 use App\Modules\Treinamento\Enums\StatusInscricao;
+use App\Modules\Treinamento\Enums\TipoEventoCronograma;
 use App\Modules\Treinamento\Models\CursoCronograma;
 use App\Modules\Treinamento\Models\CursoEvento;
 use App\Modules\Treinamento\Models\Inscricao;
@@ -25,6 +26,22 @@ use Illuminate\Pagination\LengthAwarePaginator;
  */
 class GestaoCursoConsulta
 {
+    /**
+     * Props comuns das telas de gestao do curso: a aba Gestao da Area do
+     * Gestor (EAD) e a pagina avulsa aberta pelo detalhe do curso (demais
+     * modalidades).
+     *
+     * @return array{curso: array, historico: LengthAwarePaginator, tipoEventoCronogramaOptions: array}
+     */
+    public function pagina(Treinamento $curso, int $paginaHistorico = 1): array
+    {
+        return [
+            'curso' => $this->resumo($curso),
+            'historico' => $this->historico($curso, 15, max(1, $paginaHistorico)),
+            'tipoEventoCronogramaOptions' => TipoEventoCronograma::toSelectArray(),
+        ];
+    }
+
     /**
      * Cartao do curso na tela do gestor.
      *
