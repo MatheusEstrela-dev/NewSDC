@@ -303,3 +303,42 @@ no CELULAR, em evento, entao o desenho parte do mobile:
 2. O que a tela de resultado mostra alem dos certificados validos: cursos em
    andamento? certificados cancelados?
 3. Registrar quem consultou quem (trilha de acesso a dado pessoal)?
+
+---
+
+## Caminho do breadcrumb nas telas de Capacitacoes
+
+**Levantado em:** 2026-11-19, conferindo a Area do Gestor no homolog (8099)
+**Origem:** print do usuario em `/treinamentos-gestor` ("Inicio > Capacitacoes > Gestao")
+
+### O que foi pedido
+
+Acertar o caminho (breadcrumb) das telas de Capacitacoes, para a trilha
+refletir onde o usuario esta e por onde chegou.
+
+### O que existe hoje
+
+A trilha nasce do NOME DO COMPONENTE Inertia (`useBreadcrumb.js`, fallback
+depois do `breadcrumbMap`): cada pasta vira um nivel e o nome do arquivo vira o
+ultimo. So `TreinamentoIndex/Create/Edit/Show`, `Indicadores`, `Catalogo`,
+`ConsultaEdital`, `ValidarParticipante` e o portal tem entrada propria no mapa.
+Efeitos vistos:
+
+- **Sem acento:** o rotulo sai do nome do arquivo. `Treinamento/Professor/Correcoes`
+  mostra "Capacitacoes > Area do Gestor > Correcoes"; o mesmo vale para
+  Conteudo, Previa e a aba nova Gestao (`Treinamento/Professor/Gestao`).
+- **Sem o curso:** nas abas do curso (Conteudo, Provas, Alunos, Correcoes,
+  Previa, Gestao) a trilha nao tem o nivel do curso, entao o "Voltar" pula
+  direto para a Area do Gestor.
+- **Pagina de gestao presencial:** `Treinamento/Gestao/Show` (aberta pelo
+  botao "Gestao do curso" no detalhe do curso) mostra "Capacitacoes > Gestao >
+  Visualizar", sem o curso e sem passar pelo detalhe de onde o usuario veio.
+- A listagem `/treinamentos-gestor` do print foi removida em 2026-11-19
+  (gestao virou aba da Area do Gestor), mas a causa continua nas demais telas.
+
+### Direcao provavel
+
+Entradas explicitas no `breadcrumbMap` para as telas do curso, com o titulo do
+curso vindo das props (`curso.titulo`) e a rota do nivel anterior, em vez de
+depender do nome do arquivo. Conferir tambem a Sala de aula e as telas do
+aluno.
