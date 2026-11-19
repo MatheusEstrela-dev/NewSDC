@@ -17,6 +17,8 @@ import { useToast } from '@/Composables/useToast';
 const ATRASO_PROGRESSO_MS = 1000;
 const ATRASO_RETENTATIVA_MS = 3000;
 const MAX_RETENTATIVAS = 3;
+// Leitura minima de cada pagina nova do PDF antes de liberar a seguinte.
+const SEGUNDOS_POR_PAGINA_PDF = 60;
 
 const props = defineProps({
   curso: { type: Object, required: true },
@@ -224,6 +226,8 @@ onBeforeUnmount(enviarPendente);
             :url="rotas.arquivo(itemAtual.id)"
             :posicao-inicial="itemAtual.posicao"
             :total-paginas="itemAtual.total_paginas ?? 1"
+            :concluido="itemAtual.status === 'CONCLUIDO'"
+            :segundos-por-pagina="previa ? 0 : SEGUNDOS_POR_PAGINA_PDF"
             @pagina="registrarProgresso(itemAtual, $event)"
           />
           <PlayerVideo

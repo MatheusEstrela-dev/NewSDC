@@ -6,11 +6,18 @@ const props = defineProps({
   url: { type: String, required: true },
   posicaoInicial: { type: Number, default: 0 },
   totalPaginas: { type: Number, default: 1 },
+  concluido: { type: Boolean, default: false },
+  // Tempo minimo em cada pagina ainda nao lida; 0 desliga (previa do professor).
+  segundosPorPagina: { type: Number, default: 0 },
 });
 
 const emit = defineEmits(['pagina']);
 
 const { abrirDocumento, renderizarPagina } = usePdf();
+
+const ANEL_RAIO = 9;
+const ANEL_CIRCUNFERENCIA = 2 * Math.PI * ANEL_RAIO;
+const TICK_MS = 250;
 
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 2.4;
@@ -24,9 +31,40 @@ const zoom = ref(ZOOM_BASE);
 const total = ref(Math.max(1, props.totalPaginas));
 const pagina = ref(Math.min(Math.max(1, props.posicaoInicial), total.value));
 
+// Leitura minima: a pagina que o aluno alcanca pela primeira vez segura a
+// seta de avancar ate cumprir o tempo. So conta com a aba visivel, e a
+// ultima pagina so e registrada (o que conclui o item) depois do tempo dela.
+const exigeTempo = computed(() => props.segundosPorPagina > 0 && !props.concluido);
+const liberadaAte = ref(exigeTempo.value ? Math.max(1, props.posicaoInicial) : Number.MAX_SAFE_INTEGER);
+const decorridoMs = ref(0);
+
+const emLeituraMinima = computed(() => exigeTempo.value && !carregando.value && !erro.value && pagina.value >= liberadaAte.value);
+const restante = computed(() => Math.max(0, Math.ceil(props.segundosPorPagina - decorridoMs.value / 1000)));
+const fracaoRestante = computed(() => Math.max(0, 1 - decorridoMs.value / (props.segundosPorPagina * 1000)));
+
 const zoomPercentual = computed(() => Math.round((zoom.value / ZOOM_BASE) * 100));
 const temAnterior = computed(() => pagina.value > 1);
-const temProxima = computed(() => pagina.value < total.value);
+const temProxima = computed(() => pagina.value < total.value && !emLeituraMinima.value);
+
+let relogio = null;
+
+function contar() {
+  if (!emLeituraMinima.value || document.hidden) return;
+  decorridoMs.value += TICK_MS;
+  if (decorridoMs.value < props.segundosPorPagina * 1000) return;
+
+  decorridoMs.value = 0;
+  if (pagina.value < total.value) {
+    liberadaAte.value = pagina.value + 1;
+  } else {
+    liberadaAte.value = Number.MAX_SAFE_INTEGER;
+    emit('pagina', pagina.value);
+  }
+}
+
+function deveRegistrar(numero) {
+  return !exigeTempo.value || numero < total.value;
+}
 
 let documento = null;
 let tarefa = null;
@@ -73,7 +111,8 @@ onMounted(async () => {
     total.value = documento.numPages;
     pagina.value = Math.min(pagina.value, total.value);
     carregando.value = false;
-    emit('pagina', pagina.value);
+    if (deveRegistrar(pagina.value)) emit('pagina', pagina.value);
+    relogio = window.setInterval(contar, TICK_MS);
     await desenhar();
   } catch {
     if (desmontado) return;
@@ -83,12 +122,14 @@ onMounted(async () => {
 });
 
 watch(pagina, (n) => {
-  emit('pagina', n);
+  decorridoMs.value = 0;
+  if (deveRegistrar(n)) emit('pagina', n);
   desenhar();
 });
 watch(zoom, desenhar);
 
 onBeforeUnmount(() => {
+  window.clearInterval(relogio);
   desmontado = true;
   geracao++;
   tarefa?.cancel();
@@ -102,6 +143,29 @@ onBeforeUnmount(() => {
       <button type="button" class="rounded px-2 py-1 hover:bg-slate-600 disabled:opacity-40" :disabled="!temAnterior" aria-label="Pagina anterior" @click="irPara(pagina - 1)">&lsaquo;</button>
       <span>pag. {{ pagina }} / {{ total }}</span>
       <button type="button" class="rounded px-2 py-1 hover:bg-slate-600 disabled:opacity-40" :disabled="!temProxima" aria-label="Proxima pagina" @click="irPara(pagina + 1)">&rsaquo;</button>
+      <span
+        v-if="emLeituraMinima"
+        class="relative inline-flex h-7 w-7 items-center justify-center"
+        role="timer"
+        :aria-label="`Leitura mínima: faltam ${restante} segundos nesta página`"
+        :title="pagina < total ? `Avance em ${restante}s` : `Conclui em ${restante}s`"
+      >
+        <svg class="absolute inset-0 h-7 w-7 -rotate-90" viewBox="0 0 22 22" aria-hidden="true">
+          <circle cx="11" cy="11" :r="ANEL_RAIO" fill="none" stroke-width="2.5" class="stroke-slate-500" />
+          <circle
+            cx="11"
+            cy="11"
+            :r="ANEL_RAIO"
+            fill="none"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            class="anel-leitura stroke-amber-400"
+            :stroke-dasharray="ANEL_CIRCUNFERENCIA"
+            :stroke-dashoffset="ANEL_CIRCUNFERENCIA * (1 - fracaoRestante)"
+          />
+        </svg>
+        <span class="relative text-[10px] font-bold tabular-nums">{{ restante }}</span>
+      </span>
       <span class="hidden h-4 w-px bg-slate-500 sm:inline-block" />
       <button type="button" class="rounded px-2 py-1 hover:bg-slate-600 disabled:opacity-40" :disabled="zoom <= ZOOM_MIN" aria-label="Diminuir zoom" @click="ajustarZoom(-ZOOM_PASSO)">&minus;</button>
       <span>{{ zoomPercentual }}%</span>
@@ -115,3 +179,15 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.anel-leitura {
+  transition: stroke-dashoffset 250ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anel-leitura {
+    transition: none;
+  }
+}
+</style>
