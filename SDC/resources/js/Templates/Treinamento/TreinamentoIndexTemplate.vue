@@ -6,8 +6,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
-import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import StatusExibicaoCursoBadge from '@/Components/Molecules/Treinamento/StatusExibicaoCursoBadge.vue';
+import TreinamentoStatusBadge from '@/Components/Molecules/Treinamento/TreinamentoStatusBadge.vue';
 import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/TreinamentoFiltersSection.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
 import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
@@ -213,15 +212,7 @@ function handleExportCsv(params) {
               </span>
             </td>
             <td class="px-4 py-3">
-              <Badge v-if="treinamento.situacao && treinamento.situacao !== 'ATIVO'" :variant="treinamento.situacao_variant" size="sm">
-                {{ treinamento.situacao_label }}
-              </Badge>
-              <StatusExibicaoCursoBadge
-                v-else
-                :color="treinamento.status_exibicao_color"
-                :label="treinamento.status_exibicao_label"
-                size="sm"
-              />
+              <TreinamentoStatusBadge :status="treinamento.status" :label="treinamento.status_label" />
             </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ treinamento.instrutor || '—' }}</td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
