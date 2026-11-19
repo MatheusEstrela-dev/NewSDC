@@ -15,6 +15,8 @@ use Throwable;
  * ficou completa porque o professor excluiu item ou pasta, ou marcou item como
  * opcional, e inscricoes que terminaram antes da Fase 3. Idempotente e barata:
  * conclusao ja congelada (8.7) encerra no primeiro teste, sem consulta extra.
+ * A avaliacao do curso (etapa final) e exigida dentro do
+ * ConclusaoService::registrar: sem ela, nada aqui conclui.
  */
 class ReavaliacaoDeConclusaoService
 {

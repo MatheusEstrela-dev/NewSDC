@@ -29,7 +29,7 @@ class SalaDeAulaController extends Controller
 
         return Inertia::render(
             'Treinamento/Aluno/SalaDeAula',
-            SalaDeAulaProps::de($treinamento, $estado, 'aluno'),
+            SalaDeAulaProps::de($treinamento, $estado, 'aluno', $inscricao),
         );
     }
 }

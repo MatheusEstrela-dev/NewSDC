@@ -40,6 +40,29 @@ final class InscricaoDoAluno
     }
 
     /**
+     * Inscricao aprovada do proprio aluno, para avaliar o curso (qualquer
+     * tipo, nao so EAD). Se a avaliacao ja esta liberada (requisitos cumpridos,
+     * curso que ainda permite concluir) decide o AvaliacaoCursoService. A
+     * inscricao vem sempre do usuario autenticado, nunca da URL: nao ha como
+     * avaliar a inscricao de outra pessoa.
+     */
+    public static function paraAvaliar(Treinamento $treinamento, ?Model $inscrito): Inscricao
+    {
+        abort_if($inscrito === null || ! $treinamento->exigeAvaliacaoParaConcluir() || ! $treinamento->publico_alvo->aceita($inscrito), 404);
+
+        $inscricao = Inscricao::query()
+            ->porTreinamento($treinamento->id)
+            ->where('inscrito_type', $inscrito->getMorphClass())
+            ->where('inscrito_id', $inscrito->getKey())
+            ->where('status', StatusInscricao::APROVADA->value)
+            ->first();
+
+        abort_if($inscricao === null, 403, 'Você não tem inscrição aprovada neste curso.');
+
+        return $inscricao->setRelation('treinamento', $treinamento);
+    }
+
+    /**
      * Curso publicado pelo slug do link publico (escopo do portal).
      */
     public static function cursoPublicado(string $slug): Treinamento

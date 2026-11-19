@@ -27,6 +27,8 @@ class CertificadoService
      * tipo do treinamento (frequencia nos eventos, trilha no EAD). Chamada
      * apos cada presenca, ao finalizar o treinamento e ao concluir o ultimo
      * item da trilha; a ordem em que as condicoes se completam nao importa.
+     * A conclusao tambem exige a avaliacao do curso (ConclusaoService): sem
+     * ela nao ha certificado, e o envio da avaliacao chama este metodo.
      *
      * Idempotente: um certificado ja emitido nao e refeito, e um CANCELADO
      * nunca volta a ser emitido por aqui.

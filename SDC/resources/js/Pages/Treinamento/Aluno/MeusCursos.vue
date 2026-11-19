@@ -4,6 +4,7 @@ import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import CertificadoItem from '@/Components/Molecules/Treinamento/CertificadoItem.vue';
+import AvaliacaoCursoCard from '@/Components/Organisms/Treinamento/AvaliacaoCursoCard.vue';
 import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexoModal.vue';
 import CursoEadCard from '@/Components/Molecules/Treinamento/CursoEadCard.vue';
 import SecaoRecolhivel from '@/Components/Molecules/Treinamento/SecaoRecolhivel.vue';
@@ -22,9 +23,12 @@ defineProps({
   disponiveis: { type: Array, default: () => [] },
   certificados: { type: Array, default: () => [] },
   credencial: { type: Object, default: null },
+  /** Eventos (sem sala) com os requisitos cumpridos: falta so avaliar para concluir. */
+  avaliacoes_pendentes: { type: Array, default: () => [] },
+  notas_avaliacao: { type: Array, default: () => [] },
 });
 
-useCursosAoVivo(['meus_cursos', 'disponiveis', 'certificados']);
+useCursosAoVivo(['meus_cursos', 'disponiveis', 'certificados', 'avaliacoes_pendentes']);
 
 const { show: toast } = useToast();
 const inscrevendo = ref(null);
@@ -52,6 +56,26 @@ function inscrever(sexo) {
       :icon-image="moduleIcon('treinamento')"
       variant="gradient"
     />
+
+    <SecaoRecolhivel
+      v-if="avaliacoes_pendentes.length"
+      class="mt-6"
+      titulo="Avalie o curso para concluir"
+      :total="avaliacoes_pendentes.length"
+      namespace="treinamento-aluno"
+      secao-id="avaliacoes-pendentes"
+    >
+      <div class="space-y-4">
+        <AvaliacaoCursoCard
+          v-for="pendente in avaliacoes_pendentes"
+          :key="pendente.inscricao_id"
+          :url="pendente.url_avaliar"
+          :notas="notas_avaliacao"
+          :titulo="pendente.titulo"
+          :subtitulo="`${pendente.tipo_label} · Você cumpriu os requisitos. Avalie o curso para concluí-lo e receber o certificado.`"
+        />
+      </div>
+    </SecaoRecolhivel>
 
     <SecaoRecolhivel class="mt-6" titulo="Meus cursos" :total="meus_cursos.length" namespace="treinamento-aluno" secao-id="meus-cursos">
 

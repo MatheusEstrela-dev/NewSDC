@@ -12,7 +12,9 @@ use App\Modules\Treinamento\Services\ReavaliacaoDeConclusaoService;
  * Avalia se a inscricao concluiu o curso a cada item concluido (spec 8.4):
  * congela concluido_em/aproveitamento na inscricao e enfileira a emissao do
  * certificado. Idempotente: a conclusao grava uma vez e o certificado e unico
- * por inscricao, entao o evento repetido nao duplica nada.
+ * por inscricao, entao o evento repetido nao duplica nada. Com a trilha
+ * completa mas sem a avaliacao do curso (etapa final) nada e gravado: quem
+ * conclui nesse caso e o envio da avaliacao (AvaliacaoCursoService).
  *
  * Falha na avaliacao ou na emissao e reportada e engolida: o item ja foi
  * concluido na requisicao que disparou o evento. O comando
