@@ -34,12 +34,14 @@ class ImpressaoDeCertificado
     ): array {
         $versao = VersoesDoCurso::rotuloDe($treinamento);
         $urlValidacao = route('certificados.validar', $codigo);
+        $evento = $treinamento->categoria === CategoriaTreinamento::EVENTO;
 
         return [
             'papel' => $papel,
             'nome' => $nome,
             'curso' => $treinamento->titulo.($versao ? ' - '.$versao : ''),
-            'artigoCurso' => $treinamento->categoria === CategoriaTreinamento::EVENTO ? 'o evento' : 'a capacitação',
+            'artigoCurso' => $evento ? 'o evento' : 'a capacitação',
+            'realizado' => $evento ? 'realizado' : 'realizada',
             'periodo' => DataPorExtenso::periodo($treinamento->data_inicio, $treinamento->data_fim),
             'cargaHoraria' => $treinamento->carga_horaria,
             'aproveitamento' => $papel === self::CONCLUINTE ? $aproveitamento : null,

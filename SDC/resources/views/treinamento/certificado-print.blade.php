@@ -199,7 +199,7 @@
 
         @if ($instrutor)
             <p>
-                ministrou {{ $artigoCurso }} <strong>{{ $curso }}</strong>@if ($periodo), realizado {{ $periodo }}@endif,
+                ministrou {{ $artigoCurso }} <strong>{{ $curso }}</strong>{{ $periodo ? ', '.$realizado.' '.$periodo : '' }},
                 com carga horária de {{ $cargaHoraria }} horas, contribuindo de forma relevante para a formação e o
                 desenvolvimento de competências dos profissionais e agentes de Proteção e Defesa Civil.
             </p>
@@ -212,8 +212,8 @@
             </p>
         @else
             <p>
-                Participou e concluiu com aproveitamento {{ $artigoCurso }} <strong>{{ $curso }}</strong>@if ($periodo), realizado {{ $periodo }}@endif,
-                com carga horária de {{ $cargaHoraria }} horas@if ($aproveitamento !== null) e aproveitamento de {{ number_format($aproveitamento, 1, ',', '.') }}%@endif,
+                Participou e concluiu com aproveitamento {{ $artigoCurso }} <strong>{{ $curso }}</strong>{{ $periodo ? ', '.$realizado.' '.$periodo : '' }},
+                com carga horária de {{ $cargaHoraria }} horas{{ $aproveitamento !== null ? ' e aproveitamento de '.number_format($aproveitamento, 1, ',', '.').'%' : '' }},
                 promovido no âmbito das ações de fortalecimento das capacidades institucionais e de desenvolvimento de
                 competências em Proteção e Defesa Civil.
             </p>
