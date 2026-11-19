@@ -54,7 +54,9 @@ class GestaoAutorizacaoTest extends TreinamentoGestorTestCase
         $professor = $this->usuarioComPermissoes(['treinamento.professor.acessar']);
         $this->logarComo($professor);
 
-        $this->get(route('treinamentos.gestor.index'))->assertForbidden();
+        $cursoEad = $this->criarCursoEad();
+        $this->designarProfessor($cursoEad, $professor);
+        $this->get(route('treinamentos.professor.gestao', $cursoEad->id))->assertForbidden();
         $this->get(route('treinamentos.gestor.show', $curso->id))->assertForbidden();
         $this->put(route('treinamentos.gestor.vagas.update', $curso->id), ['numero_vagas' => 5])->assertForbidden();
         $this->put(route('treinamentos.gestor.periodo.update', $curso->id), [])->assertForbidden();
@@ -85,7 +87,7 @@ class GestaoAutorizacaoTest extends TreinamentoGestorTestCase
         $curso = $this->criarCurso();
         $gestor = $this->logarComo($this->usuarioComCargo('manager'));
 
-        $this->get(route('treinamentos.gestor.index'))->assertOk();
+        $this->get(route('treinamentos.professor.gestao', $this->criarCursoEad()->id))->assertOk();
         $this->get(route('treinamentos.gestor.show', $curso->id))->assertOk();
 
         $this->put(route('treinamentos.gestor.periodo.update', $curso->id), [])->assertSessionHasNoErrors();
@@ -136,7 +138,6 @@ class GestaoAutorizacaoTest extends TreinamentoGestorTestCase
         $usuario = $this->usuarioComPermissoes(['treinamento.gestor.acessar']);
         $this->logarComo($usuario);
 
-        $this->get(route('treinamentos.gestor.index'))->assertOk();
         $this->get(route('treinamentos.gestor.show', $curso->id))->assertOk();
 
         $this->put(route('treinamentos.gestor.vagas.update', $curso->id), ['numero_vagas' => 5])->assertForbidden();

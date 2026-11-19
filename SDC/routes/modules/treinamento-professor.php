@@ -14,6 +14,7 @@ use App\Modules\Treinamento\Controllers\Professor\CursoPausarController;
 use App\Modules\Treinamento\Controllers\Professor\CursoReativarController;
 use App\Modules\Treinamento\Controllers\Professor\CursoRetomarController;
 use App\Modules\Treinamento\Controllers\Professor\EntregaArquivoController;
+use App\Modules\Treinamento\Controllers\Professor\GestaoController;
 use App\Modules\Treinamento\Controllers\Professor\ItemArquivoController;
 use App\Modules\Treinamento\Controllers\Professor\ItemDestroyController;
 use App\Modules\Treinamento\Controllers\Professor\ItemReordenarController;
@@ -85,6 +86,8 @@ Route::prefix('professor')->name('professor.')->middleware('permission:treinamen
         Route::post('/{treinamento}/entregas/{entrega}/correcao', CorrecaoStoreController::class)->name('entregas.correcao');
         Route::get('/{treinamento}/entregas/{entrega}/arquivo', EntregaArquivoController::class)->name('entregas.arquivo');
         Route::get('/{treinamento}/previa', PreviaController::class)->name('previa');
+        // Aba Gestao (vagas, periodo, cronograma, historico): so quem abre a gestao.
+        Route::get('/{treinamento}/gestao', GestaoController::class)->middleware('can:treinamento.gestor.acessar')->name('gestao');
         Route::get('/{treinamento}/provas', ProvasController::class)->name('provas');
         Route::get('/{treinamento}/provas/{prova}', ProvaShowController::class)->whereNumber('prova')->name('provas.show');
         Route::put('/{treinamento}/provas/{prova}', ProvaUpdateController::class)->whereNumber('prova')->name('provas.update');

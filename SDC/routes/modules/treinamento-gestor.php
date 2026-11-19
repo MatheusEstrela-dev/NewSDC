@@ -5,7 +5,6 @@ use App\Modules\Treinamento\Controllers\Gestao\CronogramaDestroyController;
 use App\Modules\Treinamento\Controllers\Gestao\CronogramaIndexController;
 use App\Modules\Treinamento\Controllers\Gestao\CronogramaStoreController;
 use App\Modules\Treinamento\Controllers\Gestao\CronogramaUpdateController;
-use App\Modules\Treinamento\Controllers\Gestao\IndexController;
 use App\Modules\Treinamento\Controllers\Gestao\PeriodoUpdateController;
 use App\Modules\Treinamento\Controllers\Gestao\ShowController;
 use App\Modules\Treinamento\Controllers\Gestao\VagasUpdateController;
@@ -13,8 +12,10 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Rotas: Area do Gestor do curso (vagas, periodo, cronograma,
-| historico e cancelamento). Issue #86, bloco 2.
+| Rotas: gestao do curso (vagas, periodo, cronograma, historico e
+| cancelamento). Issue #86, bloco 2. Sem listagem propria: o curso EAD e
+| gerido pela aba Gestao da Area do Gestor (treinamentos.professor.gestao)
+| e as demais modalidades pelo botao do detalhe do curso (show).
 |--------------------------------------------------------------------------
 |
 | Incluido direto em routes/web.php, dentro do grupo auth, logo apos
@@ -41,7 +42,6 @@ Route::prefix('treinamentos-gestor')
     ->name('treinamentos.gestor.')
     ->middleware('can:treinamento.gestor.acessar')
     ->group(function () {
-        Route::get('/', IndexController::class)->name('index');
         Route::get('/{treinamento}', ShowController::class)->whereNumber('treinamento')->name('show');
         Route::get('/{treinamento}/cronograma', CronogramaIndexController::class)->whereNumber('treinamento')->name('cronograma.index');
 
