@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Treinamento\Enums\SituacaoCurso;
-use App\Modules\Treinamento\Enums\TipoEventoCurso;
 use App\Modules\Treinamento\Jobs\ReavaliarConclusoesDoCursoJob;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Services\Video\AutorizacaoVideoService;
@@ -28,29 +27,29 @@ class CicloDoCursoService
 {
     public function pausar(Treinamento $curso, User $por): void
     {
-        $this->mudar($curso, SituacaoCurso::PAUSADO, [SituacaoCurso::ATIVO], $por, 'curso pausado', 'Somente um curso ativo pode ser pausado.', TipoEventoCurso::CURSO_PAUSADO);
+        $this->mudar($curso, SituacaoCurso::PAUSADO, [SituacaoCurso::ATIVO], $por, 'curso pausado', 'Somente um curso ativo pode ser pausado.');
     }
 
     public function retomar(Treinamento $curso, User $por): void
     {
-        $this->mudar($curso, SituacaoCurso::ATIVO, [SituacaoCurso::PAUSADO], $por, 'curso retomado', 'Somente um curso pausado pode ser retomado.', TipoEventoCurso::CURSO_RETOMADO);
+        $this->mudar($curso, SituacaoCurso::ATIVO, [SituacaoCurso::PAUSADO], $por, 'curso retomado', 'Somente um curso pausado pode ser retomado.');
     }
 
     /** Desativa um curso ativo ou pausado. */
     public function desativar(Treinamento $curso, User $por): void
     {
-        $this->mudar($curso, SituacaoCurso::DESATIVADO, [SituacaoCurso::ATIVO, SituacaoCurso::PAUSADO], $por, 'curso desativado', 'O curso ja esta desativado.', TipoEventoCurso::CURSO_DESATIVADO);
+        $this->mudar($curso, SituacaoCurso::DESATIVADO, [SituacaoCurso::ATIVO, SituacaoCurso::PAUSADO], $por, 'curso desativado', 'O curso ja esta desativado.');
     }
 
     public function reativar(Treinamento $curso, User $por): void
     {
-        $this->mudar($curso, SituacaoCurso::ATIVO, [SituacaoCurso::DESATIVADO], $por, 'curso reativado', 'Somente um curso desativado pode ser reativado.', TipoEventoCurso::CURSO_REATIVADO);
+        $this->mudar($curso, SituacaoCurso::ATIVO, [SituacaoCurso::DESATIVADO], $por, 'curso reativado', 'Somente um curso desativado pode ser reativado.');
     }
 
     /**
      * @param  list<SituacaoCurso>  $origens  situacoes das quais a transicao e valida
      */
-    private function mudar(Treinamento $curso, SituacaoCurso $nova, array $origens, User $por, string $detalhe, string $recusa, TipoEventoCurso $evento): void
+    private function mudar(Treinamento $curso, SituacaoCurso $nova, array $origens, User $por, string $detalhe, string $recusa): void
     {
         // Update direto: a situacao nao passa pelo $fillable e a trilha de acoes
         // do model nao deve disparar um "editado" alem do aviso explicito abaixo.
@@ -68,16 +67,6 @@ class CicloDoCursoService
         if ($afetadas !== 1) {
             throw new \DomainException($recusa.' Situacao atual: '.mb_strtolower($curso->situacaoEfetiva()->getLabel()).'. Atualize a pagina.');
         }
-
-        // Historico do curso: linha do gestor, gravada logo apos a transicao e
-        // sem try/catch - e registro, nao aviso. Um erro aqui tem de aparecer.
-        app(HistoricoDoCursoService::class)->registrar(
-            (int) $curso->id,
-            $evento,
-            ucfirst($detalhe).'.',
-            ['situacao' => $nova->value],
-            (int) $por->getKey(),
-        );
 
         // O update por query nao dispara evento de model: as telas abertas so
         // ficam sabendo da nova situacao por este aviso.

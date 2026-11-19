@@ -25,13 +25,6 @@ class TreinamentoListResource extends JsonResource
             'status' => $this->status->value,
             'status_label' => $this->status->getLabel(),
             'status_color' => $this->status->getBadgeColor(),
-            // Status de exibicao da Area do Gestor: pura derivacao de enum, sem
-            // consulta extra (seguro numa lista grande, diferente de vagas e
-            // inscricoes, que ja fazem uma query por linha nos accessors acima).
-            'status_exibicao' => $this->statusDeExibicao()->value,
-            'status_exibicao_label' => $this->statusDeExibicao()->getLabel(),
-            'status_exibicao_variant' => $this->statusDeExibicao()->getVariant(),
-            'status_exibicao_color' => $this->statusDeExibicao()->getBadgeColor(),
             'instrutor' => $this->instrutor,
             'local' => $this->local,
             'data_inicio' => $this->data_inicio?->toDateString(),

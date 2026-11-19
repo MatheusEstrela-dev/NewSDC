@@ -9,7 +9,6 @@ import CursoEadCard from '@/Components/Molecules/Treinamento/CursoEadCard.vue';
 import CapaCursoUpload from '@/Components/Molecules/Treinamento/CapaCursoUpload.vue';
 import SecaoHeader from '@/Components/Molecules/Treinamento/SecaoHeader.vue';
 import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesCicloCurso.vue';
-import StatusExibicaoCursoBadge from '@/Components/Molecules/Treinamento/StatusExibicaoCursoBadge.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useCursosAoVivo } from '@/Composables/treinamento/useCursosAoVivo';
 
@@ -27,7 +26,7 @@ useCursosAoVivo(['cursos', 'pode_abrir'], { professor: true });
 <template>
   <div>
     <PageHeader
-      title="Gestão dos meus cursos"
+      title="Meus cursos"
       :description="pode_abrir ? 'Todos os cursos EAD' : 'Cursos EAD em que você foi designado como professor'"
       :icon-image="moduleIcon('treinamento')"
       variant="gradient"
@@ -51,8 +50,7 @@ useCursosAoVivo(['cursos', 'pode_abrir'], { professor: true });
           </template>
 
           <template #corpo>
-            <div class="mt-3 flex flex-wrap items-center gap-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-              <StatusExibicaoCursoBadge :color="curso.status_exibicao_color" :label="curso.status_exibicao_label" size="sm" />
+            <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
               <span>Público: {{ curso.publico_alvo_label }}</span>
               <span>{{ curso.alunos }} aluno(s)</span>
               <Badge v-if="curso.designado === false" variant="warning">Sem professor designado</Badge>
