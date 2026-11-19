@@ -8,6 +8,8 @@ import TreinamentoIndexTemplate from '@/Templates/Treinamento/TreinamentoIndexTe
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from '@/Composables/useToast';
 import { useCursosAoVivo } from '@/Composables/treinamento/useCursosAoVivo';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
 const { can } = usePermissions();
 const { show: toast } = useToast();
@@ -58,14 +60,20 @@ const handleEdit = (id) => {
   router.visit(route('treinamentos.edit', id));
 };
 
-const handleDelete = (id) => {
-  if (!confirm('Tem certeza que deseja excluir este treinamento?')) return;
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 
-  router.delete(route('treinamentos.destroy', id), {
+const handleDelete = (id) => {
+  pedirConfirmacao({
+    title: 'Excluir capacitação',
+    message: 'Tem certeza que deseja excluir esta capacitação?',
+    description: 'Inscrições, conteúdo e histórico da capacitação deixam de aparecer no sistema.',
+    variant: 'danger',
+    confirmText: 'Excluir',
+  }, () => router.delete(route('treinamentos.destroy', id), {
     preserveScroll: true,
     onSuccess: () => toast('Treinamento removido.', 'success'),
     onError: () => toast('Nao foi possivel remover o treinamento.', 'error'),
-  });
+  }));
 };
 
 const handleFilter = (filters) => {
@@ -96,5 +104,5 @@ const handleFilter = (filters) => {
       @delete="handleDelete"
       @filter="handleFilter"
     />
-
+    <ConfirmDialog :is-open="confirmacao.aberto" v-bind="confirmacao.opcoes" @confirm="confirmar" @cancel="cancelar" />
 </template>

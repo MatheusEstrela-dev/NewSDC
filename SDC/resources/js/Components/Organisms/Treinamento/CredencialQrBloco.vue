@@ -5,6 +5,8 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import { useToast } from '@/Composables/useToast';
 import { formatDateTime } from '@/utils/dateFormatter';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
 /*
  * Credencial do proprio servidor: QR que a equipe da CEDEC le num evento para
@@ -17,9 +19,19 @@ defineProps({
 const { show: toast } = useToast();
 const regerando = ref(false);
 
-function regerar() {
-  if (!confirm('Gerar um novo QR? O QR atual deixa de valer.')) return;
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 
+function regerar() {
+  pedirConfirmacao({
+    title: 'Gerar novo QR',
+    message: 'Gerar um novo QR da credencial?',
+    description: 'O QR atual deixa de valer: quem tiver uma cópia impressa ou salva precisa da nova.',
+    variant: 'warning',
+    confirmText: 'Gerar novo QR',
+  }, enviarRegeracao);
+}
+
+function enviarRegeracao() {
   regerando.value = true;
   router.post(route('treinamentos.aluno.credencial.regerar'), {}, {
     preserveScroll: true,
@@ -52,5 +64,6 @@ function regerar() {
       </p>
       <Button variant="secondary" size="md" :loading="regerando" @click="regerar">Gerar novo QR</Button>
     </div>
+    <ConfirmDialog :is-open="confirmacao.aberto" v-bind="confirmacao.opcoes" @confirm="confirmar" @cancel="cancelar" />
   </CardBase>
 </template>

@@ -20,6 +20,8 @@ import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
 import { usePdf } from '@/Composables/treinamento/usePdf';
 import { formatarDuracao } from '@/Composables/treinamento/formatarDuracao';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -81,12 +83,19 @@ function salvarPasta() {
   }
 }
 
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
+
 function excluirPasta(pasta) {
-  if (!window.confirm(`Excluir a pasta "${pasta.titulo}" e seus itens?`)) return;
-  router.delete(route('treinamentos.professor.pastas.destroy', [props.curso.id, pasta.id]), {
+  pedirConfirmacao({
+    title: 'Excluir pasta',
+    message: `Excluir a pasta "${pasta.titulo}"?`,
+    description: 'Todos os itens da pasta saem do curso junto com ela.',
+    variant: 'danger',
+    confirmText: 'Excluir pasta',
+  }, () => router.delete(route('treinamentos.professor.pastas.destroy', [props.curso.id, pasta.id]), {
     preserveScroll: true,
     onError: avisarErro,
-  });
+  }));
 }
 
 function reordenarPastas() {
@@ -181,11 +190,15 @@ function salvarItem() {
 }
 
 function excluirItem(item) {
-  if (!window.confirm(`Excluir o item "${item.titulo}"?`)) return;
-  router.delete(route('treinamentos.professor.itens.destroy', [props.curso.id, item.id]), {
+  pedirConfirmacao({
+    title: 'Excluir item',
+    message: `Excluir o item "${item.titulo}"?`,
+    variant: 'danger',
+    confirmText: 'Excluir item',
+  }, () => router.delete(route('treinamentos.professor.itens.destroy', [props.curso.id, item.id]), {
     preserveScroll: true,
     onError: avisarErro,
-  });
+  }));
 }
 
 function reordenarItens(pasta) {
@@ -228,14 +241,21 @@ function atualizarVideo(atualizado) {
   }));
 }
 
-async function desvincularVideo(item) {
-  if (!window.confirm(`Desvincular o vídeo do item "${item.titulo}"? O vídeo continua na biblioteca.`)) return;
-  try {
-    await window.axios.delete(route('treinamentos.professor.itens.video.desvincular', [props.curso.id, item.id]));
-    recarregarPastas();
-  } catch (e) {
-    toast(e.response?.data?.message || 'Não foi possível desvincular o vídeo.', 'error');
-  }
+function desvincularVideo(item) {
+  pedirConfirmacao({
+    title: 'Desvincular vídeo',
+    message: `Desvincular o vídeo do item "${item.titulo}"?`,
+    description: 'O vídeo continua na biblioteca e pode ser vinculado de novo.',
+    variant: 'warning',
+    confirmText: 'Desvincular',
+  }, async () => {
+    try {
+      await window.axios.delete(route('treinamentos.professor.itens.video.desvincular', [props.curso.id, item.id]));
+      recarregarPastas();
+    } catch (e) {
+      toast(e.response?.data?.message || 'Não foi possível desvincular o vídeo.', 'error');
+    }
+  });
 }
 
 function avisoDoVideo(video) {
@@ -514,5 +534,6 @@ function enviarPublicacao(dados) {
       @vinculado="aoVincularVideo"
       @fechar="seletorAberto = false"
     />
+    <ConfirmDialog :is-open="confirmacao.aberto" v-bind="confirmacao.opcoes" @confirm="confirmar" @cancel="cancelar" />
   </div>
 </template>

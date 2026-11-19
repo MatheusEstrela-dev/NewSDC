@@ -9,6 +9,8 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import QuestaoFormModal from '@/Components/Organisms/Treinamento/Professor/QuestaoFormModal.vue';
 import { useToast } from '@/Composables/useToast';
 import { mensagensDeErro, useProvaApi } from '@/Composables/treinamento/useProvaApi';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
 /**
  * Editor de uma prova: configuracao (nota minima, tentativas) e lista de
@@ -89,18 +91,26 @@ async function salvarQuestao(corpo) {
   emit('alterado');
 }
 
-async function excluirQuestao(questao) {
-  const aviso = questao.tem_respostas
-    ? 'Excluir esta questao? Alunos ja responderam: ela deixa de valer para novas tentativas, mas as respostas antigas continuam registradas.'
-    : 'Excluir esta questao?';
-  if (!window.confirm(aviso)) return;
-  try {
-    await api.excluirQuestao(props.provaId, questao.id);
-    await carregar();
-    emit('alterado');
-  } catch (e) {
-    toast(mensagensDeErro(e)[0], 'error');
-  }
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
+
+function excluirQuestao(questao) {
+  pedirConfirmacao({
+    title: 'Excluir questão',
+    message: 'Excluir esta questão?',
+    description: questao.tem_respostas
+      ? 'Alunos já responderam: ela deixa de valer para novas tentativas, mas as respostas antigas continuam registradas.'
+      : null,
+    variant: 'danger',
+    confirmText: 'Excluir questão',
+  }, async () => {
+    try {
+      await api.excluirQuestao(props.provaId, questao.id);
+      await carregar();
+      emit('alterado');
+    } catch (e) {
+      toast(mensagensDeErro(e)[0], 'error');
+    }
+  });
 }
 
 async function persistirOrdem() {
@@ -202,5 +212,6 @@ const campo = 'w-24 rounded-md border border-slate-300 px-3 py-2 text-sm dark:bo
       :salvar="salvarQuestao"
       @fechar="modalAberto = false"
     />
+    <ConfirmDialog :is-open="confirmacao.aberto" v-bind="confirmacao.opcoes" @confirm="confirmar" @cancel="cancelar" />
   </div>
 </template>

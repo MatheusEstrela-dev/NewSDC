@@ -15,6 +15,8 @@ import EscalaCalendario from '@/Components/Organisms/Plantao/EscalaCalendario.vu
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CronogramaItemModal from '@/Components/Organisms/Treinamento/Gestao/CronogramaItemModal.vue';
 import { useToast } from '@/Composables/useToast';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
 const props = defineProps({
   treinamentoId: { type: [Number, String], required: true },
@@ -91,16 +93,21 @@ function aoSalvar() {
   emit('alterado');
 }
 
-function removerItem(item) {
-  if (!confirm(`Remover "${item.titulo}" do cronograma?`)) return;
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 
-  router.delete(route('treinamentos.gestor.cronograma.destroy', [props.treinamentoId, item.id]), {
+function removerItem(item) {
+  pedirConfirmacao({
+    title: 'Remover do cronograma',
+    message: `Remover "${item.titulo}" do cronograma?`,
+    variant: 'danger',
+    confirmText: 'Remover',
+  }, () => router.delete(route('treinamentos.gestor.cronograma.destroy', [props.treinamentoId, item.id]), {
     preserveScroll: true,
     onSuccess: () => {
       toast('Item removido.', 'success');
       carregar(competencia.value);
     },
-  });
+  }));
 }
 </script>
 
@@ -143,5 +150,6 @@ function removerItem(item) {
       @fechar="modalAberto = false"
       @salvo="aoSalvar"
     />
+    <ConfirmDialog :is-open="confirmacao.aberto" v-bind="confirmacao.opcoes" @confirm="confirmar" @cancel="cancelar" />
   </SecaoRecolhivel>
 </template>
