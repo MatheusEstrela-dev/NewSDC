@@ -854,7 +854,7 @@
         <NavItem
           v-if="canSeeTreinamento && _routes.hasTreinamentos"
           :href="route('treinamentos.index')"
-          :active="isRouteActive('treinamentos.*') && !isRouteActive('treinamentos.aluno.*') && !isRouteActive('treinamentos.professor.*') && !isRouteActive('treinamentos.indicadores') && !isRouteActive('treinamentos.validar-participante*') && !isRouteActive('treinamentos.catalogo.*') && !isRouteActive('treinamentos.consulta-edital*')"
+          :active="capacitacoesAtivo"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
@@ -1266,6 +1266,23 @@ const _activeRoutes = computed(() => {
 });
 
 const isRouteActive = (pattern) => _activeRoutes.value[pattern] ?? false;
+
+// Itens irmaos de "Capacitacoes" sob o mesmo prefixo treinamentos.: o item
+// so acende quando nenhum deles esta ativo. Item novo no submenu entra aqui,
+// senao os dois acendem juntos (aconteceu com a Area do Gestor).
+const ROTAS_IRMAS_DE_CAPACITACOES = [
+  'treinamentos.indicadores',
+  'treinamentos.aluno.*',
+  'treinamentos.professor.*',
+  'treinamentos.gestor.*',
+  'treinamentos.validar-participante*',
+  'treinamentos.consulta-edital*',
+  'treinamentos.catalogo.*',
+];
+
+const capacitacoesAtivo = computed(
+  () => isRouteActive('treinamentos.*') && !ROTAS_IRMAS_DE_CAPACITACOES.some(isRouteActive),
+);
 
 // ============================================================================
 // Conjunto de permissoes derivado das props da visita atual.
