@@ -9,8 +9,8 @@ use App\Modules\Treinamento\Models\Treinamento;
 use Illuminate\Support\Collection;
 
 /**
- * Leituras sobre as versoes de um curso do catalogo. O rotulo da versao so
- * aparece quando o curso tem mais de uma versao publicada (spec, decisao 8).
+ * Leituras sobre as versoes de um curso do catalogo. Todo curso EAD exibe o
+ * rotulo da versao, inclusive a primeira ("v1.0"); presencial nao tem versao.
  */
 class VersoesDoCurso
 {
@@ -20,11 +20,8 @@ class VersoesDoCurso
      */
     public static function rotulos(iterable $treinamentos): array
     {
-        $lista = collect($treinamentos);
-        $publicadas = self::publicadasPorCurso($lista->pluck('curso_id')->filter()->unique()->values()->all());
-
-        return $lista->mapWithKeys(fn (Treinamento $t) => [
-            $t->id => ($publicadas[$t->curso_id] ?? 0) > 1 ? $t->rotuloDeVersao() : null,
+        return collect($treinamentos)->mapWithKeys(fn (Treinamento $t) => [
+            $t->id => $t->tipo === TipoTreinamento::EAD ? $t->rotuloDeVersao() : null,
         ])->all();
     }
 
@@ -62,26 +59,5 @@ class VersoesDoCurso
             ->whereNotNull('publicado_em')
             ->vigente()
             ->first();
-    }
-
-    /**
-     * @param  list<int>  $cursoIds
-     * @return array<int, int> curso_id => quantidade de versoes EAD publicadas
-     */
-    private static function publicadasPorCurso(array $cursoIds): array
-    {
-        if ($cursoIds === []) {
-            return [];
-        }
-
-        return Treinamento::query()
-            ->whereIn('curso_id', $cursoIds)
-            ->where('tipo', TipoTreinamento::EAD->value)
-            ->whereNotNull('publicado_em')
-            ->selectRaw('curso_id, count(*) as total')
-            ->groupBy('curso_id')
-            ->pluck('total', 'curso_id')
-            ->map(fn ($total) => (int) $total)
-            ->all();
     }
 }
