@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Treinamento\Controllers\Aluno\AtualizarVersaoController;
+use App\Modules\Treinamento\Controllers\Aluno\AvaliacaoStoreController;
 use App\Modules\Treinamento\Controllers\Aluno\CredencialRegerarController;
 use App\Modules\Treinamento\Controllers\Aluno\EntregaStoreController;
 use App\Modules\Treinamento\Controllers\Aluno\ItemArquivoController;
@@ -39,6 +40,10 @@ Route::prefix('aluno')->name('aluno.')->middleware('can:treinamento.cursos.view'
     Route::post('/cursos/{treinamento}/itens/{item}/entregas', EntregaStoreController::class)
         ->middleware('throttle:10,1,ead-entrega')
         ->name('itens.entregas');
+    // Avaliacao do curso (etapa final): conclui e emite o certificado. A inscricao vem do usuario logado.
+    Route::post('/cursos/{treinamento}/avaliacao', AvaliacaoStoreController::class)
+        ->middleware('throttle:10,1,ead-avaliacao')
+        ->name('avaliacao');
 
     // Prova do item: so a regra do backend decide se abre, quantas tentativas restam e a nota.
     Route::prefix('/cursos/{treinamento}/itens/{item}/prova')->name('itens.prova')->group(function () {

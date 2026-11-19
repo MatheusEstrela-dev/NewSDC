@@ -9,6 +9,7 @@ use App\Modules\Treinamento\Controllers\Portal\InscricaoController;
 use App\Modules\Treinamento\Controllers\Portal\MinhasInscricoesController;
 use App\Modules\Treinamento\Controllers\Portal\PresencaAutoconfirmacaoController;
 use App\Modules\Treinamento\Controllers\Portal\RegisterController;
+use App\Modules\Treinamento\Controllers\Portal\SalaAvaliacaoStoreController;
 use App\Modules\Treinamento\Controllers\Portal\SalaDeAulaController;
 use App\Modules\Treinamento\Controllers\Portal\SalaEntregaStoreController;
 use App\Modules\Treinamento\Controllers\Portal\SalaItemArquivoController;
@@ -93,6 +94,10 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
         Route::post('/cursos/{slug}/itens/{item}/entregas', SalaEntregaStoreController::class)
             ->middleware('throttle:10,1,portal-ead-entrega')
             ->name('cursos.itens.entregas');
+        // Avaliacao do curso (etapa final): conclui e emite o certificado. A inscricao vem do cidadao logado.
+        Route::post('/cursos/{slug}/avaliacao', SalaAvaliacaoStoreController::class)
+            ->middleware('throttle:10,1,portal-ead-avaliacao')
+            ->name('cursos.avaliacao');
         Route::prefix('/cursos/{slug}/itens/{item}/prova')->name('cursos.itens.prova')->group(function () {
             Route::get('/', SalaProvaShowController::class);
             Route::post('/tentativas', SalaProvaIniciarController::class)->name('.iniciar');

@@ -10,7 +10,8 @@ use Illuminate\Console\Command;
 /**
  * Reavaliacao retroativa da conclusao dos cursos EAD (spec 8.4): alunos que
  * terminaram antes da Fase 3 ou cuja trilha ficou completa por edicao do
- * curso. Idempotente: conclusao ja gravada nunca e tocada.
+ * curso. Idempotente: conclusao ja gravada nunca e tocada. Inscricao com a
+ * trilha completa e sem a avaliacao do curso nao conclui (ConclusaoService).
  */
 class ReavaliarConclusoesCommand extends Command
 {

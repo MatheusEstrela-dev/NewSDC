@@ -9,9 +9,10 @@ defineProps({
   estado: { type: Object, required: true },
   escopo: { type: String, default: 'previa' },
   versao_rotulo: { type: String, default: null },
+  notas_avaliacao: { type: Array, default: () => [] },
 });
 </script>
 
 <template>
-  <SalaDeAulaTemplate :curso="curso" :estado="estado" :escopo="escopo" :versao-rotulo="versao_rotulo" />
+  <SalaDeAulaTemplate :curso="curso" :estado="estado" :escopo="escopo" :versao-rotulo="versao_rotulo" :notas-avaliacao="notas_avaliacao" />
 </template>

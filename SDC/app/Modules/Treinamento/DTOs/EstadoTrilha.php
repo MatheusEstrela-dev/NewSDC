@@ -17,6 +17,24 @@ final readonly class EstadoTrilha
         public array $pastas,
     ) {}
 
+    /** Todos os itens exigidos cumpridos: mesma condicao do ConclusaoPorTrilha. */
+    public function completa(): bool
+    {
+        return $this->total > 0 && $this->concluidos >= $this->total;
+    }
+
+    /**
+     * Percentual do curso para o aluno, com a avaliacao (etapa final
+     * obrigatoria) contando como mais uma etapa: trilha completa sem avaliar
+     * nao chega a 100%. Mesma conta da sala (SalaDeAulaTemplate).
+     */
+    public function percentualDoCurso(bool $etapaFinalCumprida): float
+    {
+        return $this->total === 0
+            ? 0.0
+            : round(100 * ($this->concluidos + ($etapaFinalCumprida ? 1 : 0)) / ($this->total + 1), 1);
+    }
+
     /**
      * @return array<string, mixed>
      */

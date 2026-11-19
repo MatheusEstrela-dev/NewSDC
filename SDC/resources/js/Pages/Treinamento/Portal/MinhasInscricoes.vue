@@ -7,12 +7,16 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import AvaliacaoCursoCard from '@/Components/Organisms/Treinamento/AvaliacaoCursoCard.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   inscricoes: { type: Object, required: true },
   salas: { type: Object, default: () => ({}) },
+  /** Por id da inscricao: eventos (sem sala) em que falta so avaliar para concluir. */
+  avaliacoes_pendentes: { type: Object, default: () => ({}) },
+  notas_avaliacao: { type: Array, default: () => [] },
 });
 
 const pagination = computed(() => {
@@ -80,12 +84,31 @@ const formatDate = (dateValue) => {
             Ver certificado
           </a>
           <Link
-            v-if="salas[inscricao.id]"
+            v-if="salas[inscricao.id]?.avaliacao_pendente"
+            :href="salas[inscricao.id].sala_url"
+            class="text-xs font-semibold text-amber-700 hover:underline dark:text-amber-400"
+          >
+            Avalie o curso para concluir ({{ Math.round(salas[inscricao.id].percentual) }}%)
+          </Link>
+          <Link
+            v-else-if="salas[inscricao.id]"
             :href="salas[inscricao.id].sala_url"
             class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
           >
             Abrir curso ({{ Math.round(salas[inscricao.id].percentual) }}%)
           </Link>
+          <Text v-if="avaliacoes_pendentes[inscricao.id]" size="xs" weight="semibold" color="warning">
+            Avalie o curso para concluir
+          </Text>
+        </div>
+
+        <!-- Evento sem sala com os requisitos cumpridos: a avaliacao e a etapa final. -->
+        <div v-if="avaliacoes_pendentes[inscricao.id]" class="mt-4">
+          <AvaliacaoCursoCard
+            :url="avaliacoes_pendentes[inscricao.id].url_avaliar"
+            :notas="notas_avaliacao"
+            subtitulo="Você cumpriu os requisitos. Avalie o curso para concluí-lo e receber o certificado."
+          />
         </div>
       </CardBase>
 

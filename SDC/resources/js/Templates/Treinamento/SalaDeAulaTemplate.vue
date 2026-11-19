@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
+import EtapaAvaliacao from '@/Components/Organisms/Treinamento/Sala/EtapaAvaliacao.vue';
 import ItemProjeto from '@/Components/Organisms/Treinamento/Sala/ItemProjeto.vue';
 import ItemProva from '@/Components/Organisms/Treinamento/Sala/ItemProva.vue';
 import PlayerVideo from '@/Components/Organisms/Treinamento/Sala/PlayerVideo.vue';
@@ -22,6 +23,9 @@ const props = defineProps({
   estado: { type: Object, required: true },
   escopo: { type: String, required: true, validator: (v) => ['aluno', 'portal', 'previa'].includes(v) },
   versaoRotulo: { type: String, default: null },
+  /** Etapa final, a avaliacao do curso (SalaDeAulaProps::avaliacaoFinal); null na previa. */
+  avaliacaoFinal: { type: Object, default: null },
+  notasAvaliacao: { type: Array, default: () => [] },
 });
 
 const { show: toast } = useToast();
@@ -33,6 +37,34 @@ const rotas = useRotasSala(props.escopo, props.escopo === 'portal' ? props.curso
 const estadoLocal = ref(props.estado);
 watch(() => props.estado, (novo) => { estadoLocal.value = novo; });
 
+// Etapa final (avaliacao do curso). O backend manda a situacao na carga; a
+// trilha que fecha durante a visita (resposta do progresso/prova) libera a
+// etapa aqui mesmo, sem recarregar. Na previa ela aparece aberta, sem envio.
+const trilhaCompleta = computed(() => estadoLocal.value.total > 0 && estadoLocal.value.concluidos >= estadoLocal.value.total);
+const concluido = computed(() => props.avaliacaoFinal?.concluido === true);
+const situacaoAvaliacao = computed(() => {
+  if (previa.value) return 'LIBERADA';
+  if (props.avaliacaoFinal?.situacao === 'ENVIADA') return 'ENVIADA';
+  if (props.avaliacaoFinal?.situacao === 'LIBERADA' || concluido.value || trilhaCompleta.value) return 'LIBERADA';
+  return 'BLOQUEADA';
+});
+const faltam = computed(() => Math.max(0, estadoLocal.value.total - estadoLocal.value.concluidos));
+
+// A avaliacao conta como uma etapa a mais: trilha completa sem avaliar nao
+// mostra 100%. Mesma conta de EstadoTrilha::percentualDoCurso (backend).
+const percentualCurso = computed(() => {
+  const { total, concluidos } = estadoLocal.value;
+  if (total === 0) return 0;
+  const etapaFinal = situacaoAvaliacao.value === 'ENVIADA' || concluido.value ? 1 : 0;
+  return Math.round((1000 * (concluidos + etapaFinal)) / (total + 1)) / 10;
+});
+
+watch(trilhaCompleta, (completa, antes) => {
+  if (completa && !antes && !previa.value && situacaoAvaliacao.value !== 'ENVIADA' && !concluido.value) {
+    toast('Você concluiu todos os módulos! A avaliação do curso foi liberada.', 'success');
+  }
+});
+
 const itens = computed(() => estadoLocal.value.pastas.flatMap((pasta, indice) => pasta.itens.map((item) => ({
   ...item,
   pasta: pasta.titulo,
@@ -41,11 +73,19 @@ const itens = computed(() => estadoLocal.value.pastas.flatMap((pasta, indice) =>
 
 const itemAtualId = ref(estadoLocal.value.proximo_item_id ?? itens.value[0]?.id ?? null);
 
+// Com a trilha cumprida (nada mais a fazer nos modulos) a sala abre direto na etapa final.
+const avaliacaoAberta = ref(!previa.value && situacaoAvaliacao.value !== 'BLOQUEADA' && estadoLocal.value.proximo_item_id === null);
+
 const indiceAtual = computed(() => itens.value.findIndex((i) => i.id === itemAtualId.value));
-const itemAtual = computed(() => itens.value[indiceAtual.value] ?? null);
-const anterior = computed(() => itens.value[indiceAtual.value - 1] ?? null);
-const proximo = computed(() => itens.value[indiceAtual.value + 1] ?? null);
-const podeAvancar = computed(() => proximo.value?.liberado === true);
+const itemAtual = computed(() => (avaliacaoAberta.value ? null : itens.value[indiceAtual.value] ?? null));
+const ultimo = computed(() => itens.value[itens.value.length - 1] ?? null);
+const anterior = computed(() => (avaliacaoAberta.value ? ultimo.value : itens.value[indiceAtual.value - 1] ?? null));
+const proximo = computed(() => (avaliacaoAberta.value ? null : itens.value[indiceAtual.value + 1] ?? null));
+// Depois do ultimo item vem a etapa final, que so abre com a trilha completa.
+const proximoEhAvaliacao = computed(() => !avaliacaoAberta.value && proximo.value === null && itemAtual.value !== null);
+const podeAvancar = computed(() => (proximoEhAvaliacao.value
+  ? situacaoAvaliacao.value !== 'BLOQUEADA'
+  : proximo.value?.liberado === true));
 
 // Progresso (pagina do PDF ou segundo do video): um envio por pausa de 1 s.
 let temporizador = null;
@@ -101,7 +141,19 @@ const progressoVideo = useProgressoVideo({
 
 function selecionar(id) {
   enviarPendente();
+  avaliacaoAberta.value = false;
   itemAtualId.value = id;
+}
+
+// Bloqueada tambem abre: mostra o cadeado e o que falta para liberar.
+function abrirAvaliacao() {
+  enviarPendente();
+  avaliacaoAberta.value = true;
+}
+
+function avancar() {
+  if (proximoEhAvaliacao.value) abrirAvaliacao();
+  else selecionar(proximo.value.id);
 }
 
 onBeforeUnmount(enviarPendente);
@@ -114,7 +166,7 @@ onBeforeUnmount(enviarPendente);
         {{ curso.titulo }}
         <span v-if="versaoRotulo" class="ml-1.5 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold">{{ versaoRotulo }}</span>
       </Heading>
-      <span class="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-semibold">{{ Math.round(estadoLocal.percentual) }}%</span>
+      <span class="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-semibold">{{ Math.round(percentualCurso) }}%</span>
       <Link :href="rotas.fechar()" class="text-xs hover:underline">Fechar &#10005;</Link>
     </div>
 
@@ -123,10 +175,36 @@ onBeforeUnmount(enviarPendente);
     </div>
 
     <div class="grid min-h-[520px] grid-cols-1 lg:grid-cols-[300px_1fr]">
-      <TrilhaLateral :estado="estadoLocal" :item-atual-id="itemAtualId" @selecionar="selecionar" />
+      <TrilhaLateral
+        :estado="estadoLocal"
+        :item-atual-id="avaliacaoAberta ? null : itemAtualId"
+        :percentual="percentualCurso"
+        :avaliacao="situacaoAvaliacao"
+        :concluido="concluido"
+        :avaliacao-aberta="avaliacaoAberta"
+        @selecionar="selecionar"
+        @abrir-avaliacao="abrirAvaliacao"
+      />
 
       <div class="flex min-w-0 flex-col">
-        <template v-if="itemAtual">
+        <template v-if="avaliacaoAberta">
+          <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-5 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <span>Etapa final &rsaquo;</span>
+            <b class="text-slate-800 dark:text-slate-100">Avaliação do curso</b>
+          </div>
+
+          <EtapaAvaliacao
+            :situacao="situacaoAvaliacao"
+            :avaliacao-final="avaliacaoFinal"
+            :notas="notasAvaliacao"
+            :faltam="faltam"
+            :url-avaliar="rotas.avaliacao()"
+            :url-certificado="rotas.certificado"
+            :previa="previa"
+          />
+        </template>
+
+        <template v-else-if="itemAtual">
           <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-5 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
             <span>Pasta {{ itemAtual.pastaIndice }} · {{ itemAtual.pasta }} &rsaquo;</span>
             <b class="text-slate-800 dark:text-slate-100">{{ itemAtual.titulo }}</b>
@@ -187,7 +265,7 @@ onBeforeUnmount(enviarPendente);
           <span class="flex-1 text-center text-slate-500 dark:text-slate-400">
             <template v-if="!previa && itemAtual?.tipo === 'PDF' && itemAtual.posicao > 1">Retoma na página em que você parou</template>
           </span>
-          <Button size="sm" :disabled="!podeAvancar" @click="selecionar(proximo.id)">Próximo &rsaquo;</Button>
+          <Button size="sm" :disabled="!podeAvancar" @click="avancar">{{ proximoEhAvaliacao ? 'Avaliar o curso' : 'Próximo' }} &rsaquo;</Button>
         </div>
       </div>
     </div>

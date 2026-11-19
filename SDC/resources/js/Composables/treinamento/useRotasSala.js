@@ -5,6 +5,8 @@ const ROTAS = {
     entrega: 'treinamentos.aluno.itens.entregas',
     prova: 'treinamentos.aluno.itens.prova',
     pulso: 'treinamentos.sessao.pulso',
+    avaliacao: 'treinamentos.aluno.avaliacao',
+    certificado: 'treinamentos.certificados.imprimir',
     fechar: ['treinamentos.aluno.index', false],
   },
   portal: {
@@ -13,6 +15,8 @@ const ROTAS = {
     entrega: 'portal.treinamento.cursos.itens.entregas',
     prova: 'portal.treinamento.cursos.itens.prova',
     pulso: 'portal.treinamento.sessao.pulso',
+    avaliacao: 'portal.treinamento.cursos.avaliacao',
+    certificado: 'portal.treinamento.certificados.imprimir',
     fechar: ['portal.treinamento.inscricoes.index', false],
   },
   previa: {
@@ -21,6 +25,8 @@ const ROTAS = {
     entrega: null,
     prova: null,
     pulso: 'treinamentos.sessao.pulso',
+    avaliacao: null,
+    certificado: null,
     fechar: ['treinamentos.professor.conteudo', true],
   },
 };
@@ -53,6 +59,9 @@ export function useRotasSala(escopo, chave) {
       : null),
     // A rota do pulso pode nao estar no manifesto Ziggy ainda: sem ela, null.
     pulso: () => (nomes.pulso && route().has(nomes.pulso) ? route(nomes.pulso) : null),
+    // Feedback de conclusao (chave do curso) e impressao do certificado (id do certificado).
+    avaliacao: () => (nomes.avaliacao ? route(nomes.avaliacao, chave) : null),
+    certificado: (certificadoId) => (nomes.certificado ? route(nomes.certificado, certificadoId) : null),
     fechar: () => (nomes.fechar[1] ? route(nomes.fechar[0], chave) : route(nomes.fechar[0])),
   };
 }

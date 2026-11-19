@@ -79,6 +79,12 @@ class Inscricao extends Model
         return $this->hasOne(Certificado::class);
     }
 
+    /** Avaliacao do curso: a etapa final, sem ela a inscricao nao conclui (no maximo uma). */
+    public function avaliacao(): HasOne
+    {
+        return $this->hasOne(AvaliacaoCurso::class);
+    }
+
     public function provaTentativas(): HasMany
     {
         return $this->hasMany(ProvaTentativa::class);

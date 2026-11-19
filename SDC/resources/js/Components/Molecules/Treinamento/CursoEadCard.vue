@@ -55,10 +55,15 @@ const novaVersao = computed(() => (props.modo === 'inscrito' ? props.curso.nova_
 
 const capa = computed(() => props.capaUrl ?? props.curso.capa_url ?? null);
 
-const concluido = computed(() => props.modo === 'inscrito' && props.curso.aprovada && Math.round(props.curso.percentual) >= 100);
+// Concluido vem do backend (a avaliacao do curso e a etapa final: 100% da
+// trilha sem avaliar nao e concluido); o percentual fica de reserva.
+const concluido = computed(() => props.modo === 'inscrito' && props.curso.aprovada
+  && (props.curso.concluido ?? Math.round(props.curso.percentual) >= 100));
+const avaliacaoPendente = computed(() => props.modo === 'inscrito' && props.curso.avaliacao_pendente === true);
 
 const selo = computed(() => {
   if (concluido.value) return { texto: 'Concluído', classe: 'bg-emerald-500 text-white' };
+  if (avaliacaoPendente.value) return { texto: 'Avaliação pendente', classe: 'bg-amber-400 text-slate-900' };
   if (props.curso.situacao === 'PAUSADO') return { texto: 'Pausado', classe: 'bg-amber-400 text-slate-900' };
   if (props.curso.situacao === 'DESATIVADO') return { texto: 'Encerrado', classe: 'bg-slate-500 text-white' };
   if (props.modo === 'professor') {
@@ -127,7 +132,9 @@ const selo = computed(() => {
           <div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
             <div :class="['h-full rounded-full transition-all', concluido ? 'bg-emerald-500' : 'bg-amber-500']" :style="{ width: `${Math.min(100, curso.percentual)}%` }" />
           </div>
-          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Math.round(curso.percentual) }}% concluído</p>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {{ Math.round(curso.percentual) }}% concluído<template v-if="avaliacaoPendente"> · falta avaliar o curso</template>
+          </p>
         </div>
 
         <p v-if="novaVersao" class="mb-3 flex items-start gap-1.5 text-sm font-medium text-sky-700 dark:text-sky-300">
@@ -145,7 +152,7 @@ const selo = computed(() => {
           <span v-if="modo === 'disponivel' && curso.pausado" class="text-xs text-slate-500 dark:text-slate-400">Inscrições suspensas</span>
           <Button v-else-if="modo === 'disponivel'" size="sm" :loading="loading" @click="emit('inscrever', curso)">Inscrever-se</Button>
           <div v-else-if="curso.aprovada" class="flex flex-wrap items-center gap-2">
-            <Button v-if="curso.sala_url" size="sm" :variant="novaVersao ? 'outline' : 'primary'" :href="curso.sala_url">{{ concluido ? 'Revisar' : 'Continuar' }}</Button>
+            <Button v-if="curso.sala_url" size="sm" :variant="novaVersao ? 'outline' : 'primary'" :href="curso.sala_url">{{ concluido ? 'Revisar' : avaliacaoPendente ? 'Avaliar curso' : 'Continuar' }}</Button>
             <span v-else class="text-xs text-slate-500 dark:text-slate-400">{{ curso.situacao === 'DESATIVADO' ? 'Curso encerrado' : 'Curso pausado pelo professor' }}</span>
             <Button v-if="novaVersao" size="sm" :loading="atualizando" @click="emit('atualizar', curso)">Atualizar</Button>
           </div>

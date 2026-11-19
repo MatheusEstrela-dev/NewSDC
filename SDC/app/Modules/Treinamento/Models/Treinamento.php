@@ -134,6 +134,11 @@ class Treinamento extends Model implements Rastreavel
         return $this->hasMany(Certificado::class);
     }
 
+    public function avaliacoes(): HasMany
+    {
+        return $this->hasMany(AvaliacaoCurso::class);
+    }
+
     public function cronogramas(): HasMany
     {
         return $this->hasMany(CursoCronograma::class)->orderBy('inicio');
@@ -249,6 +254,19 @@ class Treinamento extends Model implements Rastreavel
         }
 
         return route($rota, ['treinamento' => $this->id, 'v' => substr(md5($this->capa_path), 0, 12)]);
+    }
+
+    /**
+     * Ponto unico de quais cursos tem a avaliacao como etapa final obrigatoria:
+     * sem ela a inscricao nao conclui (ConclusaoService::registrar) e, por
+     * consequencia, nao recebe certificado. Vale para todos os tipos: no EAD a
+     * avaliacao e a ultima etapa da trilha na sala de aula; nos eventos
+     * (presencial/online/semi), que nao tem sala, ela aparece em "Minhas
+     * inscricoes" (cidadao) e "Meus cursos" (servidor).
+     */
+    public function exigeAvaliacaoParaConcluir(): bool
+    {
+        return true;
     }
 
     public function estaPublicado(): bool
