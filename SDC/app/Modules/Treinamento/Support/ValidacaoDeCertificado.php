@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Support;
 
 use App\Models\User;
 use App\Modules\Treinamento\Models\Certificado;
+use App\Modules\Treinamento\Models\CertificadoInstrutor;
 use App\Modules\Treinamento\Models\Cidadao;
 
 /**
@@ -26,6 +27,10 @@ final class ValidacaoDeCertificado
 
     public const CANCELADO = 'CANCELADO';
 
+    public const CONCLUINTE = 'CONCLUINTE';
+
+    public const INSTRUTOR = 'INSTRUTOR';
+
     /** @return array<string, mixed>|null null = codigo desconhecido ou certificado nao emitido */
     public function buscar(string $codigo): ?array
     {
@@ -38,10 +43,14 @@ final class ValidacaoDeCertificado
             ->where('codigo_verificacao', $codigo)
             ->first();
 
-        $inscricao = $certificado?->inscricao;
-        $treinamento = $certificado?->treinamento;
+        if ($certificado === null) {
+            return $this->buscarDeInstrutor($codigo);
+        }
 
-        if ($certificado === null || $certificado->emitido_em === null || $inscricao === null || $treinamento === null || $inscricao->inscrito === null) {
+        $inscricao = $certificado->inscricao;
+        $treinamento = $certificado->treinamento;
+
+        if ($certificado->emitido_em === null || $inscricao === null || $treinamento === null || $inscricao->inscrito === null) {
             return null;
         }
 
@@ -49,6 +58,7 @@ final class ValidacaoDeCertificado
         $conclusao = $treinamento->isEad() ? ($inscricao->concluido_em ?? $certificado->emitido_em) : $certificado->emitido_em;
 
         return [
+            'papel' => self::CONCLUINTE,
             'situacao' => $this->situacao($certificado),
             'nome' => $inscrito?->name,
             'cpf_mascarado' => $this->mascararCpf($inscrito instanceof User || $inscrito instanceof Cidadao ? $inscrito->cpf : null),
@@ -58,6 +68,40 @@ final class ValidacaoDeCertificado
             'modalidade' => $treinamento->tipo->getLabel(),
             'concluido_em' => $conclusao->toDateString(),
             'aproveitamento' => $certificado->aproveitamento,
+        ];
+    }
+
+    /**
+     * Certificado de quem ministrou o curso. O instrutor do presencial pode
+     * ser so um nome (sem usuario): valida sem CPF. Professor cujo usuario foi
+     * excluido responde como nao encontrado, como no do aluno.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function buscarDeInstrutor(string $codigo): ?array
+    {
+        $certificado = CertificadoInstrutor::query()
+            ->with(['usuario', 'treinamento' => fn ($q) => $q->withTrashed()])
+            ->where('codigo_verificacao', $codigo)
+            ->first();
+
+        $treinamento = $certificado?->treinamento;
+
+        if ($certificado === null || $treinamento === null || ($certificado->user_id !== null && $certificado->usuario === null)) {
+            return null;
+        }
+
+        return [
+            'papel' => self::INSTRUTOR,
+            'situacao' => self::VALIDO,
+            'nome' => $certificado->nome,
+            'cpf_mascarado' => $this->mascararCpf($certificado->usuario?->cpf),
+            'curso' => $treinamento->titulo,
+            'versao_rotulo' => VersoesDoCurso::rotuloDe($treinamento),
+            'carga_horaria' => $treinamento->carga_horaria,
+            'modalidade' => $treinamento->tipo->getLabel(),
+            'concluido_em' => ($treinamento->data_fim ?? $certificado->emitido_em)->toDateString(),
+            'aproveitamento' => null,
         ];
     }
 

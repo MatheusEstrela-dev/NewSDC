@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Controllers\Professor;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Services\CertificadoInstrutorService;
 use App\Modules\Treinamento\Services\ProfessorService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,7 +14,10 @@ use Inertia\Response;
 
 class MeusCursosController extends Controller
 {
-    public function __construct(private readonly ProfessorService $professores) {}
+    public function __construct(
+        private readonly ProfessorService $professores,
+        private readonly CertificadoInstrutorService $certificadosInstrutor,
+    ) {}
 
     public function __invoke(Request $request): Response
     {
@@ -37,6 +41,10 @@ class MeusCursosController extends Controller
                 'situacao_label' => $t->situacaoEfetiva()->getLabel(),
                 'alunos' => (int) $t->inscricoes_aprovadas_count,
                 'designado' => isset($designados[(int) $t->id]),
+                // Certificado de instrutor: so de quem ministrou, depois que o curso termina.
+                'certificado_instrutor_url' => isset($designados[(int) $t->id]) && $this->certificadosInstrutor->cursoEncerrado($t)
+                    ? route('treinamentos.certificados-instrutor.meu', $t->id)
+                    : null,
             ])
             ->values();
 

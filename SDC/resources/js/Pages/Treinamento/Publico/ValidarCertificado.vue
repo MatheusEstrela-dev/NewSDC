@@ -27,13 +27,15 @@ const situacao = computed(() => SITUACOES[props.resultado?.situacao] ?? null);
 const linhas = computed(() => {
   const r = props.resultado;
   if (!r) return [];
+  const instrutor = r.papel === 'INSTRUTOR';
   return [
+    ['Certificado de', instrutor ? 'Instrutor' : 'Conclusão'],
     ['Nome', r.nome],
     ['CPF', r.cpf_mascarado],
     ['Curso', r.versao_rotulo ? `${r.curso} - ${r.versao_rotulo}` : r.curso],
     ['Carga horária', r.carga_horaria != null ? `${r.carga_horaria} horas` : null],
     ['Modalidade', r.modalidade],
-    ['Data de conclusão', r.concluido_em ? new Date(`${r.concluido_em}T00:00:00`).toLocaleDateString('pt-BR') : null],
+    [instrutor ? 'Término do curso' : 'Data de conclusão', r.concluido_em ? new Date(`${r.concluido_em}T00:00:00`).toLocaleDateString('pt-BR') : null],
     ['Aproveitamento', r.aproveitamento != null ? `${Number(r.aproveitamento).toLocaleString('pt-BR')}%` : null],
   ].filter(([, valor]) => valor);
 });

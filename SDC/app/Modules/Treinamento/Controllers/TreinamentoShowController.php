@@ -6,7 +6,9 @@ namespace App\Modules\Treinamento\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Models\CertificadoInstrutor;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
+use App\Modules\Treinamento\Services\CertificadoInstrutorService;
 use App\Modules\Treinamento\Services\InscricaoService;
 use App\Modules\Treinamento\Services\ProfessorService;
 use App\Modules\Treinamento\Services\TreinamentoService;
@@ -22,7 +24,8 @@ class TreinamentoShowController extends Controller
         private readonly TreinamentoService $treinamentoService,
         private readonly ProfessorService $professorService,
         private readonly InscricaoService $inscricaoService,
-        private readonly NovaVersaoDoCursoService $versoes
+        private readonly NovaVersaoDoCursoService $versoes,
+        private readonly CertificadoInstrutorService $certificadosInstrutor,
     ) {
     }
 
@@ -46,6 +49,9 @@ class TreinamentoShowController extends Controller
             'professores' => $treinamento->isEad() ? $this->professorService->listar($treinamento) : [],
             'versoes' => $this->versoesDoCurso($treinamento),
             'rascunho_id' => $rascunho?->id,
+            'certificados_instrutor' => $user->can('treinamento.certificados.download')
+                ? $this->certificadosDeInstrutor($treinamento)
+                : null,
             'pode_criar_versao' => $treinamento->isEad()
                 && $treinamento->publicado_em !== null
                 && $rascunho === null
@@ -59,6 +65,31 @@ class TreinamentoShowController extends Controller
                 'certificado_id' => $minhaInscricao->certificado?->id,
             ] : null,
         ]);
+    }
+
+    /**
+     * Certificados de instrutor ja emitidos e se o curso ja permite emitir
+     * (terminou). O nome sugerido e o campo Instrutor do curso (presencial).
+     *
+     * @return array<string, mixed>
+     */
+    private function certificadosDeInstrutor(Treinamento $treinamento): array
+    {
+        return [
+            'pode_emitir' => $this->certificadosInstrutor->cursoEncerrado($treinamento),
+            'nome_sugerido' => $treinamento->instrutor,
+            'emitidos' => $this->certificadosInstrutor->doCurso($treinamento)
+                ->map(fn (CertificadoInstrutor $c) => [
+                    'id' => $c->id,
+                    'nome' => $c->nome,
+                    'user_id' => $c->user_id,
+                    'codigo' => $c->codigo_verificacao,
+                    'emitido_em' => $c->emitido_em?->format('d/m/Y'),
+                    'imprimir_url' => route('treinamentos.certificados-instrutor.imprimir', $c->id),
+                ])
+                ->values()
+                ->all(),
+        ];
     }
 
     /**

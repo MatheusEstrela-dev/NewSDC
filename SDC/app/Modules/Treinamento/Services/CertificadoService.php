@@ -9,6 +9,7 @@ use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Treinamento\Enums\StatusCertificado;
 use App\Modules\Treinamento\Models\Certificado;
+use App\Modules\Treinamento\Models\CertificadoInstrutor;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Support\CodigoVerificacao;
@@ -137,6 +138,11 @@ class CertificadoService
 
         for ($i = 0; $i < self::TENTATIVAS_DE_CODIGO; $i++) {
             $codigo = CodigoVerificacao::gerar();
+
+            // O codigo e unico entre aluno e instrutor: a validacao publica busca nos dois.
+            if (CertificadoInstrutor::query()->where('codigo_verificacao', $codigo)->exists()) {
+                continue;
+            }
 
             try {
                 $gravou = ConexaoTreinamento::transacao(

@@ -21,6 +21,11 @@ defineProps({
 });
 
 useCursosAoVivo(['cursos', 'pode_abrir'], { professor: true });
+
+// A impressao e uma pagina Blade, fora do Inertia: abre em aba propria.
+function abrirCertificado(url) {
+  window.open(url, '_blank', 'noopener');
+}
 </script>
 
 <template>
@@ -62,6 +67,9 @@ useCursosAoVivo(['cursos', 'pode_abrir'], { professor: true });
               <Button size="sm" :href="route('treinamentos.professor.conteudo', curso.id)">Conteúdo</Button>
               <Button size="sm" variant="outline" :href="route('treinamentos.professor.previa', curso.id)">Prévia</Button>
               <AcoesCicloCurso :curso="curso" />
+              <Button v-if="curso.certificado_instrutor_url" size="sm" variant="secondary" @click="abrirCertificado(curso.certificado_instrutor_url)">
+                Certificado de instrutor
+              </Button>
             </div>
           </template>
         </CursoEadCard>

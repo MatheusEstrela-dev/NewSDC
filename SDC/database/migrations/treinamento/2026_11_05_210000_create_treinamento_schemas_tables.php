@@ -81,6 +81,7 @@ return new class extends Migration
         $this->criarCatalogo();
         $this->criarAreaDoGestor();
         $this->criarVersoes();
+        $this->criarCertificadoInstrutor();
     }
 
     public function down(): void
@@ -935,6 +936,39 @@ return new class extends Migration
         $this->indices('treinamento.treinamentos', ['treinamentos_versao_origem_id_fkidx' => 'versao_origem_id']);
         $this->indices('treinamento.modulo_itens', ['modulo_itens_origem_item_id_fkidx' => 'origem_item_id']);
         $this->indices('treinamento.inscricoes', ['inscricoes_atualizacao_de_inscricao_id_fkidx' => 'atualizacao_de_inscricao_id']);
+    }
+
+    /**
+     * Certificado de quem ministrou o curso. No EAD e o professor designado
+     * (user_id); no presencial o instrutor e so um nome digitado (user_id NULL).
+     * Um por (curso, professor) e um por (curso, nome) sem usuario. O codigo
+     * tem o formato do certificado do aluno e e unico entre as duas tabelas
+     * (garantido no servico). user_id e emitido_por apontam para o banco sdc:
+     * sem FK, como em treinamento_professores.
+     */
+    private function criarCertificadoInstrutor(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.certificados_instrutor (
+                id bigserial PRIMARY KEY,
+                treinamento_id bigint NOT NULL,
+                user_id bigint,
+                nome varchar(255) NOT NULL,
+                codigo_verificacao varchar(20) NOT NULL,
+                emitido_em timestamp(0) NOT NULL,
+                emitido_por bigint,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT certificados_instrutor_codigo_unique UNIQUE (codigo_verificacao),
+                CONSTRAINT certificados_instrutor_treinamento_id_foreign
+                    FOREIGN KEY (treinamento_id) REFERENCES treinamento.treinamentos (id) ON DELETE RESTRICT
+            )
+            SQL);
+        $this->exec('CREATE UNIQUE INDEX IF NOT EXISTS certificados_instrutor_usuario_unico ON treinamento.certificados_instrutor (treinamento_id, user_id) WHERE user_id IS NOT NULL');
+        $this->exec('CREATE UNIQUE INDEX IF NOT EXISTS certificados_instrutor_nome_unico ON treinamento.certificados_instrutor (treinamento_id, lower(nome)) WHERE user_id IS NULL');
+        $this->indices('treinamento.certificados_instrutor', [
+            'certificados_instrutor_user_id_fkidx' => 'user_id',
+        ]);
     }
 
     /** Cria a FK so se ela ainda nao existe: reaplicar nao revalida nem trava as tabelas. */
