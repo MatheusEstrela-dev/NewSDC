@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services;
 
 use App\Models\User;
-use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Models\TreinamentoProfessor;
@@ -82,13 +81,14 @@ class ProfessorService
     }
 
     /**
-     * Cursos EAD que o usuario gerencia: todos para o admin, so os designados para os demais.
+     * Cursos e eventos que o usuario ve na Area do Gestor: todos os nao excluidos para o admin,
+     * so os designados (professor de EAD) para os demais.
      *
      * @return Collection<int, Treinamento>
      */
     public function cursosDe(User $usuario): Collection
     {
-        $query = Treinamento::query()->where('tipo', TipoTreinamento::EAD->value);
+        $query = Treinamento::query();
 
         if (!$usuario->can(self::PERMISSAO_ADMIN)) {
             $query->whereIn('id', $this->idsDesignados($usuario));
