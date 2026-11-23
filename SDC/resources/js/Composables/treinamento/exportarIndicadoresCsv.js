@@ -3,9 +3,15 @@ const hoje = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const CABECALHO = ['Município', 'REDEC', 'Mesorregião', 'Capacitação', 'Ano', 'Início', 'Fim', 'Participantes', 'Masculino', 'Feminino', 'Não informado'];
+const CABECALHO = [
+  'Município', 'REDEC', 'Mesorregião', 'Capacitação', 'Ano', 'Início', 'Fim', 'Participantes',
+  'Concluídos', 'Em andamento', 'Desistentes', 'Masculino', 'Feminino', 'Outros / não informado',
+];
 
-/** Nao informado = quem esta no total e nao e F nem M (nunca negativo). */
+/**
+ * Quem esta no total e nao e F nem M: nao-binario, outro e nao informado (a
+ * linha da tabela so separa masculino e feminino). Nunca negativo.
+ */
 export const naoInformado = (linha) => Math.max(0, (linha.participantes ?? 0) - (linha.masculino ?? 0) - (linha.feminino ?? 0));
 
 /**
@@ -15,7 +21,9 @@ export const naoInformado = (linha) => Math.max(0, (linha.participantes ?? 0) - 
 export function baixarIndicadoresCsv(linhas) {
   const corpo = linhas.map((l) => [
     l.municipio ?? 'EAD / sem município', l.redec ?? '', l.mesorregiao ?? '', l.treinamento, l.ano,
-    l.periodo_inicio ?? '', l.periodo_fim ?? '', l.participantes, l.masculino, l.feminino, naoInformado(l),
+    l.periodo_inicio ?? '', l.periodo_fim ?? '', l.participantes,
+    l.concluidos ?? 0, l.em_andamento ?? 0, l.desistentes ?? 0,
+    l.masculino, l.feminino, naoInformado(l),
   ]);
 
   const csv = [CABECALHO, ...corpo]

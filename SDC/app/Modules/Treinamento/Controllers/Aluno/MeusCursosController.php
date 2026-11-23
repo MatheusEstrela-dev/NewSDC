@@ -55,6 +55,7 @@ class MeusCursosController extends Controller
             'certificados' => CertificadoResource::collection($this->certificados($userId))->resolve(),
             'credencial' => $request->user() instanceof User ? $this->credenciais->paraServidor($request->user()) : null,
             'sexo_padrao' => $this->inscricaoService->sexoDaUltimaInscricao($request->user())?->value,
+            'data_nascimento_padrao' => $this->inscricaoService->dataNascimentoDaUltimaInscricao($request->user()),
             'disponiveis' => $this->disponiveis($userId, $inscricoes),
         ]);
     }

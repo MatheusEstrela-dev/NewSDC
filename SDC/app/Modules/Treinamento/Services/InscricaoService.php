@@ -43,9 +43,9 @@ class InscricaoService extends BaseService
      * $inscrito e polimorfico: App\Models\User (servidor, area interna) ou
      * App\Modules\Treinamento\Models\Cidadao (portal do cidadao).
      */
-    public function inscrever(Treinamento $treinamento, Model $inscrito, ?Sexo $sexo = null): Inscricao
+    public function inscrever(Treinamento $treinamento, Model $inscrito, ?Sexo $sexo = null, ?string $dataNascimento = null): Inscricao
     {
-        return $this->registrarInscricao($treinamento, $inscrito, $sexo, null);
+        return $this->registrarInscricao($treinamento, $inscrito, $sexo, $dataNascimento, null);
     }
 
     /**
@@ -54,12 +54,12 @@ class InscricaoService extends BaseService
      * qualquer inscricao, mas nunca pela regra das 3 inscricoes, e nasce
      * aprovada (a pessoa ja foi aprovada nesta formacao).
      */
-    public function inscreverParaAtualizacao(Treinamento $vigente, Model $inscrito, Inscricao $origem, ?Sexo $sexo = null): Inscricao
+    public function inscreverParaAtualizacao(Treinamento $vigente, Model $inscrito, Inscricao $origem, ?Sexo $sexo = null, ?string $dataNascimento = null): Inscricao
     {
-        return $this->registrarInscricao($vigente, $inscrito, $sexo, $origem);
+        return $this->registrarInscricao($vigente, $inscrito, $sexo, $dataNascimento, $origem);
     }
 
-    private function registrarInscricao(Treinamento $treinamento, Model $inscrito, ?Sexo $sexo, ?Inscricao $origemDaAtualizacao): Inscricao
+    private function registrarInscricao(Treinamento $treinamento, Model $inscrito, ?Sexo $sexo, ?string $dataNascimento, ?Inscricao $origemDaAtualizacao): Inscricao
     {
         if ($treinamento->isEad() && !$treinamento->estaPublicado()) {
             throw new \DomainException('Este curso ainda nao foi publicado.');
@@ -108,7 +108,7 @@ class InscricaoService extends BaseService
 
         // A vaga so e segura com a linha do limite travada, e a trava so vale
         // dentro da transacao - por isso a checagem e a insercao andam juntas.
-        $inscricao = ConexaoTreinamento::transacao(function () use ($treinamento, $inscrito, $sexo, $aprovacaoAutomatica, $origemDaAtualizacao) {
+        $inscricao = ConexaoTreinamento::transacao(function () use ($treinamento, $inscrito, $sexo, $dataNascimento, $aprovacaoAutomatica, $origemDaAtualizacao) {
             ControleDeVagas::exigirVagaComTrava($treinamento);
 
             return Inscricao::create([
@@ -121,6 +121,7 @@ class InscricaoService extends BaseService
                 'qr_code_token' => (string) Str::uuid(),
                 'data_inscricao' => now(),
                 'sexo' => $sexo?->value,
+                'data_nascimento' => $dataNascimento,
                 'municipio_inscrito_id' => MunicipioDoInscrito::de($inscrito),
                 'atualizacao_de_inscricao_id' => $origemDaAtualizacao?->id,
             ]);
@@ -186,6 +187,20 @@ class InscricaoService extends BaseService
      */
     public function sexoDaUltimaInscricao(?Model $inscrito): ?Sexo
     {
+        return $this->ultimaInscricaoCom($inscrito, 'sexo')?->sexo;
+    }
+
+    /**
+     * Data de nascimento informada na inscricao mais recente do mesmo inscrito
+     * (Y-m-d), para pre-preencher o campo.
+     */
+    public function dataNascimentoDaUltimaInscricao(?Model $inscrito): ?string
+    {
+        return $this->ultimaInscricaoCom($inscrito, 'data_nascimento')?->data_nascimento?->toDateString();
+    }
+
+    private function ultimaInscricaoCom(?Model $inscrito, string $coluna): ?Inscricao
+    {
         if ($inscrito === null) {
             return null;
         }
@@ -193,11 +208,10 @@ class InscricaoService extends BaseService
         return Inscricao::query()
             ->where('inscrito_type', $inscrito::class)
             ->where('inscrito_id', $inscrito->getKey())
-            ->whereNotNull('sexo')
+            ->whereNotNull($coluna)
             ->orderByDesc('data_inscricao')
             ->orderByDesc('id')
-            ->first()
-            ?->sexo;
+            ->first();
     }
 
     /**

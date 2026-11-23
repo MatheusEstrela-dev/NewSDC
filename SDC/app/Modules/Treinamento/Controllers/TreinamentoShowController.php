@@ -46,6 +46,7 @@ class TreinamentoShowController extends Controller
         return Inertia::render('Treinamento/TreinamentoShow', [
             'treinamento' => (new TreinamentoResource($treinamento))->resolve(),
             'sexoPadrao' => $this->inscricaoService->sexoDaUltimaInscricao($user)?->value,
+            'dataNascimentoPadrao' => $this->inscricaoService->dataNascimentoDaUltimaInscricao($user),
             'professores' => $treinamento->isEad() ? $this->professorService->listar($treinamento) : [],
             'versoes' => $this->versoesDoCurso($treinamento),
             'rascunho_id' => $rascunho?->id,

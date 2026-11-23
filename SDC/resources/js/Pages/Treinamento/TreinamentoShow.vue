@@ -42,6 +42,10 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  dataNascimentoPadrao: {
+    type: String,
+    default: null,
+  },
   versoes: {
     type: Array,
     default: () => [],
@@ -97,8 +101,8 @@ function postAction(url, data = {}, successMessage = 'Feito.') {
 }
 
 const modalInscricao = ref(false);
-const inscreverSe = (sexo) => {
-  postAction('treinamentos.inscrever', { sexo }, 'Inscricao realizada! Aguarde a aprovacao.');
+const inscreverSe = (perfil) => {
+  postAction('treinamentos.inscrever', perfil, 'Inscricao realizada! Aguarde a aprovacao.');
   modalInscricao.value = false;
 };
 
@@ -387,6 +391,7 @@ function copiarLinkPublico() {
         :show="modalInscricao"
         :titulo="treinamento.titulo"
         :padrao="sexoPadrao"
+        :data-nascimento-padrao="dataNascimentoPadrao"
         @fechar="modalInscricao = false"
         @confirmar="inscreverSe"
       />

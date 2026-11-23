@@ -70,6 +70,7 @@ class CatalogoController extends Controller
                 'capa_url' => $treinamento->capaUrl(Treinamento::ROTA_CAPA_PORTAL),
             ],
             'sexoPadrao' => $this->inscricaoService->sexoDaUltimaInscricao($cidadao)?->value,
+            'dataNascimentoPadrao' => $this->inscricaoService->dataNascimentoDaUltimaInscricao($cidadao),
             'minhaInscricao' => $minhaInscricao ? [
                 'id' => $minhaInscricao->id,
                 'status' => $minhaInscricao->status->value,

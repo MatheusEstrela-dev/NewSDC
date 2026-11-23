@@ -3,7 +3,7 @@ import SelectInput from '@/Components/Atoms/Input/SelectInput.vue';
 
 /*
  * Pergunta de sexo da inscricao. Opcional: "Prefiro nao informar" vira vazio
- * (null no back). v-model recebe 'F', 'M' ou ''.
+ * (null no back). v-model recebe 'F', 'M', 'N', 'O' ou ''.
  */
 defineProps({
   modelValue: { type: String, default: '' },
@@ -14,6 +14,8 @@ defineEmits(['update:modelValue']);
 const opcoes = [
   { value: 'F', label: 'Feminino' },
   { value: 'M', label: 'Masculino' },
+  { value: 'N', label: 'Não-binário' },
+  { value: 'O', label: 'Outro' },
   { value: '', label: 'Prefiro não informar' },
 ];
 </script>

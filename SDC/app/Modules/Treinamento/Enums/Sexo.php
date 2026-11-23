@@ -12,12 +12,16 @@ enum Sexo: string
 {
     case FEMININO = 'F';
     case MASCULINO = 'M';
+    case NAO_BINARIO = 'N';
+    case OUTRO = 'O';
 
     public function getLabel(): string
     {
         return match ($this) {
             self::FEMININO => 'Feminino',
             self::MASCULINO => 'Masculino',
+            self::NAO_BINARIO => 'Não-binário',
+            self::OUTRO => 'Outro',
         };
     }
 

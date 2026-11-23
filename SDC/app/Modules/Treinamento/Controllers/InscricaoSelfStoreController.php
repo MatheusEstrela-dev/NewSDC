@@ -23,7 +23,7 @@ class InscricaoSelfStoreController extends Controller
     public function __invoke(InscreverRequest $request, Treinamento $treinamento)
     {
         try {
-            $inscricao = $this->inscricaoService->inscrever($treinamento, $request->user(), $request->sexo());
+            $inscricao = $this->inscricaoService->inscrever($treinamento, $request->user(), $request->sexo(), $request->dataNascimento());
         } catch (\DomainException $e) {
             return back()->withErrors(['inscricao' => $e->getMessage()]);
         }
