@@ -9,6 +9,10 @@
       :espaco-inferior="false"
     >
       <template #actions>
+        <span class="inline-flex items-center gap-1.5 text-xs text-white/80" role="status" :title="aoVivo ? 'Atualiza sozinho quando os dados mudam' : 'Atualiza sozinho a cada 30 segundos'">
+          <span class="h-2 w-2 rounded-full" :class="aoVivo ? 'bg-emerald-400' : 'bg-white/50'" aria-hidden="true" />
+          {{ aoVivo ? 'Ao vivo' : 'Atualização automática' }} · {{ horaAtualizacao }}
+        </span>
         <GerarRelatorioMenu :carregando="gerandoRelatorio" @gerar="gerarRelatorio" />
       </template>
     </PageHeader>
@@ -135,6 +139,7 @@ import CapacitacoesPorAnoPainel from '@/Components/Organisms/Treinamento/Indicad
 import MapIcon from '@/Components/Icons/MapIcon.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import { useAtualizacaoAoVivo } from '@/Composables/useAtualizacaoAoVivo';
 import { useFiltrosAtivos } from '@/Composables/treinamento/useFiltrosAtivos';
 import { baixarIndicadoresCsv } from '@/Composables/treinamento/exportarIndicadoresCsv';
 import { rotuloContagem, situacoesFiltradas } from '@/Composables/treinamento/useTemaGrafico';
@@ -203,6 +208,30 @@ const PROPS_DE_DADOS = [
   'filtros', 'kpis', 'mapa', 'semMunicipio', 'porRedec', 'porMes', 'porAno', 'porSexo', 'porFaixaEtaria',
   'porCurso', 'satisfacao', 'rankingMunicipios', 'pessoasPorCurso', 'pessoasPorMunicipio', 'tabela',
 ];
+
+// Aviso do servidor (RecursoAtualizado, recurso treinamento-indicadores) apos
+// mudanca de inscricao, conclusao, avaliacao, certificado ou curso. Rebusca so
+// as props de dados, na URL atual (filtros e pagina da tabela preservados), com
+// a aba visivel. Sem websocket, rebusca a cada 30 s. O detalhe do mes aberto
+// entra no conjunto para nao ficar com o numero anterior.
+const EVENTO_AO_VIVO = '.RecursoAtualizado';
+const CANAL_AO_VIVO = 'listagem.treinamento-indicadores';
+
+const { aoVivo, atualizadoEm } = useAtualizacaoAoVivo({
+  canal: CANAL_AO_VIVO,
+  evento: EVENTO_AO_VIVO,
+  props: () => [
+    ...PROPS_DE_DADOS.filter((p) => p !== 'filtros'),
+    ...(detalheMesCarregado.value ? ['detalheMes'] : []),
+  ],
+  debounceMs: 1500,
+  esperaMaximaMs: 8000,
+  adiarSe: () => carregando.value || gerandoRelatorio.value,
+  intervaloSemTempoRealMs: 30000,
+});
+
+const abertoEm = new Date();
+const horaAtualizacao = computed(() => (atualizadoEm.value ?? abertoEm).toLocaleTimeString('pt-BR'));
 
 const carregando = ref(false);
 const gerandoRelatorio = ref(false);

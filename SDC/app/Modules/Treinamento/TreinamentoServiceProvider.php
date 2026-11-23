@@ -13,9 +13,14 @@ use App\Modules\Treinamento\Http\Middleware\GerenciaCicloDoCurso;
 use App\Modules\Treinamento\Http\Middleware\GerenciaVideo;
 use App\Modules\Treinamento\Http\Middleware\LecionaCurso;
 use App\Modules\Treinamento\Http\Middleware\TransicaoDeStatusAutorizada;
+use App\Modules\Treinamento\Models\AvaliacaoCurso;
+use App\Modules\Treinamento\Models\Certificado;
+use App\Modules\Treinamento\Models\Curso;
+use App\Modules\Treinamento\Models\CursoCronograma;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Observers\CursoTempoRealObserver;
+use App\Modules\Treinamento\Observers\IndicadoresTempoRealObserver;
 use Illuminate\Support\ServiceProvider;
 
 class TreinamentoServiceProvider extends ServiceProvider
@@ -47,6 +52,11 @@ class TreinamentoServiceProvider extends ServiceProvider
 
         Treinamento::observe(CursoTempoRealObserver::class);
         Inscricao::observe(CursoTempoRealObserver::class);
+
+        // Dado que so o painel de indicadores conta.
+        foreach ([AvaliacaoCurso::class, Certificado::class, Curso::class, CursoCronograma::class] as $modelo) {
+            $modelo::observe(IndicadoresTempoRealObserver::class);
+        }
 
         if ($this->app->runningInConsole()) {
             $this->commands([
