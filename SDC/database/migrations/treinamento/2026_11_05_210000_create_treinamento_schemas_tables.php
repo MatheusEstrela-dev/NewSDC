@@ -714,15 +714,18 @@ return new class extends Migration
      * - treinamentos.municipio_id: municipio de realizacao da turma (municipios.id
      *   do sdc, sem FK, como os demais ids de outro banco). NULL = sem municipio
      *   (EAD ou turma antiga); o painel mostra esse grupo a parte do mapa.
-     * - inscricoes.sexo: declarado na inscricao (F/M). NULL = nao informado.
+     * - inscricoes.sexo: declarado na inscricao (F/M/N/O). NULL = nao informado.
      *   Mora na inscricao para nao exigir coluna nova em users (outro banco).
+     * - inscricoes.data_nascimento: declarada na inscricao (faixa etaria dos
+     *   indicadores). NULL = nao informada.
      */
     private function criarIndicadores(): void
     {
         $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS municipio_id bigint');
         $this->exec('ALTER TABLE treinamento.inscricoes ADD COLUMN IF NOT EXISTS sexo char(1)');
         $this->exec('ALTER TABLE treinamento.inscricoes DROP CONSTRAINT IF EXISTS inscricoes_sexo_check');
-        $this->exec("ALTER TABLE treinamento.inscricoes ADD CONSTRAINT inscricoes_sexo_check CHECK (sexo IN ('F', 'M'))");
+        $this->exec("ALTER TABLE treinamento.inscricoes ADD CONSTRAINT inscricoes_sexo_check CHECK (sexo IN ('F', 'M', 'N', 'O'))");
+        $this->exec('ALTER TABLE treinamento.inscricoes ADD COLUMN IF NOT EXISTS data_nascimento date');
         $this->indices('treinamento.treinamentos', [
             'treinamentos_municipio_id_fkidx' => 'municipio_id',
         ]);

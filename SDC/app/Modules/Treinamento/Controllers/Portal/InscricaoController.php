@@ -25,7 +25,7 @@ class InscricaoController extends Controller
             ->firstOrFail();
 
         try {
-            $inscricao = $this->inscricaoService->inscrever($treinamento, Auth::guard('cidadao')->user(), $request->sexo());
+            $inscricao = $this->inscricaoService->inscrever($treinamento, Auth::guard('cidadao')->user(), $request->sexo(), $request->dataNascimento());
         } catch (\DomainException $e) {
             return back()->withErrors(['inscricao' => $e->getMessage()]);
         }

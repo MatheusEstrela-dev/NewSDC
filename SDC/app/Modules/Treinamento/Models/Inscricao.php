@@ -37,6 +37,7 @@ class Inscricao extends Model
         'aprovado_por_id',
         'observacoes',
         'sexo',
+        'data_nascimento',
         'municipio_inscrito_id',
         'atualizacao_de_inscricao_id',
     ];
@@ -44,6 +45,7 @@ class Inscricao extends Model
     protected $casts = [
         'status' => StatusInscricao::class,
         'sexo' => Sexo::class,
+        'data_nascimento' => 'date',
         'data_inscricao' => 'datetime',
         'data_aprovacao' => 'datetime',
         // Conclusao congelada do EAD (spec 8.7): gravada uma vez, fora do

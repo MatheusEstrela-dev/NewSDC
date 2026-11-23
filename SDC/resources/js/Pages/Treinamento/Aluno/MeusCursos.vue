@@ -19,6 +19,7 @@ defineOptions({ layout: AuthenticatedLayout });
 
 defineProps({
   sexo_padrao: { type: String, default: null },
+  data_nascimento_padrao: { type: String, default: null },
   meus_cursos: { type: Array, default: () => [] },
   disponiveis: { type: Array, default: () => [] },
   certificados: { type: Array, default: () => [] },
@@ -43,11 +44,11 @@ function atualizar(curso) {
   });
 }
 
-function inscrever(sexo) {
+function inscrever(perfil) {
   const curso = cursoEscolhido.value;
   inscrevendo.value = curso.id;
   cursoEscolhido.value = null;
-  router.post(route('treinamentos.inscrever', curso.id), { sexo }, {
+  router.post(route('treinamentos.inscrever', curso.id), perfil, {
     preserveScroll: true,
     onSuccess: () => toast('Inscrição realizada.', 'success'),
     onError: (errors) => toast(errors.inscricao || 'Não foi possível concluir a inscrição.', 'error'),
@@ -141,6 +142,7 @@ function inscrever(sexo) {
       :show="cursoEscolhido !== null"
       :titulo="cursoEscolhido?.titulo"
       :padrao="sexo_padrao"
+      :data-nascimento-padrao="data_nascimento_padrao"
       @fechar="cursoEscolhido = null"
       @confirmar="inscrever"
     />

@@ -55,7 +55,7 @@ class AtualizacaoDeVersaoService
                 throw new DomainException($motivo);
             }
 
-            $nova = $this->inscricoes->inscreverParaAtualizacao($vigente, $inscrito, $origem, $origem->sexo);
+            $nova = $this->inscricoes->inscreverParaAtualizacao($vigente, $inscrito, $origem, $origem->sexo, $origem->data_nascimento?->toDateString());
 
             $this->gravarProgressoAproveitado($nova, $vigente, $origem);
             $this->trilha->atualizarPastas($nova);
