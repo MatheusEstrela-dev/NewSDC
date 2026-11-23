@@ -82,6 +82,7 @@ return new class extends Migration
         $this->criarAreaDoGestor();
         $this->criarVersoes();
         $this->criarCertificadoInstrutor();
+        $this->criarAvaliacaoDoCurso();
     }
 
     public function down(): void
@@ -331,6 +332,10 @@ return new class extends Migration
         $this->indices('treinamento.modulo_itens', [
             'modulo_itens_modulo_id_ordem_index' => 'modulo_id, ordem',
         ]);
+        // Tempo minimo de leitura por pagina, opcional por material (so PDF):
+        // slides de aula exigem, PDF complementar dispensa. DEFAULT true mantem
+        // o comportamento dos itens que ja existem.
+        $this->exec('ALTER TABLE treinamento.modulo_itens ADD COLUMN IF NOT EXISTS exige_tempo_leitura boolean NOT NULL DEFAULT true');
 
         $this->exec(<<<'SQL'
             CREATE TABLE IF NOT EXISTS treinamento.treinamento_professores (
@@ -699,6 +704,11 @@ return new class extends Migration
         $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS situacao_alterada_por bigint');
         $this->exec('ALTER TABLE treinamento.treinamentos DROP CONSTRAINT IF EXISTS treinamentos_situacao_check');
         $this->exec("ALTER TABLE treinamento.treinamentos ADD CONSTRAINT treinamentos_situacao_check CHECK (situacao IN ('ATIVO', 'PAUSADO', 'DESATIVADO'))");
+        // Categoria de oferta: EAD com tutoria abre e fecha turmas com periodo e
+        // tutor; sem tutoria e capacitacao livre (o aluno faz direto). So vale para
+        // EAD: online e semipresencial sao sempre "com tutoria", e presencial e
+        // evento se classificam pelo tipo/categoria (ver ClassificacaoDeOferta).
+        $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS com_tutoria boolean NOT NULL DEFAULT false');
         // Capa do curso: caminho da imagem no disco privado `treinamentos`.
         // NULL = sem imagem propria, a tela gera uma capa pelo titulo.
         $this->exec('ALTER TABLE treinamento.treinamentos ADD COLUMN IF NOT EXISTS capa_path varchar(255)');
@@ -972,6 +982,61 @@ return new class extends Migration
         $this->indices('treinamento.certificados_instrutor', [
             'certificados_instrutor_user_id_fkidx' => 'user_id',
         ]);
+    }
+
+    /**
+     * Pesquisa de satisfacao ao final do curso, a etapa final obrigatoria da
+     * conclusao (ConclusaoService). Autocontido e idempotente; consolida a
+     * antiga 2026_11_18_120000_create_curso_avaliacoes_table.
+     *
+     * - curso_avaliacoes: uma avaliacao por inscricao (UNIQUE), imutavel e sem
+     *   soft delete (apaga-la so perderia o dado). Duas perguntas na escala
+     *   1..5: nota ("Como voce avalia a capacitacao?"; enum NotaAvaliacaoCurso)
+     *   e nota_relevancia ("Em que medida o conteudo apresentado foi relevante
+     *   para sua atuacao ou contribuiu para ampliar seus conhecimentos sobre o
+     *   tema?"; enum NotaRelevanciaCurso), alem do comentario/sugestao.
+     *   nota_relevancia e NULLABLE de proposito: as avaliacoes anteriores a
+     *   segunda pergunta nao tem a resposta e seguem validas; toda avaliacao
+     *   nova grava a relevancia e o comentario (obrigatorios no
+     *   AvaliarCursoRequest). Consolida a antiga
+     *   2026_11_23_120000_add_nota_relevancia_to_curso_avaliacoes.
+     * - certificados.exige_avaliacao: SEM USO desde 2026-11-19 (a avaliacao
+     *   virou etapa da conclusao e a retencao do certificado deixou de existir).
+     *   Fica, sempre false, porque ja existe nos bancos aplicados.
+     */
+    private function criarAvaliacaoDoCurso(): void
+    {
+        $this->exec(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS treinamento.curso_avaliacoes (
+                id bigserial PRIMARY KEY,
+                inscricao_id bigint NOT NULL,
+                treinamento_id bigint NOT NULL,
+                nota smallint NOT NULL,
+                comentario text,
+                created_at timestamp(0),
+                updated_at timestamp(0),
+                CONSTRAINT curso_avaliacoes_inscricao_id_unique UNIQUE (inscricao_id),
+                CONSTRAINT curso_avaliacoes_nota_check CHECK (nota BETWEEN 1 AND 5),
+                CONSTRAINT curso_avaliacoes_inscricao_id_foreign
+                    FOREIGN KEY (inscricao_id) REFERENCES treinamento.inscricoes (id) ON UPDATE CASCADE ON DELETE CASCADE,
+                CONSTRAINT curso_avaliacoes_treinamento_id_foreign
+                    FOREIGN KEY (treinamento_id) REFERENCES treinamento.treinamentos (id) ON UPDATE CASCADE ON DELETE CASCADE
+            )
+            SQL);
+        $this->exec("COMMENT ON COLUMN treinamento.curso_avaliacoes.nota IS '1 Pessimo .. 5 Excelente (enum NotaAvaliacaoCurso)'");
+
+        $this->exec('ALTER TABLE treinamento.curso_avaliacoes ADD COLUMN IF NOT EXISTS nota_relevancia smallint');
+        $this->exec('ALTER TABLE treinamento.curso_avaliacoes DROP CONSTRAINT IF EXISTS curso_avaliacoes_nota_relevancia_check');
+        $this->exec('ALTER TABLE treinamento.curso_avaliacoes ADD CONSTRAINT curso_avaliacoes_nota_relevancia_check CHECK (nota_relevancia BETWEEN 1 AND 5)');
+        $this->exec("COMMENT ON COLUMN treinamento.curso_avaliacoes.nota_relevancia IS '1 Nao foi relevante .. 5 Muito relevante (enum NotaRelevanciaCurso); NULL = avaliacao anterior a pergunta'");
+
+        $this->indices('treinamento.curso_avaliacoes', [
+            'curso_avaliacoes_treinamento_id_index' => 'treinamento_id',
+            'curso_avaliacoes_treinamento_nota_index' => 'treinamento_id, nota',
+        ]);
+
+        $this->exec('ALTER TABLE treinamento.certificados ADD COLUMN IF NOT EXISTS exige_avaliacao boolean NOT NULL DEFAULT false');
+        $this->exec("COMMENT ON COLUMN treinamento.certificados.exige_avaliacao IS 'true = so liberado ao aluno depois da avaliacao do curso; false = legado (emitido antes do feedback)'");
     }
 
     /** Cria a FK so se ela ainda nao existe: reaplicar nao revalida nem trava as tabelas. */
