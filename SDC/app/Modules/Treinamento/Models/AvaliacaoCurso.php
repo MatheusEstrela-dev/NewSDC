@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Models;
 
 use App\Modules\Treinamento\Enums\NotaAvaliacaoCurso;
+use App\Modules\Treinamento\Enums\NotaRelevanciaCurso;
 use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,7 @@ class AvaliacaoCurso extends Model
         'inscricao_id',
         'treinamento_id',
         'nota',
+        'nota_relevancia',
         'comentario',
     ];
 
@@ -32,6 +34,8 @@ class AvaliacaoCurso extends Model
         'inscricao_id' => 'integer',
         'treinamento_id' => 'integer',
         'nota' => NotaAvaliacaoCurso::class,
+        // NULL nas avaliacoes anteriores a pergunta de relevancia.
+        'nota_relevancia' => NotaRelevanciaCurso::class,
     ];
 
     // Relationships

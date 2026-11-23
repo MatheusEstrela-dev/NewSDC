@@ -28,6 +28,7 @@ const props = defineProps({
   /** Etapa final, a avaliacao do curso (SalaDeAulaProps::avaliacaoFinal); null na previa. */
   avaliacaoFinal: { type: Object, default: null },
   notasAvaliacao: { type: Array, default: () => [] },
+  notasRelevancia: { type: Array, default: () => [] },
 });
 
 const { show: toast } = useToast();
@@ -199,6 +200,7 @@ onBeforeUnmount(enviarPendente);
             :situacao="situacaoAvaliacao"
             :avaliacao-final="avaliacaoFinal"
             :notas="notasAvaliacao"
+            :relevancias="notasRelevancia"
             :faltam="faltam"
             :url-avaliar="rotas.avaliacao()"
             :url-certificado="rotas.certificado"

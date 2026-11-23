@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Treinamento;
 
 use App\Modules\Treinamento\Enums\NotaAvaliacaoCurso;
+use App\Modules\Treinamento\Enums\NotaRelevanciaCurso;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\StatusCertificado;
 use App\Modules\Treinamento\Enums\StatusFrequencia;
@@ -47,7 +48,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $inscricao = $this->inscrever($curso, $cidadao);
 
         $this->actingAs($cidadao, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => 4])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(4))
             ->assertSessionHasErrors('nota');
 
         $this->assertFalse(AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->exists());
@@ -109,6 +110,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $this->actingAs($cidadao, 'cidadao')
             ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), [
                 'nota' => 5,
+                'nota_relevancia' => 4,
                 'comentario' => '  Muito bom!  ',
             ])
             ->assertRedirect()
@@ -117,6 +119,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
 
         $avaliacao = AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->sole();
         $this->assertSame(NotaAvaliacaoCurso::EXCELENTE, $avaliacao->nota);
+        $this->assertSame(NotaRelevanciaCurso::RELEVANTE, $avaliacao->nota_relevancia);
         $this->assertSame('Muito bom!', $avaliacao->comentario);
         $this->assertSame($curso->id, $avaliacao->treinamento_id);
 
@@ -146,7 +149,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
                 ->where('meus_cursos.0.percentual', 50) // 1 item + a avaliacao: falta a etapa final
                 ->has('certificados', 0));
 
-        $this->post(route('treinamentos.aluno.avaliacao', $curso), ['nota' => 4])->assertSessionHasNoErrors();
+        $this->post(route('treinamentos.aluno.avaliacao', $curso), $this->respostas(4))->assertSessionHasNoErrors();
 
         $this->assertNotNull($inscricao->fresh()->concluido_em);
         $certificado = Certificado::query()->where('inscricao_id', $inscricao->id)->sole();
@@ -176,7 +179,8 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
                 ->component('Treinamento/Portal/SalaDeAula')
                 ->where('avaliacao_final.situacao', 'BLOQUEADA')
                 ->where('avaliacao_final.concluido', false)
-                ->has('notas_avaliacao', 5));
+                ->has('notas_avaliacao', 5)
+                ->has('notas_relevancia', 5));
 
         $this->completarTrilha($inscricao, $item);
 
@@ -187,7 +191,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
                 ->where('avaliacao_final.certificado', null));
 
         $this->actingAs($cidadao, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => 3])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(3))
             ->assertSessionHasNoErrors();
 
         $this->actingAs($cidadao, 'cidadao')->get($sala)->assertOk()
@@ -195,6 +199,8 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
                 ->where('avaliacao_final.situacao', 'ENVIADA')
                 ->where('avaliacao_final.concluido', true)
                 ->where('avaliacao_final.avaliacao.nota', 3)
+                ->where('avaliacao_final.avaliacao.nota_relevancia', 5)
+                ->where('avaliacao_final.avaliacao.nota_relevancia_label', 'Muito relevante')
                 ->where('avaliacao_final.certificado.disponivel', true));
     }
 
@@ -227,7 +233,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $inscricao = $this->eventoComFrequencia($curso, $cidadao, presente: false, concluirCurso: true);
 
         $this->actingAs($cidadao, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => 5])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(5))
             ->assertSessionHasErrors('nota');
 
         $this->assertFalse(AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->exists());
@@ -240,7 +246,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $inscricao = $this->eventoComFrequencia($curso, $cidadao, presente: true, concluirCurso: false);
 
         $this->actingAs($cidadao, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => 5])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(5))
             ->assertSessionHasErrors('nota');
 
         $this->assertFalse(AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->exists());
@@ -265,7 +271,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
                 ->has('notas_avaliacao', 5));
 
         $this->actingAs($cidadao, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => 2])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(2))
             ->assertSessionHasNoErrors();
 
         $this->assertNotNull($inscricao->fresh()->concluido_em);
@@ -293,7 +299,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
                 ->where('avaliacoes_pendentes.0.inscricao_id', $inscricao->id)
                 ->where('avaliacoes_pendentes.0.url_avaliar', route('treinamentos.aluno.avaliacao', $curso->id)));
 
-        $this->post(route('treinamentos.aluno.avaliacao', $curso), ['nota' => 1])->assertSessionHasNoErrors();
+        $this->post(route('treinamentos.aluno.avaliacao', $curso), $this->respostas(1))->assertSessionHasNoErrors();
 
         $this->assertNotNull($inscricao->fresh()->concluido_em);
         $certificado = Certificado::query()->where('inscricao_id', $inscricao->id)->sole();
@@ -334,8 +340,53 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $this->completarTrilha($inscricao, $item);
 
         $this->actingAs($cidadao, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => $nota])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas($nota))
             ->assertSessionHasErrors('nota');
+
+        $this->assertFalse(AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->exists());
+        $this->assertNull($inscricao->fresh()->concluido_em);
+    }
+
+    #[DataProvider('notasInvalidas')]
+    public function test_relevancia_fora_de_1_a_5_e_rejeitada(mixed $relevancia): void
+    {
+        $cidadao = $this->cidadao();
+        [$curso, $item] = $this->cursoEadComTrilha(PublicoAlvo::CIDADAOS);
+        $inscricao = $this->inscrever($curso, $cidadao);
+        $this->completarTrilha($inscricao, $item);
+
+        $this->actingAs($cidadao, 'cidadao')
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota_relevancia' => $relevancia] + $this->respostas(4))
+            ->assertSessionHasErrors('nota_relevancia');
+
+        $this->assertFalse(AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->exists());
+        $this->assertNull($inscricao->fresh()->concluido_em);
+    }
+
+    /**
+     * @return array<string, array{0: mixed}>
+     */
+    public static function comentariosInvalidos(): array
+    {
+        return [
+            'ausente' => [null],
+            'vazio' => [''],
+            'so espacos' => ['   '],
+            'longo demais' => [str_repeat('a', 2001)],
+        ];
+    }
+
+    #[DataProvider('comentariosInvalidos')]
+    public function test_sugestao_e_obrigatoria_e_limitada(mixed $comentario): void
+    {
+        $cidadao = $this->cidadao();
+        [$curso, $item] = $this->cursoEadComTrilha(PublicoAlvo::CIDADAOS);
+        $inscricao = $this->inscrever($curso, $cidadao);
+        $this->completarTrilha($inscricao, $item);
+
+        $this->actingAs($cidadao, 'cidadao')
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['comentario' => $comentario] + $this->respostas(4))
+            ->assertSessionHasErrors('comentario');
 
         $this->assertFalse(AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->exists());
         $this->assertNull($inscricao->fresh()->concluido_em);
@@ -349,8 +400,8 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $this->completarTrilha($inscricao, $item);
         $url = route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug);
 
-        $this->actingAs($cidadao, 'cidadao')->post($url, ['nota' => 2])->assertSessionHasNoErrors();
-        $this->actingAs($cidadao, 'cidadao')->post($url, ['nota' => 5])->assertSessionHasErrors('nota');
+        $this->actingAs($cidadao, 'cidadao')->post($url, $this->respostas(2))->assertSessionHasNoErrors();
+        $this->actingAs($cidadao, 'cidadao')->post($url, $this->respostas(5))->assertSessionHasErrors('nota');
 
         $avaliacoes = AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->get();
         $this->assertCount(1, $avaliacoes);
@@ -368,14 +419,14 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
 
         // A rota resolve a inscricao do proprio usuario logado: sem inscricao, 403.
         $this->actingAs($intruso, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => 1])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(1))
             ->assertForbidden();
 
         $this->assertFalse(AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->exists());
         $this->assertNull($inscricao->fresh()->concluido_em);
 
         $this->actingAs($dono, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => 5])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(5))
             ->assertSessionHasNoErrors();
         $certificado = Certificado::query()->where('inscricao_id', $inscricao->id)->sole();
 
@@ -392,7 +443,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $this->completarTrilha($inscricao, $item);
 
         $this->logarComo($this->usuarioComPermissoes(['treinamento.cursos.view']));
-        $this->post(route('treinamentos.aluno.avaliacao', $curso), ['nota' => 5])->assertForbidden();
+        $this->post(route('treinamentos.aluno.avaliacao', $curso), $this->respostas(5))->assertForbidden();
 
         $this->assertFalse(AvaliacaoCurso::query()->where('inscricao_id', $inscricao->id)->exists());
         $this->assertNull($inscricao->fresh()->concluido_em);
@@ -427,7 +478,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
 
         // Avaliar depois e opcional e nao mexe na conclusao nem no certificado.
         $this->actingAs($cidadao, 'cidadao')
-            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), ['nota' => 4])
+            ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(4))
             ->assertSessionHasNoErrors();
 
         $this->assertEquals($concluidoEm, $inscricao->fresh()->concluido_em);
@@ -435,6 +486,17 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────
+
+    /**
+     * As tres respostas do formulario (todas obrigatorias): nota geral,
+     * relevancia do conteudo e sugestao/comentario.
+     *
+     * @return array<string, mixed>
+     */
+    private function respostas(mixed $nota, mixed $relevancia = 5, string $comentario = 'Gostaria de ver mais sobre gestao de risco.'): array
+    {
+        return ['nota' => $nota, 'nota_relevancia' => $relevancia, 'comentario' => $comentario];
+    }
 
     /**
      * Curso EAD publicado com uma pasta e um PDF obrigatorio de 1 pagina.

@@ -22,7 +22,7 @@ class AvaliacaoStoreController extends Controller
         $inscricao = InscricaoDoAluno::paraAvaliar($treinamento, $request->user());
 
         try {
-            $this->avaliacoes->avaliar($inscricao, $request->nota(), $request->comentario());
+            $this->avaliacoes->avaliar($inscricao, $request->nota(), $request->notaRelevancia(), $request->comentario());
         } catch (DomainException $e) {
             return back()->withErrors(['nota' => $e->getMessage()]);
         }

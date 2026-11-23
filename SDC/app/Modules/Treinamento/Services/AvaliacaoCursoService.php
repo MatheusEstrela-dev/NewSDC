@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services;
 
 use App\Modules\Treinamento\Enums\NotaAvaliacaoCurso;
+use App\Modules\Treinamento\Enums\NotaRelevanciaCurso;
 use App\Modules\Treinamento\Models\AvaliacaoCurso;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
@@ -32,11 +33,11 @@ class AvaliacaoCursoService
      *
      * @throws DomainException avaliacao ainda bloqueada ou curso ja avaliado
      */
-    public function avaliar(Inscricao $inscricao, NotaAvaliacaoCurso $nota, ?string $comentario): AvaliacaoCurso
+    public function avaliar(Inscricao $inscricao, NotaAvaliacaoCurso $nota, NotaRelevanciaCurso $relevancia, ?string $comentario): AvaliacaoCurso
     {
         $comentario = $comentario !== null ? trim($comentario) : null;
 
-        return ConexaoTreinamento::transacao(function () use ($inscricao, $nota, $comentario) {
+        return ConexaoTreinamento::transacao(function () use ($inscricao, $nota, $relevancia, $comentario) {
             // Lock da inscricao: serializa com o registrar() (mesma linha) e com um envio duplo.
             $travada = Inscricao::query()->with('treinamento')->lockForUpdate()->findOrFail($inscricao->id);
 
@@ -55,6 +56,7 @@ class AvaliacaoCursoService
                     'inscricao_id' => $travada->id,
                     'treinamento_id' => $travada->treinamento_id,
                     'nota' => $nota,
+                    'nota_relevancia' => $relevancia,
                     'comentario' => $comentario === '' ? null : $comentario,
                 ]));
             } catch (UniqueConstraintViolationException) {

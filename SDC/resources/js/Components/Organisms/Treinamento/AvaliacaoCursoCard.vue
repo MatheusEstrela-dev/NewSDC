@@ -1,14 +1,17 @@
 <script setup>
 /**
  * Card "Avaliacao do curso": a etapa final obrigatoria (na sala de aula do
- * EAD e em "Minhas inscricoes"/"Meus cursos" nos eventos). Titulo e
- * subtitulo, um card interno com o convite, a barra de satisfacao de 1
- * (vermelho) a 5 (verde), o comentario e o botao Enviar. Enviar conclui o
- * curso e emite o certificado; quem pode avaliar e quando e decidido no
- * backend (AvaliacaoCursoService). `url` vem de fora porque a rota difere
- * entre o portal e a area do servidor; sem ela (pre-visualizacao do
- * professor) o formulario fica so de exibicao.
+ * EAD e em "Minhas inscricoes"/"Meus cursos" nos eventos). Formulario de
+ * avaliacao da CEDEC MG com tres perguntas obrigatorias:
+ *   1. Como voce avalia a capacitacao? (barra 1..5, NotaAvaliacaoCurso)
+ *   2. Em que medida o conteudo foi relevante...? (barra 1..5, NotaRelevanciaCurso)
+ *   3. Sugestao, comentario ou tema para futuras palestras (texto longo)
+ * Enviar conclui o curso e emite o certificado; quem pode avaliar e quando e
+ * decidido no backend (AvaliacaoCursoService). `url` vem de fora porque a
+ * rota difere entre o portal e a area do servidor; sem ela (pre-visualizacao
+ * do professor) o formulario fica so de exibicao.
  */
+import { computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { PaperAirplaneIcon } from '@heroicons/vue/24/outline';
 import BarraDeSatisfacao from '@/Components/Atoms/Input/BarraDeSatisfacao.vue';
@@ -20,15 +23,20 @@ import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 
 const props = defineProps({
   url: { type: String, default: null },
-  /** Opcoes da barra (NotaAvaliacaoCurso::toSelectArray). */
+  /** Opcoes da 1a pergunta (NotaAvaliacaoCurso::toSelectArray). */
   notas: { type: Array, required: true },
+  /** Opcoes da 2a pergunta (NotaRelevanciaCurso::toSelectArray). */
+  relevancias: { type: Array, default: () => [] },
   titulo: { type: String, default: 'Avaliação do curso' },
   subtitulo: { type: String, default: 'Última etapa: avalie o curso para concluí-lo e receber o certificado.' },
 });
 
 const emit = defineEmits(['enviada']);
 
-const form = useForm({ nota: null, comentario: '' });
+const form = useForm({ nota: null, nota_relevancia: null, comentario: '' });
+
+const bloqueado = computed(() => form.processing || !props.url);
+const completo = computed(() => form.nota !== null && form.nota_relevancia !== null && form.comentario.trim() !== '');
 
 // O retorno (flash "success" do backend) e exibido pelo layout; a pagina
 // recarrega as props com o curso concluido e o certificado.
@@ -50,9 +58,9 @@ function enviar() {
     </header>
 
     <CardBase padding="lg" class="mx-auto mt-5 max-w-2xl shadow-sm">
-      <Heading :level="5" class="text-slate-800 dark:text-slate-100">Avaliar com a barra de satisfação</Heading>
+      <Heading :level="5" class="text-slate-800 dark:text-slate-100">Avaliação</Heading>
       <Text size="sm" color="muted" class="mt-1">
-        Sua opinião é muito importante para nós! Reserve um momento para avaliar sua experiência no curso e nos ajudar a melhorá-lo.
+        Sua avaliação é muito importante para o mapeamento de melhorias e monitoramento do andamento das ações pedagógicas da CEDEC MG.
       </Text>
 
       <form class="mt-5 space-y-5" @submit.prevent="enviar">
@@ -60,24 +68,39 @@ function enviar() {
           <BarraDeSatisfacao
             v-model="form.nota"
             :opcoes="notas"
-            legenda="Qual o seu nível de satisfação com o curso?"
-            :disabled="form.processing || !url"
+            nome="nota"
+            legenda="Como você avalia a capacitação?"
+            obrigatorio
+            :disabled="bloqueado"
             :error="form.errors.nota"
+          />
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-5 dark:border-slate-700 dark:bg-slate-900/40">
+          <BarraDeSatisfacao
+            v-model="form.nota_relevancia"
+            :opcoes="relevancias"
+            nome="nota_relevancia"
+            legenda="Em que medida o conteúdo apresentado foi relevante para sua atuação ou contribuiu para ampliar seus conhecimentos sobre o tema?"
+            obrigatorio
+            :disabled="bloqueado"
+            :error="form.errors.nota_relevancia"
           />
         </div>
 
         <FormTextarea
           v-model="form.comentario"
-          label="Comentário (opcional)"
-          placeholder="Conte-nos sobre sua experiência"
+          label="Você tem alguma sugestão, comentário ou tema que gostaria de ver abordado em futuras palestras?"
+          placeholder="Escreva sua resposta"
           :rows="4"
           maxlength="2000"
-          :disabled="form.processing || !url"
+          required
+          :disabled="bloqueado"
           :error="form.errors.comentario"
         />
 
         <div class="flex justify-end">
-          <Button type="submit" variant="success" :icon="PaperAirplaneIcon" :disabled="form.nota === null || !url" :loading="form.processing">
+          <Button type="submit" variant="success" :icon="PaperAirplaneIcon" :disabled="!completo || !url" :loading="form.processing">
             Enviar
           </Button>
         </div>

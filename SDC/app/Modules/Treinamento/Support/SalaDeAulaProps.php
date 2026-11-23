@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Support;
 
 use App\Modules\Treinamento\DTOs\EstadoTrilha;
 use App\Modules\Treinamento\Enums\NotaAvaliacaoCurso;
+use App\Modules\Treinamento\Enums\NotaRelevanciaCurso;
 use App\Modules\Treinamento\Enums\SituacaoAvaliacaoCurso;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
@@ -33,6 +34,7 @@ final class SalaDeAulaProps
             'escopo' => $escopo,
             'avaliacao_final' => $inscricao !== null ? self::avaliacaoFinal($inscricao, $estado) : null,
             'notas_avaliacao' => NotaAvaliacaoCurso::toSelectArray(),
+            'notas_relevancia' => NotaRelevanciaCurso::toSelectArray(),
         ];
     }
 
@@ -62,6 +64,8 @@ final class SalaDeAulaProps
                 'nota' => $avaliacao->nota->value,
                 'nota_label' => $avaliacao->nota->getLabel(),
                 'nota_color' => $avaliacao->nota->getColor(),
+                'nota_relevancia' => $avaliacao->nota_relevancia?->value,
+                'nota_relevancia_label' => $avaliacao->nota_relevancia?->getLabel(),
                 'comentario' => $avaliacao->comentario,
                 'avaliado_em' => $avaliacao->created_at?->toIso8601String(),
             ],

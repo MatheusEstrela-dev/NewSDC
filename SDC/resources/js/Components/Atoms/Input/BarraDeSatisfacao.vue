@@ -1,7 +1,7 @@
 <template>
   <fieldset :aria-describedby="error ? erroId : undefined">
     <legend v-if="legenda" :id="legendaId" class="mb-3 text-sm font-medium text-slate-700 dark:text-slate-200">
-      {{ legenda }}
+      {{ legenda }}<span v-if="obrigatorio" class="ml-0.5 text-red-500" aria-hidden="true">*</span>
     </legend>
 
     <!-- Radios nativos (sr-only) por baixo de cada segmento: setas, Tab e leitor
@@ -79,6 +79,8 @@ const props = defineProps({
   opcoes: { type: Array, required: true },
   legenda: { type: String, default: '' },
   nome: { type: String, default: 'nota' },
+  /** Asterisco vermelho na legenda (padrao do Label dos formularios). */
+  obrigatorio: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   error: { type: String, default: '' },
 });

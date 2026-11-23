@@ -11,9 +11,10 @@ defineProps({
   versao_rotulo: { type: String, default: null },
   avaliacao_final: { type: Object, default: null },
   notas_avaliacao: { type: Array, default: () => [] },
+  notas_relevancia: { type: Array, default: () => [] },
 });
 </script>
 
 <template>
-  <SalaDeAulaTemplate :curso="curso" :estado="estado" :escopo="escopo" :versao-rotulo="versao_rotulo" :avaliacao-final="avaliacao_final" :notas-avaliacao="notas_avaliacao" />
+  <SalaDeAulaTemplate :curso="curso" :estado="estado" :escopo="escopo" :versao-rotulo="versao_rotulo" :avaliacao-final="avaliacao_final" :notas-avaliacao="notas_avaliacao" :notas-relevancia="notas_relevancia" />
 </template>

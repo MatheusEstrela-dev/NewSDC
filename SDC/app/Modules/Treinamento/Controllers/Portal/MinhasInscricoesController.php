@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Enums\NotaAvaliacaoCurso;
+use App\Modules\Treinamento\Enums\NotaRelevanciaCurso;
 use App\Modules\Treinamento\Enums\SituacaoAvaliacaoCurso;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
@@ -45,6 +46,7 @@ class MinhasInscricoesController extends Controller
             'salas' => $salas,
             'avaliacoes_pendentes' => $pendentes,
             'notas_avaliacao' => NotaAvaliacaoCurso::toSelectArray(),
+            'notas_relevancia' => NotaRelevanciaCurso::toSelectArray(),
         ]);
     }
 

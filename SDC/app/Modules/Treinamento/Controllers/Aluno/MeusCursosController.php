@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Controllers\Aluno;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Treinamento\Enums\NotaAvaliacaoCurso;
+use App\Modules\Treinamento\Enums\NotaRelevanciaCurso;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\SituacaoAvaliacaoCurso;
 use App\Modules\Treinamento\Enums\StatusInscricao;
@@ -52,6 +53,7 @@ class MeusCursosController extends Controller
             'meus_cursos' => $this->cursos($inscricoes),
             'avaliacoes_pendentes' => $this->avaliacoesPendentes($userId),
             'notas_avaliacao' => NotaAvaliacaoCurso::toSelectArray(),
+            'notas_relevancia' => NotaRelevanciaCurso::toSelectArray(),
             'certificados' => CertificadoResource::collection($this->certificados($userId))->resolve(),
             'credencial' => $request->user() instanceof User ? $this->credenciais->paraServidor($request->user()) : null,
             'sexo_padrao' => $this->inscricaoService->sexoDaUltimaInscricao($request->user())?->value,

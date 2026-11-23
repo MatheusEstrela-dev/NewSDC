@@ -17,6 +17,7 @@ const props = defineProps({
   /** Por id da inscricao: eventos (sem sala) em que falta so avaliar para concluir. */
   avaliacoes_pendentes: { type: Object, default: () => ({}) },
   notas_avaliacao: { type: Array, default: () => [] },
+  notas_relevancia: { type: Array, default: () => [] },
 });
 
 const pagination = computed(() => {
@@ -107,6 +108,7 @@ const formatDate = (dateValue) => {
           <AvaliacaoCursoCard
             :url="avaliacoes_pendentes[inscricao.id].url_avaliar"
             :notas="notas_avaliacao"
+            :relevancias="notas_relevancia"
             subtitulo="Você cumpriu os requisitos. Avalie o curso para concluí-lo e receber o certificado."
           />
         </div>

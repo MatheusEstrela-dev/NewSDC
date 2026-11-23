@@ -27,6 +27,7 @@ defineProps({
   /** Eventos (sem sala) com os requisitos cumpridos: falta so avaliar para concluir. */
   avaliacoes_pendentes: { type: Array, default: () => [] },
   notas_avaliacao: { type: Array, default: () => [] },
+  notas_relevancia: { type: Array, default: () => [] },
 });
 
 useCursosAoVivo(['meus_cursos', 'disponiveis', 'certificados', 'avaliacoes_pendentes']);
@@ -80,6 +81,7 @@ function inscrever(perfil) {
           :key="pendente.inscricao_id"
           :url="pendente.url_avaliar"
           :notas="notas_avaliacao"
+          :relevancias="notas_relevancia"
           :titulo="pendente.titulo"
           :subtitulo="`${pendente.tipo_label} · Você cumpriu os requisitos. Avalie o curso para concluí-lo e receber o certificado.`"
         />

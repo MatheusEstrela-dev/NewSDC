@@ -20,6 +20,8 @@ const props = defineProps({
   /** SalaDeAulaProps::avaliacaoFinal (null na pre-visualizacao). */
   avaliacaoFinal: { type: Object, default: null },
   notas: { type: Array, required: true },
+  /** Opcoes da pergunta de relevancia (NotaRelevanciaCurso::toSelectArray). */
+  relevancias: { type: Array, default: () => [] },
   /** Itens obrigatorios que faltam para liberar a avaliacao. */
   faltam: { type: Number, default: 0 },
   urlAvaliar: { type: String, default: null },
@@ -79,6 +81,7 @@ const legado = computed(() => props.avaliacaoFinal?.concluido === true && props.
       <AvaliacaoCursoCard
         :url="previa ? null : urlAvaliar"
         :notas="notas"
+        :relevancias="relevancias"
         :subtitulo="legado ? 'Sua opinião ajuda a melhorar os próximos cursos.' : undefined"
       />
 
