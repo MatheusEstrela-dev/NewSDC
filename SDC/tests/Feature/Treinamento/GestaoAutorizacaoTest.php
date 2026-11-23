@@ -17,7 +17,7 @@ use App\Modules\Treinamento\Models\Treinamento;
  *   para CANCELADO, edit/update, designar professor, desativar/reativar e em
  *   toda rota treinamentos.gestor.* de escrita (e de leitura, ja que ele nem
  *   tem gestor.acessar); 200/redirect no conteudo/alunos do curso que leciona
- *   e em pausar (ProfessorService::gerencia: designado OU cursos.edit).
+ *   e 403 em pausar/retomar sem treinamento.cursos.pausar (RN04).
  * - Gestor (cargo manager) e Administrador: 200/redirect nas mesmas acoes,
  *   exceto DELETE do curso, que so Administrador (e super-admin) tem.
  * - Usuario so com treinamento.gestor.acessar (sem configurar/cancelar): le a
@@ -64,7 +64,7 @@ class GestaoAutorizacaoTest extends TreinamentoGestorTestCase
         $this->post(route('treinamentos.gestor.cancelar', $curso->id), [])->assertForbidden();
     }
 
-    public function test_professor_designado_mantem_200_no_conteudo_alunos_e_pausar(): void
+    public function test_professor_designado_mantem_200_no_conteudo_e_alunos_mas_leva_403_em_pausar(): void
     {
         $curso = $this->criarCursoEad(['status' => StatusTreinamento::EM_ANDAMENTO->value]);
         $curso->publicarNoPortal();
@@ -74,6 +74,19 @@ class GestaoAutorizacaoTest extends TreinamentoGestorTestCase
 
         $this->get(route('treinamentos.professor.conteudo', $curso->id))->assertOk();
         $this->get(route('treinamentos.professor.alunos', $curso->id))->assertOk();
+
+        // RN04: pausar/retomar exigem treinamento.cursos.pausar.
+        $this->post(route('treinamentos.professor.pausar', $curso->id))->assertForbidden();
+        $this->post(route('treinamentos.professor.retomar', $curso->id))->assertForbidden();
+    }
+
+    public function test_professor_designado_com_slug_pausar_consegue_pausar(): void
+    {
+        $curso = $this->criarCursoEad(['status' => StatusTreinamento::EM_ANDAMENTO->value]);
+        $curso->publicarNoPortal();
+        $professor = $this->usuarioComPermissoes(['treinamento.professor.acessar', 'treinamento.cursos.pausar']);
+        $this->designarProfessor($curso->fresh(), $professor);
+        $this->logarComo($professor);
 
         $this->post(route('treinamentos.professor.pausar', $curso->id))
             ->assertSessionHasNoErrors()

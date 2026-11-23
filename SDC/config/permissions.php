@@ -350,6 +350,9 @@ return [
                 // ciclo. Fica fora de `edit` pelo mesmo motivo de
                 // `plantao.escala.publicar`: e o ato irreversivel do modulo.
                 'cancelar' => 'treinamento.cursos.cancelar',
+                // Pausar e retomar o curso (RN04): so a chefia. Reversivel, mas
+                // afeta a sala dos alunos; vai junto com `cancelar` nos perfis.
+                'pausar' => 'treinamento.cursos.pausar',
             ],
             'Inscricoes' => [
                 'view' => 'treinamento.inscricoes.view',
@@ -889,6 +892,7 @@ return [
             'treinamento.gestor.acessar',
             'treinamento.cursos.configurar',
             'treinamento.cursos.cancelar',
+            'treinamento.cursos.pausar',
             'treinamento.inscricoes.view',
             'treinamento.inscricoes.aprovar',
             'treinamento.inscricoes.reprovar',
