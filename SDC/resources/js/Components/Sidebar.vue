@@ -891,26 +891,6 @@
         >
           Validar participante
         </NavItem>
-        <NavItem
-          v-if="canSeeTreinamentoEdital && _routes.hasTreinamentoEdital"
-          :href="route('treinamentos.consulta-edital')"
-          :active="isRouteActive('treinamentos.consulta-edital*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Consulta para edital
-        </NavItem>
-        <NavItem
-          v-if="canSeeTreinamentoCatalogo && _routes.hasTreinamentoCatalogo"
-          :href="route('treinamentos.catalogo.index')"
-          :active="isRouteActive('treinamentos.catalogo.*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Catálogo de cursos
-        </NavItem>
       </div>
     </nav>
 
@@ -1128,8 +1108,6 @@ const _routes = {
   hasTreinamentoProfessor: route().has('treinamentos.professor.index'),
   hasTreinamentoIndicadores: route().has('treinamentos.indicadores'),
   hasTreinamentoValidar: route().has('treinamentos.validar-participante'),
-  hasTreinamentoEdital: route().has('treinamentos.consulta-edital'),
-  hasTreinamentoCatalogo: route().has('treinamentos.catalogo.index'),
   hasRanking: route().has('ranking.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
@@ -1223,8 +1201,6 @@ const _activeRoutes = computed(() => {
     // 'treinamentos.*' nao acender os dois itens juntos.
     'treinamentos.indicadores': route().current('treinamentos.indicadores'),
     'treinamentos.validar-participante*': route().current('treinamentos.validar-participante*'),
-    'treinamentos.consulta-edital*': route().current('treinamentos.consulta-edital*'),
-    'treinamentos.catalogo.*': route().current('treinamentos.catalogo.*'),
     'plancon.*': route().current('plancon.*'),
     // isRouteActive so consulta ESTE mapa: sem a linha abaixo o item de
     // Ranking nasceria permanentemente apagado, mesmo dentro do modulo.
@@ -1262,8 +1238,6 @@ const ROTAS_IRMAS_DE_CAPACITACOES = [
   'treinamentos.aluno.*',
   'treinamentos.professor.*',
   'treinamentos.validar-participante*',
-  'treinamentos.consulta-edital*',
-  'treinamentos.catalogo.*',
 ];
 
 const capacitacoesAtivo = computed(
@@ -1446,16 +1420,12 @@ const canSeeTreinamentoIndicadores = computed(() => {
   return hasPermission(['treinamento.indicadores.view']);
 });
 // O botao do grupo aparece se qualquer um dos itens aparecer.
-const canSeeTreinamentoEdital = computed(() => hasPermission(['treinamento.indicadores.view']));
-const canSeeTreinamentoCatalogo = computed(() => hasPermission(['treinamento.cursos.edit']));
 const canSeeTreinamentoGroup = computed(() => {
   return (canSeeTreinamentoIndicadores.value && _routes.hasTreinamentoIndicadores)
     || (canSeeTreinamento.value && _routes.hasTreinamentos)
     || (canSeeTreinamentoAluno.value && _routes.hasTreinamentoAluno)
     || (canSeeTreinamentoProfessor.value && _routes.hasTreinamentoProfessor)
-    || (canSeeTreinamentoValidar.value && _routes.hasTreinamentoValidar)
-    || (canSeeTreinamentoEdital.value && _routes.hasTreinamentoEdital)
-    || (canSeeTreinamentoCatalogo.value && _routes.hasTreinamentoCatalogo);
+    || (canSeeTreinamentoValidar.value && _routes.hasTreinamentoValidar);
 });
 
 const canSeePlanCon = computed(() => {

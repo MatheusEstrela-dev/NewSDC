@@ -9,14 +9,14 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import { useToast } from '@/Composables/useToast';
 
 /*
- * Criar/editar curso do catalogo. Na pagina do catalogo grava por Inertia e a
- * lista recarrega. Em `rapido` (atalho "Novo curso" do formulario da turma)
- * grava por JSON e devolve o curso criado em `criado`, sem sair da pagina.
+ * Cadastro rapido de curso do catalogo (atalho "Novo curso" do formulario de
+ * criar/editar curso): grava por JSON e devolve o curso criado em `criado`, sem
+ * sair da pagina. A tela do catalogo e a edicao foram removidas.
  */
 const props = defineProps({
   show: { type: Boolean, default: false },
-  curso: { type: Object, default: null },
-  rapido: { type: Boolean, default: false },
+  /** Mantida por compatibilidade com quem ja passa `rapido`; o modal so cadastra. */
+  rapido: { type: Boolean, default: true },
 });
 const emit = defineEmits(['fechar', 'criado']);
 
@@ -28,16 +28,16 @@ const processandoRapido = ref(false);
 watch(() => props.show, (aberto) => {
   if (!aberto) return;
   form.defaults({
-    nome: props.curso?.nome ?? '',
-    sigla: props.curso?.sigla ?? '',
-    descricao: props.curso?.descricao ?? '',
-    ativo: props.curso?.ativo ?? true,
+    nome: '',
+    sigla: '',
+    descricao: '',
+    ativo: true,
   }).reset();
   form.clearErrors();
   erroRapido.value = {};
 });
 
-const erro = (campo) => (props.rapido ? erroRapido.value[campo]?.[0] : form.errors[campo]);
+const erro = (campo) => erroRapido.value[campo]?.[0];
 
 async function salvarRapido() {
   processandoRapido.value = true;
@@ -57,22 +57,14 @@ async function salvarRapido() {
 }
 
 function salvar() {
-  if (props.rapido) return salvarRapido();
-
-  const opcoes = {
-    preserveScroll: true,
-    onSuccess: () => emit('fechar'),
-    onError: () => toast('Verifique os campos do formulario.', 'error'),
-  };
-  if (props.curso) form.put(route('treinamentos.catalogo.update', props.curso.id), opcoes);
-  else form.post(route('treinamentos.catalogo.store'), opcoes);
+  return salvarRapido();
 }
 </script>
 
 <template>
   <Modal :show="show" max-width="md" centralizado @close="emit('fechar')">
     <form class="space-y-4 p-6" @submit.prevent="salvar">
-      <Heading :level="3" class="text-lg font-semibold">{{ curso ? 'Editar curso' : 'Novo curso' }}</Heading>
+      <Heading :level="3" class="text-lg font-semibold">Novo curso</Heading>
 
       <div>
         <label for="curso-nome" class="field-label">Nome <span class="text-red-500">*</span></label>
@@ -97,15 +89,10 @@ function salvar() {
         <p v-if="erro('descricao')" class="field-error">{{ erro('descricao') }}</p>
       </div>
 
-      <label v-if="curso" class="flex min-h-[44px] items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-        <input v-model="form.ativo" type="checkbox" class="h-4 w-4 rounded border-slate-300 dark:border-slate-600" />
-        Curso ativo (aparece ao criar novas turmas)
-      </label>
-
       <div class="flex justify-end gap-2">
         <Button type="button" variant="secondary" @click="emit('fechar')">Cancelar</Button>
         <Button type="submit" variant="success" :loading="form.processing || processandoRapido" :disabled="!form.nome.trim()">
-          {{ curso ? 'Salvar' : 'Cadastrar' }}
+          Cadastrar
         </Button>
       </div>
     </form>
