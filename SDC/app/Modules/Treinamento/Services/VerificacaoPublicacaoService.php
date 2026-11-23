@@ -13,9 +13,10 @@ use App\Modules\Treinamento\Models\Treinamento;
 use Illuminate\Support\Str;
 
 /**
- * Pendencias que impedem publicar um curso EAD (spec 8.6): toda pasta termina
- * em uma prova, e toda prova tem questoes com exatamente uma alternativa
- * correta. Uma mensagem por problema, ja com o nome da pasta.
+ * Pendencias que impedem publicar um curso EAD (spec 8.6): a prova final e
+ * opcional (RN12), mas, quando a pasta tem prova, ela precisa ter questoes com
+ * exatamente uma alternativa correta. Uma mensagem por problema, ja com o nome
+ * da pasta.
  */
 class VerificacaoPublicacaoService
 {
@@ -51,10 +52,6 @@ class VerificacaoPublicacaoService
     private function problemasDaPasta(Modulo $pasta, $provas): array
     {
         $problemas = [];
-
-        if ($pasta->itens->last()?->tipo !== TipoItem::PROVA) {
-            $problemas[] = "A pasta \"{$pasta->titulo}\" precisa terminar com um item de prova.";
-        }
 
         foreach ($pasta->itens->where('tipo', TipoItem::PROVA) as $item) {
             array_push($problemas, ...$this->problemasDaProva($pasta, $item, $provas->get($item->id)));

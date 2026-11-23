@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -13,12 +13,11 @@ import VisualizadorPdf from '@/Components/Organisms/Treinamento/Sala/Visualizado
 import { useProgressoVideo } from '@/Composables/treinamento/useProgressoVideo';
 import { useRotasSala } from '@/Composables/treinamento/useRotasSala';
 import { useToast } from '@/Composables/useToast';
+import { SEGUNDOS_POR_PAGINA_PDF } from '@/Support/leituraDePdf';
 
 const ATRASO_PROGRESSO_MS = 1000;
 const ATRASO_RETENTATIVA_MS = 3000;
 const MAX_RETENTATIVAS = 3;
-// Leitura minima de cada pagina nova do PDF antes de liberar a seguinte.
-const SEGUNDOS_POR_PAGINA_PDF = 60;
 
 const props = defineProps({
   curso: { type: Object, required: true },
@@ -82,6 +81,8 @@ const avaliacaoAberta = ref(!previa.value && situacaoAvaliacao.value !== 'BLOQUE
 const indiceAtual = computed(() => itens.value.findIndex((i) => i.id === itemAtualId.value));
 const itemAtual = computed(() => (avaliacaoAberta.value ? null : itens.value[indiceAtual.value] ?? null));
 const ultimo = computed(() => itens.value[itens.value.length - 1] ?? null);
+// Na previa o professor folheia sem trava; sem o campo (item antigo), vale a trava.
+const segundosPorPagina = (item) => (previa.value || item?.exige_tempo_leitura === false ? 0 : SEGUNDOS_POR_PAGINA_PDF);
 const anterior = computed(() => (avaliacaoAberta.value ? ultimo.value : itens.value[indiceAtual.value - 1] ?? null));
 const proximo = computed(() => (avaliacaoAberta.value ? null : itens.value[indiceAtual.value + 1] ?? null));
 // Depois do ultimo item vem a etapa final, que so abre com a trilha completa.
@@ -142,17 +143,40 @@ const progressoVideo = useProgressoVideo({
   enviar: (item, segundos) => registrarProgresso(item, segundos),
 });
 
+// No celular a trilha fica recolhida (aberta so no desktop): ao escolher um item ela fecha e a
+// tela rola ate o conteudo, que senao ficaria abaixo da lista inteira.
+const trilhaAberta = ref(false);
+const conteudo = ref(null);
+
+async function irParaConteudo() {
+  trilhaAberta.value = false;
+  await nextTick();
+  const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  conteudo.value?.scrollIntoView({ behavior: reduzido ? 'auto' : 'smooth', block: 'start' });
+}
+
 function selecionar(id) {
   enviarPendente();
   avaliacaoAberta.value = false;
   itemAtualId.value = id;
+  irParaConteudo();
 }
 
 // Bloqueada tambem abre: mostra o cadeado e o que falta para liberar.
 function abrirAvaliacao() {
   enviarPendente();
   avaliacaoAberta.value = true;
+  irParaConteudo();
 }
+
+// Por que o "Proximo" esta desabilitado (null quando esta liberado).
+const motivoProximo = computed(() => {
+  if (podeAvancar.value || itemAtual.value === null) return null;
+  if (proximoEhAvaliacao.value) return 'A avaliação do curso abre quando você concluir todos os itens.';
+  if (proximo.value && proximo.value.tipo === 'PROVA') return 'Conclua antes os demais itens obrigatórios desta pasta para liberar a prova.';
+
+  return 'Conclua os itens obrigatórios desta pasta para liberar o próximo.';
+});
 
 function avancar() {
   if (proximoEhAvaliacao.value) abrirAvaliacao();
@@ -178,7 +202,21 @@ onBeforeUnmount(enviarPendente);
     </div>
 
     <div class="grid min-h-[520px] grid-cols-1 lg:grid-cols-[300px_1fr]">
+      <div class="min-w-0">
+        <button
+          type="button"
+          class="flex min-h-[44px] w-full items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2 text-left text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 lg:hidden"
+          :aria-expanded="trilhaAberta"
+          aria-controls="trilha-do-curso"
+          @click="trilhaAberta = !trilhaAberta"
+        >
+          <span>Conteúdo do curso ({{ itens.length }} {{ itens.length === 1 ? 'item' : 'itens' }})</span>
+          <span aria-hidden="true">{{ trilhaAberta ? '&#9650;' : '&#9660;' }}</span>
+        </button>
       <TrilhaLateral
+        id="trilha-do-curso"
+        class="lg:!block"
+        :class="trilhaAberta ? 'block' : 'hidden'"
         :estado="estadoLocal"
         :item-atual-id="avaliacaoAberta ? null : itemAtualId"
         :percentual="percentualCurso"
@@ -188,8 +226,9 @@ onBeforeUnmount(enviarPendente);
         @selecionar="selecionar"
         @abrir-avaliacao="abrirAvaliacao"
       />
+      </div>
 
-      <div class="flex min-w-0 flex-col">
+      <div ref="conteudo" class="flex min-w-0 scroll-mt-2 flex-col">
         <template v-if="avaliacaoAberta">
           <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-5 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
             <span>Etapa final &rsaquo;</span>
@@ -229,7 +268,7 @@ onBeforeUnmount(enviarPendente);
             :posicao-inicial="itemAtual.posicao"
             :total-paginas="itemAtual.total_paginas ?? 1"
             :concluido="itemAtual.status === 'CONCLUIDO'"
-            :segundos-por-pagina="previa ? 0 : SEGUNDOS_POR_PAGINA_PDF"
+            :segundos-por-pagina="segundosPorPagina(itemAtual)"
             @pagina="registrarProgresso(itemAtual, $event)"
           />
           <PlayerVideo
@@ -268,10 +307,11 @@ onBeforeUnmount(enviarPendente);
 
         <div class="mt-auto flex items-center gap-3 border-t border-slate-200 px-5 py-3 text-xs dark:border-slate-700">
           <Button variant="outline" size="sm" :disabled="!anterior" @click="selecionar(anterior.id)">&lsaquo; Anterior</Button>
-          <span class="flex-1 text-center text-slate-500 dark:text-slate-400">
-            <template v-if="!previa && itemAtual?.tipo === 'PDF' && itemAtual.posicao > 1">Retoma na página em que você parou</template>
+          <span class="flex-1 text-center text-slate-500 dark:text-slate-400" aria-live="polite">
+            <template v-if="motivoProximo">{{ motivoProximo }}</template>
+            <template v-else-if="!previa && itemAtual?.tipo === 'PDF' && itemAtual.posicao > 1">Retoma na página em que você parou</template>
           </span>
-          <Button size="sm" :disabled="!podeAvancar" @click="avancar">{{ proximoEhAvaliacao ? 'Avaliar o curso' : 'Próximo' }} &rsaquo;</Button>
+          <Button size="sm" :disabled="!podeAvancar" :title="motivoProximo ?? undefined" @click="avancar">{{ proximoEhAvaliacao ? 'Avaliar o curso' : 'Próximo' }} &rsaquo;</Button>
         </div>
       </div>
     </div>

@@ -40,8 +40,13 @@ function estadoDoItem(item) {
   return item.id === props.itemAtualId ? 'atual' : 'pendente';
 }
 
+// Item bloqueado tambem abre: a area de conteudo mostra o motivo (ex.: prova depende dos demais itens da pasta).
 function selecionar(item) {
-  if (item.liberado) emit('selecionar', item.id);
+  emit('selecionar', item.id);
+}
+
+function descricaoDoItem(item) {
+  return item.liberado ? undefined : 'Bloqueado: conclua antes os itens obrigatórios desta pasta';
 }
 </script>
 
@@ -86,6 +91,8 @@ function selecionar(item) {
             class="flex w-full items-center gap-2.5 py-2 pl-8 pr-4 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
             :class="item.id === itemAtualId ? 'border-l-[3px] border-amber-500 bg-amber-50 pl-[29px] font-semibold dark:bg-amber-500/10' : ''"
             :aria-current="item.id === itemAtualId ? 'true' : undefined"
+            :aria-disabled="item.liberado ? undefined : 'true'"
+            :title="descricaoDoItem(item)"
             @click="selecionar(item)"
           >
             <span
@@ -99,8 +106,9 @@ function selecionar(item) {
               <template v-if="estadoDoItem(item) === 'concluido'">&#10003;</template>
               <template v-else-if="estadoDoItem(item) === 'atual'">&#9654;</template>
             </span>
-            <span class="min-w-0 flex-1 truncate">{{ item.titulo }}</span>
-            <span v-if="item.tipo === 'PROJETO'" class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+            <span class="min-w-0 flex-1 truncate" :class="{ 'text-slate-400 dark:text-slate-500': !item.liberado }">{{ item.titulo }}</span>
+            <span v-if="!item.liberado && item.tipo !== 'PROVA'" class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Bloqueado</span>
+            <span v-else-if="item.tipo === 'PROJETO'" class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
               {{ item.entrega_label ?? 'PROJETO' }}
             </span>
             <span

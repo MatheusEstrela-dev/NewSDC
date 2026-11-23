@@ -33,6 +33,7 @@ final readonly class EstadoItem
             'descricao' => $this->item->descricao,
             'obrigatorio' => $this->item->obrigatorio,
             'total_paginas' => $this->item->total_paginas,
+            'exige_tempo_leitura' => $this->item->exige_tempo_leitura,
             'tem_arquivo' => $this->item->temArquivo(),
             'liberado' => $this->liberado,
             'status' => $this->status?->value,

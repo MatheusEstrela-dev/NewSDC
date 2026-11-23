@@ -46,6 +46,7 @@ class ConteudoController extends Controller
                     'descricao' => $i->descricao,
                     'obrigatorio' => $i->obrigatorio,
                     'total_paginas' => $i->total_paginas,
+                    'exige_tempo_leitura' => $i->exige_tempo_leitura,
                     'tem_arquivo' => $i->temArquivo(),
                     'arquivo_nome' => $i->arquivo_nome,
                     'video' => $i->video ? $this->videoDoItem($i->video, $request) : null,

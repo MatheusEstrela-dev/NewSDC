@@ -23,7 +23,7 @@ class CopiaDeConteudo
 
     private const CAMPOS_ITEM = [
         'tipo', 'titulo', 'descricao', 'ordem', 'obrigatorio', 'arquivo_path', 'arquivo_nome',
-        'arquivo_mime', 'arquivo_tamanho', 'total_paginas', 'video_id',
+        'arquivo_mime', 'arquivo_tamanho', 'total_paginas', 'video_id', 'exige_tempo_leitura',
     ];
 
     public function copiar(Treinamento $origem, Treinamento $destino): void

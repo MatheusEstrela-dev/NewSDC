@@ -35,11 +35,13 @@ const pagina = ref(Math.min(Math.max(1, props.posicaoInicial), total.value));
 // seta de avancar ate cumprir o tempo. So conta com a aba visivel, e a
 // ultima pagina so e registrada (o que conclui o item) depois do tempo dela.
 const exigeTempo = computed(() => props.segundosPorPagina > 0 && !props.concluido);
-const liberadaAte = ref(exigeTempo.value ? Math.max(1, props.posicaoInicial) : Number.MAX_SAFE_INTEGER);
+const liberadaAte = ref(exigeTempo.value ? Math.min(Math.max(1, props.posicaoInicial), total.value) : Number.MAX_SAFE_INTEGER);
 const decorridoMs = ref(0);
 
 const emLeituraMinima = computed(() => exigeTempo.value && !carregando.value && !erro.value && pagina.value >= liberadaAte.value);
 const restante = computed(() => Math.max(0, Math.ceil(props.segundosPorPagina - decorridoMs.value / 1000)));
+// Para leitor de tela: anuncia em degraus de 10 s (anunciar a cada segundo seria ruido).
+const restanteAnunciado = computed(() => Math.ceil(restante.value / 10) * 10);
 const fracaoRestante = computed(() => Math.max(0, 1 - decorridoMs.value / (props.segundosPorPagina * 1000)));
 
 const zoomPercentual = computed(() => Math.round((zoom.value / ZOOM_BASE) * 100));
@@ -47,15 +49,34 @@ const temAnterior = computed(() => pagina.value > 1);
 const temProxima = computed(() => pagina.value < total.value && !emLeituraMinima.value);
 
 let relogio = null;
+// O tempo vem de timestamps (aba em segundo plano atrasa o intervalo, mas nao o relogio): `marca` e
+// o inicio do trecho visivel em curso e `acumulado` o que ja foi contado nesta pagina.
+let marca = null;
+let acumulado = 0;
+
+function zerarContagem() {
+  marca = null;
+  acumulado = 0;
+  decorridoMs.value = 0;
+}
 
 function contar() {
-  if (!emLeituraMinima.value || document.hidden) return;
-  decorridoMs.value += TICK_MS;
+  const agora = Date.now();
+  if (!emLeituraMinima.value || document.hidden) {
+    if (marca !== null) {
+      acumulado += agora - marca;
+      marca = null;
+    }
+    return;
+  }
+
+  marca ??= agora;
+  decorridoMs.value = acumulado + (agora - marca);
   if (decorridoMs.value < props.segundosPorPagina * 1000) return;
 
-  decorridoMs.value = 0;
+  zerarContagem();
   if (pagina.value < total.value) {
-    liberadaAte.value = pagina.value + 1;
+    liberadaAte.value = Math.min(pagina.value + 1, total.value);
   } else {
     liberadaAte.value = Number.MAX_SAFE_INTEGER;
     emit('pagina', pagina.value);
@@ -110,9 +131,11 @@ onMounted(async () => {
     documento = aberto;
     total.value = documento.numPages;
     pagina.value = Math.min(pagina.value, total.value);
+    liberadaAte.value = Math.min(liberadaAte.value, total.value);
     carregando.value = false;
     if (deveRegistrar(pagina.value)) emit('pagina', pagina.value);
     relogio = window.setInterval(contar, TICK_MS);
+    document.addEventListener('visibilitychange', contar);
     await desenhar();
   } catch {
     if (desmontado) return;
@@ -122,7 +145,7 @@ onMounted(async () => {
 });
 
 watch(pagina, (n) => {
-  decorridoMs.value = 0;
+  zerarContagem();
   if (deveRegistrar(n)) emit('pagina', n);
   desenhar();
 });
@@ -130,6 +153,7 @@ watch(zoom, desenhar);
 
 onBeforeUnmount(() => {
   window.clearInterval(relogio);
+  document.removeEventListener('visibilitychange', contar);
   desmontado = true;
   geracao++;
   tarefa?.cancel();
@@ -165,6 +189,12 @@ onBeforeUnmount(() => {
           />
         </svg>
         <span class="relative text-[10px] font-bold tabular-nums">{{ restante }}</span>
+      </span>
+      <span v-if="emLeituraMinima" class="text-amber-200" aria-hidden="true">
+        Leitura mínima: aguarde {{ restante }} s para {{ pagina < total ? 'avançar' : 'concluir' }}
+      </span>
+      <span v-if="emLeituraMinima" class="sr-only" role="status" aria-live="polite">
+        Leitura mínima: faltam cerca de {{ restanteAnunciado }} segundos para {{ pagina < total ? 'avançar' : 'concluir' }}.
       </span>
       <span class="hidden h-4 w-px bg-slate-500 sm:inline-block" />
       <button type="button" class="rounded px-2 py-1 hover:bg-slate-600 disabled:opacity-40" :disabled="zoom <= ZOOM_MIN" aria-label="Diminuir zoom" @click="ajustarZoom(-ZOOM_PASSO)">&minus;</button>

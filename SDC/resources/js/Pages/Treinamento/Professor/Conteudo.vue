@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -22,6 +22,7 @@ import { usePdf } from '@/Composables/treinamento/usePdf';
 import { formatarDuracao } from '@/Composables/treinamento/formatarDuracao';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { useConfirmacao } from '@/Composables/core/useConfirmacao';
+import { TEMPO_POR_PAGINA_PDF_ROTULO } from '@/Support/leituraDePdf';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -116,6 +117,7 @@ const ITEM_VAZIO = {
   descricao: '',
   obrigatorio: true,
   total_paginas: '',
+  exige_tempo_leitura: true,
   arquivo: null,
   nota_minima: 70,
   max_tentativas: 3,
@@ -138,6 +140,12 @@ formItem.transform((dados) => {
   return { ...base, nota_minima: notaMinima, max_tentativas: maxTentativas };
 });
 
+// O arquivo e servido fora do Inertia: abre em aba propria, com o mesmo botao
+// contornado do Editar (o Button com href vira link Inertia, que nao abre aba).
+function abrirArquivo(item) {
+  window.open(route('treinamentos.professor.itens.arquivo', [props.curso.id, item.id]), '_blank', 'noopener');
+}
+
 function abrirItem(pasta, item = null) {
   pastaDoItem.value = pasta;
   itemEmEdicao.value = item;
@@ -150,6 +158,7 @@ function abrirItem(pasta, item = null) {
     formItem.descricao = item.descricao ?? '';
     formItem.obrigatorio = item.obrigatorio;
     formItem.total_paginas = item.total_paginas ?? '';
+    formItem.exige_tempo_leitura = item.exige_tempo_leitura ?? true;
     if (item.tipo === 'PROVA') {
       formItem.nota_minima = item.nota_minima ?? ITEM_VAZIO.nota_minima;
       formItem.max_tentativas = item.max_tentativas ?? ITEM_VAZIO.max_tentativas;
@@ -281,6 +290,16 @@ function publicar() {
   enviarPublicacao({});
 }
 
+// O menu de outras abas leva aqui com ?publicar=1 para pedir o "O que mudou"; o parametro sai da URL.
+function abrirPublicacaoPedida() {
+  if (new URLSearchParams(window.location.search).get('publicar') !== '1') return;
+  window.history.replaceState(window.history.state, '', window.location.pathname);
+  if (!props.curso.publicado) publicar();
+}
+
+onMounted(abrirPublicacaoPedida);
+watch(() => usePage().url, abrirPublicacaoPedida);
+
 function enviarPublicacao(dados) {
   router.post(route('treinamentos.professor.publicar', props.curso.id), dados, {
     preserveScroll: true,
@@ -311,7 +330,7 @@ function enviarPublicacao(dados) {
       <div class="min-w-0 space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <Text color="muted">{{ lista.length }} pasta(s), {{ totalItens }} item(ns)</Text>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" @click="abrirPasta()">+ Nova pasta</Button>
             <Button size="sm" variant="success" :disabled="curso.publicado" @click="publicar">
               {{ curso.publicado ? 'Publicado' : 'Publicar curso' }}
@@ -345,12 +364,12 @@ function enviarPublicacao(dados) {
           <template #item="{ element: pasta, index }">
             <CardBase>
               <div class="flex items-start gap-3">
-                <span class="handle-pasta cursor-grab select-none text-slate-400" title="Arraste para reordenar">::</span>
+                <span class="handle-pasta cursor-grab select-none text-slate-400" title="Arraste para reordenar" role="img" :aria-label="`Arrastar para reordenar a pasta ${pasta.titulo}`">::</span>
                 <div class="min-w-0 flex-1">
                   <Heading :level="3" class="text-base font-semibold">{{ index + 1 }}. {{ pasta.titulo }}</Heading>
                   <Text v-if="pasta.descricao" size="xs" color="muted">{{ pasta.descricao }}</Text>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap justify-end gap-2">
                   <Button size="sm" variant="outline" @click="abrirPasta(pasta)">Editar</Button>
                   <Button size="sm" variant="danger" @click="excluirPasta(pasta)">Excluir</Button>
                 </div>
@@ -366,23 +385,17 @@ function enviarPublicacao(dados) {
               >
                 <template #item="{ element: item }">
                   <div class="rounded-md border border-slate-200 dark:border-slate-700">
-                    <div class="flex items-center gap-3 px-3 py-2">
-                      <span class="handle-item cursor-grab select-none text-slate-400" title="Arraste para reordenar">::</span>
-                      <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2">
+                      <span class="handle-item cursor-grab select-none text-slate-400" title="Arraste para reordenar" role="img" :aria-label="`Arrastar para reordenar o item ${item.titulo}`">::</span>
+                      <div class="min-w-0 flex-1 basis-40">
                         <Text class="block truncate font-medium">{{ item.titulo }}</Text>
                         <Text size="xs" color="muted">
                           {{ item.tipo_label }}
-                          <template v-if="item.tipo === 'PDF'"> - {{ item.total_paginas }} pagina(s)</template>
+                          <template v-if="item.tipo === 'PDF'"> - {{ item.total_paginas }} pagina(s){{ item.exige_tempo_leitura === false ? ' - sem tempo mínimo de leitura' : ` - leitura mínima de ${TEMPO_POR_PAGINA_PDF_ROTULO}` }}</template>
                           - {{ item.obrigatorio ? 'Obrigatorio' : 'Opcional' }}
                         </Text>
                       </div>
-                      <a
-                        v-if="item.tem_arquivo"
-                        :href="route('treinamentos.professor.itens.arquivo', [curso.id, item.id])"
-                        target="_blank"
-                        rel="noopener"
-                        class="text-sm text-sky-600 hover:underline"
-                      >Abrir</a>
+                      <Button v-if="item.tem_arquivo" size="sm" variant="outline" @click="abrirArquivo(item)">Abrir</Button>
                       <Button
                         v-if="item.tipo === 'PROVA'"
                         size="sm"
@@ -495,6 +508,15 @@ function enviarPublicacao(dados) {
           <Text v-if="itemEmEdicao?.arquivo_nome && !formItem.arquivo" size="xs" color="muted">Atual: {{ itemEmEdicao.arquivo_nome }}</Text>
           <p v-if="formItem.errors.arquivo" class="mt-1 text-sm text-red-600">{{ formItem.errors.arquivo }}</p>
           <p v-if="formItem.errors.total_paginas" class="mt-1 text-sm text-red-600">{{ formItem.errors.total_paginas }}</p>
+        </div>
+
+        <div v-if="ehPdf">
+          <label class="flex items-center gap-2 text-sm">
+            <input v-model="formItem.exige_tempo_leitura" type="checkbox">
+            Exigir tempo mínimo de leitura ({{ TEMPO_POR_PAGINA_PDF_ROTULO }})
+          </label>
+          <Text size="xs" color="muted" class="mt-1">Vale só para este PDF. Use em slides de aula; desmarque em PDFs complementares.</Text>
+          <p v-if="formItem.errors.exige_tempo_leitura" class="mt-1 text-sm text-red-600">{{ formItem.errors.exige_tempo_leitura }}</p>
         </div>
 
         <Text v-if="ehVideo && !itemEmEdicao" size="xs" color="muted">O vídeo é escolhido na biblioteca depois que o item for criado.</Text>
