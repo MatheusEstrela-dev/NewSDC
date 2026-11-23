@@ -17,7 +17,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['view', 'edit', 'delete']);
+const emit = defineEmits(['view', 'edit', 'delete', 'nova-versao']);
 </script>
 
 <template>
@@ -38,6 +38,7 @@ const emit = defineEmits(['view', 'edit', 'delete']);
         @view="emit('view', $event)"
         @edit="emit('edit', $event)"
         @delete="emit('delete', $event)"
+        @nova-versao="emit('nova-versao', $event)"
       />
     </div>
   </div>

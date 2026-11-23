@@ -76,6 +76,23 @@ const handleDelete = (id) => {
   }));
 };
 
+// Retomar rascunho nao cria nada (o backend redireciona para a edicao); so a criacao pede confirmacao.
+const handleNovaVersao = (treinamento) => {
+  const enviar = () => router.post(route('treinamentos.versoes.store', treinamento.id), {}, {
+    preserveScroll: true,
+    onError: (erros) => toast(Object.values(erros)[0] || 'Não foi possível criar a nova versão.', 'error'),
+  });
+
+  if (treinamento.pode_continuar_rascunho) return enviar();
+
+  pedirConfirmacao({
+    title: 'Criar nova versão',
+    message: `Criar uma nova versão de "${treinamento.titulo}"?`,
+    description: 'O conteúdo da versão atual é copiado para um rascunho. Inscrições, progresso e datas da turma não são copiados.',
+    confirmText: 'Criar nova versão',
+  }, enviar);
+};
+
 const handleFilter = (filters) => {
   router.visit(route('treinamentos.index'), {
     data: filters,
@@ -102,6 +119,7 @@ const handleFilter = (filters) => {
       @view="handleView"
       @edit="handleEdit"
       @delete="handleDelete"
+      @nova-versao="handleNovaVersao"
       @filter="handleFilter"
     />
     <ConfirmDialog :is-open="confirmacao.aberto" v-bind="confirmacao.opcoes" @confirm="confirmar" @cancel="cancelar" />

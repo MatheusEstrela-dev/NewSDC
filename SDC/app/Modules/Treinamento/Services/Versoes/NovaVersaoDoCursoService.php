@@ -21,14 +21,16 @@ use Illuminate\Database\UniqueConstraintViolationException;
 /**
  * Cria a proxima versao (rascunho) de um curso EAD copiando o conteudo da vigente.
  * Inscricoes, progresso, tentativas, entregas, frequencias, certificados, cronogramas
- * e historico NAO sao copiados: pertencem a versao em que aconteceram.
+ * e historico NAO sao copiados: pertencem a versao em que aconteceram. Dados da turma
+ * (datas, horario, vagas, local, municipio e instrutor) tambem ficam de fora: so vao o
+ * conteudo pedagogico e os dados estruturais do curso. Os professores vao junto: quem
+ * conduz o conteudo e o mesmo. Se ja existe rascunho, ele e retomado (nunca duplicado).
  */
 class NovaVersaoDoCursoService
 {
     private const CAMPOS_COPIADOS = [
         'titulo', 'descricao', 'carga_horaria', 'categoria', 'tipo', 'publico_alvo',
-        'inscricao_aprovacao_automatica', 'status', 'instrutor', 'local', 'municipio_id',
-        'data_inicio', 'data_fim', 'hora_inicio', 'numero_vagas', 'percentual_frequencia_minimo',
+        'inscricao_aprovacao_automatica', 'percentual_frequencia_minimo',
     ];
 
     public function __construct(
@@ -48,7 +50,7 @@ class NovaVersaoDoCursoService
             ->first();
     }
 
-    public function criar(Treinamento $vigente, User $autor): Treinamento
+    public function criar(Treinamento $vigente, User $autor): ResultadoNovaVersao
     {
         if ($vigente->tipo !== TipoTreinamento::EAD) {
             throw new DomainException('So cursos EAD podem ter nova versao.');
@@ -64,9 +66,9 @@ class NovaVersaoDoCursoService
         }
     }
 
-    private function criarEmTransacao(Treinamento $vigente, User $autor): Treinamento
+    private function criarEmTransacao(Treinamento $vigente, User $autor): ResultadoNovaVersao
     {
-        return ConexaoTreinamento::transacao(function () use ($vigente, $autor): Treinamento {
+        return ConexaoTreinamento::transacao(function () use ($vigente, $autor): ResultadoNovaVersao {
             $curso = $this->cursoTravado($vigente, $autor);
 
             $vigente->refresh();
@@ -76,7 +78,7 @@ class NovaVersaoDoCursoService
 
             $existente = $this->rascunhoDe($curso->id);
             if ($existente !== null) {
-                throw new DomainException("Ja existe um rascunho da versao {$existente->versao} deste curso.");
+                return new ResultadoNovaVersao($existente, retomado: true);
             }
 
             $rascunho = $this->criarRascunho($vigente, $curso, $autor);
@@ -91,7 +93,7 @@ class NovaVersaoDoCursoService
                 $autor->id,
             );
 
-            return $rascunho;
+            return new ResultadoNovaVersao($rascunho, retomado: false);
         });
     }
 
