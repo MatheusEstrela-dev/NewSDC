@@ -104,7 +104,7 @@ class InscricaoService extends BaseService
         // Periodo de atuacao: so o limite final recusa (ver PeriodoDeInscricao).
         PeriodoDeInscricao::exigirAberto($treinamento);
 
-        $aprovacaoAutomatica = $origemDaAtualizacao !== null || (bool) $treinamento->inscricao_aprovacao_automatica;
+        $aprovacaoAutomatica = $origemDaAtualizacao !== null || $treinamento->aprovaInscricaoNaHora();
 
         // A vaga so e segura com a linha do limite travada, e a trava so vale
         // dentro da transacao - por isso a checagem e a insercao andam juntas.

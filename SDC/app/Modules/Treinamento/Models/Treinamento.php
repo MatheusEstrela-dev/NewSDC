@@ -210,6 +210,16 @@ class Treinamento extends Model implements Rastreavel
     }
 
     /**
+     * Capacitacao livre e "direto": a inscricao e aprovada na hora, qualquer que
+     * seja a opcao gravada. Em tutoria, presencial e eventos vale a opcao do curso.
+     */
+    public function aprovaInscricaoNaHora(): bool
+    {
+        return $this->categoriaOferta() === CategoriaOferta::LIVRE
+            || (bool) $this->inscricao_aprovacao_automatica;
+    }
+
+    /**
      * Status que a tela do gestor mostra, derivado de status + publicacao.
      * Nao ha coluna para ele; a precedencia esta documentada no enum.
      * A situacao (Pausado/Desativado) e ortogonal e vem de situacaoEfetiva().

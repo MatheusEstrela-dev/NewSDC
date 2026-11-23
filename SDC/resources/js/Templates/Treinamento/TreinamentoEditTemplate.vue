@@ -10,6 +10,7 @@ import MunicipioBuscaSelect from '@/Components/Molecules/Treinamento/MunicipioBu
 import CursoBuscaSelect from '@/Components/Molecules/Treinamento/CursoBuscaSelect.vue';
 import CursoFormModal from '@/Components/Organisms/Treinamento/Catalogo/CursoFormModal.vue';
 import ComTutoriaField from '@/Components/Molecules/Treinamento/ComTutoriaField.vue';
+import AprovacaoAutomaticaField from '@/Components/Molecules/Treinamento/AprovacaoAutomaticaField.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
 
@@ -211,15 +212,12 @@ function cancelar() {
           </div>
         </div>
 
-        <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
-          <input type="checkbox" v-model="form.inscricao_aprovacao_automatica" class="mt-0.5 rounded border-slate-300 dark:border-slate-600" />
-          <span>
-            Aprovar inscrições automaticamente
-            <span class="block text-xs text-slate-500 dark:text-slate-400">
-              Sem isso, cada inscrição fica pendente até um administrador aprovar.
-            </span>
-          </span>
-        </label>
+        <AprovacaoAutomaticaField
+          v-model="form.inscricao_aprovacao_automatica"
+          :tipo="form.tipo"
+          :categoria="form.categoria"
+          :com-tutoria="form.com_tutoria"
+        />
 
         <label v-if="usaPresenca" class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
           <input type="checkbox" v-model="form.presenca_autoconfirmavel" class="mt-0.5 rounded border-slate-300 dark:border-slate-600" />

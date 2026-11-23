@@ -1,13 +1,12 @@
 <script setup>
 import { computed } from 'vue';
+import { admiteTutoria } from '@/Support/categoriaOferta';
 
 /*
  * Opcao "Com tutoria" do cadastro/edicao da capacitacao. So aparece para EAD fora
- * da categoria Evento: espelha ClassificacaoDeOferta::admiteTutoria. Online e
- * semipresencial ja sao "com tutoria" por natureza, e o backend grava false nos
- * demais casos de qualquer forma.
+ * da categoria Evento (admiteTutoria). Online e semipresencial ja sao "com
+ * tutoria" por natureza, e o backend grava false nos demais casos de qualquer forma.
  */
-const TIPOS_COM_TUTORIA = ['EAD'];
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -18,7 +17,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
-const visivel = computed(() => props.categoria !== 'EVENTO' && TIPOS_COM_TUTORIA.includes(props.tipo));
+const visivel = computed(() => admiteTutoria(props));
 </script>
 
 <template>
