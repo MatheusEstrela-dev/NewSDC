@@ -64,8 +64,10 @@ final class SalaDeAulaProps
                 'nota' => $avaliacao->nota->value,
                 'nota_label' => $avaliacao->nota->getLabel(),
                 'nota_color' => $avaliacao->nota->getColor(),
+                // NULL nas avaliacoes anteriores a pergunta de relevancia.
                 'nota_relevancia' => $avaliacao->nota_relevancia?->value,
                 'nota_relevancia_label' => $avaliacao->nota_relevancia?->getLabel(),
+                'nota_relevancia_color' => $avaliacao->nota_relevancia?->getColor(),
                 'comentario' => $avaliacao->comentario,
                 'avaliado_em' => $avaliacao->created_at?->toIso8601String(),
             ],

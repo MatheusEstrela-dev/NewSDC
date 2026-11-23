@@ -29,18 +29,27 @@
           :aria-label="`${opcao.value} de ${opcoes.length}: ${opcao.label}`"
           @change="$emit('update:modelValue', opcao.value)"
         />
+        <!-- A opacidade vai so no fundo (camada propria): o numero mantem contraste pleno. -->
         <span
-          class="flex h-11 items-center justify-center text-sm font-bold text-white transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-800"
+          class="relative flex h-11 items-center justify-center text-sm font-bold transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-800"
           :class="[
-            CORES_SEGMENTO[opcao.color] ?? CORES_SEGMENTO.slate,
+            preenchido(opcao) ? (CORES_NUMERO[opcao.color] ?? CORES_NUMERO.slate) : 'text-slate-700 dark:text-slate-200',
             indice === 0 && 'rounded-l-full',
             indice === opcoes.length - 1 && 'rounded-r-full',
-            preenchido(opcao) ? 'opacity-100' : 'opacity-30',
-            !disabled && !preenchido(opcao) && 'group-hover:opacity-60',
             modelValue === opcao.value && 'scale-y-110 shadow-md',
           ]"
           aria-hidden="true"
-        >{{ opcao.value }}</span>
+        >
+          <span
+            class="absolute inset-0 rounded-[inherit] transition-opacity duration-150"
+            :class="[
+              CORES_SEGMENTO[opcao.color] ?? CORES_SEGMENTO.slate,
+              preenchido(opcao) ? 'opacity-100' : 'opacity-30',
+              !disabled && !preenchido(opcao) && 'group-hover:opacity-60',
+            ]"
+          />
+          <span class="relative">{{ opcao.value }}</span>
+        </span>
       </label>
     </div>
 
@@ -110,6 +119,16 @@ export const CORES_SEGMENTO = {
   lime: 'bg-lime-500',
   green: 'bg-green-600',
   slate: 'bg-slate-300 dark:bg-slate-600',
+};
+
+// Numero sobre o segmento cheio: escuro nas cores claras (amarelo, lima, laranja), branco nas demais.
+export const CORES_NUMERO = {
+  red: 'text-white',
+  orange: 'text-slate-900',
+  yellow: 'text-slate-900',
+  lime: 'text-slate-900',
+  green: 'text-white',
+  slate: 'text-white',
 };
 
 export const CORES_TEXTO = {

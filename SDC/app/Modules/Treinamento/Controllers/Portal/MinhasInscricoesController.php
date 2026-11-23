@@ -60,10 +60,14 @@ class MinhasInscricoesController extends Controller
      */
     private function salas(Collection $inscricoes): array
     {
-        return $inscricoes
-            ->filter(fn (Inscricao $i) => $i->status === StatusInscricao::APROVADA && $i->treinamento?->isEad() && $i->treinamento->situacaoEfetiva()->permiteAcessoDoAluno())
-            ->mapWithKeys(function (Inscricao $i) {
-                $estado = $this->trilha->estado($i);
+        $comSala = $inscricoes
+            ->filter(fn (Inscricao $i) => $i->status === StatusInscricao::APROVADA && $i->treinamento?->isEad() && $i->treinamento->situacaoEfetiva()->permiteAcessoDoAluno());
+        // Trilha de todas em lote (sem N+1 por curso).
+        $estados = $this->trilha->estadosDeInscricoes($comSala);
+
+        return $comSala
+            ->mapWithKeys(function (Inscricao $i) use ($estados) {
+                $estado = $estados[$i->id];
                 $avaliacao = SituacaoAvaliacaoCurso::de($i->avaliacao !== null, $this->conclusao->requisitosCumpridos($i, $estado));
 
                 return [$i->id => [

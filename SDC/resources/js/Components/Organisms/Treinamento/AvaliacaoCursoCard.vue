@@ -31,12 +31,20 @@ const props = defineProps({
   subtitulo: { type: String, default: 'Última etapa: avalie o curso para concluí-lo e receber o certificado.' },
 });
 
+const LIMITE_COMENTARIO = 2000;
+
 const emit = defineEmits(['enviada']);
 
 const form = useForm({ nota: null, nota_relevancia: null, comentario: '' });
 
 const bloqueado = computed(() => form.processing || !props.url);
 const completo = computed(() => form.nota !== null && form.nota_relevancia !== null && form.comentario.trim() !== '');
+
+const faltando = computed(() => [
+  form.nota === null ? 'avaliação' : null,
+  form.nota_relevancia === null ? 'relevância' : null,
+  form.comentario.trim() === '' ? 'comentário' : null,
+].filter(Boolean));
 
 // O retorno (flash "success" do backend) e exibido pelo layout; a pagina
 // recarrega as props com o curso concluido e o certificado.
@@ -93,13 +101,18 @@ function enviar() {
           label="Você tem alguma sugestão, comentário ou tema que gostaria de ver abordado em futuras palestras?"
           placeholder="Escreva sua resposta"
           :rows="4"
-          maxlength="2000"
+          :maxlength="LIMITE_COMENTARIO"
           required
           :disabled="bloqueado"
           :error="form.errors.comentario"
         />
 
-        <div class="flex justify-end">
+        <p class="text-right text-xs text-slate-500 dark:text-slate-400" aria-live="polite">
+          {{ form.comentario.length }}/{{ LIMITE_COMENTARIO }}
+        </p>
+
+        <div class="flex flex-col items-end gap-2">
+          <Text v-if="url && faltando.length" size="xs" color="muted" aria-live="polite">Responda: {{ faltando.join(', ') }}</Text>
           <Button type="submit" variant="success" :icon="PaperAirplaneIcon" :disabled="!completo || !url" :loading="form.processing">
             Enviar
           </Button>

@@ -28,8 +28,9 @@ class AvaliacaoCursoService
     ) {}
 
     /**
-     * Grava a avaliacao (uma por inscricao, imutavel), conclui o curso e
-     * emite o certificado.
+     * Grava a avaliacao (uma por inscricao, imutavel) com as duas respostas da
+     * pesquisa (nota geral e relevancia do conteudo), conclui o curso e emite
+     * o certificado.
      *
      * @throws DomainException avaliacao ainda bloqueada ou curso ja avaliado
      */

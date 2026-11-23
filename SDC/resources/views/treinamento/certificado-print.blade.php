@@ -43,17 +43,36 @@
         @media screen {
             body { padding: 20px; }
             .page { box-shadow: 0 2px 16px rgba(0, 0, 0, .18); }
+            /* O A4 fixo (297mm) so e reduzido na tela; o script abaixo ajusta o zoom
+               a largura do aparelho e o desfaz antes de imprimir. */
+            .page.escalada { margin: 0; }
         }
 
         .faixas { position: absolute; inset: 0; width: 297mm; height: 210mm; }
 
+        /* Faixa curva do canto inferior direito, como no PPTX: e uma FORMA
+           (custGeom) preenchida pela imagem AMPLIADA alem da moldura (fillRect
+           l=-186.736% t=-25.621% r=-54.409% b=-21.989%), espelhada e girada -90
+           junto com a forma. A moldura recorta (overflow + clip-path da forma);
+           so o trecho da curva que cai dentro dela aparece. */
         .faixa-curva {
             position: absolute;
             left: 180.6mm;
             top: 93.6mm;
             width: 54.3mm;
             height: 178.5mm;
+            overflow: hidden;
+            clip-path: polygon(0% 0.108%, 82.94% 0%, 91.48% 0%, 100% 35.7%, 100% 100%, 1.403% 100%);
             transform: rotate(-90deg) scaleX(-1);
+        }
+
+        .faixa-curva img {
+            position: absolute;
+            left: -186.736%;
+            top: -25.621%;
+            width: 341.145%;
+            height: 147.61%;
+            max-width: none;
         }
 
         .logo {
@@ -178,7 +197,9 @@
         <polygon fill="#F68944" points="19.81,161.63 1.66,171.15 1.66,210 38.06,210 38.06,171.15 19.91,161.63" />
         <polygon fill="#093871" points="26.31,163.63 8.76,173.26 8.76,210 43.96,210 43.96,173.26 26.41,163.63" />
     </svg>
-    <img class="faixa-curva" src="{{ asset('imgs/certificado/faixa-curva.png') }}" alt="">
+    <div class="faixa-curva" aria-hidden="true">
+        <img src="{{ asset('imgs/certificado/faixa-curva.png') }}" alt="">
+    </div>
     <img class="logo" src="{{ asset('imgs/certificado/logo-defesa-civil-mg.png') }}" alt="Defesa Civil - Minas Gerais Sempre Presente">
 
     <div class="titulo">Certificado</div>
@@ -214,7 +235,7 @@
             <p>
                 Participou e concluiu com aproveitamento {{ $artigoCurso }} <strong>{{ $curso }}</strong>{{ $periodo ? ', '.$realizado.' '.$periodo : '' }},
                 com carga horária de {{ $cargaHoraria }} horas{{ $aproveitamento !== null ? ' e aproveitamento de '.number_format($aproveitamento, 1, ',', '.').'%' : '' }},
-                promovido no âmbito das ações de fortalecimento das capacidades institucionais e de desenvolvimento de
+                {{ $promovido }} no âmbito das ações de fortalecimento das capacidades institucionais e de desenvolvimento de
                 competências em Proteção e Defesa Civil.
             </p>
             <p>
@@ -238,6 +259,28 @@
 </div>
 
 <button class="print-btn no-print" onclick="window.print()">Imprimir / Salvar como PDF</button>
+
+<script>
+    // Tela estreita (celular): reduz a pagina A4 para caber na largura, sem rolagem lateral.
+    (function () {
+        var pagina = document.querySelector('.page');
+        function ajustar() {
+            pagina.style.zoom = '';
+            pagina.classList.remove('escalada');
+            if (window.matchMedia('print').matches) return;
+            var disponivel = document.documentElement.clientWidth - 40;
+            var fator = disponivel / pagina.offsetWidth;
+            if (fator < 1) {
+                pagina.style.zoom = fator;
+                pagina.classList.add('escalada');
+            }
+        }
+        window.addEventListener('resize', ajustar);
+        window.addEventListener('beforeprint', function () { pagina.style.zoom = ''; });
+        window.addEventListener('afterprint', ajustar);
+        ajustar();
+    })();
+</script>
 
 </body>
 </html>
