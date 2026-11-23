@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services;
 
 use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Treinamento\Support\OtimizadorDeImagem;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -17,14 +18,18 @@ class CapaDoCursoService
 {
     public const MIMES = ['jpg', 'jpeg', 'png', 'webp'];
 
-    public const TAMANHO_MAXIMO_KB = 2048;
+    /** 10 MB: foto de celular sobe direto; o OtimizadorDeImagem reduz antes de gravar. */
+    public const TAMANHO_MAXIMO_KB = 10240;
 
     public function __construct(private readonly ArquivoCursoService $arquivos) {}
 
     public function trocar(Treinamento $curso, UploadedFile $imagem): void
     {
         $anterior = $curso->capa_path;
-        $nova = $this->arquivos->guardar($imagem, "capas/{$curso->id}")['arquivo_path'];
+        $nova = OtimizadorDeImagem::paraCapa(
+            $imagem,
+            fn (UploadedFile $otimizada) => $this->arquivos->guardar($otimizada, "capas/{$curso->id}")['arquivo_path'],
+        );
 
         $this->gravar($curso, $nova);
         $this->arquivos->apagar($anterior);

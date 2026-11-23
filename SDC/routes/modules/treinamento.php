@@ -30,6 +30,8 @@ use App\Modules\Treinamento\Controllers\TreinamentoIndexController;
 use App\Modules\Treinamento\Controllers\TreinamentoLiberarPresencaController;
 use App\Modules\Treinamento\Controllers\TreinamentoPublicarController;
 use App\Modules\Treinamento\Controllers\TreinamentoShowController;
+use App\Modules\Treinamento\Controllers\Categoria\CapaDeCategoriaDestroyController;
+use App\Modules\Treinamento\Controllers\Categoria\CapaDeCategoriaStoreController;
 use App\Modules\Treinamento\Controllers\TreinamentoStoreController;
 use App\Modules\Treinamento\Controllers\TreinamentoTransicionarStatusController;
 use App\Modules\Treinamento\Controllers\TreinamentoUpdateController;
@@ -64,6 +66,14 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
         ->middleware('permission:treinamento.cursos.view|treinamento.professor.acessar|treinamento.cursos.edit')
         ->whereNumber('treinamento')
         ->name('capa');
+    // Capa das pastas de categoria da vitrine: so quem administra cursos troca.
+    // A imagem em si e servida pela rota publica treinamentos.categorias.capa (web.php).
+    Route::post('/categorias/{categoria}/capa', CapaDeCategoriaStoreController::class)
+        ->middleware('can:treinamento.cursos.edit')
+        ->name('categorias.capa.store');
+    Route::delete('/categorias/{categoria}/capa', CapaDeCategoriaDestroyController::class)
+        ->middleware('can:treinamento.cursos.edit')
+        ->name('categorias.capa.destroy');
 
     require __DIR__ . '/treinamento-aluno.php';
     require __DIR__ . '/treinamento-professor.php';

@@ -46,7 +46,28 @@ require __DIR__ . '/modules/treinamento-validacao.php';
 // RF02 - imagem de divulgacao: publica de proposito (pensada pra ser
 // compartilhada/postada), so exige que o treinamento esteja publicado.
 Route::get('/treinamentos/{treinamento}/divulgacao.png', \App\Modules\Treinamento\Controllers\TreinamentoDivulgacaoImagemController::class)
+    ->middleware('throttle:60,1')
     ->name('treinamentos.divulgacao');
+
+// Capa das pastas de categoria da vitrine de cursos: foto de divulgacao, sem
+// dado pessoal; publica para servir as telas internas e o portal do cidadao.
+// E so imagem: sai da pilha de sessao/cookies/Inertia do grupo web (nao cria
+// sessao por visitante nem monta pagina de erro). Envio e remocao ficam em
+// routes/modules/treinamento.php (com permissao).
+Route::get('/treinamentos/categorias/{categoria}/capa', \App\Modules\Treinamento\Controllers\Categoria\CapaDeCategoriaController::class)
+    ->withoutMiddleware([
+        \App\Http\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \App\Http\Middleware\VerifyCsrfToken::class,
+        \App\Http\Middleware\HandleInertiaRequests::class,
+        \App\Http\Middleware\LogSystemActivity::class,
+        \App\Http\Middleware\CheckUserActive::class,
+        \App\Http\Middleware\EnsurePasswordChanged::class,
+    ])
+    ->middleware('throttle:120,1')
+    ->name('treinamentos.categorias.capa');
 
 Route::middleware('auth')->group(function () {
 
