@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Services;
 use App\Modules\Decretacoes\Services\RedecService;
 use App\Modules\Treinamento\DTOs\IndicadoresFiltroDTO;
 use App\Modules\Treinamento\Enums\NotaAvaliacaoCurso;
+use App\Modules\Treinamento\Enums\NotaRelevanciaCurso;
 use App\Modules\Treinamento\Enums\Sexo;
 use App\Modules\Treinamento\Enums\SituacaoParticipacao;
 use App\Modules\Treinamento\Support\FaixaEtaria;
@@ -34,6 +35,12 @@ final class IndicadoresConsulta
     private const LIMITE_CURSOS = 15;
 
     private const LIMITE_MUNICIPIOS = 20;
+
+    /** Sugestoes mais recentes mostradas no bloco de satisfacao. */
+    private const LIMITE_SUGESTOES = 8;
+
+    /** Comentarios por pagina em "Ver todos os comentarios". */
+    private const COMENTARIOS_POR_PAGINA = 20;
 
     /** Tabela compacta: o painel e de leitura rapida; o relatorio traz tudo. */
     private const POR_PAGINA = 6;
@@ -333,7 +340,7 @@ final class IndicadoresConsulta
                 ] + $contagens + [
                     'taxa_desistencia_pct' => $this->percentual($contagens['desistentes'], $contagens['participantes']),
                     // Satisfacao do mesmo curso no card: le junto com volume e desistencia.
-                    'satisfacao' => $satisfacao[$chave] ?? $this->resumoDeNotas(collect(), true),
+                    'satisfacao' => $satisfacao[$chave] ?? $this->resumoDeNotas(collect(), true) + $this->resumoDeRelevancia(collect(), true) + ['comentarios' => 0],
                 ];
             })
             ->sort(fn ($a, $b) => [$b['participantes'], $a['nome']] <=> [$a['participantes'], $b['nome']])
@@ -425,18 +432,31 @@ final class IndicadoresConsulta
 
         $avaliacoes = $this->avaliacoes();
         $resumo = $this->resumoDeNotas($avaliacoes);
-        $porNota = $avaliacoes->groupBy('nota')->map(fn (Collection $g) => (int) $g->sum('total'));
+        $relevancia = $this->resumoDeRelevancia($avaliacoes);
         $detalhaTurma = $this->filtro->filtraCursoOuTurma();
 
         return $this->satisfacao = $resumo + [
-            'distribuicao' => array_map(fn (NotaAvaliacaoCurso $nota) => [
-                'nota' => $nota->value,
-                'rotulo' => $nota->getLabel(),
-                'total' => (int) ($porNota[$nota->value] ?? 0),
-                'pct' => $this->percentual((int) ($porNota[$nota->value] ?? 0), $resumo['n']),
-            ], NotaAvaliacaoCurso::cases()),
+            'distribuicao' => $this->distribuicaoDeNotas($avaliacoes, 'nota', NotaAvaliacaoCurso::cases(), $resumo['n']),
+            'n_relevancia' => $relevancia['n_relevancia'],
+            'media_relevancia' => $relevancia['media_relevancia'],
+            'comentarios_total' => $this->totalDeComentarios($avaliacoes),
+            'sugestoes' => $this->service->sugestoes($this->filtro, self::LIMITE_SUGESTOES),
+            'distribuicao_relevancia' => $this->distribuicaoDeNotas(
+                $avaliacoes->whereNotNull('nota_relevancia'),
+                'nota_relevancia',
+                NotaRelevanciaCurso::cases(),
+                $relevancia['n_relevancia']
+            ),
             'por_curso' => $detalhaTurma ? [] : collect($this->satisfacaoPorCurso())
-                ->map(fn (array $s) => ['curso_id' => $s['curso_id'], 'nome' => $s['nome'], 'n' => $s['n'], 'media' => $s['media']])
+                ->map(fn (array $s) => [
+                    'curso_id' => $s['curso_id'],
+                    'nome' => $s['nome'],
+                    'n' => $s['n'],
+                    'media' => $s['media'],
+                    'n_relevancia' => $s['n_relevancia'],
+                    'media_relevancia' => $s['media_relevancia'],
+                    'comentarios' => $s['comentarios'],
+                ])
                 ->sort(fn ($a, $b) => [$b['n'], $a['nome']] <=> [$a['n'], $b['nome']])
                 ->values()
                 ->all(),
@@ -446,10 +466,31 @@ final class IndicadoresConsulta
                     'treinamento_id' => $id,
                     'titulo' => $g->first()['titulo'],
                     'versao' => $g->first()['versao'],
-                ] + $this->resumoDeNotas($g))
+                ] + $this->resumoDeNotas($g) + $this->resumoDeRelevancia($g) + ['comentarios' => $this->totalDeComentarios($g)])
                 ->sort(fn ($a, $b) => [$b['n'], $a['titulo']] <=> [$a['n'], $b['titulo']])
                 ->values()
                 ->all(),
+        ];
+    }
+
+    /**
+     * Uma pagina de todos os comentarios do recorte (mais recentes primeiro),
+     * sem identificacao do autor.
+     *
+     * @return array{data: list<array<string, mixed>>, pagina: int, por_pagina: int, total: int, ultima_pagina: int}
+     */
+    public function comentarios(int $pagina): array
+    {
+        $total = $this->service->totalDeSugestoes($this->filtro);
+        $ultima = max(1, (int) ceil($total / self::COMENTARIOS_POR_PAGINA));
+        $pagina = min($pagina, $ultima);
+
+        return [
+            'data' => $this->service->sugestoes($this->filtro, self::COMENTARIOS_POR_PAGINA, $pagina),
+            'pagina' => $pagina,
+            'por_pagina' => self::COMENTARIOS_POR_PAGINA,
+            'total' => $total,
+            'ultima_pagina' => $ultima,
         ];
     }
 
@@ -519,6 +560,62 @@ final class IndicadoresConsulta
     }
 
     /**
+     * Distribuicao de um eixo (nota geral ou relevancia): uma linha por nivel do
+     * enum, com total e percentual sobre $base.
+     *
+     * @param  Collection<int, array<string, mixed>>  $avaliacoes
+     * @param  array<int, NotaAvaliacaoCurso|NotaRelevanciaCurso>  $niveis
+     * @return list<array{nota: int, rotulo: string, total: int, pct: float}>
+     */
+    private function distribuicaoDeNotas(Collection $avaliacoes, string $campo, array $niveis, int $base): array
+    {
+        $porNota = $avaliacoes->groupBy($campo)->map(fn (Collection $g) => (int) $g->sum('total'));
+
+        return array_map(fn ($nivel) => [
+            'nota' => $nivel->value,
+            'rotulo' => $nivel->getLabel(),
+            'total' => (int) ($porNota[$nivel->value] ?? 0),
+            'pct' => $this->percentual((int) ($porNota[$nivel->value] ?? 0), $base),
+        ], $niveis);
+    }
+
+    /**
+     * Relevancia do conteudo (RN17): so as avaliacoes que responderam (as
+     * antigas tem nota_relevancia NULL e ficam fora do n e da media). Com
+     * $comNotas, acrescenta a contagem por nivel para a barrinha do card.
+     *
+     * @param  Collection<int, array<string, mixed>>  $avaliacoes
+     * @return array<string, mixed>
+     */
+    private function resumoDeRelevancia(Collection $avaliacoes, bool $comNotas = false): array
+    {
+        $respondidas = $avaliacoes->whereNotNull('nota_relevancia');
+        $n = (int) $respondidas->sum('total');
+        $soma = $respondidas->sum(fn ($a) => $a['nota_relevancia'] * $a['total']);
+        $resumo = ['n_relevancia' => $n, 'media_relevancia' => $n > 0 ? round($soma / $n, 1) : null];
+
+        if (! $comNotas) {
+            return $resumo;
+        }
+
+        return $resumo + ['notas_relevancia' => array_map(
+            fn (array $linha) => ['nota' => $linha['nota'], 'rotulo' => $linha['rotulo'], 'total' => $linha['total']],
+            $this->distribuicaoDeNotas($respondidas, 'nota_relevancia', NotaRelevanciaCurso::cases(), $n)
+        )];
+    }
+
+    /**
+     * Avaliacoes com sugestao/comentario preenchido (a pergunta 3 do combo;
+     * as antigas ficam sem texto e nao entram).
+     *
+     * @param  Collection<int, array<string, mixed>>  $avaliacoes
+     */
+    private function totalDeComentarios(Collection $avaliacoes): int
+    {
+        return (int) $avaliacoes->sum('comentarios');
+    }
+
+    /**
      * Quantidade de avaliacoes e media das notas (1 casa; null sem avaliacao).
      * Com $comNotas, acrescenta a contagem por nota (1..5), para a barrinha de
      * distribuicao do card de curso.
@@ -558,7 +655,7 @@ final class IndicadoresConsulta
             ->map(fn (Collection $g) => [
                 'curso_id' => $g->first()['curso_id'],
                 'nome' => self::nomeDoCurso($g->first()),
-            ] + $this->resumoDeNotas($g, true))
+            ] + $this->resumoDeNotas($g, true) + $this->resumoDeRelevancia($g, true) + ['comentarios' => $this->totalDeComentarios($g)])
             ->all();
     }
 

@@ -12,6 +12,7 @@ use App\Modules\Treinamento\Models\CredencialConsulta;
 use App\Modules\Treinamento\Models\CredencialQr;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Support\VersoesDoCurso;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -36,10 +37,10 @@ class CredencialQrService
      */
     public function paraServidor(User $servidor): array
     {
-        $credencial = CredencialQr::query()->firstOrCreate(
+        $credencial = $this->semCorrida(fn () => CredencialQr::query()->firstOrCreate(
             ['user_id' => $servidor->getKey()],
             ['token' => $this->novoToken(), 'gerado_em' => now()],
-        );
+        ));
 
         return $this->apresentar($credencial) + ['cpf_mascarado' => $this->mascararCpf((string) $servidor->cpf)];
     }
@@ -49,10 +50,24 @@ class CredencialQrService
      */
     public function regerar(User $servidor): void
     {
-        CredencialQr::query()->updateOrCreate(
+        $this->semCorrida(fn () => CredencialQr::query()->updateOrCreate(
             ['user_id' => $servidor->getKey()],
             ['token' => $this->novoToken(), 'gerado_em' => now()],
-        );
+        ));
+    }
+
+    /**
+     * Cria-ou-le idempotente: duas requisicoes simultaneas (ex.: duas abas no
+     * primeiro acesso) podem tentar inserir o mesmo user_id. A perdedora estoura o
+     * UNIQUE, entao repete a operacao (que agora encontra a linha da vencedora).
+     */
+    private function semCorrida(callable $operacao): CredencialQr
+    {
+        try {
+            return $operacao();
+        } catch (UniqueConstraintViolationException) {
+            return $operacao();
+        }
     }
 
     /**

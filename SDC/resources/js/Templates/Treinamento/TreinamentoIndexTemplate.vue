@@ -13,6 +13,7 @@ import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/Treinament
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon, QrCodeIcon } from '@heroicons/vue/24/outline';
 import { ref } from 'vue';
+import { acoesDeVersao } from '@/Support/atalhoDeVersao';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 
 // Formatador de data seguro (evita Invalid Date em strings já formatadas dd/mm/yyyy)
@@ -72,7 +73,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['create', 'view', 'edit', 'delete', 'filter', 'filter-change', 'filter-reset']);
+const emit = defineEmits(['create', 'view', 'edit', 'delete', 'nova-versao', 'filter', 'filter-change', 'filter-reset']);
 
 const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
@@ -184,6 +185,7 @@ function handleExportCsv(params) {
       @view="emit('view', $event)"
       @edit="emit('edit', $event)"
       @delete="emit('delete', $event)"
+      @nova-versao="emit('nova-versao', $event)"
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
@@ -228,6 +230,7 @@ function handleExportCsv(params) {
                     { action: 'view',   handler: () => emit('view', treinamento.id) },
                     { action: 'edit',   handler: () => emit('edit', treinamento.id),   allowed: canEdit },
                     { action: 'delete', handler: () => emit('delete', treinamento.id), allowed: canDelete },
+                    ...acoesDeVersao(treinamento, (t) => emit('nova-versao', t)),
                   ]"
                 />
               </div>

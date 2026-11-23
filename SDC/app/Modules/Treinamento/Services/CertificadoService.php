@@ -8,14 +8,17 @@ use App\Models\User;
 use App\Modules\Notificacoes\Enums\AcaoTrilha;
 use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Treinamento\Enums\StatusCertificado;
+use App\Modules\Treinamento\Mail\CertificadoDisponivelMail;
 use App\Modules\Treinamento\Models\Certificado;
 use App\Modules\Treinamento\Models\CertificadoInstrutor;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Support\CodigoVerificacao;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
+use App\Modules\Treinamento\Support\VersoesDoCurso;
 use DomainException;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Mail;
 
 class CertificadoService
 {
@@ -54,13 +57,57 @@ class CertificadoService
                 return $certificado;
             }
 
-            if ($certificado->status !== StatusCertificado::GERADO) {
+            $primeiraEmissao = $certificado->status !== StatusCertificado::GERADO;
+
+            if ($primeiraEmissao) {
                 $certificado->aproveitamento = $resultado->aproveitamento;
                 $certificado->marcarComoGerado();
             }
 
-            return $this->garantirCodigo($certificado);
+            $certificado = $this->garantirCodigo($certificado);
+
+            // RN19: so a transicao para GERADO avisa; rodar de novo (job de
+            // rede de seguranca, comando) cai no ramo ja emitido e nao reenvia.
+            if ($primeiraEmissao) {
+                ConexaoTreinamento::conexao()->afterCommit(fn () => $this->avisarDisponibilidade($inscricao, $certificado));
+            }
+
+            return $certificado;
         });
+    }
+
+    /**
+     * Enfileira o e-mail "certificado disponivel" para o inscrito (servidor ou
+     * cidadao) que tem e-mail. Falha de e-mail nunca desfaz a emissao.
+     */
+    private function avisarDisponibilidade(Inscricao $inscricao, Certificado $certificado): void
+    {
+        try {
+            $inscricao->loadMissing(['treinamento', 'inscrito']);
+            $inscrito = $inscricao->inscrito;
+            $email = $inscrito === null ? '' : trim((string) $inscrito->email);
+
+            if ($email === '' || $certificado->codigo_verificacao === null) {
+                return;
+            }
+
+            $treinamento = $inscricao->treinamento;
+            $concluidoEm = $inscricao->concluido_em ?? $certificado->emitido_em ?? now();
+            $urlMeusCursos = $inscrito instanceof User
+                ? route('treinamentos.aluno.index')
+                : route('portal.treinamento.certificados.index');
+
+            Mail::to($email)->queue(new CertificadoDisponivelMail(
+                (string) $inscrito->name,
+                (string) $treinamento->titulo,
+                VersoesDoCurso::rotuloDe($treinamento),
+                $concluidoEm->format('d/m/Y'),
+                $urlMeusCursos,
+                route('certificados.validar', $certificado->codigo_verificacao),
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**

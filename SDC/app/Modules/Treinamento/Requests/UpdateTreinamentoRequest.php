@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Requests;
 
+use App\Modules\Treinamento\Enums\CategoriaTreinamento;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Rules\CursoSemOutroEad;
 use App\Modules\Treinamento\Services\ProfessorService;
+use App\Modules\Treinamento\Support\ClassificacaoDeOferta;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -17,6 +19,25 @@ class UpdateTreinamentoRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()?->can(ProfessorService::PERMISSAO_ADMIN) ?? false;
+    }
+
+    /**
+     * "Com tutoria" so vale para EAD/online. Categoria e tipo podem nao vir na
+     * requisicao (sometimes): vale o que ja esta gravado. Ao virar presencial ou
+     * evento, a opcao e zerada mesmo sem ser enviada.
+     */
+    protected function prepareForValidation(): void
+    {
+        $treinamento = Treinamento::query()->find((int) $this->route('id'));
+
+        $admite = ClassificacaoDeOferta::admiteTutoria(
+            $this->has('categoria') ? CategoriaTreinamento::tryFrom((string) $this->input('categoria')) : $treinamento?->categoria,
+            $this->has('tipo') ? TipoTreinamento::tryFrom((string) $this->input('tipo')) : $treinamento?->tipo,
+        );
+
+        if (! $admite) {
+            $this->merge(['com_tutoria' => false]);
+        }
     }
 
     public function rules(): array
@@ -39,6 +60,8 @@ class UpdateTreinamentoRequest extends FormRequest
             'numero_vagas' => ['nullable', 'integer', 'min:1'],
             'percentual_frequencia_minimo' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'presenca_autoconfirmavel' => ['nullable', 'boolean'],
+            // Turmas com periodo e tutor definidos (categoria "Cursos com tutoria").
+            'com_tutoria' => ['boolean'],
             // Municipio de realizacao (alimenta o painel de indicadores). A tabela
             // municipios fica no banco sdc (conexao padrao), nao no do treinamento.
             'curso_id' => $this->regraDoCurso(),

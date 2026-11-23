@@ -6,6 +6,7 @@ namespace App\Modules\Treinamento\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Enums\StatusInscricao;
+use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Resources\InscricaoResource;
 use App\Modules\Treinamento\Services\InscricaoService;
@@ -25,13 +26,18 @@ class InscricaoIndexController extends Controller
         $filters = $request->only(['status']);
         $inscricoes = $this->inscricaoService->listPorTreinamento($treinamento->id, $filters, 15);
 
+        // Frequencia da pagina em lote (2 consultas), em vez de 3 por inscricao.
+        Inscricao::precarregarFrequencia($inscricoes->getCollection(), $treinamento);
+        $modulos = $treinamento->modulos;
+
         return Inertia::render('Treinamento/Inscricoes/Index', [
             'treinamento' => [
                 'id' => $treinamento->id,
                 'titulo' => $treinamento->titulo,
                 'curso_id' => $treinamento->curso_id,
                 'presenca_liberada' => (bool) $treinamento->presenca_liberada,
-                'modulos' => $treinamento->modulos()->orderBy('ordem')->get(['id', 'titulo'])->map(fn ($m) => [
+                'usa_controle_presenca' => $treinamento->usaControleDePresenca(),
+                'modulos' => $modulos->map(fn ($m) => [
                     'id' => $m->id,
                     'titulo' => $m->titulo,
                 ]),

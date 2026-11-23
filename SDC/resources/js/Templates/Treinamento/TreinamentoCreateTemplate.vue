@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
@@ -9,6 +9,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import MunicipioBuscaSelect from '@/Components/Molecules/Treinamento/MunicipioBuscaSelect.vue';
 import CursoBuscaSelect from '@/Components/Molecules/Treinamento/CursoBuscaSelect.vue';
 import CursoFormModal from '@/Components/Organisms/Treinamento/Catalogo/CursoFormModal.vue';
+import ComTutoriaField from '@/Components/Molecules/Treinamento/ComTutoriaField.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useToast } from '@/Composables/useToast';
 
@@ -55,7 +56,11 @@ const form = useForm({
   numero_vagas: '',
   percentual_frequencia_minimo: 75,
   presenca_autoconfirmavel: false,
+  com_tutoria: false,
 });
+
+// Mesma regra do backend (usaControleDePresenca): o EAD nao tem presenca, exceto na categoria Evento.
+const usaPresenca = computed(() => form.tipo !== 'EAD' || form.categoria === 'EVENTO');
 
 const cursosLista = ref([...props.cursos]);
 const modalCurso = ref(false);
@@ -149,6 +154,13 @@ function cancelar() {
           </div>
         </div>
 
+        <ComTutoriaField
+          v-model="form.com_tutoria"
+          :tipo="form.tipo"
+          :categoria="form.categoria"
+          :erro="form.errors.com_tutoria"
+        />
+
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label class="field-label">Instrutor</label>
@@ -182,12 +194,12 @@ function cancelar() {
         </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
+          <div v-if="usaPresenca">
             <label class="field-label">Horário de Início</label>
             <TextInput v-model="form.hora_inicio" type="time" />
             <p v-if="form.errors.hora_inicio" class="field-error">{{ form.errors.hora_inicio }}</p>
           </div>
-          <div>
+          <div v-if="usaPresenca">
             <label class="field-label">Frequência Mínima (%)</label>
             <TextInput v-model="form.percentual_frequencia_minimo" type="number" />
           </div>
@@ -209,7 +221,7 @@ function cancelar() {
           </span>
         </label>
 
-        <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <label v-if="usaPresenca" class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
           <input type="checkbox" v-model="form.presenca_autoconfirmavel" class="mt-0.5 rounded border-slate-300 dark:border-slate-600" />
           <span>
             Permitir que o próprio inscrito confirme a presença dele

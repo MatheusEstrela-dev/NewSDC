@@ -96,7 +96,8 @@ async function confirmarEnvio() {
 }
 
 onMounted(() => {
-  prova.carregar();
+  // Prova bloqueada so mostra o motivo; carregar a tentativa seria negado pelo servidor.
+  if (props.item.liberado) prova.carregar();
 });
 </script>
 

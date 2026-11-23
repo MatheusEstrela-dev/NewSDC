@@ -83,7 +83,7 @@ class ConteudoCursoService
     }
 
     /**
-     * @param  array<string, mixed>  $dados  tipo, titulo, descricao?, obrigatorio, total_paginas?, nota_minima?, max_tentativas?
+     * @param  array<string, mixed>  $dados  tipo, titulo, descricao?, obrigatorio, total_paginas?, exige_tempo_leitura?, nota_minima?, max_tentativas?
      */
     public function criarItem(Modulo $modulo, array $dados, ?UploadedFile $arquivo): ModuloItem
     {
@@ -104,6 +104,7 @@ class ConteudoCursoService
                 'descricao' => $dados['descricao'] ?? null,
                 'obrigatorio' => $tipo === TipoItem::PROVA || (bool) ($dados['obrigatorio'] ?? true),
                 'total_paginas' => $tipo === TipoItem::PDF ? (int) $dados['total_paginas'] : null,
+                'exige_tempo_leitura' => $this->exigeTempoLeitura($tipo, $dados, true),
                 'ordem' => ((int) $ultimo) + 1,
             ]);
 
@@ -137,6 +138,7 @@ class ConteudoCursoService
             'descricao' => $dados['descricao'] ?? null,
             'obrigatorio' => $item->tipo === TipoItem::PROVA || (bool) ($dados['obrigatorio'] ?? $item->obrigatorio),
             'total_paginas' => $item->tipo === TipoItem::PDF ? (int) $dados['total_paginas'] : null,
+            'exige_tempo_leitura' => $this->exigeTempoLeitura($item->tipo, $dados, $item->exige_tempo_leitura ?? true),
         ]);
 
         // Lido antes de marcarAlterado(), cujo update sobrescreve o wasChanged().
@@ -255,6 +257,23 @@ class ConteudoCursoService
     private function diretorio(Modulo $modulo, ModuloItem $item): string
     {
         return "cursos/{$modulo->treinamento_id}/itens/{$item->id}";
+    }
+
+    /**
+     * Trava de leitura minima por pagina (RN15): so o PDF escolhe; nos demais
+     * tipos a coluna fica no padrao (true), sem efeito. Ausente no envio,
+     * vale o atual (edicao) ou true (criacao). Mudar a trava nao altera o
+     * conteudo: nao marca a copia como alterada.
+     *
+     * @param  array<string, mixed>  $dados
+     */
+    private function exigeTempoLeitura(TipoItem $tipo, array $dados, bool $atual): bool
+    {
+        if ($tipo !== TipoItem::PDF) {
+            return $atual;
+        }
+
+        return (bool) ($dados['exige_tempo_leitura'] ?? $atual);
     }
 
     /**

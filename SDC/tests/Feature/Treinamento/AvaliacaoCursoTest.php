@@ -141,7 +141,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $this->completarTrilha($inscricao, $item);
         $this->logarComo($aluno);
 
-        $this->get(route('treinamentos.aluno.index'))
+        $this->get(route('treinamentos.aluno.index', ['categoria' => 'LIVRE']))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('meus_cursos.0.avaliacao_pendente', true)
@@ -154,7 +154,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $this->assertNotNull($inscricao->fresh()->concluido_em);
         $certificado = Certificado::query()->where('inscricao_id', $inscricao->id)->sole();
 
-        $this->get(route('treinamentos.aluno.index'))
+        $this->get(route('treinamentos.aluno.index', ['categoria' => 'LIVRE']))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('meus_cursos.0.avaliacao_pendente', false)
@@ -293,7 +293,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $inscricao = $this->eventoComFrequencia($curso, $servidor, presente: true, concluirCurso: true);
         $this->logarComo($servidor);
 
-        $this->get(route('treinamentos.aluno.index'))
+        $this->get(route('treinamentos.aluno.index', ['categoria' => 'LIVRE']))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('avaliacoes_pendentes.0.inscricao_id', $inscricao->id)
@@ -305,7 +305,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $certificado = Certificado::query()->where('inscricao_id', $inscricao->id)->sole();
 
         // O certificado do evento aparece em "Meus certificados" e a pendencia some.
-        $this->get(route('treinamentos.aluno.index'))
+        $this->get(route('treinamentos.aluno.index', ['categoria' => 'LIVRE']))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->has('avaliacoes_pendentes', 0)

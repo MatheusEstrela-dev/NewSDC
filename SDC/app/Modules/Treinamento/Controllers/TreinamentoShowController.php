@@ -12,7 +12,7 @@ use App\Modules\Treinamento\Services\CertificadoInstrutorService;
 use App\Modules\Treinamento\Services\InscricaoService;
 use App\Modules\Treinamento\Services\ProfessorService;
 use App\Modules\Treinamento\Services\TreinamentoService;
-use App\Modules\Treinamento\Services\Versoes\NovaVersaoDoCursoService;
+use App\Modules\Treinamento\Support\AtalhoDeNovaVersao;
 use App\Modules\Treinamento\Support\VersoesDoCurso;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,7 +24,7 @@ class TreinamentoShowController extends Controller
         private readonly TreinamentoService $treinamentoService,
         private readonly ProfessorService $professorService,
         private readonly InscricaoService $inscricaoService,
-        private readonly NovaVersaoDoCursoService $versoes,
+        private readonly AtalhoDeNovaVersao $atalhoDeVersao,
         private readonly CertificadoInstrutorService $certificadosInstrutor,
     ) {
     }
@@ -38,10 +38,15 @@ class TreinamentoShowController extends Controller
         }
 
         $user = $request->user();
-        $minhaInscricao = $treinamento->inscricoes
-            ->first(fn ($i) => $i->inscrito_type === $user::class && $i->inscrito_id === $user->id);
+        // So a inscricao de quem esta logado: a lista de inscritos (nome/e-mail/CPF)
+        // nao vai para esta tela, que basta cursos.view.
+        $minhaInscricao = $treinamento->inscricoes()
+            ->where('inscrito_type', $user->getMorphClass())
+            ->where('inscrito_id', $user->getKey())
+            ->with('certificado')
+            ->first();
 
-        $rascunho = $treinamento->isEad() && $treinamento->curso_id ? $this->versoes->rascunhoDe($treinamento->curso_id) : null;
+        $atalho = $this->atalhoDeVersao->para($treinamento, $user);
 
         return Inertia::render('Treinamento/TreinamentoShow', [
             'treinamento' => (new TreinamentoResource($treinamento))->resolve(),
@@ -49,15 +54,11 @@ class TreinamentoShowController extends Controller
             'dataNascimentoPadrao' => $this->inscricaoService->dataNascimentoDaUltimaInscricao($user),
             'professores' => $treinamento->isEad() ? $this->professorService->listar($treinamento) : [],
             'versoes' => $this->versoesDoCurso($treinamento),
-            'rascunho_id' => $rascunho?->id,
+            'rascunho_id' => $atalho['rascunho_id'],
             'certificados_instrutor' => $user->can('treinamento.certificados.download')
                 ? $this->certificadosDeInstrutor($treinamento)
                 : null,
-            'pode_criar_versao' => $treinamento->isEad()
-                && $treinamento->publicado_em !== null
-                && $rascunho === null
-                && $treinamento->eVigente()
-                && $user->can('treinamento.cursos.edit'),
+            'pode_criar_versao' => $atalho['pode_criar_versao'],
             'minhaInscricao' => $minhaInscricao ? [
                 'id' => $minhaInscricao->id,
                 'status' => $minhaInscricao->status->value,

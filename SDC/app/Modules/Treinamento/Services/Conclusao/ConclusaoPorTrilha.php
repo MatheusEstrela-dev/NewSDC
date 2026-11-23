@@ -14,6 +14,8 @@ use App\Modules\Treinamento\Services\Versoes\AproveitamentoDeItens;
 
 /**
  * Curso EAD: inscricao aprovada + todas as pastas concluidas (spec 8.4).
+ * A prova e opcional (RN12): sem prova, conclui ao cumprir a trilha e o
+ * aproveitamento fica nulo; com prova, a nota minima segue valendo na trilha.
  * Aproveitamento = media das notas finais das provas do curso (na atualizacao,
  * as provas aproveitadas entram com a nota da inscricao de origem).
  *

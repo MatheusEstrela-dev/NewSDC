@@ -61,12 +61,21 @@ const concluido = computed(() => props.modo === 'inscrito' && props.curso.aprova
   && (props.curso.concluido ?? Math.round(props.curso.percentual) >= 100));
 const avaliacaoPendente = computed(() => props.modo === 'inscrito' && props.curso.avaliacao_pendente === true);
 
+// O card tambem mostra presencial/semipresencial/online/evento (Area do Gestor):
+// a modalidade vem do backend (eh_ead/tipo_label) em vez do "EAD" fixo.
+const modalidade = computed(() => (props.curso.eh_ead === false ? (props.curso.tipo_label || 'Presencial') : 'EAD'));
+const natureza = computed(() => (props.curso.categoria_oferta === 'EVENTO' ? 'Evento' : 'Capacitação'));
+
 const selo = computed(() => {
   if (concluido.value) return { texto: 'Concluído', classe: 'bg-emerald-500 text-white' };
   if (avaliacaoPendente.value) return { texto: 'Avaliação pendente', classe: 'bg-amber-400 text-slate-900' };
   if (props.curso.situacao === 'PAUSADO') return { texto: 'Pausado', classe: 'bg-amber-400 text-slate-900' };
   if (props.curso.situacao === 'DESATIVADO') return { texto: 'Encerrado', classe: 'bg-slate-500 text-white' };
   if (props.modo === 'professor') {
+    // Presencial/evento nao tem rascunho de conteudo: o selo e o status da turma.
+    if (props.curso.eh_ead === false) {
+      return { texto: props.curso.status_label || 'Planejado', classe: 'bg-sky-500 text-white' };
+    }
     return props.curso.publicado
       ? { texto: 'Publicado', classe: 'bg-emerald-500 text-white' }
       : { texto: 'Rascunho', classe: 'bg-slate-500 text-white' };
@@ -87,7 +96,7 @@ const selo = computed(() => {
         <div class="absolute -right-6 -bottom-8 h-36 w-36 rounded-full bg-white/10 blur-xl" />
         <component :is="icone" class="absolute right-5 top-1/2 h-20 w-20 -translate-y-1/2 text-white/80 drop-shadow-lg transition-transform duration-300 group-hover:scale-110" />
         <div class="absolute bottom-3 left-4 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/80">
-          <span class="rounded bg-white/15 px-1.5 py-0.5">EAD</span>
+          <span class="rounded bg-white/15 px-1.5 py-0.5">{{ modalidade }}</span>
           <span>SDC MG · CEDEC</span>
         </div>
       </div>
@@ -108,9 +117,9 @@ const selo = computed(() => {
     <div class="flex flex-1 flex-col p-4">
       <p class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
         <BookOpenIcon class="h-4 w-4" />
-        <span>Curso</span>
+        <span>{{ natureza }}</span>
         <span class="text-slate-300 dark:text-slate-600">|</span>
-        <span class="truncate">EAD{{ curso.instrutor ? `, conduzido por ${curso.instrutor}` : '' }}</span>
+        <span class="truncate">{{ modalidade }}{{ curso.instrutor ? `, conduzido por ${curso.instrutor}` : '' }}</span>
       </p>
 
       <h3 class="mt-2 text-base font-bold leading-snug text-slate-900 dark:text-white">{{ curso.titulo }}</h3>

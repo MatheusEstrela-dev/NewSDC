@@ -11,11 +11,14 @@ import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesC
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
+import DocumentDuplicateIcon from '@/Components/Icons/DocumentDuplicateIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import TreinamentoHeader from '@/Components/Treinamento/TreinamentoHeader.vue';
 import TreinamentoTabs from '@/Components/Treinamento/TreinamentoTabs.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { usePermissions } from '@/Composables/usePermissions';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 import { useToast } from '@/Composables/useToast';
 import { useTabs } from '@/Composables/core/useTabs';
 import { router, Link } from '@inertiajs/vue3';
@@ -70,6 +73,7 @@ useCursosAoVivo(['treinamento', 'minhaInscricao', 'professores', 'versoes', 'pod
 const { can } = usePermissions();
 const { show: toast } = useToast();
 const tabs = useTabs('detalhes');
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 
 const tabConfig = computed(() => [
   { id: 'detalhes', label: 'Detalhes', icon: DocumentTextIcon },
@@ -92,17 +96,18 @@ const formatDate = (dateValue) => {
   return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 };
 
+// successMessage null = sem toast local (o flash do servidor já informa o resultado).
 function postAction(url, data = {}, successMessage = 'Feito.') {
   router.post(route(url, props.treinamento.id), data, {
     preserveScroll: true,
-    onSuccess: () => toast(successMessage, 'success'),
-    onError: (errors) => toast(Object.values(errors)[0] || 'Nao foi possivel concluir a acao.', 'error'),
+    onSuccess: () => { if (successMessage) toast(successMessage, 'success'); },
+    onError: (errors) => toast(Object.values(errors)[0] || 'Não foi possível concluir a ação.', 'error'),
   });
 }
 
 const modalInscricao = ref(false);
 const inscreverSe = (perfil) => {
-  postAction('treinamentos.inscrever', perfil, 'Inscricao realizada! Aguarde a aprovacao.');
+  postAction('treinamentos.inscrever', perfil, null);
   modalInscricao.value = false;
 };
 
@@ -114,10 +119,33 @@ const confirmarPresenca = () => {
   });
 };
 const criarVersao = () => postAction('treinamentos.versoes.store', {}, 'Nova versão criada.');
-const publicar = () => postAction('treinamentos.publicar', {}, 'Treinamento publicado no Portal do Cidadao!');
+const publicar = () => postAction('treinamentos.publicar', {}, 'Treinamento publicado no Portal do Cidadão!');
 const liberarPresenca = () => postAction('treinamentos.liberar-presenca', {}, 'Presenca liberada.');
 const bloquearPresenca = () => postAction('treinamentos.bloquear-presenca', {}, 'Presenca bloqueada.');
 const transicionar = (status) => postAction('treinamentos.status', { status }, 'Status atualizado.');
+
+const confirmarFinalizar = () => pedirConfirmacao({
+  title: 'Finalizar treinamento',
+  message: `Finalizar "${props.treinamento.titulo}"?`,
+  description: 'O treinamento passa a Concluído e deixa de receber inscrições e presenças.',
+  variant: 'warning',
+  confirmText: 'Finalizar',
+  cancelText: 'Voltar',
+}, () => transicionar('CONCLUIDO'));
+
+const confirmarCancelar = () => pedirConfirmacao({
+  title: 'Cancelar treinamento',
+  message: `Cancelar "${props.treinamento.titulo}"?`,
+  description: 'O cancelamento fica registrado no histórico e não pode ser desfeito por esta tela.',
+  variant: 'danger',
+  confirmText: 'Cancelar treinamento',
+  cancelText: 'Voltar',
+}, () => transicionar('CANCELADO'));
+
+// O EAD publica pelo conteúdo do curso (item, prova e notas da versão são conferidos lá).
+const ehEad = computed(() => props.treinamento.tipo === 'EAD');
+// Link e selo do Portal do Cidadão só fazem sentido em curso de cidadãos (o de servidores não tem página pública).
+const publicoCidadao = computed(() => props.treinamento.publico_alvo === 'CIDADAOS');
 
 const podeTransicionarPara = (status) => (props.treinamento.status_transicoes || []).includes(status);
 
@@ -174,7 +202,18 @@ function adicionarProfessor(userId) {
   });
 }
 
-function removerProfessor(userId) {
+function removerProfessor(professor) {
+  pedirConfirmacao({
+    title: 'Remover professor',
+    message: `Remover ${professor.name} dos professores deste curso?`,
+    description: 'Ele perde o acesso à área do professor deste curso.',
+    variant: 'danger',
+    confirmText: 'Remover',
+    cancelText: 'Voltar',
+  }, () => removerProfessorConfirmado(professor.id));
+}
+
+function removerProfessorConfirmado(userId) {
   router.delete(route('treinamentos.professores.destroy', [props.treinamento.id, userId]), {
     preserveScroll: true,
     onSuccess: () => toast('Professor removido.', 'success'),
@@ -195,6 +234,27 @@ function copiarLinkPublico() {
     <div class="treinamento-show-container">
       <TreinamentoHeader :treinamento="treinamento" />
 
+      <!-- Nova versao (RN07): destaque no topo, antes das demais acoes. -->
+      <div v-if="pode_criar_versao || (rascunho_id && can('treinamento.cursos.edit'))" class="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950/40">
+        <DocumentDuplicateIcon class="h-6 w-6 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+        <div class="min-w-0 flex-1">
+          <Text size="sm" class="font-semibold">Nova versão do curso</Text>
+          <Text size="xs" color="muted">
+            {{ pode_criar_versao ? 'Crie uma nova versão para atualizar o conteúdo sem alterar a versão em andamento.' : 'Há um rascunho de nova versão em edição.' }}
+          </Text>
+        </div>
+        <Button v-if="pode_criar_versao" variant="primary" size="sm" @click="criarVersao">
+          <DocumentDuplicateIcon class="mr-1.5 h-4 w-4" aria-hidden="true" />
+          Nova versão
+        </Button>
+        <Link v-else :href="route('treinamentos.professor.conteudo', rascunho_id)">
+          <Button variant="primary" size="sm">
+            <DocumentDuplicateIcon class="mr-1.5 h-4 w-4" aria-hidden="true" />
+            Continuar rascunho da nova versão
+          </Button>
+        </Link>
+      </div>
+
       <!-- Ações de fluxo (admin) -->
       <div class="mb-6 flex flex-wrap gap-2">
         <!-- Gestao do curso (issue #86): vale para qualquer modalidade. O EAD
@@ -211,28 +271,27 @@ function copiarLinkPublico() {
           <CursoSelos :publicado="treinamento.esta_publicado" :situacao="treinamento.situacao" :situacao-label="treinamento.situacao_label" />
           <AcoesCicloCurso :curso="treinamento" />
         </template>
-        <Button v-if="pode_criar_versao" variant="primary" size="sm" @click="criarVersao">
-          Nova versão
-        </Button>
-        <Link v-else-if="rascunho_id && can('treinamento.cursos.edit')" :href="route('treinamentos.professor.conteudo', rascunho_id)">
-          <Button variant="secondary" size="sm">Continuar rascunho da nova versão</Button>
-        </Link>
-        <Button v-if="can('treinamento.cursos.configurar') && !treinamento.esta_publicado" variant="secondary" size="sm" @click="publicar">
-          Publicar no Portal
-        </Button>
+        <template v-if="can('treinamento.cursos.configurar') && !treinamento.esta_publicado">
+          <Link v-if="ehEad" :href="route('treinamentos.professor.conteudo', treinamento.id)">
+            <Button variant="secondary" size="sm">Publicar pelo conteúdo do curso</Button>
+          </Link>
+          <Button v-else variant="secondary" size="sm" @click="publicar">
+            Publicar no Portal
+          </Button>
+        </template>
         <Button v-if="can('treinamento.cursos.configurar') && podeTransicionarPara('EM_ANDAMENTO')" variant="primary" size="sm" @click="transicionar('EM_ANDAMENTO')">
           Iniciar Treinamento
         </Button>
-        <Button v-if="can('treinamento.cursos.configurar') && podeTransicionarPara('CONCLUIDO')" variant="success" size="sm" @click="transicionar('CONCLUIDO')">
+        <Button v-if="can('treinamento.cursos.configurar') && podeTransicionarPara('CONCLUIDO')" variant="success" size="sm" @click="confirmarFinalizar">
           Finalizar Treinamento
         </Button>
-        <Button v-if="can('treinamento.cursos.cancelar') && podeTransicionarPara('CANCELADO')" variant="danger" size="sm" @click="transicionar('CANCELADO')">
+        <Button v-if="can('treinamento.cursos.cancelar') && podeTransicionarPara('CANCELADO')" variant="danger" size="sm" @click="confirmarCancelar">
           Cancelar Treinamento
         </Button>
-        <Button v-if="can('treinamento.presencas.registrar') && !treinamento.presenca_liberada" variant="secondary" size="sm" @click="liberarPresenca">
+        <Button v-if="treinamento.usa_controle_presenca && can('treinamento.presencas.registrar') && !treinamento.presenca_liberada" variant="secondary" size="sm" @click="liberarPresenca">
           Liberar Presença (check-in)
         </Button>
-        <Button v-if="can('treinamento.presencas.registrar') && treinamento.presenca_liberada" variant="secondary" size="sm" @click="bloquearPresenca">
+        <Button v-if="treinamento.usa_controle_presenca && can('treinamento.presencas.registrar') && treinamento.presenca_liberada" variant="secondary" size="sm" @click="bloquearPresenca">
           Bloquear Presença
         </Button>
         <Link v-if="can('treinamento.inscricoes.view')" :href="route('treinamentos.inscricoes.index', treinamento.id)">
@@ -249,8 +308,11 @@ function copiarLinkPublico() {
           <!-- Aba: Detalhes -->
           <div v-if="activeTab === 'detalhes'" class="space-y-6">
             <div v-if="treinamento.esta_publicado" class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <span>Publicado no Portal do Cidadão</span>
-              <button type="button" class="text-blue-600 hover:underline dark:text-blue-400" @click="copiarLinkPublico">copiar link público</button>
+              <template v-if="publicoCidadao">
+                <span>Publicado no Portal do Cidadão</span>
+                <button type="button" class="text-blue-600 hover:underline dark:text-blue-400" @click="copiarLinkPublico">copiar link público</button>
+              </template>
+              <span v-else>Publicado</span>
             </div>
 
             <div v-if="treinamento.tipo === 'EAD'" class="relative aspect-[16/6] w-full max-w-xl overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
@@ -323,7 +385,7 @@ function copiarLinkPublico() {
                 </Text>
               </div>
 
-              <div>
+              <div v-if="treinamento.usa_controle_presenca">
                 <Text size="sm" color="muted" class="mb-1">Frequência Mínima</Text>
                 <Text size="base" class="font-medium">{{ treinamento.percentual_frequencia_minimo }}%</Text>
               </div>
@@ -355,7 +417,7 @@ function copiarLinkPublico() {
                 {{ minhaInscricao.status_label }}
               </Badge>
               <Button
-                v-if="minhaInscricao.status === 'APROVADA' && (treinamento.tipo === 'ONLINE' || treinamento.presenca_autoconfirmavel) && treinamento.presenca_liberada"
+                v-if="treinamento.usa_controle_presenca && minhaInscricao.status === 'APROVADA' && (treinamento.tipo === 'ONLINE' || treinamento.presenca_autoconfirmavel) && treinamento.presenca_liberada"
                 variant="success"
                 size="sm"
                 @click="confirmarPresenca"
@@ -387,6 +449,13 @@ function copiarLinkPublico() {
         </template>
       </TreinamentoTabs>
 
+      <ConfirmDialog
+        :is-open="confirmacao.aberto"
+        v-bind="confirmacao.opcoes"
+        @confirm="confirmar"
+        @cancel="cancelar"
+      />
+
       <InscricaoSexoModal
         :show="modalInscricao"
         :titulo="treinamento.titulo"
@@ -410,7 +479,7 @@ function copiarLinkPublico() {
             class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
           >
             <Text size="sm" class="font-medium">{{ professor.name }}</Text>
-            <Button v-if="can('treinamento.cursos.configurar')" variant="danger" size="sm" @click="removerProfessor(professor.id)">
+            <Button v-if="can('treinamento.cursos.configurar')" variant="danger" size="sm" @click="removerProfessor(professor)">
               Remover
             </Button>
           </li>

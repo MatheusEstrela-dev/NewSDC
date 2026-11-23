@@ -91,7 +91,7 @@
 	# mailcap do Alpine ainda tipa .ts como text/vnd.trolltech.linguist (text/*
 	# entra na compressao por padrao), por isso a exclusao e explicita.
 	# A playlist .m3u8 segue comprimivel.
-	@comprimivel not path *.ts
+	@comprimivel not path *.ts /geo/*
 	encode @comprimivel zstd gzip
 
 	# Reverb (websocket). Mesma rota da producao: o handshake do
@@ -116,6 +116,35 @@
 	@api_integracao path /api/v1/integracao/* /api/v1/bi/* /api/v1/rat/protocolos* /api/v1/inventario /api/v1/inventario/* /api/v1/estoque/movimentacoes /api/v1/pae/empreendimentos* /api/v1/pae/notificacoes/* /api/v1/rat-novo* /api/v1/rat/ocorrencias* /api/v1/decretacoes/receive /api/v1/decretacoes/export/* /api/v1/decretacoes/traces/* /api/v1/tdap/* /api/v1/ajuda-humanitaria/liberacoes/cedec /api/v1/ajuda-humanitaria/pedidos/consolidado /api/v1/cisternas/beneficiarios/export
 	reverse_proxy @api_integracao {
 		import lb_homolog api_integracao
+	}
+
+	# Estaticos do front. Quem os entrega e o Octane (Swoole), que nao manda
+	# Cache-Control nem ETag: sem isto o navegador rebaixa o bundle a cada F5.
+	# /build/* tem hash no nome (o conteudo nunca muda sob o mesmo nome): cache
+	# anual imutavel. O ">" adia o header para depois da resposta do upstream.
+	@build path /build/*
+	handle @build {
+		header >Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy {
+			import lb_homolog app
+		}
+	}
+
+	# GeoJSON dos municipios (500 KB): o Octane o serve como octet-stream, sem
+	# cache e sem compressao. Tipo correto, cache de 1 dia e encode proprio
+	# (o tipo geo+json fora da lista padrao do encode).
+	@geo path /geo/*
+	handle @geo {
+		encode zstd gzip {
+			match {
+				header Content-Type application/geo+json*
+			}
+		}
+		header >Content-Type "application/geo+json"
+		header >Cache-Control "public, max-age=86400"
+		reverse_proxy {
+			import lb_homolog app
+		}
 	}
 
 	# Videos do EAD: o Caddy entrega do volume, o Octane so autoriza (204/403).

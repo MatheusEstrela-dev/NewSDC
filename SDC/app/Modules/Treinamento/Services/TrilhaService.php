@@ -84,15 +84,7 @@ class TrilhaService
      */
     public function estadosEmLote(Treinamento $treinamento, Collection $inscricoes, array $situacoesPorInscricao): array
     {
-        $ids = $inscricoes->modelKeys();
-        $pastas = $this->pastasDoCurso($treinamento->id);
-        $lote = [
-            'pastas' => $pastas,
-            'em_preparacao' => $this->provasEmPreparacao($pastas),
-            'progressos' => ProgressoItem::query()->whereIn('inscricao_id', $ids)->get()->groupBy('inscricao_id'),
-            'gravadas' => ProgressoPasta::query()->whereIn('inscricao_id', $ids)->get(['inscricao_id', 'modulo_id'])->groupBy('inscricao_id'),
-            'entregas' => ProjetoEntrega::query()->whereIn('inscricao_id', $ids)->orderByDesc('id')->get()->groupBy('inscricao_id'),
-        ];
+        $lote = $this->carregarLote($inscricoes->modelKeys(), $this->pastasDoCurso($treinamento->id));
 
         $estados = [];
         foreach ($inscricoes as $inscricao) {
@@ -100,6 +92,60 @@ class TrilhaService
         }
 
         return $estados;
+    }
+
+    /**
+     * Estado de inscricoes de CURSOS DIFERENTES (lista do aluno/cidadao) sem
+     * N+1: pastas e itens de todos os cursos em uma consulta, e progresso,
+     * pastas gravadas, entregas e provas-em-preparacao uma vez para todas as
+     * inscricoes. So a situacao das provas segue por curso.
+     *
+     * @param  Collection<int, Inscricao>  $inscricoes
+     * @return array<int, EstadoTrilha> por inscricao_id
+     */
+    public function estadosDeInscricoes(Collection $inscricoes): array
+    {
+        if ($inscricoes->isEmpty()) {
+            return [];
+        }
+
+        $pastasPorCurso = Modulo::query()
+            ->whereIn('treinamento_id', $inscricoes->pluck('treinamento_id')->unique()->all())
+            ->ordenados()
+            ->with('itens.video')
+            ->get()
+            ->groupBy('treinamento_id');
+        $base = $this->carregarLote($inscricoes->modelKeys(), $pastasPorCurso->flatten(1));
+
+        $estados = [];
+        foreach ($inscricoes->groupBy('treinamento_id') as $treinamentoId => $doCurso) {
+            $lote = ['pastas' => $pastasPorCurso->get($treinamentoId, collect())] + $base;
+            $situacoes = $this->provas->porInscricoes((int) $treinamentoId, $doCurso->modelKeys());
+            foreach ($doCurso as $inscricao) {
+                $estados[$inscricao->id] = $this->estado($inscricao, $situacoes[$inscricao->id] ?? [], $lote);
+            }
+        }
+
+        return $estados;
+    }
+
+    /**
+     * Consultas compartilhadas do lote: progresso, pastas gravadas e entregas
+     * das inscricoes (uma consulta cada) e as provas em preparacao das pastas.
+     *
+     * @param  list<int>  $ids  inscricao_id
+     * @param  Collection<int, Modulo>  $pastas
+     * @return array<string, mixed>
+     */
+    private function carregarLote(array $ids, Collection $pastas): array
+    {
+        return [
+            'pastas' => $pastas,
+            'em_preparacao' => $this->provasEmPreparacao($pastas),
+            'progressos' => ProgressoItem::query()->whereIn('inscricao_id', $ids)->get()->groupBy('inscricao_id'),
+            'gravadas' => ProgressoPasta::query()->whereIn('inscricao_id', $ids)->get(['inscricao_id', 'modulo_id'])->groupBy('inscricao_id'),
+            'entregas' => ProjetoEntrega::query()->whereIn('inscricao_id', $ids)->orderByDesc('id')->get()->groupBy('inscricao_id'),
+        ];
     }
 
     /**

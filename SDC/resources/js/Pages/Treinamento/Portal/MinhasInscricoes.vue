@@ -74,8 +74,8 @@ const formatDate = (dateValue) => {
           </div>
         </div>
 
-        <div class="mt-3 flex items-center gap-4">
-          <Text size="xs" color="muted">Frequência: {{ inscricao.percentual_frequencia?.toFixed(0) ?? 0 }}%</Text>
+        <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Text v-if="!salas[inscricao.id]" size="xs" color="muted">Frequência: {{ inscricao.percentual_frequencia?.toFixed(0) ?? 0 }}%</Text>
           <a
             v-if="inscricao.certificado?.disponivel"
             :href="route('portal.treinamento.certificados.imprimir', inscricao.certificado.id)"
@@ -87,14 +87,14 @@ const formatDate = (dateValue) => {
           <Link
             v-if="salas[inscricao.id]?.avaliacao_pendente"
             :href="salas[inscricao.id].sala_url"
-            class="text-xs font-semibold text-amber-700 hover:underline dark:text-amber-400"
+            class="inline-flex min-h-[44px] items-center text-xs font-semibold text-amber-700 hover:underline dark:text-amber-400 sm:min-h-0"
           >
             Avalie o curso para concluir ({{ Math.round(salas[inscricao.id].percentual) }}%)
           </Link>
           <Link
             v-else-if="salas[inscricao.id]"
             :href="salas[inscricao.id].sala_url"
-            class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+            class="inline-flex min-h-[44px] items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:min-h-0 sm:py-1.5"
           >
             Abrir curso ({{ Math.round(salas[inscricao.id].percentual) }}%)
           </Link>

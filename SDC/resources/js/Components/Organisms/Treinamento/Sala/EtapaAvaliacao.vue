@@ -6,7 +6,7 @@
  * BLOQUEADA  cadeado: a avaliacao so abre com a trilha completa.
  * LIBERADA   card de avaliacao; enviar conclui o curso e emite o certificado.
  *            No legado (concluido antes da regra) a avaliacao e opcional.
- * ENVIADA    parabens, a nota dada e o certificado.
+ * ENVIADA    parabens, as respostas dadas e o certificado.
  */
 import { computed } from 'vue';
 import { CheckBadgeIcon, LockClosedIcon, PrinterIcon, SparklesIcon } from '@heroicons/vue/24/outline';
@@ -114,6 +114,13 @@ const legado = computed(() => props.avaliacaoFinal?.concluido === true && props.
         :class="CORES_SELO[avaliacao.nota_color] ?? CORES_SELO.slate"
       >
         Sua avaliação: {{ avaliacao.nota }} · {{ avaliacao.nota_label }}
+      </span>
+      <span
+        v-if="avaliacao?.nota_relevancia"
+        class="mt-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+        :class="CORES_SELO[avaliacao.nota_relevancia_color] ?? CORES_SELO.slate"
+      >
+        Relevância do conteúdo: {{ avaliacao.nota_relevancia }} · {{ avaliacao.nota_relevancia_label }}
       </span>
 
       <div class="mt-5">

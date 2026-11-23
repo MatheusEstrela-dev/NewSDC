@@ -34,8 +34,10 @@ class IndicadoresController extends Controller
         return Inertia::render('Treinamento/Indicadores/Index', [
             'filtros' => fn () => $filtro->toArray(),
             'opcoes' => fn () => $consulta->opcoes(),
-            // Todos os municipios de MG, sem filtro: a tela nao pede de novo ao filtrar.
-            'territorio' => fn () => $consulta->territorio(),
+            // Todos os municipios de MG, sem filtro: lazy, a tela pede uma vez quando o mapa entra na tela.
+            'territorio' => Inertia::lazy(fn () => $consulta->territorio()),
+            // "Ver todos os comentarios": pagina (?comentarios_pagina=N) no mesmo recorte; sem autor.
+            'comentarios' => Inertia::lazy(fn () => $consulta->comentarios(max(1, (int) $request->query('comentarios_pagina', 1)))),
             'kpis' => fn () => $consulta->kpis(),
             'mapa' => fn () => $consulta->mapa(),
             'semMunicipio' => fn () => $consulta->semMunicipio(),

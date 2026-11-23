@@ -115,13 +115,16 @@ Route::prefix('professor')->name('professor.')->middleware('permission:treinamen
     });
 });
 
-// Pausa e retomada: professor designado ou admin (que nao precisa da area do
-// professor). Issue #86 mantem a pausa com quem conduz a turma -- e reversivel
-// e nao encerra nada.
-Route::prefix('professor')->name('professor.')->middleware('gerencia.ciclo.curso')->group(function () {
-    Route::post('/{treinamento}/pausar', CursoPausarController::class)->name('pausar');
-    Route::post('/{treinamento}/retomar', CursoRetomarController::class)->name('retomar');
-});
+// Pausa e retomada: RN04 restringe a chefia. Alem de `gerencia.ciclo.curso`
+// (que mantem o 404 para curso nao-EAD), exige `treinamento.cursos.pausar`:
+// professor designado sem o slug recebe 403. Substitui a regra da issue #86,
+// que deixava a pausa com quem conduz a turma. Nao encerra nada (reversivel).
+Route::prefix('professor')->name('professor.')
+    ->middleware(['gerencia.ciclo.curso', 'can:treinamento.cursos.pausar'])
+    ->group(function () {
+        Route::post('/{treinamento}/pausar', CursoPausarController::class)->name('pausar');
+        Route::post('/{treinamento}/retomar', CursoRetomarController::class)->name('retomar');
+    });
 
 // Desativar e reativar: issue #86 trata a desativacao como ENCERRAMENTO do
 // curso, ao lado do cancelamento. Alem de `gerencia.ciclo.curso` (que mantem o

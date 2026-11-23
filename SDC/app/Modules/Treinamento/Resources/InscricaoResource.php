@@ -12,6 +12,8 @@ class InscricaoResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $percentual = $this->calcularPercentualFrequencia();
+
         return [
             'id' => $this->id,
             'treinamento_id' => $this->treinamento_id,
@@ -33,8 +35,8 @@ class InscricaoResource extends JsonResource
             'inscrito_nome' => $this->whenLoaded('inscrito', fn () => $this->inscrito?->name),
             'inscrito_email' => $this->whenLoaded('inscrito', fn () => $this->inscrito?->email),
             'inscrito_cpf' => $this->whenLoaded('inscrito', fn () => $this->inscrito?->cpf),
-            'percentual_frequencia' => $this->calcularPercentualFrequencia(),
-            'aprovado_por_frequencia' => $this->estaAprovadoPorFrequencia(),
+            'percentual_frequencia' => $percentual,
+            'aprovado_por_frequencia' => $this->percentualAprovaPorFrequencia($percentual),
             'certificado' => $this->whenLoaded('certificado', fn () => $this->certificado ? new CertificadoResource($this->certificado) : null),
         ];
     }

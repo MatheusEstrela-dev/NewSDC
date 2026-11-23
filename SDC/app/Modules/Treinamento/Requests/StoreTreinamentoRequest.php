@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Requests;
 
+use App\Modules\Treinamento\Enums\CategoriaTreinamento;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Rules\CursoSemOutroEad;
+use App\Modules\Treinamento\Support\ClassificacaoDeOferta;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -15,6 +17,19 @@ class StoreTreinamentoRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()?->can('treinamento.cursos.create') ?? false;
+    }
+
+    /** "Com tutoria" so vale para EAD/online: nos demais e gravado como false. */
+    protected function prepareForValidation(): void
+    {
+        $admite = ClassificacaoDeOferta::admiteTutoria(
+            CategoriaTreinamento::tryFrom((string) $this->input('categoria')),
+            TipoTreinamento::tryFrom((string) $this->input('tipo')),
+        );
+
+        if (! $admite) {
+            $this->merge(['com_tutoria' => false]);
+        }
     }
 
     public function rules(): array
@@ -37,6 +52,8 @@ class StoreTreinamentoRequest extends FormRequest
             'numero_vagas' => ['nullable', 'integer', 'min:1'],
             'percentual_frequencia_minimo' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'presenca_autoconfirmavel' => ['nullable', 'boolean'],
+            // Turmas com periodo e tutor definidos (categoria "Cursos com tutoria").
+            'com_tutoria' => ['boolean'],
             // Municipio de realizacao (alimenta o painel de indicadores). A tabela
             // municipios fica no banco sdc (conexao padrao), nao no do treinamento.
             // Curso do catalogo (banco do treinamento): obrigatorio e ativo.

@@ -18,13 +18,14 @@ class TreinamentoService extends BaseService
 {
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Treinamento::query()->with(['modulos']);
+        // withCount: vagas_disponiveis/total_inscricoes/podeReceberInscricao da linha
+        // leem o count da consulta em vez de um count por curso.
+        $query = Treinamento::query()
+            ->with(['modulos'])
+            ->withCount(['inscricoes', 'inscricoesAprovadas']);
 
         if (!empty($filters['search'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('titulo', 'like', "%{$filters['search']}%")
-                  ->orWhere('descricao', 'like', "%{$filters['search']}%");
-            });
+            $query->buscarTexto((string) $filters['search'], ['titulo', 'descricao']);
         }
 
         if (!empty($filters['status'])) {
@@ -59,9 +60,11 @@ class TreinamentoService extends BaseService
 
     public function findById(int $id): ?Treinamento
     {
-        // Nota: `frequencias` pertence a Modulo, nao a Treinamento diretamente
-        // (bug pre-existente aqui tentava eager-load de uma relacao inexistente).
-        return Treinamento::with(['curso', 'modulos.frequencias', 'inscricoes.inscrito', 'inscricoes.certificado'])->find($id);
+        // Sem `inscricoes`: a tela do curso nao lista inscritos (LGPD e N+1); quem
+        // precisa deles usa a pagina de inscricoes, que exige treinamento.inscricoes.view.
+        return Treinamento::with(['curso', 'modulos'])
+            ->withCount(['inscricoes', 'inscricoesAprovadas'])
+            ->find($id);
     }
 
     public function create(array $data): Treinamento
@@ -167,6 +170,8 @@ class TreinamentoService extends BaseService
 
     public function liberarPresenca(Treinamento $treinamento, User $por): void
     {
+        $this->exigirControleDePresenca($treinamento);
+
         if (!$treinamento->status->podeRegistrarFrequencia()) {
             throw new \DomainException('So e possivel liberar a presenca de um treinamento Em Andamento.');
         }
@@ -176,7 +181,16 @@ class TreinamentoService extends BaseService
 
     public function bloquearPresenca(Treinamento $treinamento): void
     {
+        $this->exigirControleDePresenca($treinamento);
+
         $treinamento->bloquearPresenca();
+    }
+
+    private function exigirControleDePresenca(Treinamento $treinamento): void
+    {
+        if (!$treinamento->usaControleDePresenca()) {
+            throw new \DomainException('Cursos EAD nao usam controle de presenca: a conclusao segue o progresso na trilha.');
+        }
     }
 
     public function transicionarStatus(Treinamento $treinamento, StatusTreinamento $novoStatus): void

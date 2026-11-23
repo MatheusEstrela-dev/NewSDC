@@ -105,16 +105,50 @@ class Inscricao extends Model
 
     // Business Logic
 
+    /** Presencas contadas em lote por precarregarFrequencia (evita 1 count por inscricao). */
+    private ?int $presencasPrecarregadas = null;
+
+    /**
+     * Prepara as inscricoes de UM treinamento para o calculo de frequencia sem
+     * N+1: treinamento (com modulos) e presencas de todas entram em 2 consultas,
+     * em vez de 3 por inscricao.
+     *
+     * @param  iterable<int, Inscricao>  $inscricoes
+     */
+    public static function precarregarFrequencia(iterable $inscricoes, Treinamento $treinamento): void
+    {
+        $treinamento->loadMissing('modulos');
+        $lista = collect($inscricoes);
+
+        $presencas = $lista->isEmpty() ? collect() : Frequencia::query()
+            ->whereIn('inscricao_id', $lista->pluck('id'))
+            ->whereIn('status', self::statusQueContamPresenca())
+            ->selectRaw('inscricao_id, count(*) as total')
+            ->groupBy('inscricao_id')
+            ->pluck('total', 'inscricao_id');
+
+        foreach ($lista as $inscricao) {
+            $inscricao->setRelation('treinamento', $treinamento);
+            $inscricao->presencasPrecarregadas = (int) ($presencas[$inscricao->id] ?? 0);
+        }
+    }
+
+    /** @return list<string> */
+    private static function statusQueContamPresenca(): array
+    {
+        return [StatusFrequencia::PRESENTE->value, StatusFrequencia::JUSTIFICADA->value];
+    }
+
     public function calcularPercentualFrequencia(): float
     {
-        $totalModulos = $this->treinamento->modulos()->count();
+        $totalModulos = $this->totalDeModulos();
 
         if ($totalModulos === 0) {
             return 0;
         }
 
-        $presencas = Frequencia::where('inscricao_id', $this->id)
-            ->whereIn('status', [StatusFrequencia::PRESENTE->value, StatusFrequencia::JUSTIFICADA->value])
+        $presencas = $this->presencasPrecarregadas ?? Frequencia::where('inscricao_id', $this->id)
+            ->whereIn('status', self::statusQueContamPresenca())
             ->count();
 
         return ($presencas / $totalModulos) * 100;
@@ -122,8 +156,22 @@ class Inscricao extends Model
 
     public function estaAprovadoPorFrequencia(): bool
     {
-        $percentual = $this->calcularPercentualFrequencia();
+        return $this->percentualAprovaPorFrequencia($this->calcularPercentualFrequencia());
+    }
+
+    /** Compara um percentual ja calculado com o minimo do curso (evita recalcular). */
+    public function percentualAprovaPorFrequencia(float $percentual): bool
+    {
         return $percentual >= $this->treinamento->percentual_frequencia_minimo;
+    }
+
+    private function totalDeModulos(): int
+    {
+        $treinamento = $this->treinamento;
+
+        return $treinamento->relationLoaded('modulos')
+            ? $treinamento->modulos->count()
+            : $treinamento->modulos()->count();
     }
 
     // Scopes

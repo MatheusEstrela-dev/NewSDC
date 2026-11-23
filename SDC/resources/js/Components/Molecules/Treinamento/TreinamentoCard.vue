@@ -6,6 +6,7 @@ import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import { computed } from 'vue';
+import { acoesDeVersao } from '@/Support/atalhoDeVersao';
 
 const props = defineProps({
   treinamento: {
@@ -22,7 +23,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['view', 'edit', 'delete']);
+const emit = defineEmits(['view', 'edit', 'delete', 'nova-versao']);
 
 const formatDate = (dateValue) => {
   if (!dateValue) return '—';
@@ -136,6 +137,7 @@ const vagasText = computed(() => {
             { action: 'view',   handler: () => emit('view', treinamento.id) },
             { action: 'edit',   handler: () => emit('edit', treinamento.id),   allowed: canEdit },
             { action: 'delete', handler: () => emit('delete', treinamento.id), allowed: canDelete },
+            ...acoesDeVersao(treinamento, (t) => emit('nova-versao', t)),
           ]"
         />
       </div>

@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Avaliacao do curso, a etapa final obrigatoria: uma por inscricao (UNIQUE no
  * banco), gravada pelo proprio aluno e imutavel. Sem ela a inscricao nao
- * conclui (ConclusaoService::registrar). Sem SoftDeletes de proposito: a
+ * conclui (ConclusaoService::registrar). Duas perguntas na escala 1..5: nota
+ * (avaliacao geral) e nota_relevancia (relevancia do conteudo; NULL nas
+ * avaliacoes anteriores a pergunta). Sem SoftDeletes de proposito: a
  * conclusao ja congelada nao depende mais dela, e apaga-la so perderia o dado.
  */
 class AvaliacaoCurso extends Model

@@ -125,17 +125,21 @@ class IndicadoresService
     /**
      * Avaliacoes de satisfacao: so participacoes CONCLUIDAS (no prazo) com os
      * demais filtros; o filtro de situacoes da tela nao vale aqui. Um total por
-     * turma x nota, com o curso e a versao para os recortes.
+     * turma x nota x relevancia (RN17; null nas avaliacoes antigas), com o curso
+     * e a versao para os recortes. As linhas particionam as avaliacoes: somar
+     * `total` por nota continua dando a contagem da nota geral. `comentarios`
+     * conta as avaliacoes da linha com sugestao preenchida (nao vazia).
      *
-     * @return Collection<int, array{treinamento_id: int, titulo: string, curso_id: ?int, curso: ?string, versao: ?string, nota: int, total: int}>
+     * @return Collection<int, array{treinamento_id: int, titulo: string, curso_id: ?int, curso: ?string, versao: ?string, nota: int, nota_relevancia: ?int, total: int, comentarios: int}>
      */
     public function avaliacoes(IndicadoresFiltroDTO $filtro): Collection
     {
         return $this->baseParticipacoes($filtro->soConcluidos())
             ->join((new AvaliacaoCurso)->getTable() . ' as av', 'av.inscricao_id', '=', 'i.id')
-            ->select(['t.id', 't.titulo', 't.tipo', 't.versao', 't.curso_id', 'c.nome as curso', 'av.nota'])
+            ->select(['t.id', 't.titulo', 't.tipo', 't.versao', 't.curso_id', 'c.nome as curso', 'av.nota', 'av.nota_relevancia'])
             ->selectRaw('COUNT(*) AS total')
-            ->groupBy(['t.id', 't.titulo', 't.tipo', 't.versao', 't.curso_id', 'c.nome', 'av.nota'])
+            ->selectRaw("COUNT(*) FILTER (WHERE NULLIF(BTRIM(av.comentario), '') IS NOT NULL) AS comentarios")
+            ->groupBy(['t.id', 't.titulo', 't.tipo', 't.versao', 't.curso_id', 'c.nome', 'av.nota', 'av.nota_relevancia'])
             ->get()
             ->map(fn ($l) => [
                 'treinamento_id' => (int) $l->id,
@@ -144,8 +148,50 @@ class IndicadoresService
                 'curso' => $l->curso,
                 'versao' => self::versao($l->tipo, $l->versao),
                 'nota' => (int) $l->nota,
+                'nota_relevancia' => self::inteiroOuNulo($l->nota_relevancia),
                 'total' => (int) $l->total,
+                'comentarios' => (int) $l->comentarios,
             ]);
+    }
+
+    /**
+     * Ultimas sugestoes/comentarios da pesquisa de satisfacao, no mesmo recorte
+     * e base de concluintes de avaliacoes(). Consulta propria com LIMIT: so o
+     * texto, a data e a turma/curso; nunca o autor (LGPD).
+     *
+     * @return list<array{id: int, comentario: string, data: ?string, titulo: string, curso: ?string, versao: ?string}>
+     */
+    public function sugestoes(IndicadoresFiltroDTO $filtro, int $limite, int $pagina = 1): array
+    {
+        return $this->baseComentarios($filtro)
+            ->select(['av.id', 'av.comentario', 'av.created_at', 't.titulo', 't.tipo', 't.versao', 'c.nome as curso'])
+            ->orderByDesc('av.created_at')
+            ->orderByDesc('av.id')
+            ->offset(max(0, $pagina - 1) * $limite)
+            ->limit($limite)
+            ->get()
+            ->map(fn ($l) => [
+                'id' => (int) $l->id,
+                'comentario' => trim((string) $l->comentario),
+                'data' => self::data($l->created_at),
+                'titulo' => (string) $l->titulo,
+                'curso' => $l->curso,
+                'versao' => self::versao($l->tipo, $l->versao),
+            ])
+            ->all();
+    }
+
+    /** Total de comentarios do recorte (para paginar "Ver todos"). */
+    public function totalDeSugestoes(IndicadoresFiltroDTO $filtro): int
+    {
+        return $this->baseComentarios($filtro)->count();
+    }
+
+    private function baseComentarios(IndicadoresFiltroDTO $filtro): Builder
+    {
+        return $this->baseParticipacoes($filtro->soConcluidos())
+            ->join((new AvaliacaoCurso)->getTable() . ' as av', 'av.inscricao_id', '=', 'i.id')
+            ->whereRaw("NULLIF(BTRIM(av.comentario), '') IS NOT NULL");
     }
 
     /**

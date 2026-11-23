@@ -34,6 +34,7 @@ class SalvarItemRequest extends FormRequest
             'total_paginas' => $pdf
                 ? [$edicao ? 'sometimes' : 'required', 'integer', 'min:1']
                 : ['nullable', 'integer', 'min:1'],
+            'exige_tempo_leitura' => $pdf ? ['sometimes', 'boolean'] : ['exclude'],
             'arquivo' => $pdf
                 ? [$edicao ? 'nullable' : 'required', 'file', 'mimes:pdf', 'max:'.self::MAX_KB]
                 : ['nullable', 'file', 'max:'.self::MAX_KB],

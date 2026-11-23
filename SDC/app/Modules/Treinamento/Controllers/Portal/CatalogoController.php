@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Treinamento\Enums\CategoriaOferta;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Resources\PortalTreinamentoListResource;
 use App\Modules\Treinamento\Resources\TreinamentoResource;
 use App\Modules\Treinamento\Services\InscricaoService;
+use App\Modules\Treinamento\Support\ClassificacaoDeOferta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -24,23 +26,40 @@ class CatalogoController extends Controller
 
     public function index(Request $request): Response
     {
-        $filters = $request->only(['search', 'categoria']);
+        // ?categoria= e a categoria de oferta (mosaico); valor invalido e ignorado.
+        $categoria = CategoriaOferta::daRequisicao($request->query('categoria'));
+        $filters = array_filter([
+            'search' => $request->query('search'),
+            'categoria' => $categoria?->value,
+        ], fn ($valor) => $valor !== null && $valor !== '');
 
-        $query = Treinamento::query()->noCatalogo()->paraPublico(PublicoAlvo::CIDADAOS)->with('modulos');
+        $query = Treinamento::query()->noCatalogo()->paraPublico(PublicoAlvo::CIDADAOS);
 
         if (!empty($filters['search'])) {
-            $query->where('titulo', 'like', "%{$filters['search']}%");
+            $query->buscarTexto((string) $filters['search'], ['titulo']);
         }
 
-        if (!empty($filters['categoria'])) {
-            $query->where('categoria', $filters['categoria']);
+        // As pastas contam o catalogo (com a busca), antes do filtro de categoria.
+        $totais = ClassificacaoDeOferta::totais($query);
+
+        if ($categoria !== null) {
+            $query->daCategoriaOferta($categoria);
         }
 
-        $treinamentos = $query->orderBy('data_inicio', 'asc')->paginate(12);
+        // Raiz sem busca: so as pastas, sem listar cursos. Raiz com busca: lista
+        // plana de todas as categorias. Dentro da pasta: cursos paginados dela.
+        $soPastas = $categoria === null && empty($filters['search']);
+
+        $treinamentos = $soPastas
+            ? ['data' => [], 'meta' => null]
+            : PortalTreinamentoListResource::collection(
+                $query->with('modulos')->orderBy('data_inicio', 'asc')->paginate(12)->withPath($request->url())
+            );
 
         return Inertia::render('Treinamento/Portal/Catalogo', [
-            'treinamentos' => PortalTreinamentoListResource::collection($treinamentos->withPath($request->url())),
+            'treinamentos' => $treinamentos,
             'filters' => $filters,
+            'categorias' => CategoriaOferta::mosaico($totais, $categoria),
         ]);
     }
 

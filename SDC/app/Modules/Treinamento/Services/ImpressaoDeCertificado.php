@@ -42,6 +42,8 @@ class ImpressaoDeCertificado
             'curso' => $treinamento->titulo.($versao ? ' - '.$versao : ''),
             'artigoCurso' => $evento ? 'o evento' : 'a capacitação',
             'realizado' => $evento ? 'realizado' : 'realizada',
+            // Concorda com o artigo acima: "o evento ... promovido", "a capacitacao ... promovida".
+            'promovido' => $evento ? 'promovido' : 'promovida',
             'periodo' => DataPorExtenso::periodo($treinamento->data_inicio, $treinamento->data_fim),
             'cargaHoraria' => $treinamento->carga_horaria,
             'aproveitamento' => $papel === self::CONCLUINTE ? $aproveitamento : null,

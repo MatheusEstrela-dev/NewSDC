@@ -7,7 +7,11 @@ namespace App\Modules\Treinamento\Requests;
 use App\Modules\Treinamento\Services\CapaDoCursoService;
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Quem pode trocar a capa ja foi decidido pelo middleware leciona.curso. */
+/**
+ * Imagem de capa (do curso ou da pasta de categoria). Quem pode trocar ja foi
+ * decidido pelo middleware da rota: leciona.curso (curso) ou
+ * can:treinamento.cursos.edit (categoria).
+ */
 class CapaStoreRequest extends FormRequest
 {
     public function authorize(): bool
@@ -33,8 +37,8 @@ class CapaStoreRequest extends FormRequest
             'capa.required' => 'Escolha uma imagem.',
             'capa.image' => 'O arquivo precisa ser uma imagem.',
             'capa.mimes' => 'Use uma imagem JPG, PNG ou WebP.',
-            'capa.max' => 'A imagem pode ter no máximo 2 MB.',
-            'capa.uploaded' => 'A imagem pode ter no máximo 2 MB.',
+            'capa.max' => 'A imagem pode ter no máximo 10 MB.',
+            'capa.uploaded' => 'A imagem pode ter no máximo 10 MB.',
         ];
     }
 }
