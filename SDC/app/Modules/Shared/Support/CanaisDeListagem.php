@@ -75,6 +75,11 @@ final class CanaisDeListagem
         // escuta aqui, e quem edita cursos escuta 'treinamento-cursos'. A Area do
         // professor assina os dois; ver AvisoDeCursos.
         'treinamento-professor' => 'treinamento.professor.acessar',
+
+        // routes/modules/treinamento.php -> can:treinamento.indicadores.view
+        // (Painel de Capacitacoes). O painel agrega o estado inteiro, sem recorte
+        // por municipio no servidor: canal global.
+        'treinamento-indicadores' => 'treinamento.indicadores.view',
     ];
 
     /**

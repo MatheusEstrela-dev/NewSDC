@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/vue3';
-import { onBeforeUnmount, onMounted } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { initEcho } from '@/bootstrap';
 
 // Espelha HandleInertiaRequests::CABECALHO_ATUALIZACAO_AO_VIVO.
@@ -23,23 +23,53 @@ const CABECALHO_ATUALIZACAO_AO_VIVO = 'X-Atualizacao-Ao-Vivo';
  * @param {string}   opcoes.canal   Canal privado, SEM o prefixo "private-".
  * @param {string}   opcoes.evento  Nome do evento. Com ponto na frente para usar
  *                                  o broadcastAs em vez do FQCN da classe.
- * @param {string[]} opcoes.props   Props a rebuscar, no formato do Inertia.
+ * @param {string[]|(() => string[])} opcoes.props Props a rebuscar, no formato do
+ *                                  Inertia. Funcao e avaliada a cada rebusca, para
+ *                                  telas cujo conjunto muda (ex.: detalhe aberto).
  * @param {number}   [opcoes.debounceMs] Janela de coalescencia, em ms.
+ * @param {number}   [opcoes.esperaMaximaMs] Teto do debounce: numa rajada continua
+ *                                  o debounce reinicia sem parar e a tela nunca
+ *                                  atualizaria; com o teto, rebusca ao menos nesse
+ *                                  intervalo. Sem o parametro, so o debounce vale.
+ * @param {() => boolean} [opcoes.adiarSe] Enquanto devolver true a rebusca espera:
+ *                                  um reload no meio de uma visita da propria tela
+ *                                  (filtro, paginacao) a cancelaria.
  * @param {number}   [opcoes.intervaloSemTempoRealMs] Reserva para ambiente sem
  *                                  websocket: rebusca nesse intervalo e ao voltar
  *                                  para a aba. Sem o parametro, sem Echo nao ha
  *                                  atualizacao nenhuma (comportamento original).
+ * @returns {{ aoVivo: import('vue').Ref<boolean>, atualizadoEm: import('vue').Ref<Date|null> }}
+ *          aoVivo: ha websocket assinado. atualizadoEm: ultima rebusca concluida.
  */
-export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400, intervaloSemTempoRealMs = null }) {
+export function useAtualizacaoAoVivo({
+    canal,
+    evento,
+    props,
+    debounceMs = 400,
+    esperaMaximaMs = null,
+    adiarSe = null,
+    intervaloSemTempoRealMs = null,
+}) {
+    const aoVivo = ref(false);
+    const atualizadoEm = ref(null);
+
     let echo = null;
     let assinatura = null;
     let pendente = false;
     let desmontado = false;
     let visibilidadeHandler = null;
     let timerDebounce = null;
+    let timerEsperaMaxima = null;
     let timerReserva = null;
 
     const recarregar = () => {
+        // Reagenda em vez de descartar: o dado novo ainda precisa chegar.
+        if (adiarSe?.()) {
+            agendarRecarga();
+
+            return;
+        }
+
         // preserveState mantem a pagina da tabela e o estado local; sem
         // preserveScroll a atualizacao daria um salto e seria pior que o F5 que
         // ela veio substituir.
@@ -48,9 +78,12 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400, i
         // mantem o atual: sem ele o aviso de erro que o usuario estava lendo
         // sumia porque OUTRA pessoa mexeu na listagem (ver HandleInertiaRequests).
         router.reload({
-            only: props,
+            only: typeof props === 'function' ? props() : props,
             preserveScroll: true,
             preserveState: true,
+            onSuccess: () => {
+                atualizadoEm.value = new Date();
+            },
             headers: { [CABECALHO_ATUALIZACAO_AO_VIVO]: '1' },
         });
     };
@@ -74,23 +107,33 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400, i
      * o mesmo estado em que um evento recebido com a aba oculta ja cai, resolvido
      * pelo visibilitychange.
      */
-    const agendarRecarga = () => {
-        if (timerDebounce) {
-            clearTimeout(timerDebounce);
+    const disparar = () => {
+        limparTimersDeEspera();
+
+        if (document.hidden) {
+            pendente = true;
+
+            return;
         }
 
-        timerDebounce = setTimeout(() => {
-            timerDebounce = null;
-
-            if (document.hidden) {
-                pendente = true;
-
-                return;
-            }
-
-            recarregar();
-        }, debounceMs);
+        recarregar();
     };
+
+    function limparTimersDeEspera() {
+        clearTimeout(timerDebounce);
+        clearTimeout(timerEsperaMaxima);
+        timerDebounce = null;
+        timerEsperaMaxima = null;
+    }
+
+    function agendarRecarga() {
+        clearTimeout(timerDebounce);
+        timerDebounce = setTimeout(disparar, debounceMs);
+
+        if (esperaMaximaMs && !timerEsperaMaxima) {
+            timerEsperaMaxima = setTimeout(disparar, esperaMaximaMs);
+        }
+    }
 
     const aoReceber = () => {
         // Aba em segundo plano nao rebusca: ninguem esta olhando e cada
@@ -147,6 +190,7 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400, i
         }
 
         echo = instancia;
+        aoVivo.value = true;
         assinatura = echo.private(canal);
         assinatura.listen(evento, aoReceber);
 
@@ -170,10 +214,7 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400, i
 
         // Sem cancelar o timer, um reload agendado dispararia depois do unmount e
         // navegaria uma pagina que nao existe mais.
-        if (timerDebounce) {
-            clearTimeout(timerDebounce);
-            timerDebounce = null;
-        }
+        limparTimersDeEspera();
 
         if (timerReserva) {
             clearInterval(timerReserva);
@@ -196,4 +237,6 @@ export function useAtualizacaoAoVivo({ canal, evento, props, debounceMs = 400, i
             echo = null;
         }
     });
+
+    return { aoVivo, atualizadoEm };
 }

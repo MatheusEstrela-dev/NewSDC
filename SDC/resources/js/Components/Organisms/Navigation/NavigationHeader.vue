@@ -20,7 +20,7 @@
         <BackButton @click="handleBack" />
       </div>
       <div class="min-w-0 overflow-x-auto trilha-scroll">
-        <BreadcrumbTrail :items="breadcrumbItems" />
+        <BreadcrumbTrail :items="breadcrumbItems" :inicio-rota="inicioRota" />
       </div>
     </div>
   </div>
@@ -31,7 +31,7 @@ import BackButton from '@/Components/Atoms/Navigation/BackButton.vue';
 import BreadcrumbTrail from '@/Components/Molecules/Navigation/BreadcrumbTrail.vue';
 import { useBreadcrumb } from '@/Composables/useBreadcrumb';
 
-const { breadcrumbItems, handleBack } = useBreadcrumb();
+const { breadcrumbItems, inicioRota, handleBack } = useBreadcrumb();
 </script>
 
 <style scoped>

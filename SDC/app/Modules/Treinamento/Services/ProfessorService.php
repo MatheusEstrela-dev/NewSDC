@@ -47,7 +47,7 @@ class ProfessorService
 
         // O curso passa a aparecer na Area do professor de quem foi designado.
         if ($vinculo->wasRecentlyCreated) {
-            AvisoDeCursos::avisar();
+            AvisoDeCursos::avisarCursos();
         }
 
         return $vinculo;
@@ -61,7 +61,7 @@ class ProfessorService
             ->delete();
 
         if ($removidos > 0) {
-            AvisoDeCursos::avisar();
+            AvisoDeCursos::avisarCursos();
         }
     }
 
