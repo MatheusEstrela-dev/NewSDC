@@ -40,11 +40,16 @@ watch(() => props.minhaInscricao?.qr_code_token, desenharQr);
 
 const modalInscricao = ref(false);
 
+const inscrevendo = ref(false);
+
+// O modal fica aberto ate o sucesso (o que foi digitado nao se perde); o sucesso aparece no
+// banner do flash (texto vem do servidor, conforme o status).
 function inscreverSe(perfil) {
-  modalInscricao.value = false;
+  inscrevendo.value = true;
   router.post(route('portal.treinamento.inscricoes.store', props.treinamento.link_publico_slug), perfil, {
     preserveScroll: true,
-    // O sucesso aparece no banner do flash (texto vem do servidor, conforme o status).
+    onSuccess: () => { modalInscricao.value = false; },
+    onFinish: () => { inscrevendo.value = false; },
     onError: (errors) => toast(Object.values(errors)[0] || 'Não foi possível concluir a inscrição.', 'error'),
   });
 }
@@ -122,10 +127,18 @@ function confirmarPresenca() {
             </Badge>
           </div>
 
-          <div v-if="minhaInscricao.status === 'APROVADA' && treinamento.tipo === 'PRESENCIAL'" class="text-center">
+          <div v-if="minhaInscricao.status === 'APROVADA' && ['PRESENCIAL', 'SEMI_PRESENCIAL'].includes(treinamento.tipo)" class="text-center">
             <Text size="sm" color="muted" class="mb-2">Apresente este QR Code no dia do evento/curso para confirmar sua presença.</Text>
             <canvas ref="qrCanvas" class="mx-auto rounded-lg border border-slate-200 dark:border-slate-700"></canvas>
           </div>
+
+          <Button
+            v-if="minhaInscricao.status === 'APROVADA' && treinamento.tipo === 'EAD'"
+            variant="primary"
+            :href="route('portal.treinamento.cursos.sala', treinamento.link_publico_slug)"
+          >
+            Abrir sala de aula
+          </Button>
 
           <Button
             v-if="minhaInscricao.status === 'APROVADA' && (treinamento.tipo === 'ONLINE' || treinamento.presenca_autoconfirmavel) && treinamento.presenca_liberada"
@@ -158,6 +171,7 @@ function confirmarPresenca() {
       :titulo="treinamento.titulo"
       :padrao="sexoPadrao"
       :data-nascimento-padrao="dataNascimentoPadrao"
+      :processando="inscrevendo"
       @fechar="modalInscricao = false"
       @confirmar="inscreverSe"
     />

@@ -145,6 +145,10 @@ class PresencaService
             throw new \DomainException('Este modulo nao pertence ao treinamento da inscricao.');
         }
 
+        if (!$inscricao->treinamento->usaControleDePresenca()) {
+            throw new \DomainException('Cursos EAD nao usam controle de presenca: a conclusao segue o progresso na trilha.');
+        }
+
         if (!$inscricao->treinamento->presenca_liberada) {
             throw new \DomainException('A presenca ainda nao foi liberada para este treinamento.');
         }

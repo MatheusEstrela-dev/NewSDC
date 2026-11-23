@@ -11,6 +11,8 @@ const props = defineProps({
   canReprovar: { type: Boolean, default: false },
   canRegistrarPresenca: { type: Boolean, default: false },
   presencaLiberada: { type: Boolean, default: false },
+  // RN13: EAD nao tem controle de presenca (sem coluna de frequencia nem botao).
+  usaControlePresenca: { type: Boolean, default: true },
   moduloSelecionado: { type: [Number, String, null], default: null },
 });
 
@@ -25,7 +27,7 @@ const emit = defineEmits(['aprovar', 'reprovar', 'marcar-presenca']);
           <th class="px-4 py-2 font-medium">Nome</th>
           <th class="px-4 py-2 font-medium">Tipo</th>
           <th class="px-4 py-2 font-medium">Status</th>
-          <th class="px-4 py-2 font-medium">Frequência</th>
+          <th v-if="usaControlePresenca" class="px-4 py-2 font-medium">Frequência</th>
           <th class="px-4 py-2 text-right font-medium">Ações</th>
         </tr>
       </thead>
@@ -43,7 +45,7 @@ const emit = defineEmits(['aprovar', 'reprovar', 'marcar-presenca']);
           <td class="px-4 py-2.5">
             <Badge :color="inscricao.status_color">{{ inscricao.status_label }}</Badge>
           </td>
-          <td class="px-4 py-2.5">{{ inscricao.percentual_frequencia?.toFixed(0) ?? 0 }}%</td>
+          <td v-if="usaControlePresenca" class="px-4 py-2.5">{{ inscricao.percentual_frequencia?.toFixed(0) ?? 0 }}%</td>
           <td class="px-4 py-2.5">
             <div class="flex items-center justify-end gap-2">
               <button
@@ -63,7 +65,7 @@ const emit = defineEmits(['aprovar', 'reprovar', 'marcar-presenca']);
                 Reprovar
               </button>
               <Button
-                v-if="canRegistrarPresenca && presencaLiberada && inscricao.status === 'APROVADA'"
+                v-if="usaControlePresenca && canRegistrarPresenca && presencaLiberada && inscricao.status === 'APROVADA'"
                 variant="secondary"
                 size="sm"
                 :disabled="!moduloSelecionado"

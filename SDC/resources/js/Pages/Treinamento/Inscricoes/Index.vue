@@ -10,6 +10,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import InscricoesTable from '@/Components/Organisms/Treinamento/InscricoesTable.vue';
+import ReprovarInscricaoModal from '@/Components/Organisms/Treinamento/ReprovarInscricaoModal.vue';
 import LiberarCpfModal from '@/Components/Organisms/Treinamento/LiberarCpfModal.vue';
 import QrScanner from '@/Components/Molecules/QrScanner.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
@@ -64,16 +65,9 @@ function aprovar(inscricao) {
   });
 }
 
-function reprovar(inscricao) {
-  const observacoes = prompt('Motivo da reprovação:');
-  if (!observacoes) return;
-
-  router.post(route('treinamentos.inscricoes.reprovar', inscricao.id), { observacoes }, {
-    preserveScroll: true,
-    onSuccess: () => toast('Inscrição reprovada.', 'success'),
-    onError: (errors) => toast(Object.values(errors)[0] || 'Não foi possível reprovar.', 'error'),
-  });
-}
+// Motivo obrigatório: coletado pelo modal (a requisição sai de lá).
+const inscricaoEmReprovacao = ref(null);
+const reprovar = (inscricao) => { inscricaoEmReprovacao.value = inscricao; };
 
 // RF07: as duas acoes de presenca (manual e QR) usam axios direto (nao o
 // router do Inertia) porque precisamos distinguir "erro de validacao" (tem
@@ -165,7 +159,7 @@ onUnmounted(() => {
 <template>
   <div class="treinamento-inscricoes-container">
     <PageHeader
-      title="Inscritos e Presença"
+      :title="treinamento.usa_controle_presenca ? 'Inscritos e Presença' : 'Inscritos'"
       :description="treinamento.titulo"
       :icon-image="moduleIcon('treinamento')"
       variant="gradient"
@@ -209,6 +203,7 @@ onUnmounted(() => {
         :can-reprovar="can('treinamento.inscricoes.reprovar')"
         :can-registrar-presenca="can('treinamento.presencas.registrar')"
         :presenca-liberada="treinamento.presenca_liberada"
+        :usa-controle-presenca="treinamento.usa_controle_presenca"
         :modulo-selecionado="moduloSelecionado"
         @aprovar="aprovar"
         @reprovar="reprovar"
@@ -219,6 +214,12 @@ onUnmounted(() => {
         <Pagination :pagination="pagination" @page-change="irParaPagina" />
       </div>
     </CardBase>
+
+    <ReprovarInscricaoModal
+      :show="inscricaoEmReprovacao !== null"
+      :inscricao="inscricaoEmReprovacao"
+      @fechar="inscricaoEmReprovacao = null"
+    />
 
     <LiberarCpfModal
       v-if="podeLiberarCpf"

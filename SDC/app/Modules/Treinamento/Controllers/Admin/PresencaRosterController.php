@@ -18,6 +18,10 @@ class PresencaRosterController extends Controller
 {
     public function __invoke(Treinamento $treinamento): JsonResponse
     {
+        if (! $treinamento->usaControleDePresenca()) {
+            return response()->json(['message' => 'Cursos EAD nao usam controle de presenca.'], 422);
+        }
+
         $inscritos = $treinamento->inscricoes()
             ->aprovadas()
             ->with('inscrito')

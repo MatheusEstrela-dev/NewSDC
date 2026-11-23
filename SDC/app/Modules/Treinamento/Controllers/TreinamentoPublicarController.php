@@ -17,6 +17,12 @@ class TreinamentoPublicarController extends Controller
 
     public function __invoke(Treinamento $treinamento)
     {
+        // O EAD publica pelo conteudo do curso, que valida item, prova, changelog e
+        // aviso; esta rota pularia essas verificacoes.
+        if ($treinamento->isEad()) {
+            return back()->withErrors(['status' => 'Cursos EAD são publicados pelo conteúdo do curso (área do professor), que confere itens, prova e notas da versão.']);
+        }
+
         try {
             $this->treinamentoService->publicar($treinamento);
         } catch (\DomainException $e) {
