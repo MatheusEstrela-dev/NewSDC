@@ -12,7 +12,8 @@
 
 <script setup>
 /**
- * Dois indicadores calculados pelo servidor (props.kpis); os percentuais de cobertura ficam nos aneis. Quando nao ha
+ * Dois indicadores calculados pelo servidor (props.kpis); os percentuais de
+ * cobertura ficam no painel de cobertura territorial. Quando nao ha
  * populacao cadastrada, capacitados_por_100k vem null e aparece como traco:
  * zero seria um numero falso.
  */

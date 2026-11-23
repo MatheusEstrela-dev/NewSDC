@@ -1,5 +1,5 @@
 <template>
-  <TdapPainel rotulo="Detalhamento" titulo="Capacitações realizadas" subtitulo="Uma linha por turma, com município, REDEC e participantes">
+  <TdapPainel rotulo="Detalhamento" titulo="Capacitações realizadas" subtitulo="Uma linha por turma, com município, REDEC, participantes e situação">
     <template #acoes>
       <button
         v-show="estaExpandido"
@@ -63,8 +63,11 @@
                   <th class="hidden px-3 py-2.5 font-semibold xl:table-cell">Mesorregião</th>
                   <th class="px-3 py-2.5 font-semibold">Período</th>
                   <th class="px-3 py-2.5 text-right font-semibold">Part.</th>
-                  <th class="px-3 py-2.5 text-right font-semibold">Masc.</th>
-                  <th class="px-4 py-2.5 text-right font-semibold">Fem.</th>
+                  <th class="px-3 py-2.5 text-right font-semibold" title="Concluídos">Concl.</th>
+                  <th class="px-3 py-2.5 text-right font-semibold" title="Em andamento">Em and.</th>
+                  <th class="px-3 py-2.5 text-right font-semibold" title="Desistentes">Desist.</th>
+                  <th class="hidden px-3 py-2.5 text-right font-semibold 2xl:table-cell">Masc.</th>
+                  <th class="hidden px-4 py-2.5 text-right font-semibold 2xl:table-cell">Fem.</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200 dark:divide-slate-700/40">
@@ -77,8 +80,11 @@
                   <td class="hidden px-3 py-2.5 xl:table-cell">{{ linha.mesorregiao }}</td>
                   <td class="whitespace-nowrap px-3 py-2.5">{{ linha.periodo }}</td>
                   <td class="px-3 py-2.5 text-right font-semibold tabular-nums">{{ formatarNumero(linha.participantes) }}</td>
-                  <td class="px-3 py-2.5 text-right tabular-nums">{{ formatarNumero(linha.masculino) }}</td>
-                  <td class="px-4 py-2.5 text-right tabular-nums">{{ formatarNumero(linha.feminino) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ formatarNumero(linha.concluidos) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ formatarNumero(linha.em_andamento) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ formatarNumero(linha.desistentes) }}</td>
+                  <td class="hidden px-3 py-2.5 text-right tabular-nums 2xl:table-cell">{{ formatarNumero(linha.masculino) }}</td>
+                  <td class="hidden px-4 py-2.5 text-right tabular-nums 2xl:table-cell">{{ formatarNumero(linha.feminino) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -111,7 +117,7 @@ import TdapPainel from '@/Components/Molecules/Tdap/TdapPainel.vue';
 import FunnelIcon from '@/Components/Icons/FunnelIcon.vue';
 import SeletorCompacto from '@/Components/Organisms/Treinamento/Indicadores/SeletorCompacto.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
-import { formatarNumero } from '@/Composables/treinamento/useTemaGrafico';
+import { formatarNumero, formatarPeriodo } from '@/Composables/treinamento/useTemaGrafico';
 
 const props = defineProps({
   tabela: { type: Object, default: () => ({ data: [], meta: null }) },
@@ -138,13 +144,6 @@ const valor = (chave) => (props.filtros[chave] ? String(props.filtros[chave]) : 
 const opcoesRedec = computed(() => [{ value: '', label: 'Todas as REDECs' }, ...(props.opcoes.redecs ?? []).map((r) => ({ value: String(r.id), label: r.nome }))]);
 const opcoesMunicipio = computed(() => [{ value: '', label: 'Todos os municípios' }, ...(props.opcoes.municipios ?? []).map((m) => ({ value: String(m.id), label: m.nome }))]);
 
-const formatarData = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
-
-function formatarPeriodo(inicio, fim) {
-  if (inicio && fim && inicio !== fim) return `${formatarData(inicio)} a ${formatarData(fim)}`;
-  return formatarData(inicio || fim) || '—';
-}
-
 // Turma sem municipio e EAD ou sem local de realizacao: o rotulo diz isso em vez de deixar a celula vazia.
 const linhas = computed(() => (props.tabela?.data ?? []).map((linha) => ({
   ...linha,
@@ -159,6 +158,9 @@ const camposMobile = [
   { key: 'mesorregiao', label: 'Mesorregião' },
   { key: 'periodo', label: 'Período', fullWidth: true },
   { key: 'participantes', label: 'Participantes' },
+  { key: 'concluidos', label: 'Concluídos' },
+  { key: 'em_andamento', label: 'Em andamento' },
+  { key: 'desistentes', label: 'Desistentes' },
   { key: 'masculino', label: 'Masculino' },
   { key: 'feminino', label: 'Feminino' },
 ];

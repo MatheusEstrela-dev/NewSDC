@@ -14,7 +14,7 @@ import 'leaflet/dist/leaflet.css';
 import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
 
 /**
- * Mapa Leaflet unico, consumido pelas paginas de Sismos e Inmet.
+ * Mapa Leaflet unico, consumido pelas paginas de Sismos, Inmet, Geoespacial e do painel de indicadores.
  *
  * Antes cada pagina montava o proprio L.map com o mesmo tile e o mesmo
  * circleMarker. A de Inmet ainda esquecia o onBeforeUnmount, entao a instancia
@@ -28,11 +28,19 @@ import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
  */
 const props = defineProps({
   /**
-   * [{ id, latitude, longitude, cor, raio, popup: { titulo, linhas: [{rotulo, valor}] } }]
+   * [{ id, latitude, longitude, cor, raio, opacidade, popup: { titulo, linhas: [{rotulo, valor}] } }]
    */
   pontos: { type: Array, default: () => [] },
   /**
-   * [{ id, geojson, cor, rotulo }] — geojson tem de ser OBJETO ja decodificado.
+   * [{ id, geojson, cor, rotulo, estilo, popup }] — geojson tem de ser OBJETO
+   * ja decodificado.
+   *
+   * Campos opcionais, todos retrocompativeis: `estilo` { color, weight,
+   * fillColor, fillOpacity, frente } sobrepoe o estilo padrao derivado de `cor`;
+   * `popup` estruturado (mesmo formato dos pontos) tem precedencia sobre
+   * `rotulo`. Com `id` estavel e o MESMO objeto geojson entre desenhos, so o
+   * estilo e reaplicado (setStyle) em vez de recriar a camada -- o que importa
+   * com centenas de poligonos. Um `clique-poligono` carrega o `id`.
    *
    * O PDO do Postgres entrega coluna jsonb como STRING, entao quem consome a
    * matview precisa dar JSON.parse antes de montar esta prop. Passar a string
@@ -40,6 +48,11 @@ const props = defineProps({
    * e o poligono some sem deixar rastro no console.
    */
   poligonos: { type: Array, default: () => [] },
+  /**
+   * Ids de poligonos (de `poligonos[].id`) nos quais o mapa se enquadra. Tem
+   * precedencia sobre `bbox`; vazio/nulo volta ao enquadramento padrao.
+   */
+  enquadrarIds: { type: Array, default: null },
   /** { min_lat, max_lat, min_lon, max_lon } — enquadra o mapa. */
   bbox: { type: Object, default: null },
   centro: { type: Array, default: () => [-18.5, -44.5] },
@@ -48,6 +61,8 @@ const props = defineProps({
 
 // Id proprio por instancia: as duas paginas usavam id fixo, o que quebraria se
 // duas montassem na mesma arvore.
+const emit = defineEmits(['clique-poligono', 'clique-ponto']);
+
 const idMapa = `mapa-leaflet-${Math.random().toString(36).slice(2, 9)}`;
 
 let mapa = null;
@@ -58,6 +73,10 @@ let camada = null;
 // pontos de chuva -- que sao justamente o dado que o operador precisa ver
 // DENTRO dela.
 let camadaPoligonos = null;
+
+// Indice id -> { camada, geojson, conteudo }, so dos poligonos com id. Permite
+// reaplicar estilo sem recriar e enquadrar um conjunto de ids.
+const poligonosPorId = new Map();
 let observador = null;
 
 // Indice id -> marcador, refeito a cada desenho. Existe para focarPonto()
@@ -92,41 +111,111 @@ function montarPopup(popup) {
   return linhas.join('<br>');
 }
 
-function desenhar() {
+const ESTILO_PADRAO = { weight: 2, fillOpacity: 0.12 };
+
+function estiloDoPoligono(poligono) {
+  const cor = poligono.cor ?? '#b45309';
+
+  // Preenchimento fraco de proposito: a area e recorte, nao dado. Opaca demais,
+  // ela compete com os pontos que estao dentro dela.
+  return { ...ESTILO_PADRAO, color: cor, fillColor: cor, ...(poligono.estilo ?? {}) };
+}
+
+function conteudoDoPoligono(poligono) {
+  if (poligono.popup) {
+    return montarPopup(poligono.popup);
+  }
+
+  return poligono.rotulo ? escapar(poligono.rotulo) : null;
+}
+
+function aplicarConteudo(camadaGeo, conteudo) {
+  camadaGeo.unbindPopup();
+
+  if (conteudo) {
+    camadaGeo.bindPopup(conteudo);
+  }
+}
+
+// Reaproveitavel quando o conjunto de ids e os objetos geojson sao os mesmos:
+// so estilo e popup mudam, e recriar 800+ camadas por isso seria desperdicio.
+function poligonosReaproveitaveis(itens) {
+  return itens.length > 0
+    && itens.length === poligonosPorId.size
+    && itens.every((p) => p.id !== undefined && p.id !== null
+      && poligonosPorId.get(String(p.id))?.geojson === p.geojson);
+}
+
+function atualizarPoligonos(itens) {
+  itens.forEach((poligono) => {
+    const entrada = poligonosPorId.get(String(poligono.id));
+    const conteudo = conteudoDoPoligono(poligono);
+
+    entrada.camada.setStyle(estiloDoPoligono(poligono));
+
+    if (poligono.estilo?.frente) {
+      entrada.camada.bringToFront();
+    }
+
+    if (conteudo !== entrada.conteudo) {
+      aplicarConteudo(entrada.camada, conteudo);
+      entrada.conteudo = conteudo;
+    }
+  });
+}
+
+function recriarPoligonos(itens) {
+  camadaPoligonos.clearLayers();
+  poligonosPorId.clear();
+
+  itens.forEach((poligono) => {
+    const camadaGeo = L.geoJSON(poligono.geojson, { style: estiloDoPoligono(poligono) });
+    const conteudo = conteudoDoPoligono(poligono);
+
+    aplicarConteudo(camadaGeo, conteudo);
+    camadaGeo.addTo(camadaPoligonos);
+
+    if (poligono.estilo?.frente) {
+      camadaGeo.bringToFront();
+    }
+
+    if (poligono.id !== undefined && poligono.id !== null) {
+      camadaGeo.on('click', () => emit('clique-poligono', poligono.id));
+      poligonosPorId.set(String(poligono.id), { camada: camadaGeo, geojson: poligono.geojson, conteudo });
+    }
+  });
+}
+
+function desenharPoligonos() {
   if (!mapa) {
     return;
   }
 
-  if (camadaPoligonos) {
-    camadaPoligonos.clearLayers();
-  } else {
-    camadaPoligonos = L.layerGroup().addTo(mapa);
+  // Criada na primeira passada, ANTES da camada de pontos (ver comentario acima).
+  camadaPoligonos ??= L.layerGroup().addTo(mapa);
+
+  const itens = props.poligonos.filter((poligono) => poligono.geojson);
+
+  if (poligonosReaproveitaveis(itens)) {
+    atualizarPoligonos(itens);
+
+    return;
   }
 
-  props.poligonos.forEach((poligono) => {
-    if (!poligono.geojson) {
-      return;
-    }
+  recriarPoligonos(itens);
 
-    const cor = poligono.cor ?? '#b45309';
+  // A malha pode chegar depois do pedido de enquadramento (fetch assincrono).
+  // Sem enquadrarIds nao se reenquadra: quem nao usa isso nunca teve o zoom
+  // do usuario desfeito por um redesenho.
+  if (props.enquadrarIds?.length) {
+    enquadrar();
+  }
+}
 
-    const camadaGeo = L.geoJSON(poligono.geojson, {
-      style: {
-        color: cor,
-        weight: 2,
-        // Preenchimento fraco de proposito: a area e recorte, nao dado. Opaca
-        // demais, ela compete com os pontos que estao dentro dela.
-        fillColor: cor,
-        fillOpacity: 0.12,
-      },
-    });
-
-    if (poligono.rotulo) {
-      camadaGeo.bindPopup(escapar(poligono.rotulo));
-    }
-
-    camadaGeo.addTo(camadaPoligonos);
-  });
+function desenharPontos() {
+  if (!mapa) {
+    return;
+  }
 
   if (camada) {
     camada.clearLayers();
@@ -139,6 +228,11 @@ function desenhar() {
   marcadoresPorId.clear();
 
   props.pontos.forEach((ponto) => {
+    // null vira 0 no Number(): sem esse teste, ponto sem coordenada cairia em (0,0).
+    if (ponto.latitude === null || ponto.latitude === undefined || ponto.longitude === null || ponto.longitude === undefined) {
+      return;
+    }
+
     const lat = Number(ponto.latitude);
     const lon = Number(ponto.longitude);
 
@@ -152,10 +246,12 @@ function desenhar() {
       color: '#1a1d21',
       weight: 1,
       opacity: 1,
-      fillOpacity: 0.85,
+      fillOpacity: ponto.opacidade ?? 0.85,
     });
 
     const conteudo = montarPopup(ponto.popup);
+
+    marcador.on('click', () => emit('clique-ponto', ponto.id));
 
     if (conteudo) {
       marcador.bindPopup(conteudo);
@@ -199,12 +295,34 @@ function focarPonto(id, { zoom = 11 } = {}) {
 
 defineExpose({ focarPonto });
 
+// Une os limites dos poligonos pedidos em enquadrarIds; null se nenhum existe.
+function limitesDosPoligonos() {
+  let limites = null;
+
+  (props.enquadrarIds ?? []).forEach((id) => {
+    const entrada = poligonosPorId.get(String(id));
+
+    if (!entrada) {
+      return;
+    }
+
+    const caixa = entrada.camada.getBounds();
+    limites = limites ? limites.extend(caixa) : L.latLngBounds(caixa.getSouthWest(), caixa.getNorthEast());
+  });
+
+  return limites?.isValid() ? limites : null;
+}
+
 function enquadrar() {
   if (!mapa) {
     return;
   }
 
-  if (props.bbox) {
+  const limites = limitesDosPoligonos();
+
+  if (limites) {
+    mapa.fitBounds(limites, { padding: [24, 24], maxZoom: 10 });
+  } else if (props.bbox) {
     // Enquadra o quadrante que o backend usa, em vez de um centro fixo: mapa e
     // coleta ficam coerentes.
     mapa.fitBounds([
@@ -234,7 +352,8 @@ onMounted(async () => {
     maxZoom: 19,
   }).addTo(mapa);
 
-  desenhar();
+  desenharPoligonos();
+  desenharPontos();
 
   /*
    * O container recebe altura por cadeia de `height: 100%` ate o .map-wrapper
@@ -267,10 +386,16 @@ onBeforeUnmount(() => {
     mapa.remove();
     mapa = null;
     camada = null;
+    camadaPoligonos = null;
+    poligonosPorId.clear();
+    marcadoresPorId.clear();
   }
 });
 
-watch(() => [props.pontos, props.poligonos], desenhar, { deep: true });
+// Separados: mudar so os poligonos (estilo por camada) nao redesenha os pontos.
+watch(() => props.pontos, desenharPontos, { deep: true });
+watch(() => props.poligonos, desenharPoligonos, { deep: true });
+watch(() => props.enquadrarIds, enquadrar);
 </script>
 
 <style scoped>

@@ -6,34 +6,41 @@ namespace App\Modules\Treinamento\Services;
 
 use App\Modules\Decretacoes\Services\RedecService;
 use App\Modules\Treinamento\DTOs\IndicadoresFiltroDTO;
+use App\Modules\Treinamento\Enums\SituacaoParticipacao;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
+use App\Modules\Treinamento\Models\AvaliacaoCurso;
 use App\Modules\Treinamento\Support\ConexaoTreinamento;
+use App\Modules\Treinamento\Support\RegrasDaParticipacao as Regras;
 use Illuminate\Database\Query\Builder;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Numeros do painel de indicadores das Capacitacoes.
  *
- * Capacitado = inscricao APROVADA com concluido_em preenchido (presencial e
- * EAD; quem grava e o ConclusaoService). Turma cancelada ou excluida e
- * inscricao excluida nao contam.
+ * A base e a PARTICIPACAO (uma pessoa numa turma), com situacao CONCLUIDO,
+ * EM_ANDAMENTO ou DESISTENTE, mes de referencia e municipio de referencia
+ * calculados ao vivo. As regras moram em Support\RegrasDaParticipacao.
  *
  * O Treinamento vive em outro banco: a agregacao (GROUP BY) acontece la, por
  * municipio_id, e o municipio/REDEC/populacao/coordenadas entram numa segunda
  * consulta no banco do SDC (catalogo cacheado). Nunca ha JOIN entre os bancos.
  *
- * Todo bloco parte de baseCapacitados(), entao um filtro vale igual em todos.
+ * Todo bloco parte de baseParticipacoes(), entao um filtro vale igual em todos.
  */
 class IndicadoresService
 {
     private const CACHE_TTL = 600;
 
-    private const CACHE_CHAVE_CATALOGO = 'treinamento:indicadores:municipios_mg:v1';
+    private const CACHE_CHAVE_CATALOGO = 'treinamento:indicadores:municipios_mg:v2';
 
     /** Ano de referencia da capacitacao: quando a turma aconteceu, com fallbacks. */
     private const ANO_DA_TURMA = 'EXTRACT(YEAR FROM COALESCE(t.data_inicio, t.publicado_em::date, t.created_at::date))::int';
+
+    private const MES_DE_REFERENCIA = "TO_CHAR(" . Regras::DATA_REFERENCIA . ", 'YYYY-MM')";
+
+    private const ANO_DE_REFERENCIA = 'EXTRACT(YEAR FROM ' . Regras::DATA_REFERENCIA . ')::int';
 
     /** Consulta de uma requisicao: o controller cria uma por request e os blocos a compartilham. */
     public function para(IndicadoresFiltroDTO $filtro): IndicadoresConsulta
@@ -42,27 +49,46 @@ class IndicadoresService
     }
 
     /**
-     * Unica agregacao do painel: um total por turma x mes de conclusao x sexo,
-     * ja com os dados da turma. Todo bloco (exceto a serie por ano) deriva disto.
+     * Unica agregacao do painel: um total por turma x municipio de referencia x
+     * situacao x mes de referencia x sexo x faixa etaria, ja com os dados da
+     * turma e do curso. Todo bloco (exceto serie por ano, pessoas e
+     * satisfacao) deriva disto.
      *
      * @return Collection<int, array<string, mixed>>
      */
     public function fatos(IndicadoresFiltroDTO $filtro): Collection
     {
-        return $this->baseCapacitados($filtro)
-            ->select('t.id', 't.titulo', 't.municipio_id', 't.data_inicio', 't.data_fim', 'i.sexo')
+        $colunas = [
+            't.id', 't.titulo', 't.tipo', 't.curso_id', 'c.nome', 't.versao', 't.municipio_id',
+            't.data_inicio', 't.data_fim', Regras::PRAZO, Regras::MUNICIPIO, Regras::SITUACAO,
+            Regras::FAIXA_ETARIA, 'i.sexo',
+        ];
+
+        return $this->baseParticipacoes($filtro)
+            ->select([
+                't.id', 't.titulo', 't.tipo', 't.curso_id', 'c.nome as curso', 't.versao',
+                't.municipio_id as municipio_turma_id', 't.data_inicio', 't.data_fim',
+                Regras::PRAZO, Regras::MUNICIPIO, Regras::SITUACAO, Regras::FAIXA_ETARIA, 'i.sexo',
+            ])
             ->selectRaw(self::ANO_DA_TURMA . ' AS ano')
-            ->selectRaw("TO_CHAR(i.concluido_em, 'YYYY-MM') AS mes")
+            ->selectRaw(self::MES_DE_REFERENCIA . ' AS mes')
             ->selectRaw('COUNT(*) AS total')
-            ->groupBy('t.id', 't.titulo', 't.municipio_id', 't.data_inicio', 't.data_fim', 'i.sexo', 'ano', 'mes')
+            ->groupBy([...$colunas, 'ano', 'mes'])
             ->get()
             ->map(fn ($l) => [
                 'treinamento_id' => (int) $l->id,
                 'titulo' => (string) $l->titulo,
-                'municipio_id' => $l->municipio_id !== null ? (int) $l->municipio_id : null,
-                'data_inicio' => $l->data_inicio !== null ? substr((string) $l->data_inicio, 0, 10) : null,
-                'data_fim' => $l->data_fim !== null ? substr((string) $l->data_fim, 0, 10) : null,
-                'sexo' => $l->sexo,
+                'curso_id' => self::inteiroOuNulo($l->curso_id),
+                'curso' => $l->curso,
+                'versao' => self::versao($l->tipo, $l->versao),
+                'municipio_turma_id' => self::inteiroOuNulo($l->municipio_turma_id),
+                'municipio_id' => self::inteiroOuNulo($l->municipio_id),
+                'data_inicio' => self::data($l->data_inicio),
+                'data_fim' => self::data($l->data_fim),
+                'prazo' => self::data($l->prazo),
+                'situacao' => (string) $l->situacao,
+                'faixa' => (string) $l->faixa,
+                'sexo' => $l->sexo !== null ? trim((string) $l->sexo) : null,
                 'ano' => (int) $l->ano,
                 'mes' => (string) $l->mes,
                 'total' => (int) $l->total,
@@ -70,46 +96,77 @@ class IndicadoresService
     }
 
     /**
-     * Uma linha por inscricao capacitada, com a pessoa, o municipio DA PESSOA
-     * (foto da inscricao) e o curso do catalogo. Base dos blocos "pessoas por
-     * curso" e "pessoas por municipio": a contagem de gente distinta precisa
-     * da linha, nao de um total ja somado. Uma consulta, nome do curso incluso.
+     * Uma linha por participacao, com a pessoa, o municipio DA PESSOA (foto da
+     * inscricao), o municipio de referencia, a situacao e o curso do catalogo.
+     * Base dos blocos de pessoas distintas (por curso, por municipio e no
+     * mapa): a contagem de gente distinta precisa da linha, nao de um total.
      *
-     * @return Collection<int, array{pessoa: string, municipio_id: ?int, curso_id: ?int, curso: ?string, turma_id: int}>
+     * @return Collection<int, array{pessoa: string, municipio_id: ?int, municipio_referencia_id: ?int, situacao: string, curso_id: ?int, curso: ?string, turma_id: int}>
      */
     public function pessoas(IndicadoresFiltroDTO $filtro): Collection
     {
-        return $this->baseCapacitados($filtro)
-            ->leftJoin('treinamento.cursos as c', 'c.id', '=', 't.curso_id')
-            ->select('i.inscrito_type', 'i.inscrito_id', 'i.municipio_inscrito_id', 't.curso_id', 't.id as turma_id', 'c.nome as curso')
+        return $this->baseParticipacoes($filtro)
+            ->select([
+                'i.inscrito_type', 'i.inscrito_id', 'i.municipio_inscrito_id', Regras::MUNICIPIO,
+                Regras::SITUACAO, 't.curso_id', 't.id as turma_id', 'c.nome as curso',
+            ])
             ->get()
             ->map(fn ($l) => [
                 'pessoa' => $l->inscrito_type . ':' . $l->inscrito_id,
-                'municipio_id' => $l->municipio_inscrito_id !== null ? (int) $l->municipio_inscrito_id : null,
-                'curso_id' => $l->curso_id !== null ? (int) $l->curso_id : null,
+                'municipio_id' => self::inteiroOuNulo($l->municipio_inscrito_id),
+                'municipio_referencia_id' => self::inteiroOuNulo($l->municipio_id),
+                'situacao' => (string) $l->situacao,
+                'curso_id' => self::inteiroOuNulo($l->curso_id),
                 'curso' => $l->curso,
                 'turma_id' => (int) $l->turma_id,
             ]);
     }
 
     /**
+     * Avaliacoes de satisfacao: so participacoes CONCLUIDAS (no prazo) com os
+     * demais filtros; o filtro de situacoes da tela nao vale aqui. Um total por
+     * turma x nota, com o curso e a versao para os recortes.
+     *
+     * @return Collection<int, array{treinamento_id: int, titulo: string, curso_id: ?int, curso: ?string, versao: ?string, nota: int, total: int}>
+     */
+    public function avaliacoes(IndicadoresFiltroDTO $filtro): Collection
+    {
+        return $this->baseParticipacoes($filtro->soConcluidos())
+            ->join((new AvaliacaoCurso)->getTable() . ' as av', 'av.inscricao_id', '=', 'i.id')
+            ->select(['t.id', 't.titulo', 't.tipo', 't.versao', 't.curso_id', 'c.nome as curso', 'av.nota'])
+            ->selectRaw('COUNT(*) AS total')
+            ->groupBy(['t.id', 't.titulo', 't.tipo', 't.versao', 't.curso_id', 'c.nome', 'av.nota'])
+            ->get()
+            ->map(fn ($l) => [
+                'treinamento_id' => (int) $l->id,
+                'titulo' => (string) $l->titulo,
+                'curso_id' => self::inteiroOuNulo($l->curso_id),
+                'curso' => $l->curso,
+                'versao' => self::versao($l->tipo, $l->versao),
+                'nota' => (int) $l->nota,
+                'total' => (int) $l->total,
+            ]);
+    }
+
+    /**
      * Serie historica: ignora o filtro de ano, por isso tem consulta propria.
-     * Capacitacoes contam no ano da turma; participantes, no ano da conclusao.
+     * Capacitacoes contam no ano da turma; participantes, no ano do mes de
+     * referencia da participacao.
      *
      * @return list<array{ano: int, capacitacoes: int, participantes: int}>
      */
     public function porAno(IndicadoresFiltroDTO $filtro): array
     {
-        $linhas = $this->baseCapacitados($filtro->semAno())
+        $linhas = $this->baseParticipacoes($filtro->semAno())
             ->select('t.id')
             ->selectRaw(self::ANO_DA_TURMA . ' AS ano_turma')
-            ->selectRaw('EXTRACT(YEAR FROM i.concluido_em)::int AS ano_conclusao')
+            ->selectRaw(self::ANO_DE_REFERENCIA . ' AS ano_referencia')
             ->selectRaw('COUNT(*) AS total')
-            ->groupBy('t.id', 'ano_turma', 'ano_conclusao')
+            ->groupBy('t.id', 'ano_turma', 'ano_referencia')
             ->get();
 
         $capacitacoes = $linhas->groupBy('ano_turma')->map(fn (Collection $g) => $g->pluck('id')->unique()->count());
-        $participantes = $linhas->groupBy('ano_conclusao')->map(fn (Collection $g) => (int) $g->sum('total'));
+        $participantes = $linhas->groupBy('ano_referencia')->map(fn (Collection $g) => (int) $g->sum('total'));
 
         return $capacitacoes->keys()->merge($participantes->keys())
             ->map(fn ($a) => (int) $a)->unique()->sort()->values()
@@ -121,23 +178,27 @@ class IndicadoresService
     }
 
     /**
-     * Valores dos filtros. Anos, cursos e municipios vem so de quem tem
-     * capacitado: opcao sem resultado seria um filtro que sempre volta vazio.
+     * Valores dos filtros. Anos, cursos, turmas e municipios vem so de quem tem
+     * participacao: opcao sem resultado seria um filtro que sempre volta vazio.
      *
      * @return array<string, mixed>
      */
     public function opcoes(): array
     {
-        $linhas = $this->baseCapacitados(new IndicadoresFiltroDTO)
-            ->select('t.id', 't.titulo', 't.municipio_id')
-            ->selectRaw('EXTRACT(YEAR FROM i.concluido_em)::int AS ano')
-            ->groupBy('t.id', 't.titulo', 't.municipio_id', 'ano')
+        $linhas = $this->baseParticipacoes(new IndicadoresFiltroDTO)
+            ->select(['t.id', 't.titulo', 't.curso_id', 'c.nome as curso', Regras::MUNICIPIO])
+            ->selectRaw(self::ANO_DE_REFERENCIA . ' AS ano')
+            ->groupBy(['t.id', 't.titulo', 't.curso_id', 'c.nome', Regras::MUNICIPIO, 'ano'])
             ->get();
 
-        $anos = $linhas->pluck('ano')->map(fn ($a) => (int) $a)->unique()->sortDesc()->values()->all();
+        $anos = $linhas->pluck('ano')->filter()->map(fn ($a) => (int) $a)->unique()->sortDesc()->values()->all();
+
+        $cursos = $linhas->whereNotNull('curso_id')->unique('curso_id')
+            ->map(fn ($l) => ['id' => (int) $l->curso_id, 'nome' => (string) $l->curso])
+            ->sortBy('nome')->values()->all();
 
         $treinamentos = $linhas->unique('id')->sortBy('titulo')
-            ->map(fn ($l) => ['id' => (int) $l->id, 'titulo' => (string) $l->titulo])
+            ->map(fn ($l) => ['id' => (int) $l->id, 'titulo' => (string) $l->titulo, 'curso_id' => self::inteiroOuNulo($l->curso_id)])
             ->values()->all();
 
         $catalogo = $this->catalogoMunicipios();
@@ -153,42 +214,42 @@ class IndicadoresService
                 RedecService::all()
             )),
             'municipios' => $municipios,
+            'cursos' => $cursos,
             'treinamentos' => $treinamentos,
             'tipos' => array_map(
                 fn (TipoTreinamento $t) => ['value' => $t->value, 'label' => $t->getLabel()],
                 TipoTreinamento::cases()
             ),
+            'situacoes' => SituacaoParticipacao::toSelectArray(),
         ];
     }
 
     // ------------------------------------------------------------ internos
 
     /**
-     * Inscricoes capacitadas com os filtros aplicados, ja unidas a turma
-     * (alias i e t). Cada bloco acrescenta select/group by em cima disto.
+     * Participacoes com os filtros aplicados, unidas a turma (t) e ao curso do
+     * catalogo (c). Municipio e REDEC filtram o municipio de referencia; o ano
+     * filtra o mes de referencia; situacoes, a situacao calculada. Cada bloco
+     * acrescenta select/group by em cima disto.
      */
-    private function baseCapacitados(IndicadoresFiltroDTO $filtro): Builder
+    private function baseParticipacoes(IndicadoresFiltroDTO $filtro): Builder
     {
-        $consulta = ConexaoTreinamento::conexao()
-            ->table('treinamento.inscricoes as i')
-            ->join('treinamento.treinamentos as t', 't.id', '=', 'i.treinamento_id')
-            ->where('i.status', 'APROVADA')
-            ->whereNotNull('i.concluido_em')
-            ->whereNull('i.deleted_at')
-            ->whereNull('t.deleted_at')
-            ->where('t.status', '<>', 'CANCELADO');
+        $consulta = Regras::participacoes(ConexaoTreinamento::conexao())
+            ->leftJoin('treinamento.cursos as c', 'c.id', '=', 't.curso_id');
 
         if ($filtro->ano !== null) {
-            // Intervalo, nao EXTRACT: assim o indice de concluido_em vale.
-            $consulta->where('i.concluido_em', '>=', "{$filtro->ano}-01-01")
-                ->where('i.concluido_em', '<', ($filtro->ano + 1) . '-01-01');
+            $consulta->where(Regras::DATA_REFERENCIA, '>=', "{$filtro->ano}-01-01")
+                ->where(Regras::DATA_REFERENCIA, '<', ($filtro->ano + 1) . '-01-01');
         }
         if ($filtro->municipioId !== null) {
-            $consulta->where('t.municipio_id', $filtro->municipioId);
+            $consulta->where(Regras::MUNICIPIO, $filtro->municipioId);
         }
         if ($filtro->redecId !== null) {
             // REDEC mora no banco do SDC: traduz para os municipios dela e filtra por id.
-            $consulta->whereIn('t.municipio_id', $this->municipiosDaRedec($filtro->redecId));
+            $consulta->whereIn(Regras::MUNICIPIO, $this->municipiosDaRedec($filtro->redecId));
+        }
+        if ($filtro->cursoId !== null) {
+            $consulta->where('t.curso_id', $filtro->cursoId);
         }
         if ($filtro->treinamentoId !== null) {
             $consulta->where('t.id', $filtro->treinamentoId);
@@ -196,16 +257,19 @@ class IndicadoresService
         if ($filtro->tipo !== null) {
             $consulta->where('t.tipo', $filtro->tipo);
         }
+        if ($filtro->filtraSituacao()) {
+            $consulta->whereIn(Regras::SITUACAO, $filtro->situacoes);
+        }
 
         return $consulta;
     }
 
     /**
-     * Catalogo de municipios de MG com REDEC, mesorregiao, populacao e
-     * coordenadas, indexado por municipios.id. Cacheado: muda raramente e todo
-     * bloco do painel precisa dele.
+     * Catalogo de municipios de MG com codigo IBGE, REDEC, mesorregiao,
+     * populacao e coordenadas, indexado por municipios.id. Cacheado: muda
+     * raramente e todo bloco do painel precisa dele.
      *
-     * @return array<int, array{nome: string, mesorregiao: ?string, lat: ?float, lng: ?float, redec_id: ?int, populacao: float}>
+     * @return array<int, array{nome: string, ibge: string, mesorregiao: ?string, lat: ?float, lng: ?float, redec_id: ?int, populacao: float}>
      */
     public function catalogoMunicipios(): array
     {
@@ -214,7 +278,7 @@ class IndicadoresService
                 ->leftJoin('cedec_municipio', 'cedec_municipio.Codmundv', '=', 'municipios.codigo_ibge')
                 ->where('municipios.uf', 'MG')
                 ->select([
-                    'municipios.id', 'municipios.nome', 'municipios.mesorregiao',
+                    'municipios.id', 'municipios.nome', 'municipios.codigo_ibge', 'municipios.mesorregiao',
                     'municipios.latitude', 'municipios.longitude',
                     'cedec_municipio.redec_id', 'cedec_municipio.populacao',
                 ])
@@ -224,6 +288,8 @@ class IndicadoresService
             foreach ($linhas as $l) {
                 $catalogo[(int) $l->id] = [
                     'nome' => (string) $l->nome,
+                    // O GeoJSON do mapa casa pelo codigo de 7 digitos (codarea).
+                    'ibge' => str_pad(trim((string) $l->codigo_ibge), 7, '0', STR_PAD_LEFT),
                     'mesorregiao' => $l->mesorregiao,
                     'lat' => $l->latitude !== null ? (float) $l->latitude : null,
                     'lng' => $l->longitude !== null ? (float) $l->longitude : null,
@@ -258,5 +324,21 @@ class IndicadoresService
         $redec = RedecService::all()[$redecId] ?? null;
 
         return $redec?->label() ?? "REDEC {$redecId}";
+    }
+
+    private static function inteiroOuNulo(mixed $valor): ?int
+    {
+        return $valor !== null ? (int) $valor : null;
+    }
+
+    /** Rotulo da versao ("v2.0"), so no EAD: e o unico tipo com trilha versionada. */
+    private static function versao(mixed $tipo, mixed $versao): ?string
+    {
+        return $tipo === TipoTreinamento::EAD->value && $versao !== null ? "v{$versao}.0" : null;
+    }
+
+    private static function data(mixed $valor): ?string
+    {
+        return $valor !== null ? substr((string) $valor, 0, 10) : null;
     }
 }
