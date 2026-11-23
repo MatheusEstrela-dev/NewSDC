@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Resources;
 
+use App\Modules\Treinamento\Support\AtalhoDeNovaVersao;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -39,6 +40,16 @@ class TreinamentoListResource extends JsonResource
             'situacao_label' => $this->situacaoEfetiva()->getLabel(),
             'situacao_variant' => $this->situacaoEfetiva()->getVariant(),
             'pode_receber_inscricao' => $this->podeReceberInscricao(),
-        ];
+        ] + $this->atalhoDeVersao($request);
+    }
+
+    /**
+     * Atalho "Nova versao" / "Continuar rascunho" da linha (regra unica em AtalhoDeNovaVersao).
+     *
+     * @return array{rascunho_id: ?int, pode_criar_versao: bool, pode_continuar_rascunho: bool}
+     */
+    private function atalhoDeVersao(Request $request): array
+    {
+        return app(AtalhoDeNovaVersao::class)->para($this->resource, $request->user());
     }
 }

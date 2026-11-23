@@ -28,7 +28,11 @@ class TreinamentoResource extends JsonResource
             'status' => $this->status->value,
             'status_label' => $this->status->getLabel(),
             'status_color' => $this->status->getBadgeColor(),
-            'status_transicoes' => array_map(fn ($s) => $s->value, $this->status->getAllowedTransitions()),
+            // Transicoes so para quem opera o ciclo do curso: nao e dado da vitrine.
+            'status_transicoes' => $this->when(
+                $this->podeOperarCiclo($request),
+                fn () => array_map(fn ($s) => $s->value, $this->status->getAllowedTransitions()),
+            ),
             // Status de exibicao da Area do Gestor (Planejado/Publicado/Em
             // andamento/Concluido/Cancelado): deriva status + publicacao, sem
             // coluna propria. Pausado/Desativado continuam vindo de `situacao`.
@@ -49,7 +53,8 @@ class TreinamentoResource extends JsonResource
             'hora_inicio' => $this->hora_inicio ? substr($this->hora_inicio, 0, 5) : null,
             'numero_vagas' => $this->numero_vagas,
             'vagas_disponiveis' => $this->vagas_disponiveis,
-            'total_inscricoes' => $this->total_inscricoes,
+            // Contador interno: so para quem ve inscricoes.
+            'total_inscricoes' => $this->when($request->user()?->can('treinamento.inscricoes.view'), fn () => $this->total_inscricoes),
             'percentual_frequencia_minimo' => (float) $this->percentual_frequencia_minimo,
             'link_publico_slug' => $this->link_publico_slug,
             'capa_url' => $this->capaUrl(),
@@ -57,8 +62,11 @@ class TreinamentoResource extends JsonResource
             'situacao' => $this->situacaoEfetiva()->value,
             'situacao_label' => $this->situacaoEfetiva()->getLabel(),
             'situacao_variant' => $this->situacaoEfetiva()->getVariant(),
+            'usa_controle_presenca' => $this->usaControleDePresenca(),
             'presenca_liberada' => (bool) $this->presenca_liberada,
             'presenca_autoconfirmavel' => (bool) $this->presenca_autoconfirmavel,
+            'com_tutoria' => (bool) $this->com_tutoria,
+            'categoria_oferta' => $this->categoriaOferta()->value,
             'finalizado_em' => $this->finalizado_em?->toIso8601String(),
             'pode_receber_inscricao' => $this->podeReceberInscricao(),
             'pode_registrar_frequencia' => $this->status->podeRegistrarFrequencia(),
@@ -70,7 +78,19 @@ class TreinamentoResource extends JsonResource
                 'carga_horaria' => $modulo->carga_horaria,
                 'data_prevista' => $modulo->data_prevista?->toDateString(),
             ])),
-            'inscricoes' => InscricaoResource::collection($this->whenLoaded('inscricoes')),
+            // Nome, e-mail e CPF dos inscritos (LGPD): so com a permissao de ver inscricoes.
+            'inscricoes' => $this->when(
+                $this->relationLoaded('inscricoes') && $request->user()?->can('treinamento.inscricoes.view'),
+                fn () => InscricaoResource::collection($this->inscricoes),
+            ),
         ];
+    }
+
+    private function podeOperarCiclo(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null
+            && ($user->can('treinamento.cursos.configurar') || $user->can('treinamento.cursos.cancelar'));
     }
 }

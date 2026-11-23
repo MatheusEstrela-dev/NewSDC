@@ -7,12 +7,14 @@ namespace App\Modules\Treinamento\Models;
 use App\Models\User;
 use App\Modules\Notificacoes\Contracts\Rastreavel;
 use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
+use App\Modules\Treinamento\Enums\CategoriaOferta;
 use App\Modules\Treinamento\Enums\CategoriaTreinamento;
 use App\Modules\Treinamento\Enums\PublicoAlvo;
 use App\Modules\Treinamento\Enums\SituacaoCurso;
 use App\Modules\Treinamento\Enums\StatusExibicaoCurso;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
+use App\Modules\Treinamento\Support\ClassificacaoDeOferta;
 use App\Support\Database\UsaConexaoDeTreinamento;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -60,6 +62,7 @@ class Treinamento extends Model implements Rastreavel
         'presenca_liberada_por',
         'presenca_autoconfirmavel',
         'finalizado_em',
+        'com_tutoria',
     ];
 
     protected $casts = [
@@ -82,12 +85,12 @@ class Treinamento extends Model implements Rastreavel
         'publicado_em' => 'datetime',
         'presenca_liberada_em' => 'datetime',
         'finalizado_em' => 'datetime',
+        'com_tutoria' => 'boolean',
     ];
 
-    protected $appends = [
-        'vagas_disponiveis',
-        'total_inscricoes',
-    ];
+    // vagas_disponiveis e total_inscricoes sao accessors sob demanda (os Resources os
+    // leem direto): ficam fora de $appends para nao custar um count por linha em
+    // qualquer serializacao do model. Em listas, use withCount('inscricoes', 'inscricoesAprovadas').
 
     // Relationships
 
@@ -178,7 +181,7 @@ class Treinamento extends Model implements Rastreavel
             return false;
         }
 
-        if ($this->numero_vagas !== null && $this->inscricoesAprovadas()->count() >= $this->numero_vagas) {
+        if ($this->numero_vagas !== null && $this->totalDeInscricoesAprovadas() >= $this->numero_vagas) {
             return false;
         }
 
@@ -188,6 +191,22 @@ class Treinamento extends Model implements Rastreavel
     public function isEad(): bool
     {
         return $this->tipo === TipoTreinamento::EAD;
+    }
+
+    /**
+     * RN13 - ponto unico de decisao do controle de presenca. Vale para
+     * presencial, semi-presencial, online (ao vivo) e qualquer evento; o EAD
+     * nao tem (o progresso da trilha ja valida a participacao).
+     */
+    public function usaControleDePresenca(): bool
+    {
+        return ! $this->isEad() || $this->categoria === CategoriaTreinamento::EVENTO;
+    }
+
+    /** Categoria de oferta da turma (mosaico das vitrines); regra em ClassificacaoDeOferta. */
+    public function categoriaOferta(): CategoriaOferta
+    {
+        return ClassificacaoDeOferta::classificar($this->categoria, $this->tipo, (bool) $this->com_tutoria);
     }
 
     /**
@@ -316,16 +335,43 @@ class Treinamento extends Model implements Rastreavel
             return null;
         }
 
-        $ocupadas = $this->inscricoesAprovadas()->count();
-        return max(0, $this->numero_vagas - $ocupadas);
+        return max(0, $this->numero_vagas - $this->totalDeInscricoesAprovadas());
     }
 
     public function getTotalInscricoesAttribute(): int
     {
-        return $this->inscricoes()->count();
+        return $this->contagemPreCarregada('inscricoes_count') ?? $this->inscricoes()->count();
+    }
+
+    /** Aprovadas: usa o withCount('inscricoesAprovadas') quando veio na consulta; senao conta. */
+    public function totalDeInscricoesAprovadas(): int
+    {
+        return $this->contagemPreCarregada('inscricoes_aprovadas_count') ?? $this->inscricoesAprovadas()->count();
+    }
+
+    private function contagemPreCarregada(string $atributo): ?int
+    {
+        return array_key_exists($atributo, $this->attributes) ? (int) $this->attributes[$atributo] : null;
     }
 
     // Scopes
+
+    /**
+     * Busca por texto sem diferenciar caixa (ILIKE do Postgres), escapando % e _ e
+     * a barra do termo para valerem como letras comuns. Casa em QUALQUER coluna.
+     *
+     * @param  list<string>  $colunas
+     */
+    public function scopeBuscarTexto($query, string $termo, array $colunas)
+    {
+        $padrao = '%'.addcslashes($termo, '\\%_').'%';
+
+        return $query->where(function ($q) use ($colunas, $padrao) {
+            foreach ($colunas as $coluna) {
+                $q->orWhere($coluna, 'ilike', $padrao);
+            }
+        });
+    }
 
     public function scopePorStatus($query, StatusTreinamento $status)
     {
@@ -345,6 +391,12 @@ class Treinamento extends Model implements Rastreavel
     public function scopeParaPublico($query, PublicoAlvo $publico)
     {
         return $query->where('publico_alvo', $publico->value);
+    }
+
+    /** Espelho em SQL de categoriaOferta(). */
+    public function scopeDaCategoriaOferta($query, CategoriaOferta $oferta)
+    {
+        return ClassificacaoDeOferta::restringir($query, $oferta);
     }
 
     public function scopePublicado($query)

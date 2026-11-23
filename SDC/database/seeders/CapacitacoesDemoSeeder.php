@@ -33,7 +33,8 @@ use Throwable;
  *   php artisan db:seed --class=CapacitacoesDemoLimpezaSeeder   (remove so os dados demo)
  *
  * Pre-requisitos: migrations de database/migrations/treinamento aplicadas na
- * conexao do Treinamento (inclui 2026_11_18_120000_create_curso_avaliacoes_table)
+ * conexao do Treinamento (a tabela curso_avaliacoes vive na migration principal
+ * 2026_11_05_210000_create_treinamento_schemas_tables, metodo criarAvaliacaoDoCurso)
  * e roles/permissoes já criadas (RolesAndPermissionsSeeder / permissions:sincronizar).
  * Classe nova no container exige `composer dump-autoload -o` e `octane:reload`.
  *
@@ -284,7 +285,7 @@ final class CapacitacoesDemoSeeder extends Seeder
 
     private const PERMISSOES_GESTOR = [
         'treinamento.cursos.view', 'treinamento.cursos.create', 'treinamento.cursos.edit', 'treinamento.cursos.export',
-        'treinamento.cursos.configurar', 'treinamento.cursos.cancelar', 'treinamento.gestor.acessar',
+        'treinamento.cursos.configurar', 'treinamento.cursos.cancelar', 'treinamento.cursos.pausar', 'treinamento.gestor.acessar',
         'treinamento.inscricoes.view', 'treinamento.inscricoes.aprovar', 'treinamento.inscricoes.reprovar', 'treinamento.inscricoes.manage',
         'treinamento.presencas.view', 'treinamento.presencas.registrar',
         'treinamento.certificados.view', 'treinamento.certificados.reemitir', 'treinamento.certificados.cancelar', 'treinamento.certificados.download',
@@ -1121,7 +1122,10 @@ final class CapacitacoesDemoSeeder extends Seeder
         }
         if ($nota !== null) {
             $this->t('curso_avaliacoes')->insert([
-                'inscricao_id' => $inscId, 'treinamento_id' => $cursoId, 'nota' => $nota, 'comentario' => $comentario ? self::COMENTARIOS[$seed % count(self::COMENTARIOS)] : null,
+                'inscricao_id' => $inscId, 'treinamento_id' => $cursoId, 'nota' => $nota,
+                // Relevancia do conteudo (RN17): acompanha a nota geral com uma variacao de -1..+1 (faixa 1..5).
+                'nota_relevancia' => max(1, min(5, $nota + ($seed % 3) - 1)),
+                'comentario' => $comentario ? self::COMENTARIOS[$seed % count(self::COMENTARIOS)] : null,
                 'created_at' => self::passado($concluidoEm->addHours(2)), 'updated_at' => self::passado($concluidoEm->addHours(2)),
             ]);
         }
