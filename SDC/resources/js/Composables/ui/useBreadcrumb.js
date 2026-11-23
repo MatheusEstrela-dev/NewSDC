@@ -1,9 +1,13 @@
 import { computed } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
+import { usePermissions } from '@/Composables/auth/usePermissions';
+import { trilhaTreinamento, INICIO_DO_PORTAL } from './trilhas/treinamento';
+import { destinoDoVoltar } from './trilhas/voltar';
 
 export function useBreadcrumb() {
     const page = usePage();
+    const { canAny } = usePermissions();
 
     const breadcrumbMap = {
         'Dashboard': [], // Dashboard is home
@@ -48,36 +52,6 @@ export function useBreadcrumb() {
             { label: 'Início', route: 'dashboard' },
             { label: 'PAE', route: 'pae.index' },
             { label: 'Novo PAE', route: null }
-        ],
-
-        'Treinamento/TreinamentoIndex': [
-            { label: 'Início', route: 'dashboard' },
-            { label: 'Capacitações', route: null }
-        ],
-        'Treinamento/Indicadores/Index': [
-            { label: 'Início', route: 'dashboard' },
-            { label: 'Capacitações', route: 'treinamentos.index' },
-            { label: 'Painel', route: null }
-        ],
-        'Treinamento/ValidarParticipante/Index': [
-            { label: 'Início', route: 'dashboard' },
-            { label: 'Capacitações', route: 'treinamentos.index' },
-            { label: 'Validar participante', route: null }
-        ],
-        'Treinamento/TreinamentoCreate': [
-            { label: 'Início', route: 'dashboard' },
-            { label: 'Capacitações', route: 'treinamentos.index' },
-            { label: 'Nova capacitação', route: null }
-        ],
-        'Treinamento/TreinamentoEdit': [
-            { label: 'Início', route: 'dashboard' },
-            { label: 'Capacitações', route: 'treinamentos.index' },
-            { label: 'Edição', route: null }
-        ],
-        'Treinamento/TreinamentoShow': [
-            { label: 'Início', route: 'dashboard' },
-            { label: 'Capacitações', route: 'treinamentos.index' },
-            { label: 'Visualizar', route: null }
         ],
 
         // Ajuda Humanitaria. Mapeado explicitamente porque o construtor
@@ -169,26 +143,6 @@ export function useBreadcrumb() {
             { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
             { label: 'Transferências', route: 'ajuda-humanitaria.transferencias.index' },
             { label: 'Visualizar', route: null }
-        ],
-
-        // Portal de Treinamentos (guard "cidadao") - mesmo shell do SDC, "Início"
-        // aponta pro catalogo (nao existe dashboard interno pra ela).
-        'Treinamento/Portal/Catalogo': [
-            { label: 'Início', route: 'portal.treinamento.catalogo' },
-            { label: 'Cursos e Eventos', route: null }
-        ],
-        'Treinamento/Portal/Detalhe': [
-            { label: 'Início', route: 'portal.treinamento.catalogo' },
-            { label: 'Cursos e Eventos', route: 'portal.treinamento.catalogo' },
-            { label: 'Detalhes', route: null }
-        ],
-        'Treinamento/Portal/MinhasInscricoes': [
-            { label: 'Início', route: 'portal.treinamento.catalogo' },
-            { label: 'Minhas Inscrições', route: null }
-        ],
-        'Treinamento/Portal/Certificados': [
-            { label: 'Início', route: 'portal.treinamento.catalogo' },
-            { label: 'Certificados', route: null }
         ],
 
         // Admin / Permissions
@@ -543,6 +497,12 @@ export function useBreadcrumb() {
             return doPae;
         }
 
+        const doTreinamento = trilhaTreinamento(componentName, propsDaPagina, canAny);
+
+        if (doTreinamento) {
+            return doTreinamento;
+        }
+
         if (breadcrumbMap[componentName]) {
             return breadcrumbMap[componentName];
         }
@@ -557,17 +517,7 @@ export function useBreadcrumb() {
             'Show': 'Visualizar',
         };
 
-        // Nome que o usuario ve quando difere do nome da pasta do componente.
-        // Mesmos rotulos do menu lateral: a trilha nao pode chamar a area de
-        // um jeito e o menu de outro.
-        const rotulos = {
-            Treinamento: 'Capacitações',
-            Aluno: 'Meus cursos',
-            MeusCursos: 'Meus cursos',
-            Professor: 'Área do Gestor',
-        };
-
-        const humanize = (segment) => rotulos[segment] ?? segment.replace(/([A-Z])/g, ' $1').trim();
+        const humanize = (segment) => segment.replace(/([A-Z])/g, ' $1').trim();
 
         /**
          * Nome de rota provavel para um nivel da trilha, ou null.
@@ -674,9 +624,9 @@ export function useBreadcrumb() {
             items.push({ label: actionMap[acao], route: null });
         }
 
-        // O nome do componente nem sempre bate com o da rota
-        // (Treinamento/Aluno/MeusCursos -> a rota e treinamentos.index, no
-        // plural): sem rota, o modulo nao era clicavel e o Voltar pulava ele
+        // O nome do componente nem sempre bate com o da rota (pasta no singular,
+        // prefixo da rota no plural): sem rota, o modulo nao era clicavel e o
+        // Voltar pulava ele
         // e caia no Inicio. O servidor manda a raiz do modulo que o usuario
         // pode abrir.
         const raiz = propsDaPagina?.navegacao?.raiz;
@@ -709,14 +659,8 @@ export function useBreadcrumb() {
     // historico), porque a pagina anterior real nem sempre e a entrada anterior
     // do historico.
     //
-    // Ordem: degrau da trilha abaixo do modulo, depois o ancestral que o
-    // servidor calculou, depois o proprio modulo e so entao o Inicio. Antes o
-    // Inicio entrava na varredura da trilha, e qualquer tela cuja trilha nao
-    // tivesse o modulo com rota voltava direto para o dashboard.
-    //
-    // O modulo fica DEPOIS do ancestral: com o link da raiz preenchido pelo
-    // servidor, o Conteudo do professor pularia a Area do Gestor (o ancestral
-    // mais proximo) e iria direto para a listagem geral.
+    // Sobe exatamente um degrau: o item anterior da trilha (ver destinoDoVoltar,
+    // que tambem define as reservas quando esse item nao tem link).
     const irPara = (item) => {
         // `params` e obrigatorio em rota com binding -- a trilha do Cisterna
         // volta para a lista DAQUELE beneficiario. Sem repassar, o Ziggy lanca
@@ -725,38 +669,29 @@ export function useBreadcrumb() {
     };
 
     const handleBack = () => {
-        const items = breadcrumbItems.value;
-
-        for (let i = items.length - 2; i >= 2; i--) {
-            if (items[i]?.route) {
-                irPara(items[i]);
-                return;
-            }
-        }
-
         const props = page.props?.value ?? page.props;
-        const voltar = props?.navegacao?.voltar;
+        const destino = destinoDoVoltar(breadcrumbItems.value, props?.navegacao?.voltar);
 
-        if (voltar?.url) {
-            router.visit(voltar.url);
-            return;
+        if (destino.tipo === 'item') {
+            irPara(destino.item);
+        } else if (destino.tipo === 'url') {
+            router.visit(destino.url);
+        } else {
+            window.history.back();
         }
-
-        // Modulo, depois Inicio. O ultimo degrau (a propria pagina) nunca tem
-        // rota, entao items[1] so e destino quando ha pagina abaixo dele.
-        for (const item of [items[1], items[0]]) {
-            if (item?.route) {
-                irPara(item);
-                return;
-            }
-        }
-
-        window.history.back();
     };
+
+    // Destino do icone de casa: o cidadao do portal nao abre o dashboard interno.
+    const inicioRota = computed(() => {
+        const props = page.props?.value ?? page.props;
+
+        return props?.auth?.cidadao ? INICIO_DO_PORTAL : 'dashboard';
+    });
 
     return {
         breadcrumbItems,
         currentRoute,
+        inicioRota,
         handleBack
     };
 }
