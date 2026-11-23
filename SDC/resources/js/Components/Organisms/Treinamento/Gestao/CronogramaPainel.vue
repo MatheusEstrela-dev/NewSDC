@@ -7,16 +7,18 @@
  * Os itens vem por axios (GestaoCursoConsulta::cronograma, JSON por mes),
  * nao por prop Inertia: o calendario pede de novo a cada mes navegado.
  */
-import { onMounted, ref } from 'vue';
+import { defineAsyncComponent, onMounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 import SecaoRecolhivel from '@/Components/Molecules/Treinamento/SecaoRecolhivel.vue';
-import EscalaCalendario from '@/Components/Organisms/Plantao/EscalaCalendario.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CronogramaItemModal from '@/Components/Organisms/Treinamento/Gestao/CronogramaItemModal.vue';
 import { useToast } from '@/Composables/useToast';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { useConfirmacao } from '@/Composables/core/useConfirmacao';
+
+// FullCalendar pesa ~240 KB: so baixa quando o cronograma e renderizado.
+const EscalaCalendario = defineAsyncComponent(() => import('@/Components/Organisms/Plantao/EscalaCalendario.vue'));
 
 const props = defineProps({
   treinamentoId: { type: [Number, String], required: true },

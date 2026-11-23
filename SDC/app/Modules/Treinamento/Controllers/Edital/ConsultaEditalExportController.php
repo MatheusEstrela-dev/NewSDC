@@ -28,7 +28,7 @@ class ConsultaEditalExportController extends Controller
         return response()->streamDownload(function () use ($pessoas): void {
             $saida = fopen('php://output', 'w');
             fwrite($saida, "\xEF\xBB\xBF");
-            fputcsv($saida, self::CABECALHO, ';');
+            fputcsv($saida, self::CABECALHO, ';', '"', '');
 
             foreach ($pessoas as $p) {
                 fputcsv($saida, [
@@ -42,7 +42,7 @@ class ConsultaEditalExportController extends Controller
                         fn (array $c) => $c['nome'] . ' (' . date('d/m/Y', strtotime($c['concluido_em'])) . ')',
                         $p['cursos']
                     )),
-                ], ';');
+                ], ';', '"', '');
             }
 
             fclose($saida);
