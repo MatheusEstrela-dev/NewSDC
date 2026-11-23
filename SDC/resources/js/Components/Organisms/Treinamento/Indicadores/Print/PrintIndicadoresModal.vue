@@ -64,11 +64,12 @@ const satisfacao = computed(() => props.relatorio?.satisfacao ?? null);
 const rankingSatisfacao = computed(() => {
   const s = satisfacao.value ?? {};
   return s.por_turma?.length
-    ? s.por_turma.map((t) => ({ chave: `t:${t.treinamento_id}`, nome: t.versao ? `${t.titulo} (${t.versao})` : t.titulo, n: t.n, media: t.media }))
-    : (s.por_curso ?? []).map((c, i) => ({ chave: `c:${c.curso_id ?? i}`, nome: c.nome, n: c.n, media: c.media }));
+    ? s.por_turma.map((t) => ({ chave: `t:${t.treinamento_id}`, nome: t.versao ? `${t.titulo} (${t.versao})` : t.titulo, n: t.n, media: t.media, media_relevancia: t.media_relevancia, comentarios: t.comentarios }))
+    : (s.por_curso ?? []).map((c, i) => ({ chave: `c:${c.curso_id ?? i}`, nome: c.nome, n: c.n, media: c.media, media_relevancia: c.media_relevancia, comentarios: c.comentarios }));
 });
 
 const media = (v) => (v === null || v === undefined ? '—' : dec(v));
+const dataBr = (iso) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '');
 </script>
 
 <template>
@@ -222,6 +223,9 @@ const media = (v) => (v === null || v === undefined ? '—' : dec(v));
           <PrintSection titulo="SATISFAÇÃO (AVALIAÇÃO DOS CONCLUINTES)">
             <table v-if="satisfacao?.n" class="bos-table">
               <tr>
+                <td class="field-label" colspan="4">1. SATISFAÇÃO GERAL - "Como você avalia a capacitação?"</td>
+              </tr>
+              <tr>
                 <td class="field-label" width="30%">AVALIAÇÕES</td>
                 <td class="field-value" width="20%" style="font-weight: bold;">{{ num(satisfacao.n) }}</td>
                 <td class="field-label" width="30%">MÉDIA (1 A 5)</td>
@@ -237,16 +241,57 @@ const media = (v) => (v === null || v === undefined ? '—' : dec(v));
                 <td class="field-value text-center">{{ num(d.total) }}</td>
                 <td class="field-value text-center">{{ dec(d.pct) }}%</td>
               </tr>
+              <tr>
+                <td class="field-label" colspan="4">2. RELEVÂNCIA DO CONTEÚDO - "Em que medida o conteúdo apresentado foi relevante?"</td>
+              </tr>
+              <tr>
+                <td class="field-label" width="30%">RESPOSTAS DE RELEVÂNCIA</td>
+                <td class="field-value" width="20%" style="font-weight: bold;">{{ num(satisfacao.n_relevancia) }}</td>
+                <td class="field-label" width="30%">MÉDIA DE RELEVÂNCIA (1 A 5)</td>
+                <td class="field-value" width="20%" style="font-weight: bold;">{{ media(satisfacao.media_relevancia) }}</td>
+              </tr>
+              <template v-if="satisfacao.n_relevancia">
+                <tr>
+                  <td class="field-label" colspan="2">RELEVÂNCIA DO CONTEÚDO</td>
+                  <td class="field-label">RESPOSTAS</td>
+                  <td class="field-label">%</td>
+                </tr>
+                <tr v-for="d in satisfacao.distribuicao_relevancia ?? []" :key="`r${d.nota}`">
+                  <td class="field-value" colspan="2">{{ d.nota }} - {{ d.rotulo }}</td>
+                  <td class="field-value text-center">{{ num(d.total) }}</td>
+                  <td class="field-value text-center">{{ dec(d.pct) }}%</td>
+                </tr>
+              </template>
+              <tr>
+                <td class="field-label" colspan="4">3. SUGESTÕES E COMENTÁRIOS</td>
+              </tr>
+              <tr>
+                <td class="field-label" colspan="2">COMENTÁRIOS NO RECORTE</td>
+                <td class="field-value text-center" colspan="2" style="font-weight: bold;">{{ num(satisfacao.comentarios_total) }}</td>
+              </tr>
+              <template v-if="satisfacao.sugestoes?.length">
+                <tr>
+                  <td class="field-label" colspan="4">SUGESTÕES MAIS RECENTES (SEM IDENTIFICAÇÃO DO AUTOR)</td>
+                </tr>
+                <tr v-for="(sug, i) in satisfacao.sugestoes" :key="`s${i}`">
+                  <td class="field-value" colspan="3">{{ sug.comentario }}</td>
+                  <td class="field-value text-center">
+                    {{ dash(sug.curso ?? sug.titulo) }}{{ sug.versao ? ` (${sug.versao})` : '' }}<template v-if="sug.data"><br>{{ dataBr(sug.data) }}</template>
+                  </td>
+                </tr>
+              </template>
               <template v-if="rankingSatisfacao.length">
                 <tr>
-                  <td class="field-label" colspan="2">{{ satisfacao.por_turma?.length ? 'TURMA' : 'CURSO' }}</td>
+                  <td class="field-label">{{ satisfacao.por_turma?.length ? 'TURMA' : 'CURSO' }}</td>
                   <td class="field-label">AVALIAÇÕES</td>
                   <td class="field-label">MÉDIA</td>
+                  <td class="field-label">MÉDIA RELEVÂNCIA</td>
                 </tr>
                 <tr v-for="r in rankingSatisfacao" :key="r.chave">
-                  <td class="field-value" colspan="2">{{ dash(r.nome) }}</td>
+                  <td class="field-value">{{ dash(r.nome) }}</td>
                   <td class="field-value text-center">{{ num(r.n) }}</td>
                   <td class="field-value text-center">{{ media(r.media) }}</td>
+                  <td class="field-value text-center">{{ media(r.media_relevancia) }}</td>
                 </tr>
               </template>
             </table>

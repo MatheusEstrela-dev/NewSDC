@@ -42,14 +42,19 @@
           </div>
 
           <div class="mt-3 border-t border-slate-200 pt-2.5 dark:border-slate-700/40">
-            <div class="flex items-baseline justify-between gap-2">
-              <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Satisfação</p>
-              <p v-if="card.satisfacao.n > 0" class="text-xs tabular-nums text-slate-500 dark:text-slate-400">
-                <span class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ formatarDecimal(card.satisfacao.media) }}</span>
-                / 5 · {{ rotuloContagem(card.satisfacao.n, 'avaliação', 'avaliações') }}
-              </p>
-              <p v-else class="text-xs text-slate-400 dark:text-slate-500">sem avaliações</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="min-w-0">
+                <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Satisfação</p>
+                <p class="mt-0.5 text-lg font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">{{ mediaOuTraco(card.satisfacao.n, card.satisfacao.media) }}</p>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Relevância</p>
+                <p class="mt-0.5 text-lg font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">{{ mediaOuTraco(card.satisfacao.n_relevancia, card.satisfacao.media_relevancia) }}</p>
+              </div>
             </div>
+            <p class="mt-1.5 text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
+              {{ rotuloContagem(card.satisfacao.n, 'avaliação', 'avaliações') }} · {{ rotuloContagem(card.satisfacao.comentarios, 'comentário', 'comentários') }}
+            </p>
             <div
               v-if="card.satisfacao.n > 0"
               class="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
@@ -76,8 +81,9 @@
 <script setup>
 /**
  * Um card por curso do catalogo (props.porCurso, top 15 do servidor, os de mais
- * matriculados primeiro): turmas, participantes, taxa de desistencia, nota media
- * de satisfacao com a distribuicao das notas, e as situacoes. Turma sem curso
+ * matriculados primeiro): turmas, participantes, taxa de desistencia, medias de
+ * satisfacao e de relevancia (sempre visiveis, traco sem resposta), quantidade de
+ * avaliacoes e comentarios, a distribuicao das notas e as situacoes. Turma sem curso
  * vem como card proprio (curso_id null) e filtra pela turma. Clicar no card ja
  * filtrado volta para todos os cursos.
  */
@@ -94,6 +100,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['selecionar']);
+
+/** Media com 1 casa, ou traco quando ninguem respondeu. */
+const mediaOuTraco = (n, media) => (Number(n) > 0 && media !== null && media !== undefined ? formatarDecimal(media) : '—');
 
 const mesmoId = (a, b) => a !== null && a !== undefined && a !== '' && String(a) === String(b);
 

@@ -38,19 +38,21 @@
       </div>
 
       <!-- 3. Satisfacao -->
-      <SatisfacaoPainel :satisfacao="satisfacao" :filtros="filtros" />
+      <SatisfacaoPainel :satisfacao="satisfacao" :filtros="filtros" :comentarios="comentarios" />
 
       <!-- 4 e 5. Cobertura territorial e o mapa logo abaixo, ligados pela REDEC destacada -->
       <CoberturaTerritorialPainel :kpis="kpis" :por-redec="porRedec" :redec-destacada="redecDestacada" @selecionar-redec="destacarRedec" />
-      <MapaTerritorialPainel
-        class="min-w-0"
-        :mapa="mapa"
-        :territorio="territorio"
-        :sem-municipio="semMunicipio"
-        :redecs="opcoes.redecs ?? []"
-        :redec-destacada="redecDestacada"
-        @selecionar-redec="destacarRedec"
-      />
+      <div ref="mapaRef" class="min-w-0">
+        <MapaTerritorialPainel
+          class="min-w-0"
+          :mapa="mapa"
+          :territorio="territorio"
+          :sem-municipio="semMunicipio"
+          :redecs="opcoes.redecs ?? []"
+          :redec-destacada="redecDestacada"
+          @selecionar-redec="destacarRedec"
+        />
+      </div>
 
       <!-- 6. Detalhamento e paineis complementares -->
       <TabelaDetalhadaPainel
@@ -110,7 +112,7 @@
  * tabela mudam. Os filtros vivem na URL: F5 e link compartilhado mantem o
  * recorte. Estado so de tela (mes aberto, REDEC destacada no mapa) fica aqui.
  */
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
@@ -148,7 +150,7 @@ const props = defineProps({
     type: Object,
     default: () => ({ anos: [], redecs: [], municipios: [], cursos: [], treinamentos: [], tipos: [], situacoes: [] }),
   },
-  /** Todos os municipios de MG (estatico): o mapa pinta tambem os nao atendidos. */
+  /** Lazy: todos os municipios de MG (estatico), pedidos quando o mapa entra na tela. */
   territorio: { type: Array, default: () => [] },
   kpis: {
     type: Object,
@@ -181,20 +183,22 @@ const props = defineProps({
   porSexo: { type: Object, default: () => ({ feminino: 0, masculino: 0, nao_binario: 0, outro: 0, nao_informado: 0 }) },
   porFaixaEtaria: { type: Array, default: () => [] },
   porCurso: { type: Array, default: () => [] },
-  satisfacao: { type: Object, default: () => ({ n: 0, media: null, distribuicao: [], por_curso: [], por_turma: [] }) },
+  satisfacao: { type: Object, default: () => ({ n: 0, media: null, distribuicao: [], n_relevancia: 0, media_relevancia: null, distribuicao_relevancia: [], comentarios_total: 0, sugestoes: [], por_curso: [], por_turma: [] }) },
   rankingMunicipios: { type: Array, default: () => [] },
   pessoasPorCurso: { type: Array, default: () => [] },
   pessoasPorMunicipio: { type: Array, default: () => [] },
   /** Lazy: so chega quando um mes do grafico mensal e clicado (visita parcial). */
   detalheMes: { type: Object, default: null },
+  /** Lazy: pagina de comentarios de "Ver todos", pedida por SatisfacaoPainel (?comentarios_pagina=N). */
+  comentarios: { type: Object, default: null },
   /** Lazy: so chega quando o botao "Gerar relatorio" pede (visita parcial). */
   relatorio: { type: Object, default: null },
   tabela: { type: Object, default: () => ({ data: [], meta: null }) },
 });
 
 // Fora do reload: `opcoes` e `territorio` nao mudam com o recorte (recarregar
-// todos os municipios de MG a cada clique seria peso sem ganho), e detalheMes e
-// relatorio sao lazy, pedidos so pela propria acao.
+// todos os municipios de MG a cada clique seria peso sem ganho), e detalheMes,
+// relatorio, comentarios e territorio sao lazy, pedidos so pela propria acao.
 const PROPS_DE_DADOS = [
   'filtros', 'kpis', 'mapa', 'semMunicipio', 'porRedec', 'porMes', 'porAno', 'porSexo', 'porFaixaEtaria',
   'porCurso', 'satisfacao', 'rankingMunicipios', 'pessoasPorCurso', 'pessoasPorMunicipio', 'tabela',
@@ -208,6 +212,39 @@ const mesSelecionado = ref(null);
 // pagina pode ser de um recorte anterior e nao deve aparecer.
 const detalheMesCarregado = ref(null);
 const redecDestacada = ref(null);
+
+// Territorio (63 KB) e lazy: pedido uma vez, quando o mapa se aproxima da tela
+// ou quando uma REDEC e destacada (o enquadramento do mapa precisa dele).
+const mapaRef = ref(null);
+let observador = null;
+let pedindoTerritorio = false;
+
+function garantirTerritorio() {
+  if (props.territorio.length > 0 || pedindoTerritorio) return;
+  pedindoTerritorio = true;
+  router.reload({
+    only: ['territorio'],
+    preserveState: true,
+    preserveScroll: true,
+    onFinish: () => { pedindoTerritorio = false; },
+  });
+}
+
+onMounted(() => {
+  if (!mapaRef.value || typeof IntersectionObserver === 'undefined') {
+    garantirTerritorio();
+    return;
+  }
+  observador = new IntersectionObserver((entradas) => {
+    if (entradas.some((e) => e.isIntersecting)) {
+      garantirTerritorio();
+      observador?.disconnect();
+    }
+  }, { rootMargin: '400px' });
+  observador.observe(mapaRef.value);
+});
+
+onBeforeUnmount(() => observador?.disconnect());
 
 const chipsAtivos = useFiltrosAtivos(() => props.filtros, () => props.opcoes);
 const resumoFiltros = computed(() => chipsAtivos.value.map((c) => `${c.rotulo}: ${c.texto}`).join(', '));
@@ -275,6 +312,7 @@ function selecionarMes(mes) {
 // REDEC destacada e so visual (cobertura + mapa): nao recarrega dado. Clicar
 // de novo na mesma limpa.
 function destacarRedec(redecId) {
+  garantirTerritorio();
   const id = redecId === null || redecId === undefined || redecId === '' ? null : Number(redecId);
   redecDestacada.value = id === null || id === redecDestacada.value ? null : id;
 }
