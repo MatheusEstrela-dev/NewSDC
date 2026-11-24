@@ -1,5 +1,5 @@
 <script setup>
-import { PrinterIcon } from '@heroicons/vue/24/outline';
+import { PrinterIcon, StarIcon } from '@heroicons/vue/24/outline';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import CertificadoSituacaoBadge from '@/Components/Molecules/Treinamento/CertificadoSituacaoBadge.vue';
@@ -42,6 +42,15 @@ defineProps({
       >
         <PrinterIcon class="h-4 w-4" />
         Ver / Imprimir
+      </a>
+      <!-- Emitido, mas so liberado depois da avaliacao do curso. -->
+      <a
+        v-else-if="certificado.aguarda_avaliacao && certificado.url_avaliar"
+        :href="certificado.url_avaliar"
+        class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+      >
+        <StarIcon class="h-4 w-4" />
+        Avaliar para liberar
       </a>
     </div>
   </CardBase>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Treinamento\Models\Certificado;
 use App\Modules\Treinamento\Services\CertificadoService;
 use App\Modules\Treinamento\Services\ImpressaoDeCertificado;
@@ -42,6 +43,11 @@ class CertificadoImprimirController extends Controller
         abort_unless(Gate::forUser($principal)->allows('view', $certificado), 403);
 
         abort_unless($certificado->status->value === 'GERADO', 404, 'Certificado ainda nao disponivel.');
+
+        // O dono so imprime depois de avaliar o curso; a gestao (permissao de
+        // download) imprime qualquer certificado emitido.
+        $gestao = $principal instanceof User && $principal->can('treinamento.certificados.download');
+        abort_unless($gestao || $certificado->liberadoAoAluno(), 403, 'Avalie o curso para liberar o seu certificado.');
 
         // Certificado emitido antes do codigo existir (ate o comando retroativo rodar).
         $this->certificados->garantirCodigo($certificado);

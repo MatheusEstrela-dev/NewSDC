@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Resources;
 
 use App\Models\User;
-use App\Modules\Treinamento\Support\InscricaoDoAluno;
 use Illuminate\Http\Request;
 
 /**
@@ -48,7 +47,7 @@ class CertificadoDoAlunoResource extends CertificadoResource
         $curso = $this->treinamento;
         $servidor = $this->inscricao->inscrito_type === User::class;
 
-        if (InscricaoDoAluno::salaAberta($curso)) {
+        if ($curso->isEad() && $curso->situacaoEfetiva()->permiteAcessoDoAluno()) {
             return $servidor
                 ? route('treinamentos.aluno.sala', $curso->id)
                 : route('portal.treinamento.cursos.sala', $curso->link_publico_slug);

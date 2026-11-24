@@ -95,7 +95,7 @@ class CatalogoController extends Controller
                 'status' => $minhaInscricao->status->value,
                 'status_label' => $minhaInscricao->status->getLabel(),
                 'qr_code_token' => $minhaInscricao->qr_code_token,
-                'certificado_disponivel' => $minhaInscricao->certificado?->status->value === 'GERADO',
+                'certificado_disponivel' => (bool) $minhaInscricao->certificado?->liberadoAoAluno(),
                 'certificado_id' => $minhaInscricao->certificado?->id,
             ] : null,
         ]);

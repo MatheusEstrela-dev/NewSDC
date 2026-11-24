@@ -20,7 +20,7 @@ use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\ProgressoItem;
 use App\Modules\Treinamento\Models\Treinamento;
 use App\Modules\Treinamento\Models\TreinamentoProfessor;
-use App\Modules\Treinamento\Resources\CertificadoResource;
+use App\Modules\Treinamento\Resources\CertificadoDoAlunoResource;
 use App\Modules\Treinamento\Services\ConclusaoService;
 use App\Modules\Treinamento\Services\CredencialQrService;
 use App\Modules\Treinamento\Services\InscricaoService;
@@ -64,7 +64,7 @@ class MeusCursosController extends Controller
             'avaliacoes_pendentes' => $this->avaliacoesPendentes($userId),
             'notas_avaliacao' => NotaAvaliacaoCurso::toSelectArray(),
             'notas_relevancia' => NotaRelevanciaCurso::toSelectArray(),
-            'certificados' => CertificadoResource::collection($this->certificados($userId))->resolve(),
+            'certificados' => CertificadoDoAlunoResource::collection($this->certificados($userId))->resolve(),
             'credencial' => $request->user() instanceof User ? $this->credenciais->paraServidor($request->user()) : null,
             'sexo_padrao' => $this->inscricaoService->sexoDaUltimaInscricao($request->user())?->value,
             'data_nascimento_padrao' => $this->inscricaoService->dataNascimentoDaUltimaInscricao($request->user()),
@@ -202,7 +202,7 @@ class MeusCursosController extends Controller
     {
         return Certificado::query()
             ->whereIn('inscricao_id', $this->doServidor($userId)->select('id'))
-            ->with('treinamento')
+            ->with(['treinamento', 'inscricao.avaliacao'])
             ->orderByDesc('created_at')
             ->get();
     }

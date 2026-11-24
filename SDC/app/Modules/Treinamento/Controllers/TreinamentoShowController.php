@@ -63,7 +63,7 @@ class TreinamentoShowController extends Controller
                 'id' => $minhaInscricao->id,
                 'status' => $minhaInscricao->status->value,
                 'status_label' => $minhaInscricao->status->getLabel(),
-                'certificado_disponivel' => $minhaInscricao->certificado?->status->value === 'GERADO',
+                'certificado_disponivel' => (bool) $minhaInscricao->certificado?->liberadoAoAluno(),
                 'certificado_id' => $minhaInscricao->certificado?->id,
             ] : null,
         ]);

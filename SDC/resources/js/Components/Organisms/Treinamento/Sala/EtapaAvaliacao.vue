@@ -5,7 +5,8 @@
  *
  * BLOQUEADA  cadeado: a avaliacao so abre com a trilha completa.
  * LIBERADA   card de avaliacao; enviar conclui o curso e emite o certificado.
- *            No legado (concluido antes da regra) a avaliacao e opcional.
+ *            No legado (concluido antes da regra) o certificado ja existe, mas
+ *            so e liberado depois do envio da avaliacao.
  * ENVIADA    parabens, as respostas dadas e o certificado.
  */
 import { computed } from 'vue';
@@ -72,30 +73,19 @@ const legado = computed(() => props.avaliacaoFinal?.concluido === true && props.
           </Heading>
           <Text size="sm" color="muted">
             <template v-if="previa">Todo curso termina com esta avaliação, gerada pelo sistema. O aluno só conclui o curso depois de enviá-la.</template>
-            <template v-else-if="legado">Seu curso foi concluído antes da avaliação obrigatória. Se quiser, conte como foi a sua experiência.</template>
+            <template v-else-if="legado">Seu curso já foi concluído. Avalie o curso para liberar o seu certificado.</template>
             <template v-else>Falta só avaliar o curso para concluí-lo e receber o certificado.</template>
           </Text>
         </div>
       </div>
 
+      <!-- O certificado so aparece depois do envio (situacao ENVIADA), inclusive no legado. -->
       <AvaliacaoCursoCard
         :url="previa ? null : urlAvaliar"
         :notas="notas"
         :relevancias="relevancias"
-        :subtitulo="legado ? 'Sua opinião ajuda a melhorar os próximos cursos.' : undefined"
+        :subtitulo="legado ? 'Ao enviar, o seu certificado é liberado.' : undefined"
       />
-
-      <div v-if="legado && certificado?.disponivel" class="flex justify-center">
-        <a
-          :href="urlCertificado(certificado.id)"
-          target="_blank"
-          rel="noopener"
-          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-        >
-          <PrinterIcon class="h-4 w-4" aria-hidden="true" />
-          Ver / Imprimir certificado
-        </a>
-      </div>
     </div>
 
     <!-- Enviada: curso concluido -->

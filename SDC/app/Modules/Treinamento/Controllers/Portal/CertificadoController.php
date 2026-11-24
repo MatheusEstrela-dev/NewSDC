@@ -7,7 +7,7 @@ namespace App\Modules\Treinamento\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Modules\Treinamento\Models\Certificado;
 use App\Modules\Treinamento\Models\Cidadao;
-use App\Modules\Treinamento\Resources\CertificadoResource;
+use App\Modules\Treinamento\Resources\CertificadoDoAlunoResource;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,12 +23,12 @@ class CertificadoController extends Controller
 
         $certificados = Certificado::query()
             ->whereIn('inscricao_id', $inscricaoIds)
-            ->with('treinamento')
+            ->with(['treinamento', 'inscricao.avaliacao'])
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
         return Inertia::render('Treinamento/Portal/Certificados', [
-            'certificados' => CertificadoResource::collection($certificados),
+            'certificados' => CertificadoDoAlunoResource::collection($certificados),
         ]);
     }
 }

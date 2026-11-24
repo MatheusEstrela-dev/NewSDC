@@ -451,7 +451,7 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
 
     // ─── Legado: concluiu antes da regra ────────────────────────────────────
 
-    public function test_legado_concluido_sem_avaliacao_segue_concluido_e_com_certificado(): void
+    public function test_legado_concluido_sem_avaliacao_so_libera_o_certificado_depois_do_feedback(): void
     {
         $cidadao = $this->cidadao();
         [$curso] = $this->cursoEadComTrilha(PublicoAlvo::CIDADAOS);
@@ -464,9 +464,10 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
         $this->assertSame(StatusCertificado::GERADO, $certificado->status);
         $this->assertEquals($concluidoEm, $inscricao->fresh()->concluido_em);
 
+        // Emitido, mas preso a avaliacao: o dono nao imprime nem ve o botao.
         $this->actingAs($cidadao, 'cidadao')
             ->get(route('portal.treinamento.certificados.imprimir', $certificado))
-            ->assertOk();
+            ->assertForbidden();
 
         $this->actingAs($cidadao, 'cidadao')
             ->get(route('portal.treinamento.cursos.sala', $curso->link_publico_slug))
@@ -474,15 +475,46 @@ class AvaliacaoCursoTest extends TreinamentoGestorTestCase
             ->assertInertia(fn ($page) => $page
                 ->where('avaliacao_final.situacao', 'LIBERADA')
                 ->where('avaliacao_final.concluido', true)
-                ->where('avaliacao_final.certificado.disponivel', true));
+                ->where('avaliacao_final.certificado.disponivel', false));
 
-        // Avaliar depois e opcional e nao mexe na conclusao nem no certificado.
+        $this->actingAs($cidadao, 'cidadao')
+            ->get(route('portal.treinamento.certificados.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('certificados.data.0.disponivel', false)
+                ->where('certificados.data.0.aguarda_avaliacao', true)
+                ->where('certificados.data.0.codigo_verificacao', null)
+                ->where('certificados.data.0.url_avaliar', route('portal.treinamento.cursos.sala', $curso->link_publico_slug)));
+
+        // Enviar o feedback libera o certificado, sem mexer na conclusao nem emitir outro.
         $this->actingAs($cidadao, 'cidadao')
             ->post(route('portal.treinamento.cursos.avaliacao', $curso->link_publico_slug), $this->respostas(4))
             ->assertSessionHasNoErrors();
 
         $this->assertEquals($concluidoEm, $inscricao->fresh()->concluido_em);
         $this->assertSame(1, Certificado::query()->where('inscricao_id', $inscricao->id)->count());
+
+        $this->actingAs($cidadao, 'cidadao')
+            ->get(route('portal.treinamento.certificados.imprimir', $certificado))
+            ->assertOk();
+
+        $this->actingAs($cidadao, 'cidadao')
+            ->get(route('portal.treinamento.cursos.sala', $curso->link_publico_slug))
+            ->assertInertia(fn ($page) => $page
+                ->where('avaliacao_final.situacao', 'ENVIADA')
+                ->where('avaliacao_final.certificado.disponivel', true));
+    }
+
+    public function test_gestao_imprime_certificado_do_legado_mesmo_sem_avaliacao(): void
+    {
+        $cidadao = $this->cidadao();
+        [$curso] = $this->cursoEadComTrilha(PublicoAlvo::CIDADAOS);
+        $inscricao = $this->inscrever($curso, $cidadao, concluida: true);
+        $certificado = app(CertificadoService::class)->emitirSeElegivel($inscricao->fresh());
+
+        $this->logarComo($this->usuarioComPermissoes(['treinamento.certificados.download']));
+
+        $this->get(route('treinamentos.certificados.imprimir', $certificado))->assertOk();
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────

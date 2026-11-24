@@ -15,6 +15,7 @@ const situacao = computed(() => {
   if (cancelado) return { texto: 'Cancelado', variant: 'danger' };
   if (disponivel && reemitido) return { texto: 'Reemitido', variant: 'info' };
   if (disponivel) return { texto: 'Válido', variant: 'success' };
+  if (props.certificado.aguarda_avaliacao) return { texto: 'Aguardando avaliação', variant: 'warning' };
   return { texto: rotulo, variant: 'warning' };
 });
 </script>

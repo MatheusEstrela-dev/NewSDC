@@ -54,6 +54,8 @@ final class SalaDeAulaProps
         $inscricao->load(['avaliacao', 'certificado']);
         $avaliacao = $inscricao->avaliacao;
         $certificado = $inscricao->certificado;
+        // A regra de liberacao le a avaliacao pela inscricao: reaproveita a ja carregada.
+        $certificado?->setRelation('inscricao', $inscricao);
         $requisitos = app(ConclusaoService::class)->requisitosCumpridos($inscricao, $estado);
 
         return [
@@ -73,7 +75,7 @@ final class SalaDeAulaProps
             ],
             'certificado' => $certificado === null ? null : [
                 'id' => $certificado->id,
-                'disponivel' => $certificado->status->value === 'GERADO',
+                'disponivel' => $certificado->liberadoAoAluno(),
                 'cancelado' => $certificado->estaCancelado(),
             ],
         ];

@@ -66,6 +66,30 @@ class Certificado extends Model
         return $this->status === StatusCertificado::CANCELADO;
     }
 
+    /**
+     * O aluno (servidor ou cidadao) so ve e imprime o certificado depois de
+     * enviar a avaliacao do curso, etapa final obrigatoria. Vale tambem para o
+     * legado (concluido e emitido antes da regra): o certificado existe, mas so
+     * e liberado ao dono depois do feedback. A gestao nao tem esse corte.
+     */
+    public function liberadoAoAluno(): bool
+    {
+        return $this->status === StatusCertificado::GERADO && $this->temAvaliacao();
+    }
+
+    /** Emitido, mas preso a avaliacao do curso que o aluno ainda nao enviou. */
+    public function aguardaAvaliacao(): bool
+    {
+        return $this->status === StatusCertificado::GERADO && ! $this->temAvaliacao();
+    }
+
+    private function temAvaliacao(): bool
+    {
+        $this->loadMissing('inscricao.avaliacao');
+
+        return $this->inscricao?->avaliacao !== null;
+    }
+
     public function marcarComoGerado(): void
     {
         $this->update([
