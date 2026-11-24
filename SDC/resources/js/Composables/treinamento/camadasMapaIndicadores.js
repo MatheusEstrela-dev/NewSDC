@@ -28,7 +28,9 @@ export const CAMADAS = [
 ];
 
 // Mesmas cores de situacao dos graficos: uma fonte so (useTemaGrafico).
-export { COR_CONCLUIDO, COR_EM_ANDAMENTO } from '@/Composables/treinamento/useTemaGrafico';
+import { COR_CONCLUIDO, COR_EM_ANDAMENTO } from '@/Composables/treinamento/useTemaGrafico';
+
+export { COR_CONCLUIDO, COR_EM_ANDAMENTO };
 
 // Azul monocromatico, do claro ao escuro: quanto mais concluidos, mais escuro.
 const AZUIS = ['#bfdbfe', '#93c5fd', '#60a5fa', '#2563eb', '#1e3a8a'];
