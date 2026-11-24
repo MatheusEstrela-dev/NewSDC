@@ -3,7 +3,19 @@ import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import CapaCursoUpload from '@/Components/Molecules/Treinamento/CapaCursoUpload.vue';
+import SectionCard from '@/Components/Atoms/Card/SectionCard.vue';
+import CursoHero from '@/Components/Molecules/Treinamento/CursoHero.vue';
+import CursoInfoTile from '@/Components/Molecules/Treinamento/CursoInfoTile.vue';
+import CursoResumoTurma from '@/Components/Molecules/Treinamento/CursoResumoTurma.vue';
+import {
+  BookOpenIcon as CatalogoIcon,
+  BuildingOffice2Icon,
+  CalendarDaysIcon,
+  ClockIcon,
+  MapPinIcon,
+  UserIcon,
+  ChevronRightIcon,
+} from '@heroicons/vue/24/outline';
 import CursoSelos from '@/Components/Molecules/Treinamento/CursoSelos.vue';
 import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexoModal.vue';
 import ListaDeVersoes from '@/Components/Organisms/Treinamento/Versoes/ListaDeVersoes.vue';
@@ -13,7 +25,6 @@ import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
 import DocumentDuplicateIcon from '@/Components/Icons/DocumentDuplicateIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
-import TreinamentoHeader from '@/Components/Treinamento/TreinamentoHeader.vue';
 import TreinamentoTabs from '@/Components/Treinamento/TreinamentoTabs.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { usePermissions } from '@/Composables/usePermissions';
@@ -78,7 +89,7 @@ const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 const tabConfig = computed(() => [
   { id: 'detalhes', label: 'Detalhes', icon: DocumentTextIcon },
   { id: 'modulos', label: 'Módulos', icon: BookOpenIcon, badge: props.treinamento.modulos?.length || null, hidden: !props.treinamento.modulos?.length },
-  { id: 'inscricao', label: 'Inscrição', icon: UsersIcon },
+  { id: 'inscricao', label: 'Inscrições', icon: UsersIcon },
 ]);
 
 // Servidor so se inscreve em curso para servidores; EAD ainda nao publicado nao aceita inscricao.
@@ -168,6 +179,8 @@ function abrirCertificado(url) {
   window.open(url, '_blank', 'noopener');
 }
 
+const corInscricao = (status) => ({ APROVADA: 'green', REPROVADA: 'red' }[status] ?? 'yellow');
+
 // Professores (somente cursos EAD)
 const buscaProfessor = ref('');
 const candidatos = ref([]);
@@ -232,10 +245,14 @@ function copiarLinkPublico() {
 <template>
 
     <div class="treinamento-show-container">
-      <TreinamentoHeader :treinamento="treinamento" />
+      <CursoHero :treinamento="treinamento" :pode-trocar-capa="can('treinamento.cursos.configurar')">
+        <template #tabs>
+          <TreinamentoTabs :active-tab="tabs.activeTab.value" :tabs="tabConfig" @tab-change="tabs.setActiveTab" />
+        </template>
+      </CursoHero>
 
       <!-- Nova versao (RN07): destaque no topo, antes das demais acoes. -->
-      <div v-if="pode_criar_versao || (rascunho_id && can('treinamento.cursos.edit'))" class="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950/40">
+      <div v-if="pode_criar_versao || (rascunho_id && can('treinamento.cursos.edit'))" class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950/40">
         <DocumentDuplicateIcon class="h-6 w-6 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />
         <div class="min-w-0 flex-1">
           <Text size="sm" class="font-semibold">Nova versão do curso</Text>
@@ -256,7 +273,7 @@ function copiarLinkPublico() {
       </div>
 
       <!-- Ações de fluxo (admin) -->
-      <div class="mb-6 flex flex-wrap gap-2">
+      <div class="mb-6 flex flex-wrap items-center gap-2">
         <!-- Gestao do curso (issue #86): vale para qualquer modalidade. O EAD
              abre a aba Gestao da Area do Gestor; as demais, a pagina avulsa. -->
         <Button
@@ -302,118 +319,81 @@ function copiarLinkPublico() {
         </Link>
       </div>
 
-      <!-- Sistema de Abas -->
-      <TreinamentoTabs :active-tab="tabs.activeTab.value" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
-        <template #default="{ activeTab }">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <!-- Coluna principal: conteudo da aba ativa -->
+        <div class="min-w-0 space-y-6">
           <!-- Aba: Detalhes -->
-          <div v-if="activeTab === 'detalhes'" class="space-y-6">
-            <div v-if="treinamento.esta_publicado" class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <template v-if="publicoCidadao">
-                <span>Publicado no Portal do Cidadão</span>
-                <button type="button" class="text-blue-600 hover:underline dark:text-blue-400" @click="copiarLinkPublico">copiar link público</button>
-              </template>
-              <span v-else>Publicado</span>
-            </div>
+          <template v-if="tabs.activeTab.value === 'detalhes'">
+            <SectionCard v-if="treinamento.descricao">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sobre o curso</p>
+              <Heading :level="3" class="mt-1 text-lg font-semibold">Descrição</Heading>
+              <p class="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">{{ treinamento.descricao }}</p>
+            </SectionCard>
 
-            <div v-if="treinamento.tipo === 'EAD'" class="relative aspect-[16/6] w-full max-w-xl overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
+            <SectionCard>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Informações essenciais</p>
+              <Heading :level="3" class="mt-1 text-lg font-semibold">Detalhes da capacitação</Heading>
+              <div :class="treinamento.curso_nome ? 'xl:[&>*:last-child:nth-child(even)]:col-span-2' : 'xl:[&>*:last-child:nth-child(odd)]:col-span-2'" class="mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 dark:border-slate-700/50 dark:bg-slate-700/50 xl:grid-cols-2 [&>*]:bg-white dark:[&>*]:bg-slate-900">
+                <CursoInfoTile v-if="treinamento.curso_nome" :icon="CatalogoIcon" rotulo="Curso do catálogo" :valor="treinamento.curso_nome" class="xl:col-span-2" />
+                <CursoInfoTile v-if="treinamento.instrutor" :icon="UserIcon" rotulo="Instrutor" :valor="treinamento.instrutor" />
+                <CursoInfoTile v-if="treinamento.local" :icon="MapPinIcon" rotulo="Local" :valor="treinamento.local" />
+                <CursoInfoTile v-if="treinamento.municipio_nome" :icon="BuildingOffice2Icon" rotulo="Município de realização" :valor="treinamento.municipio_nome" />
+                <CursoInfoTile v-if="treinamento.data_inicio" :icon="CalendarDaysIcon" rotulo="Data de início" :valor="formatDate(treinamento.data_inicio)" />
+                <CursoInfoTile v-if="treinamento.data_fim" :icon="CalendarDaysIcon" rotulo="Data de término" :valor="formatDate(treinamento.data_fim)" />
+                <CursoInfoTile v-if="treinamento.hora_inicio" :icon="ClockIcon" rotulo="Horário de início" :valor="treinamento.hora_inicio" />
+                <CursoInfoTile :icon="UsersIcon" rotulo="Público-alvo" :valor="treinamento.publico_alvo_label" />
+              </div>
+            </SectionCard>
+
+            <SectionCard v-if="treinamento.esta_publicado">
+              <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Divulgação</p>
+                  <Heading :level="3" class="mt-1 text-lg font-semibold">
+                    {{ publicoCidadao ? 'Publicado no Portal do Cidadão' : 'Publicado' }}
+                  </Heading>
+                </div>
+                <Button v-if="publicoCidadao" variant="secondary" size="sm" @click="copiarLinkPublico">Copiar link público</Button>
+              </div>
               <img
-                v-if="treinamento.capa_url"
-                :src="treinamento.capa_url"
-                :alt="`Capa do curso: ${treinamento.titulo}`"
-                class="h-full w-full object-cover"
+                :src="route('treinamentos.divulgacao', treinamento.id)"
+                :alt="`Imagem de divulgação: ${treinamento.titulo}`"
+                class="w-full max-w-xl rounded-lg border border-slate-200 dark:border-slate-700"
               />
-              <div v-else class="flex h-full w-full items-center justify-center px-4 text-center text-sm text-slate-500 dark:text-slate-400">
-                Curso sem imagem de capa
-              </div>
-              <div v-if="can('treinamento.cursos.configurar')" class="absolute right-2 top-2">
-                <CapaCursoUpload :curso="treinamento" />
-              </div>
-            </div>
-
-            <img
-              v-if="treinamento.esta_publicado"
-              :src="route('treinamentos.divulgacao', treinamento.id)"
-              :alt="`Imagem de divulgação: ${treinamento.titulo}`"
-              class="w-full max-w-xl rounded-lg border border-slate-200 dark:border-slate-700"
-            />
+            </SectionCard>
 
             <ListaDeVersoes v-if="versoes.length > 1" :versoes="versoes" />
-
-            <div v-if="treinamento.descricao">
-              <Heading :level="3" class="text-lg font-semibold mb-2">Descrição</Heading>
-              <Text size="base" class="text-slate-700 dark:text-slate-300">
-                {{ treinamento.descricao }}
-              </Text>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div v-if="treinamento.curso_nome">
-                <Text size="sm" color="muted" class="mb-1">Curso do catálogo</Text>
-                <Text size="base" class="font-medium">{{ treinamento.curso_nome }}</Text>
-              </div>
-
-              <div v-if="treinamento.instrutor">
-                <Text size="sm" color="muted" class="mb-1">Instrutor</Text>
-                <Text size="base" class="font-medium">{{ treinamento.instrutor }}</Text>
-              </div>
-
-              <div v-if="treinamento.local">
-                <Text size="sm" color="muted" class="mb-1">Local</Text>
-                <Text size="base" class="font-medium">{{ treinamento.local }}</Text>
-              </div>
-
-              <div v-if="treinamento.municipio_nome">
-                <Text size="sm" color="muted" class="mb-1">Município de realização</Text>
-                <Text size="base" class="font-medium">{{ treinamento.municipio_nome }}</Text>
-              </div>
-
-              <div v-if="treinamento.data_inicio">
-                <Text size="sm" color="muted" class="mb-1">Data de Início</Text>
-                <Text size="base" class="font-medium">{{ formatDate(treinamento.data_inicio) }}</Text>
-              </div>
-
-              <div v-if="treinamento.data_fim">
-                <Text size="sm" color="muted" class="mb-1">Data de Término</Text>
-                <Text size="base" class="font-medium">{{ formatDate(treinamento.data_fim) }}</Text>
-              </div>
-
-              <div>
-                <Text size="sm" color="muted" class="mb-1">Vagas</Text>
-                <Text size="base" class="font-medium">
-                  <span v-if="treinamento.numero_vagas">{{ treinamento.vagas_disponiveis }} de {{ treinamento.numero_vagas }} disponíveis</span>
-                  <span v-else>Ilimitadas</span>
-                </Text>
-              </div>
-
-              <div v-if="treinamento.usa_controle_presenca">
-                <Text size="sm" color="muted" class="mb-1">Frequência Mínima</Text>
-                <Text size="base" class="font-medium">{{ treinamento.percentual_frequencia_minimo }}%</Text>
-              </div>
-            </div>
-          </div>
+          </template>
 
           <!-- Aba: Módulos -->
-          <div v-else-if="activeTab === 'modulos'">
-            <ul class="space-y-2">
+          <SectionCard v-else-if="tabs.activeTab.value === 'modulos'">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estrutura</p>
+            <Heading :level="3" class="mt-1 text-lg font-semibold">Módulos do curso</Heading>
+            <ol class="mt-4 space-y-2">
               <li
-                v-for="modulo in treinamento.modulos"
+                v-for="(modulo, indice) in treinamento.modulos"
                 :key="modulo.id"
-                class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
+                class="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700/50"
               >
-                <div>
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {{ modulo.ordem || indice + 1 }}
+                </span>
+                <div class="min-w-0 flex-1">
                   <Text size="sm" class="font-medium">{{ modulo.titulo }}</Text>
                   <Text size="xs" color="muted">{{ modulo.carga_horaria }}h</Text>
                 </div>
-                <Text size="xs" color="muted">{{ formatDate(modulo.data_prevista) || '—' }}</Text>
+                <Text size="xs" color="muted" class="shrink-0">{{ formatDate(modulo.data_prevista) || '—' }}</Text>
               </li>
-            </ul>
-          </div>
+            </ol>
+          </SectionCard>
 
           <!-- Aba: Inscrição -->
-          <div v-else-if="activeTab === 'inscricao'">
-            <div v-if="minhaInscricao" class="flex items-center gap-3 flex-wrap">
+          <SectionCard v-else-if="tabs.activeTab.value === 'inscricao'">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Participação</p>
+            <Heading :level="3" class="mb-4 mt-1 text-lg font-semibold">Inscrições</Heading>
+            <div v-if="minhaInscricao" class="flex flex-wrap items-center gap-3">
               <Text size="sm">Sua inscrição:</Text>
-              <Badge :color="minhaInscricao.status === 'APROVADA' ? 'green' : minhaInscricao.status === 'REPROVADA' ? 'red' : 'yellow'">
+              <Badge :cor="corInscricao(minhaInscricao.status)">
                 {{ minhaInscricao.status_label }}
               </Badge>
               <Button
@@ -445,9 +425,126 @@ function copiarLinkPublico() {
             </Button>
             <Text v-else-if="!destinadoAoServidor" size="sm" color="muted">Este treinamento é destinado ao público do Portal do Cidadão.</Text>
             <Text v-else size="sm" color="muted">Este treinamento não está recebendo inscrições no momento.</Text>
+          </SectionCard>
+
+          <!-- Professores (EAD) -->
+          <SectionCard v-if="treinamento.tipo === 'EAD'">
+            <div class="space-y-3">
+              <Heading :level="3" class="text-lg font-semibold">Professores</Heading>
+              <Text size="xs" color="muted">
+                O campo Instrutor é apenas o nome exibido no curso. Designar um professor aqui é o que dá a ele acesso à área do professor.
+              </Text>
+              <Text v-if="!professores.length" size="sm" color="muted">Nenhum professor designado.</Text>
+              <ul v-else class="space-y-2">
+                <li
+                  v-for="professor in professores"
+                  :key="professor.id"
+                  class="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-2 dark:border-slate-700/50"
+                >
+                  <Text size="sm" class="font-medium">{{ professor.name }}</Text>
+                  <Button v-if="can('treinamento.cursos.configurar')" variant="danger" size="sm" @click="removerProfessor(professor)">
+                    Remover
+                  </Button>
+                </li>
+              </ul>
+
+              <div v-if="can('treinamento.cursos.configurar')" class="space-y-2">
+                <TextInput v-model="buscaProfessor" placeholder="Buscar professor por nome ou e-mail" />
+                <ul v-if="candidatosDisponiveis.length" class="space-y-2">
+                  <li
+                    v-for="candidato in candidatosDisponiveis"
+                    :key="candidato.id"
+                    class="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-2 dark:border-slate-700/50"
+                  >
+                    <div>
+                      <Text size="sm" class="font-medium">{{ candidato.name }}</Text>
+                      <Text size="xs" color="muted">{{ candidato.email }}</Text>
+                    </div>
+                    <Button variant="primary" size="sm" @click="adicionarProfessor(candidato.id)">Adicionar</Button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </SectionCard>
+
+          <!-- Certificados de instrutor -->
+          <SectionCard v-if="certificados_instrutor">
+            <div class="space-y-3">
+              <Heading :level="3" class="text-lg font-semibold">Certificados de instrutor</Heading>
+              <Text v-if="!certificados_instrutor.pode_emitir" size="xs" color="muted">
+                O certificado de instrutor sai quando o curso termina (concluído ou com a data de término já passada).
+              </Text>
+
+              <ul v-if="certificados_instrutor.emitidos.length" class="space-y-2">
+                <li
+                  v-for="certificado in certificados_instrutor.emitidos"
+                  :key="certificado.id"
+                  class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-4 py-2 dark:border-slate-700/50"
+                >
+                  <div class="min-w-0">
+                    <Text size="sm" class="font-medium">{{ certificado.nome }}</Text>
+                    <Text size="xs" color="muted">{{ certificado.codigo }} · emitido em {{ certificado.emitido_em }}</Text>
+                  </div>
+                  <Button variant="secondary" size="sm" @click="abrirCertificado(certificado.imprimir_url)">Imprimir</Button>
+                </li>
+              </ul>
+
+              <template v-if="certificados_instrutor.pode_emitir">
+                <ul v-if="professoresSemCertificado.length" class="space-y-2">
+                  <li
+                    v-for="professor in professoresSemCertificado"
+                    :key="professor.id"
+                    class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-4 py-2 dark:border-slate-700/50"
+                  >
+                    <Text size="sm" class="font-medium">{{ professor.name }}</Text>
+                    <Button variant="primary" size="sm" @click="emitirCertificadoInstrutor({ user_id: professor.id })">Emitir certificado</Button>
+                  </li>
+                </ul>
+
+                <div class="space-y-1">
+                  <Text size="xs" color="muted">Instrutor sem cadastro no sistema (presencial): emita pelo nome, como deve sair no certificado.</Text>
+                  <div class="flex flex-col gap-2 sm:flex-row">
+                    <TextInput v-model="nomeInstrutor" class="min-w-0 flex-1" placeholder="Nome do instrutor" />
+                    <Button variant="primary" size="sm" :disabled="!nomeInstrutor.trim()" @click="emitirCertificadoInstrutor({ nome: nomeInstrutor })">
+                      Emitir por nome
+                    </Button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </SectionCard>
+        </div>
+
+        <!-- Lateral: resumo da turma -->
+        <aside class="min-w-0">
+          <div class="lg:sticky lg:top-4">
+            <CursoResumoTurma :treinamento="treinamento">
+              <template #acao>
+                <Button
+                  v-if="can('treinamento.inscricoes.view')"
+                  variant="primary"
+                  full-width
+                  :href="route('treinamentos.inscricoes.index', treinamento.id)"
+                  :icon="ChevronRightIcon"
+                  icon-position="right"
+                >
+                  Gerenciar inscrições
+                </Button>
+                <div v-else-if="minhaInscricao" class="flex flex-wrap items-center gap-2">
+                  <Text size="sm">Sua inscrição:</Text>
+                  <Badge :cor="corInscricao(minhaInscricao.status)">{{ minhaInscricao.status_label }}</Badge>
+                </div>
+                <Button v-else-if="podeInscreverServidor" variant="primary" full-width @click="modalInscricao = true">
+                  Inscrever-se
+                </Button>
+                <Text v-else size="sm" color="muted">
+                  {{ destinadoAoServidor ? 'Este treinamento não está recebendo inscrições no momento.' : 'Destinado ao público do Portal do Cidadão.' }}
+                </Text>
+              </template>
+            </CursoResumoTurma>
           </div>
-        </template>
-      </TreinamentoTabs>
+        </aside>
+      </div>
 
       <ConfirmDialog
         :is-open="confirmacao.aberto"
@@ -464,89 +561,6 @@ function copiarLinkPublico() {
         @fechar="modalInscricao = false"
         @confirmar="inscreverSe"
       />
-
-      <!-- Professores (EAD) -->
-      <section v-if="treinamento.tipo === 'EAD'" class="mt-8 space-y-3">
-        <Heading :level="3" class="text-lg font-semibold">Professores</Heading>
-        <Text size="xs" color="muted">
-          O campo Instrutor é apenas o nome exibido no curso. Designar um professor aqui é o que dá a ele acesso à área do professor.
-        </Text>
-        <Text v-if="!professores.length" size="sm" color="muted">Nenhum professor designado.</Text>
-        <ul v-else class="space-y-2">
-          <li
-            v-for="professor in professores"
-            :key="professor.id"
-            class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
-          >
-            <Text size="sm" class="font-medium">{{ professor.name }}</Text>
-            <Button v-if="can('treinamento.cursos.configurar')" variant="danger" size="sm" @click="removerProfessor(professor)">
-              Remover
-            </Button>
-          </li>
-        </ul>
-
-        <div v-if="can('treinamento.cursos.configurar')" class="space-y-2">
-          <TextInput v-model="buscaProfessor" placeholder="Buscar professor por nome ou e-mail" />
-          <ul v-if="candidatosDisponiveis.length" class="space-y-2">
-            <li
-              v-for="candidato in candidatosDisponiveis"
-              :key="candidato.id"
-              class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
-            >
-              <div>
-                <Text size="sm" class="font-medium">{{ candidato.name }}</Text>
-                <Text size="xs" color="muted">{{ candidato.email }}</Text>
-              </div>
-              <Button variant="primary" size="sm" @click="adicionarProfessor(candidato.id)">Adicionar</Button>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <!-- Certificados de instrutor -->
-      <section v-if="certificados_instrutor" class="mt-8 space-y-3">
-        <Heading :level="3" class="text-lg font-semibold">Certificados de instrutor</Heading>
-        <Text v-if="!certificados_instrutor.pode_emitir" size="xs" color="muted">
-          O certificado de instrutor sai quando o curso termina (concluído ou com a data de término já passada).
-        </Text>
-
-        <ul v-if="certificados_instrutor.emitidos.length" class="space-y-2">
-          <li
-            v-for="certificado in certificados_instrutor.emitidos"
-            :key="certificado.id"
-            class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
-          >
-            <div class="min-w-0">
-              <Text size="sm" class="font-medium">{{ certificado.nome }}</Text>
-              <Text size="xs" color="muted">{{ certificado.codigo }} · emitido em {{ certificado.emitido_em }}</Text>
-            </div>
-            <Button variant="secondary" size="sm" @click="abrirCertificado(certificado.imprimir_url)">Imprimir</Button>
-          </li>
-        </ul>
-
-        <template v-if="certificados_instrutor.pode_emitir">
-          <ul v-if="professoresSemCertificado.length" class="space-y-2">
-            <li
-              v-for="professor in professoresSemCertificado"
-              :key="professor.id"
-              class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2"
-            >
-              <Text size="sm" class="font-medium">{{ professor.name }}</Text>
-              <Button variant="primary" size="sm" @click="emitirCertificadoInstrutor({ user_id: professor.id })">Emitir certificado</Button>
-            </li>
-          </ul>
-
-          <div class="space-y-1">
-            <Text size="xs" color="muted">Instrutor sem cadastro no sistema (presencial): emita pelo nome, como deve sair no certificado.</Text>
-            <div class="flex flex-col gap-2 sm:flex-row">
-              <TextInput v-model="nomeInstrutor" class="min-w-0 flex-1" placeholder="Nome do instrutor" />
-              <Button variant="primary" size="sm" :disabled="!nomeInstrutor.trim()" @click="emitirCertificadoInstrutor({ nome: nomeInstrutor })">
-                Emitir por nome
-              </Button>
-            </div>
-          </div>
-        </template>
-      </section>
     </div>
 
 </template>
