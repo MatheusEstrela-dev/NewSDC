@@ -63,6 +63,7 @@ const lugar = computed(() => props.treinamento.municipio_nome
             {{ selo }}
           </span>
           <TreinamentoStatusBadge :status="treinamento.status" :label="treinamento.status_label" size="sm" />
+          <slot name="selos" />
         </div>
 
         <h1 class="mt-3 break-words text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl lg:text-4xl">

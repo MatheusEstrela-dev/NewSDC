@@ -19,7 +19,6 @@ import {
 import CursoSelos from '@/Components/Molecules/Treinamento/CursoSelos.vue';
 import InscricaoSexoModal from '@/Components/Organisms/Treinamento/InscricaoSexoModal.vue';
 import ListaDeVersoes from '@/Components/Organisms/Treinamento/Versoes/ListaDeVersoes.vue';
-import AcoesCicloCurso from '@/Components/Organisms/Treinamento/Professor/AcoesCicloCurso.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
@@ -246,6 +245,9 @@ function copiarLinkPublico() {
 
     <div class="treinamento-show-container">
       <CursoHero :treinamento="treinamento" :pode-trocar-capa="can('treinamento.cursos.configurar')">
+        <template v-if="treinamento.tipo === 'EAD' && can('treinamento.cursos.configurar')" #selos>
+          <CursoSelos :publicado="treinamento.esta_publicado" :situacao="treinamento.situacao" :situacao-label="treinamento.situacao_label" />
+        </template>
         <template #tabs>
           <TreinamentoTabs :active-tab="tabs.activeTab.value" :tabs="tabConfig" @tab-change="tabs.setActiveTab" />
         </template>
@@ -274,20 +276,6 @@ function copiarLinkPublico() {
 
       <!-- Ações de fluxo (admin) -->
       <div class="mb-6 flex flex-wrap items-center gap-2">
-        <!-- Gestao do curso (issue #86): vale para qualquer modalidade. O EAD
-             abre a aba Gestao da Area do Gestor; as demais, a pagina avulsa. -->
-        <Button
-          v-if="can('treinamento.gestor.acessar')"
-          variant="primary"
-          size="sm"
-          :href="route(treinamento.tipo === 'EAD' ? 'treinamentos.professor.gestao' : 'treinamentos.gestor.show', treinamento.id)"
-        >
-          Gestão do curso
-        </Button>
-        <template v-if="treinamento.tipo === 'EAD' && can('treinamento.cursos.configurar')">
-          <CursoSelos :publicado="treinamento.esta_publicado" :situacao="treinamento.situacao" :situacao-label="treinamento.situacao_label" />
-          <AcoesCicloCurso :curso="treinamento" />
-        </template>
         <template v-if="can('treinamento.cursos.configurar') && !treinamento.esta_publicado">
           <Link v-if="ehEad" :href="route('treinamentos.professor.conteudo', treinamento.id)">
             <Button variant="secondary" size="sm">Publicar pelo conteúdo do curso</Button>
@@ -299,24 +287,12 @@ function copiarLinkPublico() {
         <Button v-if="can('treinamento.cursos.configurar') && podeTransicionarPara('EM_ANDAMENTO')" variant="primary" size="sm" @click="transicionar('EM_ANDAMENTO')">
           Iniciar Treinamento
         </Button>
-        <Button v-if="can('treinamento.cursos.configurar') && podeTransicionarPara('CONCLUIDO')" variant="success" size="sm" @click="confirmarFinalizar">
-          Finalizar Treinamento
-        </Button>
-        <Button v-if="can('treinamento.cursos.cancelar') && podeTransicionarPara('CANCELADO')" variant="danger" size="sm" @click="confirmarCancelar">
-          Cancelar Treinamento
-        </Button>
         <Button v-if="treinamento.usa_controle_presenca && can('treinamento.presencas.registrar') && !treinamento.presenca_liberada" variant="secondary" size="sm" @click="liberarPresenca">
           Liberar Presença (check-in)
         </Button>
         <Button v-if="treinamento.usa_controle_presenca && can('treinamento.presencas.registrar') && treinamento.presenca_liberada" variant="secondary" size="sm" @click="bloquearPresenca">
           Bloquear Presença
         </Button>
-        <Link v-if="can('treinamento.inscricoes.view')" :href="route('treinamentos.inscricoes.index', treinamento.id)">
-          <Button variant="secondary" size="sm">Ver Inscritos ({{ treinamento.total_inscricoes }})</Button>
-        </Link>
-        <Link v-if="can('treinamento.certificados.view')" :href="route('treinamentos.certificados.index', treinamento.id)">
-          <Button variant="secondary" size="sm">Ver Certificados</Button>
-        </Link>
       </div>
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -540,6 +516,26 @@ function copiarLinkPublico() {
                 <Text v-else size="sm" color="muted">
                   {{ destinadoAoServidor ? 'Este treinamento não está recebendo inscrições no momento.' : 'Destinado ao público do Portal do Cidadão.' }}
                 </Text>
+                <div v-if="can('treinamento.inscricoes.view') || can('treinamento.certificados.view')" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <Button
+                    v-if="can('treinamento.inscricoes.view')"
+                    variant="secondary"
+                    size="sm"
+                    full-width
+                    :href="route('treinamentos.inscricoes.index', treinamento.id)"
+                  >
+                    Ver Inscritos ({{ treinamento.total_inscricoes }})
+                  </Button>
+                  <Button
+                    v-if="can('treinamento.certificados.view')"
+                    variant="secondary"
+                    size="sm"
+                    full-width
+                    :href="route('treinamentos.certificados.index', treinamento.id)"
+                  >
+                    Ver Certificados
+                  </Button>
+                </div>
               </template>
             </CursoResumoTurma>
           </div>
