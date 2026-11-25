@@ -1,17 +1,12 @@
 <template>
   <Head title="TDAP — Acompanhamento de Cronogramas" />
   <div class="w-full space-y-6 pb-8">
-    <!-- Cabecalho (modelo Figma "Novo modelo para tela"): sobretitulo, titulo
-         grande, descricao e a acao principal a direita. -->
-    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div class="min-w-0">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">TDAP · Operações</p>
-        <h1 class="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900 dark:text-white">Acompanhamento</h1>
-        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Acompanhe o progresso dos cronogramas e identifique o que precisa da sua atenção.
-        </p>
-      </div>
-      <div class="flex shrink-0 items-center gap-2">
+    <!-- Cabecalho no padrao das demais telas do TDAP, com as acoes a direita. -->
+    <TdapPageHeader
+      title="Acompanhamento"
+      description="Acompanhe o progresso dos cronogramas e identifique o que precisa da sua atenção."
+    >
+      <template #actions>
         <Button
           :variant="minhaFila ? 'primary' : 'outline'"
           size="md"
@@ -40,8 +35,8 @@
             </button>
           </div>
         </div>
-      </div>
-    </header>
+      </template>
+    </TdapPageHeader>
 
     <!-- Indicadores: saem das proprias colunas, sem consulta extra. -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -263,6 +258,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import BoltIcon from '@/Components/Icons/BoltIcon.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ChevronDownIcon from '@/Components/Icons/ChevronDownIcon.vue';
